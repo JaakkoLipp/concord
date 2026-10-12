@@ -2,19 +2,16 @@
  * REST wrapper (client.md section 4.4): session header, waiting out exhausted rate-limit buckets,
  * one retry on 429, and errors normalised to StoatError.
  */
+import { BackendError } from '@concord/domain/errors';
 import { routeOf } from './route.ts';
 import type { HttpResponse, Transport } from './transport.ts';
 
-export class StoatError extends Error {
-  readonly status: number;
-  /** Stoat's error type, such as InvalidCredentials or MissingPermission. */
-  readonly kind: string;
+/** An HTTP error from Stoat. `kind` is Stoat's error type, such as InvalidCredentials or MissingPermission. */
+export class StoatError extends BackendError {
   readonly body: unknown;
   constructor(status: number, body: unknown, what: string) {
     const kind = (body as { type?: string } | null)?.type ?? `HTTP${status}`;
-    super(`${what}: ${status} ${kind}`);
-    this.status = status;
-    this.kind = kind;
+    super(status, kind, `${what}: ${status} ${kind}`);
     this.body = body;
   }
 }

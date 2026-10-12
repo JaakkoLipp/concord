@@ -1,15 +1,39 @@
 /** Channel helpers for the shell: visibility, names and the last channel visited per server. */
 import { Permission, channelPermissions, has, memberKey, type Channel, type Id, type Server, type Store } from '@concord/domain';
 
-export function canView(store: Store, channel: Channel): boolean {
+/** This account's permissions in a channel. */
+export function permissionsIn(store: Store, channel: Channel): bigint {
   const self = store.self;
-  if (!self) return false;
-  if (channel.kind !== 'text') return channel.kind !== 'saved' || channel.user === self.id;
-  const server = store.servers.get(channel.server);
-  if (!server) return false;
-  const member = store.members.get(memberKey(server.id, self.id));
+  if (!self) return 0n;
+  const server = channel.kind === 'text' ? store.servers.get(channel.server) : undefined;
+  if (channel.kind === 'text' && !server) return 0n;
+  const member = server ? store.members.get(memberKey(server.id, self.id)) : undefined;
   const relationship = (u: Id) => store.users.get(u)?.relationship ?? 'None';
-  return has(channelPermissions(channel, { self, server, ...(member ? { member } : {}), relationship }), Permission.ViewChannel);
+  const isBot = (u: Id) => !!store.users.get(u)?.bot;
+  return channelPermissions(channel, { self, ...(server ? { server } : {}), ...(member ? { member } : {}), relationship, isBot });
+}
+
+export function canView(store: Store, channel: Channel): boolean {
+  if (!store.self) return false;
+  if (channel.kind !== 'text') return channel.kind !== 'saved' || channel.user === store.self.id;
+  return has(permissionsIn(store, channel), Permission.ViewChannel);
+}
+
+export type SendBlock = 'permission' | 'blocked' | 'notFriend' | 'timeout';
+
+/** Why this account can't send in a channel, or null when it can. */
+export function sendBlock(store: Store, channel: Channel, now = new Date()): SendBlock | null {
+  if (channel.kind === 'dm') {
+    const rel = store.users.get(dmPartner(store, channel) ?? '')?.relationship;
+    if (rel === 'Blocked' || rel === 'BlockedOther') return 'blocked';
+  }
+  if (has(permissionsIn(store, channel), Permission.SendMessage)) return null;
+  if (channel.kind === 'dm') return 'notFriend';
+  if (channel.kind === 'text') {
+    const timeout = store.members.get(memberKey(channel.server, store.selfId ?? ''))?.timeout;
+    if (timeout && new Date(timeout) > now) return 'timeout';
+  }
+  return 'permission';
 }
 
 /** The other person in a DM, or undefined for groups. */

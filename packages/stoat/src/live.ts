@@ -1,5 +1,7 @@
 import { KEPT_HEADERS, type Frame, type HttpRequest, type HttpResponse, type Socket, type Transport } from './transport.ts';
 
+const REQUEST_TIMEOUT_MS = 20_000;
+
 /** Talks to a real Stoat stack on the same origin layout as Caddy: /api and /ws. */
 export class LiveTransport implements Transport {
   private readonly origin: string;
@@ -14,6 +16,8 @@ export class LiveTransport implements Transport {
       method: req.method,
       headers,
       body: req.body === undefined ? null : JSON.stringify(req.body),
+      // A request that hangs fails like a network error, which callers treat as "may have arrived".
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
     const text = await res.text();
     let body: unknown = null;

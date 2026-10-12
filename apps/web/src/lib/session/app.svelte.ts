@@ -3,6 +3,7 @@
  */
 import { Session } from '@concord/domain';
 import { LiveTransport, StoatBackend, StoatError } from '@concord/stoat';
+import { drafts } from '$lib/composer/drafts.ts';
 import { clearToken, loadToken, saveToken } from './token.ts';
 
 // The (app) group has ssr = false, so this only runs in the browser; the guard keeps server builds importable.
@@ -47,6 +48,7 @@ class App {
   private async signedOut(): Promise<void> {
     await this.session?.stop();
     this.session = null;
+    drafts.clear();
     await clearToken();
     this.status = 'signed-out';
   }

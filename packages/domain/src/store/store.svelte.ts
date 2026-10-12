@@ -14,6 +14,21 @@ export interface MessageWindow {
   atOldest: boolean;
 }
 
+/**
+ * A message sent from this client and not yet confirmed (client.md section 4.3). Its key is a client ULID,
+ * sent as the idempotency key, which Stoat echoes as the real message's nonce.
+ */
+export interface PendingMessage {
+  key: Id;
+  channel: Id;
+  content: string;
+  replies: { id: Id; mention: boolean }[];
+  attachments: Id[];
+  state: 'sending' | 'failed';
+  /** Why it failed: the backend's error type, or `network` when the request may not have arrived. */
+  error?: string;
+}
+
 export type NotificationLevel = 'all' | 'mention' | 'none' | 'muted';
 
 export interface Settings {
@@ -56,6 +71,15 @@ export class Store {
   readonly typing = new SvelteMap<Id, Record<Id, number>>();
   /** Servers whose full member list has been fetched. */
   readonly memberListLoaded = new SvelteMap<Id, number>();
+  /** Messages sent from this client and not yet confirmed, by key. Window reloads and Ready leave them alone. */
+  readonly pending = new SvelteMap<Id, PendingMessage>();
+  /** Keys this client has sent with, so a confirmed message keeps its pending row's identity in the list. */
+  readonly ownNonces = new Set<string>();
+  /**
+   * The newest message this client has marked read, per channel. Stoat applies acks a few seconds late,
+   * so unread state fetched in that gap may be older; it can raise this floor but never lower it.
+   */
+  private readonly readFloor = new Map<Id, Id>();
 
   get selfId(): Id | undefined {
     return this.self?.id;
@@ -75,12 +99,42 @@ export class Store {
   }
 
   upsertMessages(messages: Message[]): void {
-    for (const m of messages) this.messages.set(m.id, m);
+    for (const m of messages) {
+      this.messages.set(m.id, m);
+      this.settle(m);
+    }
   }
 
   setUnreads(unreads: Unread[]): void {
     this.unreads.clear();
-    for (const u of unreads) this.unreads.set(u.channel, u);
+    for (const u of unreads) this.unreads.set(u.channel, this.withFloor(u));
+    for (const [channel, id] of this.readFloor) if (!this.unreads.has(channel)) this.unreads.set(channel, { channel, lastId: id, mentions: [] });
+  }
+
+  /** Mark a channel read up to a message, locally and at once. The session sends the ack. */
+  markRead(channel: Id, message: Id): void {
+    if (newer(message, this.readFloor.get(channel))) this.readFloor.set(channel, message);
+    const u = this.unreads.get(channel) ?? { channel, mentions: [] };
+    this.unreads.set(channel, this.withFloor(u));
+  }
+
+  /** The read point is the later of the server's and this client's; mentions at or before it are read. */
+  private withFloor(u: Unread): Unread {
+    const floor = this.readFloor.get(u.channel);
+    const lastId = newer(floor, u.lastId) ? floor : u.lastId;
+    if (!lastId) return u;
+    const mentions = u.mentions.filter((id) => id > lastId);
+    return lastId === u.lastId && mentions.length === u.mentions.length ? u : { ...u, lastId, mentions };
+  }
+
+  /** A confirmed message replaces its pending one, whichever way it arrived: send response, echo or history. */
+  private settle(m: Message): void {
+    if (m.nonce && this.pending.has(m.nonce)) this.pending.delete(m.nonce);
+  }
+
+  /** Pending messages in a channel, oldest first. */
+  pendingIn(channel: Id): PendingMessage[] {
+    return [...this.pending.values()].filter((p) => p.channel === channel).sort((a, b) => (a.key < b.key ? -1 : 1));
   }
 
   /** Replace a channel's window with a fetched page, given oldest first. */
@@ -157,6 +211,7 @@ export class Store {
         if (e.member) this.upsertMembers([e.member]);
         const m = e.message;
         this.messages.set(m.id, m);
+        this.settle(m);
         const c = this.channels.get(m.channel);
         if (c && c.kind !== 'saved' && newer(m.id, c.lastMessageId)) this.channels.set(c.id, { ...c, lastMessageId: m.id });
         const w = this.windows.get(m.channel);
@@ -226,12 +281,10 @@ export class Store {
         return;
       case 'typingStop':
         return this.clearTyping(e.channel, e.user);
-      case 'ack': {
-        if (e.user !== this.selfId) return;
-        const u = this.unreads.get(e.channel) ?? { channel: e.channel, mentions: [] };
-        this.unreads.set(e.channel, { ...u, lastId: e.message, mentions: u.mentions.filter((id) => id > e.message) });
+      case 'ack':
+        // Another session of this account read the channel. Never moves the read point back.
+        if (e.user === this.selfId) this.markRead(e.channel, e.message);
         return;
-      }
       case 'serverCreate':
         this.servers.set(e.server.id, e.server);
         for (const c of e.channels) this.channels.set(c.id, c);
@@ -337,6 +390,7 @@ export class Store {
 
   private addMention(channel: Id, message: Id): void {
     const u = this.unreads.get(channel) ?? { channel, mentions: [] };
+    if (u.lastId && message <= u.lastId) return;
     if (!u.mentions.includes(message)) this.unreads.set(channel, { ...u, mentions: [...u.mentions, message] });
   }
 
@@ -455,9 +509,11 @@ export class Store {
 
   clear(): void {
     this.self = null;
-    for (const map of [this.users, this.servers, this.channels, this.members, this.emojis, this.unreads, this.messages, this.windows, this.profiles, this.mutuals, this.typing, this.memberListLoaded]) {
+    for (const map of [this.users, this.servers, this.channels, this.members, this.emojis, this.unreads, this.messages, this.windows, this.profiles, this.mutuals, this.typing, this.memberListLoaded, this.pending]) {
       (map as SvelteMap<unknown, unknown>).clear();
     }
+    this.ownNonces.clear();
+    this.readFloor.clear();
     this.settings = { servers: {}, channels: {}, serverOrder: [] };
   }
 }

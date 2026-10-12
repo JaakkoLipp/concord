@@ -74,6 +74,13 @@ export interface MessageQuery {
   sort?: 'Latest' | 'Oldest';
 }
 
+/** A message as the composer sends it. Content is in the backend's own syntax. */
+export interface OutgoingMessage {
+  content: string;
+  replies: { id: Id; mention: boolean }[];
+  attachments: Id[];
+}
+
 export interface Capabilities {
   /** `Subscribe` brings live status changes from non-friend members (Stoat 0.15.5). */
   serverSubscribe: boolean;
@@ -98,6 +105,10 @@ export interface Backend {
   mutual(id: Id): Promise<{ users: Id[]; servers: Id[]; channels: Id[] }>;
   unreads(): Promise<Unread[]>;
   settings(keys: string[]): Promise<Record<string, { updated: number; value: string }>>;
+
+  /** Send with an idempotency key, which the backend echoes as the message's nonce. */
+  sendMessage(channel: Id, message: OutgoingMessage, key: string): Promise<Message>;
+  ack(channel: Id, message: Id): Promise<void>;
 
   connect(handlers: GatewayHandlers): Gateway;
 }

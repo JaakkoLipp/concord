@@ -5,8 +5,8 @@
    * the bottom, new content keeps them there. Otherwise the message at the top of the view stays put while
    * history loads above it or media and late embeds change height.
    */
-  import type { Message, Session } from '@concord/domain';
-  import { tick } from 'svelte';
+  import type { Message, PendingMessage, Session } from '@concord/domain';
+  import { tick, untrack } from 'svelte';
   import ArrowDown from '@lucide/svelte/icons/arrow-down';
   import { setMarkdownContext } from '$lib/markdown/context.ts';
   import { dayLabel, sameDay, ulidTime } from '$lib/markdown/time.ts';
@@ -23,19 +23,36 @@
   const win = $derived(store.windows.get(channel));
   const messages = $derived((win?.ids ?? []).map((id) => store.messages.get(id)).filter((x): x is Message => !!x));
 
-  // The "new messages" line sits after the last acknowledged message as it was when the channel opened.
-  let unreadFrom = $state<string | undefined>(undefined);
-  $effect.pre(() => {
-    void channel;
-    unreadFrom = store.isUnread(channel) ? (store.unreads.get(channel)?.lastId ?? '0') : undefined;
+  // Messages sent from here and not yet confirmed, shown after the newest message (client.md section 4.3).
+  const pending = $derived(win?.atNewest ? store.pendingIn(channel) : []);
+  const asMessage = (p: PendingMessage): Message => ({
+    id: p.key, channel: p.channel, author: store.selfId ?? '', content: p.content, attachments: [], embeds: [],
+    mentions: [], roleMentions: [], replies: p.replies.map((r) => r.id), reactions: {}, pinned: false,
   });
 
-  interface Row { message: Message; continuation: boolean; day: Date | null; unread: boolean }
+  // The "new messages" line sits after the last acknowledged message as it was when the channel opened,
+  // once the connection is up. Reading the channel afterwards doesn't move or remove it.
+  let unreadFrom = $state<string | undefined>(undefined);
+  let dividerFor: string | null = null;
+  $effect.pre(() => {
+    const c = channel;
+    const ready = store.connection === 'ready';
+    untrack(() => {
+      if (dividerFor === c) return;
+      unreadFrom = undefined;
+      if (!ready) return;
+      dividerFor = c;
+      unreadFrom = store.isUnread(c) ? (store.unreads.get(c)?.lastId ?? '0') : undefined;
+    });
+  });
+
+  interface Row { key: string; message: Message; pending?: PendingMessage; continuation: boolean; day: Date | null; unread: boolean }
   const rows = $derived.by(() => {
     const out: Row[] = [];
     let prev: Message | undefined;
     let unreadShown = false;
-    for (const msg of messages) {
+    const all: { message: Message; pending?: PendingMessage }[] = [...messages.map((message) => ({ message })), ...pending.map((p) => ({ message: asMessage(p), pending: p }))];
+    for (const { message: msg, pending: p } of all) {
       const t = ulidTime(msg.id);
       const pt = prev ? ulidTime(prev.id) : null;
       const day = !pt || !sameDay(pt, t) ? t : null;
@@ -44,7 +61,9 @@
       const continuation = !!prev && !day && !unread && !msg.system && !prev.system && !msg.replies.length
         && prev.author === msg.author && (prev.masquerade?.name ?? '') === (msg.masquerade?.name ?? '')
         && t.getTime() - pt!.getTime() < 7 * 60_000;
-      out.push({ message: msg, continuation, day, unread });
+      // A confirmed message keeps its pending row's key, so the swap doesn't remount or move anything.
+      const key = p ? p.key : msg.nonce && store.ownNonces.has(msg.nonce) ? msg.nonce : msg.id;
+      out.push({ key, message: msg, ...(p ? { pending: p } : {}), continuation, day, unread });
       prev = msg;
     }
     return out;
@@ -122,6 +141,23 @@
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }
 
+  // Read when the newest message is in view in a visible, focused window (m2a-plan.md decision 5).
+  let active = $state(typeof document !== 'undefined' && document.visibilityState === 'visible' && document.hasFocus());
+  $effect(() => {
+    const update = () => (active = document.visibilityState === 'visible' && document.hasFocus());
+    window.addEventListener('focus', update);
+    window.addEventListener('blur', update);
+    document.addEventListener('visibilitychange', update);
+    return () => {
+      window.removeEventListener('focus', update);
+      window.removeEventListener('blur', update);
+      document.removeEventListener('visibilitychange', update);
+    };
+  });
+  $effect(() => {
+    if (active && stuck && win?.atNewest && store.connection === 'ready' && store.isUnread(channel)) session.markRead(channel);
+  });
+
   // Opening a channel starts at the bottom; a jump starts at the target, centred and briefly highlighted.
   $effect(() => {
     void channel;
@@ -163,14 +199,15 @@
     {:else if win}
       <div class="loading" aria-hidden="true">{m.app.loading}</div>
     {/if}
-    {#each rows as row (row.message.id)}
+    {#each rows as row (row.key)}
       {#if row.day}
         <div class="divider day" role="separator"><span>{dayLabel(row.day)}</span></div>
       {/if}
       {#if row.unread}
         <div class="divider new" role="separator"><span>{m.conversation.newMessages}</span></div>
       {/if}
-      <MessageItem message={row.message} {store} {server} continuation={row.continuation} highlighted={highlighted === row.message.id} {onjump} />
+      <MessageItem message={row.message} pending={row.pending} {store} {server} continuation={row.continuation} highlighted={highlighted === row.message.id} {onjump}
+        onretry={(key) => void session.retry(key)} ondiscard={(key) => session.discard(key)} />
     {/each}
     <div class="end"></div>
   </div>

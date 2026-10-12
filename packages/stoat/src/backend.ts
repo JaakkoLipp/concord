@@ -1,5 +1,5 @@
 /** The Stoat implementation of the domain's Backend interface. */
-import type { Backend, Capabilities, Gateway, GatewayHandlers, LoginResult, MessagePage, MessageQuery, NodeInfo, User } from '@concord/domain';
+import type { Backend, Capabilities, Gateway, GatewayHandlers, LoginResult, Message, MessagePage, MessageQuery, NodeInfo, OutgoingMessage, User } from '@concord/domain';
 import type { components } from './api/types.ts';
 import { capabilitiesFor } from './capabilities.ts';
 import { mapChannel } from './map/channel.ts';
@@ -36,14 +36,20 @@ export class StoatBackend implements Backend {
     const r = await this.rest.request<Root>('GET', '/');
     this.capabilities = capabilitiesFor(r.revolt);
     const limits = r.features.limits as unknown as {
-      global?: { restrict_server_creation?: string[] };
-      default?: { file_upload_size_limits?: Record<string, number> };
+      global?: { restrict_server_creation?: string[]; message_replies?: number; message_reactions?: number };
+      default?: { file_upload_size_limits?: Record<string, number>; message_length?: number; message_attachments?: number };
     };
     const livekit = (r.features as { livekit?: { enabled: boolean; nodes?: { name: string }[] } }).livekit;
     return {
       version: r.revolt,
       serverCreators: limits.global?.restrict_server_creation ?? [],
       uploadLimits: limits.default?.file_upload_size_limits ?? {},
+      limits: {
+        messageLength: limits.default?.message_length ?? 2000,
+        attachments: limits.default?.message_attachments ?? 5,
+        replies: limits.global?.message_replies ?? 5,
+        reactions: limits.global?.message_reactions ?? 20,
+      },
       voice: { enabled: livekit?.enabled ?? false, nodes: (livekit?.nodes ?? []).map((n) => ({ name: n.name })) },
       ...(r.vapid ? { vapid: r.vapid } : {}),
     };
@@ -116,6 +122,20 @@ export class StoatBackend implements Backend {
   async settings(keys: string[]) {
     const r = await this.rest.request<Record<string, [number, string]>>('POST', '/sync/settings/fetch', { keys });
     return Object.fromEntries(Object.entries(r).map(([k, [updated, value]]) => [k, { updated, value }]));
+  }
+
+  async sendMessage(channel: string, message: OutgoingMessage, key: string): Promise<Message> {
+    const body = {
+      content: message.content,
+      ...(message.replies.length ? { replies: message.replies } : {}),
+      ...(message.attachments.length ? { attachments: message.attachments } : {}),
+    };
+    // Stoat echoes the Idempotency-Key as the message's nonce (m2a-plan.md, checked live).
+    return mapMessage(await this.rest.request<WMessage>('POST', `/channels/${channel}/messages`, body, { 'Idempotency-Key': key }));
+  }
+
+  async ack(channel: string, message: string): Promise<void> {
+    await this.rest.request('PUT', `/channels/${channel}/ack/${message}`);
   }
 
   async dms() {

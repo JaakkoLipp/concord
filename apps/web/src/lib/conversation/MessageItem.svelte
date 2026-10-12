@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Message, Store } from '@concord/domain';
+  import type { Message, PendingMessage, Store } from '@concord/domain';
   import { Avatar } from '@concord/ui';
   import Markdown from '$lib/markdown/Markdown.svelte';
   import { fullDate, timeOfDay, ulidTime } from '$lib/markdown/time.ts';
@@ -13,8 +13,13 @@
   import ReplyPreview from './ReplyPreview.svelte';
   import SystemLine from './SystemLine.svelte';
 
-  interface Props { message: Message; store: Store; server: string | undefined; continuation: boolean; highlighted: boolean; onjump: (id: string) => void }
-  let { message, store, server, continuation, highlighted, onjump }: Props = $props();
+  interface Props {
+    message: Message; store: Store; server: string | undefined; continuation: boolean; highlighted: boolean; onjump: (id: string) => void;
+    /** Set while the message is sending or has failed. */
+    pending?: PendingMessage | undefined; onretry?: (key: string) => void; ondiscard?: (key: string) => void;
+  }
+  let { message, store, server, continuation, highlighted, onjump, pending, onretry, ondiscard }: Props = $props();
+  const failedReason = (error: string | undefined) => (m.composer.failed as Record<string, string>)[error ?? ''] ?? m.composer.failed.other;
 
   const user = $derived(store.users.get(message.author));
   const member = $derived(server && store.selfId ? store.members.get(`${server}:${message.author}`) : undefined);
@@ -30,7 +35,7 @@
     <SystemLine {message} {store} {server} {onjump} />
   </div>
 {:else}
-  <article class="row message" class:continuation class:mentioned class:highlighted id="message-{message.id}" data-id={message.id} aria-labelledby="author-{message.id}">
+  <article class="row message" class:continuation class:mentioned class:highlighted class:sending={pending?.state === 'sending'} class:failed={pending?.state === 'failed'} aria-busy={pending?.state === 'sending' || undefined} id="message-{message.id}" data-id={message.id} aria-labelledby="author-{message.id}">
     {#each message.replies as reply (reply)}
       <ReplyPreview id={reply} {store} {server} {onjump} />
     {/each}
@@ -54,6 +59,13 @@
         {/if}
         {#if message.content}
           <div class="content"><Markdown source={message.content} />{#if message.edited}<span class="edited" title={fullDate(new Date(message.edited))}>{m.conversation.edited}</span>{/if}</div>
+        {/if}
+        {#if pending?.state === 'failed'}
+          <p class="not-sent" role="alert">
+            {m.composer.notSent} {failedReason(pending.error)}
+            <button onclick={() => onretry?.(pending.key)}>{m.composer.retry}</button>
+            <button onclick={() => ondiscard?.(pending.key)}>{m.composer.discard}</button>
+          </p>
         {/if}
         {#each message.attachments as file (file.id)}<Attachment {file} />{/each}
         {#each message.embeds as embed, i (i)}<Embed {embed} />{/each}
@@ -89,5 +101,10 @@
   .tag { padding: 0 var(--space-2); border-radius: var(--radius-xs); background: var(--accent); color: var(--on-accent); font: 700 0.625rem/1rem var(--font-sans); text-transform: uppercase; }
   .time { color: var(--text-secondary); font: var(--text-xs) var(--font-sans); font-variant-numeric: tabular-nums; flex: none; }
   .content { color: var(--text-normal); font: var(--text-md) var(--font-sans); line-height: 1.375rem; overflow-wrap: anywhere; }
+  .sending .content { color: var(--text-muted); }
+  .failed .content { color: var(--danger); }
+  .not-sent { margin: var(--space-1) 0 0; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
+  .not-sent button { margin-left: var(--space-2); padding: 0; border: 0; background: none; color: var(--link); font: inherit; cursor: pointer; }
+  .not-sent button:hover { text-decoration: underline; }
   .edited { margin-left: var(--space-2); color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
 </style>

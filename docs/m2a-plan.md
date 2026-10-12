@@ -119,4 +119,5 @@ This is the riskiest code in M2a, and its unit tests cover every rule below.
 
 ## Progress
 
-- **Task 1**, 2026-10-12: the CodeMirror composer is deployed, waiting for Jaakko's device check. Results are in [m2a-results.md](m2a-results.md).
+- **Task 1**, 2026-10-12: done. Jaakko tested on an iPhone and chose CodeMirror. Android is untested so far. Results are in [m2a-results.md](m2a-results.md).
+- **Task 2**, 2026-10-12: done and deployed. The live check passed, as recorded in the results.

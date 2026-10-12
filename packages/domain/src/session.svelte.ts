@@ -4,10 +4,14 @@
  */
 import type { Backend, Gateway } from './backend.ts';
 import type { Id, Message } from './entities.ts';
-import { Store, type NotificationLevel, type Settings } from './store/store.svelte.ts';
+import { BackendError } from './errors.ts';
+import { Store, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
+import { ulid } from './ulid.ts';
 
 const PAGE = 100;
 const FOCUS_REFETCH_MS = 60_000;
+/** At most one ack per channel in this time (m2a-plan.md decision 5). */
+export const ACK_EVERY_MS = 2_000;
 const POLL_MS = 2 * 60_000;
 
 const oldestFirst = (list: Message[]) => [...list].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -41,6 +45,8 @@ export class Session {
   private poll: ReturnType<typeof setInterval> | null = null;
   private readonly onFocus = () => void this.refreshMembers(false);
   private onSignedOut: () => void = () => {};
+  /** Per channel: when the last ack was sent, what it was for, and a trailing ack waiting to go. */
+  private readonly acks = new Map<Id, { at: number; sent?: Id | undefined; timer?: ReturnType<typeof setTimeout> | undefined }>();
 
   constructor(backend: Backend) {
     this.backend = backend;
@@ -69,6 +75,8 @@ export class Session {
   async stop(): Promise<void> {
     globalThis.removeEventListener?.('focus', this.onFocus);
     if (this.poll) clearInterval(this.poll);
+    for (const a of this.acks.values()) clearTimeout(a.timer);
+    this.acks.clear();
     this.gateway?.close();
     this.gateway = null;
     this.store.clear();
@@ -170,8 +178,88 @@ export class Session {
     this.store.mutuals.set(user, mutual);
   }
 
-  jumpToPresent(channel: Id): Promise<void> {
-    return this.loadLatest(channel);
+  async jumpToPresent(channel: Id): Promise<void> {
+    await this.loadLatest(channel);
+    this.markRead(channel);
+  }
+
+  // ---------- sending (m2a-plan.md task 2) ----------
+
+  /** Send a message optimistically. It shows at once as pending and is replaced when Stoat confirms it. */
+  async send(channel: Id, content: string, replies: PendingMessage['replies'] = [], attachments: Id[] = []): Promise<void> {
+    // A message sent from older history would land outside the window, so go to the present first.
+    if (!this.store.windows.get(channel)?.atNewest) await this.loadLatest(channel).catch(() => {});
+    const key = ulid();
+    this.store.ownNonces.add(key);
+    this.store.pending.set(key, { key, channel, content, replies, attachments, state: 'sending' });
+    await this.deliver(key);
+  }
+
+  /** Try a failed message again with the same key, so Stoat can't store it twice. */
+  retry(key: Id): Promise<void> {
+    const p = this.store.pending.get(key);
+    if (!p || p.state !== 'failed') return Promise.resolve();
+    this.store.pending.set(key, { key, channel: p.channel, content: p.content, replies: p.replies, attachments: p.attachments, state: 'sending' });
+    return this.deliver(key);
+  }
+
+  discard(key: Id): void {
+    this.store.pending.delete(key);
+  }
+
+  private async deliver(key: Id): Promise<void> {
+    const p = this.store.pending.get(key);
+    if (!p) return;
+    try {
+      const message = await this.backend.sendMessage(p.channel, { content: p.content, replies: p.replies, attachments: p.attachments }, key);
+      this.store.apply({ type: 'messageCreate', message });
+      this.markRead(p.channel);
+    } catch (e) {
+      if (e instanceof BackendError && e.status === 409) {
+        // The key was used: an earlier attempt reached Stoat after all. The newest page holds it.
+        await this.loadLatest(p.channel).catch(() => {});
+        this.store.pending.delete(key);
+        this.markRead(p.channel);
+        return;
+      }
+      const error = e instanceof BackendError ? e.kind : 'network';
+      if (this.store.pending.has(key)) this.store.pending.set(key, { ...p, state: 'failed', error });
+    }
+  }
+
+  // ---------- acks ----------
+
+  /**
+   * Mark a channel read up to its newest message: locally at once, and to Stoat at most once per channel
+   * every ACK_EVERY_MS, with a trailing ack for the newest message when several arrive in that time.
+   */
+  markRead(channel: Id): void {
+    const c = this.store.channels.get(channel);
+    const last = c && c.kind !== 'saved' ? c.lastMessageId : undefined;
+    if (!last) return;
+    this.store.markRead(channel, last);
+    const a = this.acks.get(channel) ?? { at: 0 };
+    this.acks.set(channel, a);
+    if (a.sent === last || a.timer) return;
+    const wait = a.at + ACK_EVERY_MS - Date.now();
+    if (wait <= 0) return this.flushAck(channel);
+    a.timer = setTimeout(() => this.flushAck(channel), wait);
+  }
+
+  private flushAck(channel: Id): void {
+    const a = this.acks.get(channel);
+    if (!a) return;
+    a.timer = undefined;
+    const c = this.store.channels.get(channel);
+    const last = c && c.kind !== 'saved' ? c.lastMessageId : undefined;
+    const target = last && this.store.unreads.get(channel)?.lastId === last ? last : undefined;
+    if (!target || target === a.sent) return;
+    a.at = Date.now();
+    a.sent = target;
+    void this.backend.ack(channel, target).catch(() => {
+      // Lost ack: the next markRead tries again.
+      if (a.sent === target) a.sent = undefined;
+    });
   }
 
   private async reloadWindow(channel: Id): Promise<void> {

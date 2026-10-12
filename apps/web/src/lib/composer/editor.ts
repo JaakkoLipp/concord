@@ -8,6 +8,7 @@ import {
   type DecorationSet, type ViewUpdate,
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, insertNewline } from '@codemirror/commands';
+import { drafts } from './drafts.ts';
 import { TOKEN, tokenAt, type TokenKind } from './text.ts';
 
 /** How a token looks: a pill with text, or an image for custom emoji. */
@@ -16,20 +17,25 @@ export type Labeller = (kind: TokenKind, id: string) => TokenLook;
 
 export interface ComposerEditor {
   text(): string;
-  setText(text: string): void;
+  /** Empty the editor after a send, with a fresh undo history. */
+  clear(): void;
+  /** Keep the current draft and open another channel's, or an empty one. */
+  switchTo(draft: string): void;
   setPlaceholder(text: string): void;
   focus(): void;
+  /** Keeps the current draft. */
   destroy(): void;
 }
 
 export interface EditorOptions {
-  text: string;
+  draft: string;
   placeholder: string;
   /** On touch screens Enter adds a line and a button sends, as on Discord's phone app. */
   touch: boolean;
   label: Labeller;
   onChange(text: string): void;
   onSend(): void;
+  onEscape(): void;
 }
 
 class TokenWidget extends WidgetType {
@@ -123,36 +129,59 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
     return true;
   };
 
-  const view = new EditorView({
-    parent,
-    state: EditorState.create({
-      doc: opts.text,
-      extensions: [
-        history(),
-        keymap.of([
-          { key: 'Enter', run: opts.touch ? insertNewline : send },
-          { key: 'Shift-Enter', run: insertNewline },
-          ...historyKeymap,
-          ...defaultKeymap,
-        ]),
-        EditorView.lineWrapping,
-        hint.of(attributes(opts.placeholder)),
-        tokens(opts.label),
-        theme,
-        EditorView.updateListener.of((u) => {
-          if (u.docChanged) opts.onChange(u.state.doc.toString());
-        }),
-      ],
+  let placeholderText = opts.placeholder;
+  const extensions = () => [
+    history(),
+    keymap.of([
+      { key: 'Enter', run: opts.touch ? insertNewline : send },
+      { key: 'Shift-Enter', run: insertNewline },
+      { key: 'Escape', run: () => (opts.onEscape(), false) },
+      ...historyKeymap,
+      ...defaultKeymap,
+    ]),
+    EditorView.lineWrapping,
+    hint.of(attributes(placeholderText)),
+    tokens(opts.label),
+    theme,
+    EditorView.updateListener.of((u) => {
+      if (u.docChanged) opts.onChange(u.state.doc.toString());
     }),
-  });
+  ];
+  const fresh = (doc = '', caret = 0) => EditorState.create({ doc, selection: { anchor: Math.min(caret, doc.length) }, extensions: extensions() });
+  const saved = (draft: string) => {
+    const d = drafts.get(draft);
+    return d ? fresh(d.text, d.caret) : fresh();
+  };
+
+  let current = opts.draft;
+  const view = new EditorView({ parent, state: saved(current) });
+  const keep = () => {
+    if (view.state.doc.length) drafts.set(current, { text: view.state.doc.toString(), caret: view.state.selection.main.head });
+    else drafts.delete(current);
+  };
 
   return {
     text: () => view.state.doc.toString(),
-    setText: (text) => {
-      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text }, selection: { anchor: text.length } });
+    clear: () => {
+      view.setState(fresh());
+      drafts.delete(current);
+      opts.onChange('');
     },
-    setPlaceholder: (text) => view.dispatch({ effects: hint.reconfigure(attributes(text)) }),
+    switchTo: (draft) => {
+      if (draft === current) return;
+      keep();
+      current = draft;
+      view.setState(saved(draft));
+      opts.onChange(view.state.doc.toString());
+    },
+    setPlaceholder: (text) => {
+      placeholderText = text;
+      view.dispatch({ effects: hint.reconfigure(attributes(text)) });
+    },
     focus: () => view.focus(),
-    destroy: () => view.destroy(),
+    destroy: () => {
+      keep();
+      view.destroy();
+    },
   };
 }

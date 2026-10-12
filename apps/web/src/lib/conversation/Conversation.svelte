@@ -40,7 +40,7 @@
 <div class="body">
   <MessageList {session} {channel} {target} onjump={jump} />
 </div>
-<Composer {placeholder} {store} channel={info} />
+<Composer {placeholder} {session} channel={info} />
 
 <style>
   .body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }

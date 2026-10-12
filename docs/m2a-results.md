@@ -34,3 +34,30 @@ The editor costs nothing measurable at start-up, so its load timing stays as it 
 | Console errors or failed requests | None | None |
 
 Headless Chromium can't test IMEs, Android keyboards or Firefox. Those checks are Jaakko's, in the plan's checklist.
+
+**Verdict, 2026-10-12**: Jaakko tested on an iPhone, and everything worked. CodeMirror stays. An Android phone with Gboard hasn't been tried yet.
+
+## Task 2: send, optimistic updates, acks and drafts, 2026-10-12
+
+**Unit tests**: `packages/domain/src/sending.test.ts`, 7 tests. They cover:
+- reconciliation with the send response first and with the socket echo first,
+- a lost response followed by a retry that gets 409,
+- the backend's reason on other failures,
+- settling from a history fetch,
+- the read floor against older unread state,
+- the ack throttle with its trailing ack.
+
+**Live check**: `node tools/live/src/send.ts`, with `dev` and `aino` in three browser contexts:
+
+| Check | Result |
+|---|---|
+| `dev` sends in #botti through the composer, until `aino` sees it | **102 ms** |
+| Copies for the sender, and messages left pending | 1 and 0 |
+| `aino` posts. `dev`'s second device shows #botti unread, then clears once the first device reads it | Cleared **823 ms** after the message arrived |
+| Send while offline | Fails with "Not sent. Couldn't reach the server." plus Retry and Delete |
+| Retry once back online | Exactly one copy for each side |
+| #tekniikka, stuck unread by the planning probe, after `dev` opens it | Read at Stoat |
+
+**Also checked**: a regular member in #säännöt sees "You don't have permission to send messages in this channel." in place of the editor.
+
+**Found on the way**: replaying the recorded events twice re-added a mention that had already been read. The store now ignores mentions at or before the read point.

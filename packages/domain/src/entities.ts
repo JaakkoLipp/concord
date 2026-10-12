@@ -214,6 +214,8 @@ export interface NodeInfo {
   /** User IDs allowed to create servers. Empty means everyone. */
   serverCreators: Id[];
   uploadLimits: Record<string, number>;
+  /** Message limits: length in UTF-8 bytes, then counts per message. */
+  limits: { messageLength: number; attachments: number; replies: number; reactions: number };
   voice: { enabled: boolean; nodes: { name: string }[] };
   vapid?: string;
 }

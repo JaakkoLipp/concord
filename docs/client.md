@@ -84,7 +84,7 @@ Derived views are `$derived` selectors: the ordered channel list per server, the
 | Edit | Content changes instantly with an "edited" marker. | Reverted with a toast on failure. |
 | React, unreact | Count changes instantly. | Reverted on failure. |
 | Delete | Removed instantly. | Restored on failure. |
-| Ack | Unread marker clears instantly. | Acks are debounced, at most one per channel every 2 seconds. |
+| Ack | Unread marker clears instantly. | At most one ack per channel every 2 seconds, plus a trailing ack for the newest message. Stoat applies acks a few seconds late, so older unread state fetched meanwhile never brings a marker back. |
 
 ### 4.4 Rate limits
 
