@@ -15,7 +15,7 @@ export default {
         'style-src': ['self', 'unsafe-inline'],
         'img-src': ['self', 'data:', 'blob:'],
         'media-src': ['self', 'blob:'],
-        'font-src': ['self'],
+        'font-src': ['self', 'data:'],
         'connect-src': ['self', 'wss://concord.jaalip.com'],
         'frame-ancestors': ['none'],
         'base-uri': ['self'],

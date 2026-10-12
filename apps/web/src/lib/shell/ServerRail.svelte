@@ -1,0 +1,75 @@
+<script lang="ts">
+  import { Badge, tooltip } from '@concord/ui';
+  import { fileUrl } from '@concord/stoat';
+  import type { Store } from '@concord/domain';
+  import MessageCircle from '@lucide/svelte/icons/message-circle';
+  import { resolve } from '$app/paths';
+  import { m } from '$lib/i18n/index.ts';
+  import { canView, firstChannel, initials, orderedServers, recalled } from '$lib/view/channels.ts';
+
+  interface Props { store: Store; active: string | null }
+  let { store, active }: Props = $props();
+
+  const servers = $derived(orderedServers(store));
+  const dmMentions = $derived(store.dmList().reduce((n, c) => n + store.mentionCount(c.id), 0));
+
+  function href(server: string): string {
+    const channel = recalled(server) ?? firstChannel(store, server);
+    return channel ? resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server, channel }) : resolve('/app/channels/@me');
+  }
+</script>
+
+<nav class="rail" aria-label={m.shell.servers}>
+  <a class="item" class:active={active === null} href={resolve('/app/channels/@me')} aria-current={active === null ? 'page' : undefined} use:tooltip={m.shell.directMessages} aria-label={m.shell.directMessages}>
+    <span class="pill" aria-hidden="true"></span>
+    <span class="tile home"><MessageCircle /></span>
+    {#if dmMentions}<span class="badge"><Badge count={dmMentions} label={m.shell.mentions(dmMentions)} /></span>{/if}
+  </a>
+  <div class="separator" role="separator"></div>
+  {#each servers as server (server.id)}
+    {@const badge = store.serverBadge(server.id, (c) => canView(store, c))}
+    <a
+      class="item" class:active={active === server.id} class:unread={badge.unread}
+      href={href(server.id)} aria-current={active === server.id ? 'page' : undefined}
+      use:tooltip={server.name} aria-label={m.shell.serverLabel(server.name, badge.mentions)}
+    >
+      <span class="pill" aria-hidden="true"></span>
+      {#if server.icon}
+        <img class="tile" src={fileUrl(server.icon, { maxSide: 128 })} alt="" width="40" height="40" draggable="false" />
+      {:else}
+        <span class="tile initials">{initials(server.name)}</span>
+      {/if}
+      {#if badge.mentions}<span class="badge"><Badge count={badge.mentions} /></span>{/if}
+    </a>
+  {/each}
+</nav>
+
+<style>
+  .rail {
+    display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
+    padding: var(--space-3) 0; overflow-y: auto; scrollbar-width: none;
+  }
+  .item { position: relative; display: grid; place-items: center; width: 100%; height: var(--rail-icon); color: var(--text-normal); text-decoration: none; }
+  .tile {
+    display: grid; place-items: center; width: var(--rail-icon); height: var(--rail-icon);
+    border-radius: var(--radius-lg); background: var(--surface-3); object-fit: cover;
+    transition: background var(--dur-hover) var(--ease-out);
+  }
+  .home :global(svg) { width: var(--icon-lg); height: var(--icon-lg); }
+  .item:hover .home, .active .home { background: var(--accent); color: var(--on-accent); }
+  .initials { color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans); }
+  .item:hover .initials { background: var(--surface-5); }
+  /* The pill on the left edge: a dot for unread, taller on hover, full height when selected. */
+  .pill {
+    position: absolute; left: 0; top: 50%; width: 4px; height: 0; translate: 0 -50%;
+    border-radius: 0 var(--radius-xs) var(--radius-xs) 0; background: var(--text-strong);
+    transition: height var(--dur-popover) var(--ease-out);
+  }
+  .unread .pill { height: 8px; }
+  .item:hover .pill { height: 20px; }
+  .active .pill { height: 38px; }
+  .badge { position: absolute; right: 12px; bottom: -4px; padding: 2px; border-radius: var(--radius-full); background: var(--surface-0); line-height: 0; }
+  .separator { width: 32px; height: 1px; flex: none; background: var(--border-default); margin: var(--space-1) 0; }
+  .item:focus-visible { outline: none; }
+  .item:focus-visible .tile { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>

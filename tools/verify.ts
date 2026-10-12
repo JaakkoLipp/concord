@@ -9,6 +9,7 @@ const ROOT = join(import.meta.dirname, '..');
 const WEB = join(ROOT, 'apps', 'web');
 const bin = (dir: string, name: string) => join(dir, 'node_modules', '.bin', name);
 const steps: [string, string, string[], string][] = [
+  ['assets', process.execPath, ['tools/assets/twemoji.ts'], ROOT],
   ['typecheck', bin(ROOT, 'tsc'), ['-p', 'tsconfig.json', '--noEmit'], ROOT],
   ['lint', bin(ROOT, 'eslint'), ['.'], ROOT],
   ['no literals', process.execPath, ['tools/lint/no-literals.ts'], ROOT],

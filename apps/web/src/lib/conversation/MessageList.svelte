@@ -1,0 +1,200 @@
+<script lang="ts">
+  /**
+   * The message list (client.md section 6.1): a bounded win loaded in pages of 100 at either edge,
+   * grouping within 7 minutes, day and "new messages" dividers, and scroll anchoring. When the user is at
+   * the bottom, new content keeps them there. Otherwise the message at the top of the view stays put while
+   * history loads above it or media and late embeds change height.
+   */
+  import type { Message, Session } from '@concord/domain';
+  import { tick } from 'svelte';
+  import ArrowDown from '@lucide/svelte/icons/arrow-down';
+  import { setMarkdownContext } from '$lib/markdown/context.ts';
+  import { dayLabel, sameDay, ulidTime } from '$lib/markdown/time.ts';
+  import { m } from '$lib/i18n/index.ts';
+  import MessageItem from './MessageItem.svelte';
+
+  interface Props { session: Session; channel: string; target?: string | undefined; onjump: (id: string) => void }
+  let { session, channel, target, onjump }: Props = $props();
+  const store = $derived(session.store);
+  const info = $derived(store.channels.get(channel));
+  const server = $derived(info?.kind === 'text' ? info.server : undefined);
+  setMarkdownContext(() => ({ store, server }));
+
+  const win = $derived(store.windows.get(channel));
+  const messages = $derived((win?.ids ?? []).map((id) => store.messages.get(id)).filter((x): x is Message => !!x));
+
+  // The "new messages" line sits after the last acknowledged message as it was when the channel opened.
+  let unreadFrom = $state<string | undefined>(undefined);
+  $effect.pre(() => {
+    void channel;
+    unreadFrom = store.isUnread(channel) ? (store.unreads.get(channel)?.lastId ?? '0') : undefined;
+  });
+
+  interface Row { message: Message; continuation: boolean; day: Date | null; unread: boolean }
+  const rows = $derived.by(() => {
+    const out: Row[] = [];
+    let prev: Message | undefined;
+    let unreadShown = false;
+    for (const msg of messages) {
+      const t = ulidTime(msg.id);
+      const pt = prev ? ulidTime(prev.id) : null;
+      const day = !pt || !sameDay(pt, t) ? t : null;
+      const unread = !unreadShown && !!unreadFrom && msg.id > unreadFrom && msg.author !== store.selfId;
+      if (unread) unreadShown = true;
+      const continuation = !!prev && !day && !unread && !msg.system && !prev.system && !msg.replies.length
+        && prev.author === msg.author && (prev.masquerade?.name ?? '') === (msg.masquerade?.name ?? '')
+        && t.getTime() - pt!.getTime() < 7 * 60_000;
+      out.push({ message: msg, continuation, day, unread });
+      prev = msg;
+    }
+    return out;
+  });
+
+  let scroller = $state<HTMLDivElement | null>(null);
+  let content = $state<HTMLDivElement | null>(null);
+  let stuck = $state(true);
+  let anchor: { id: string; top: number } | null = null;
+  let highlighted = $state<string | null>(null);
+  let loadingOlder = false;
+  let loadingNewer = false;
+
+  function measureAnchor() {
+    if (!scroller || !content) return;
+    const top = scroller.getBoundingClientRect().top;
+    for (const el of content.querySelectorAll<HTMLElement>('[data-id]')) {
+      const r = el.getBoundingClientRect();
+      if (r.bottom > top) { anchor = { id: el.dataset.id!, top: r.top - top }; return; }
+    }
+    anchor = null;
+  }
+
+  function restore() {
+    if (!scroller || !content) return;
+    if (stuck && win?.atNewest) {
+      scroller.scrollTop = scroller.scrollHeight;
+      return;
+    }
+    if (!anchor) return;
+    const el = content.querySelector<HTMLElement>(`[data-id="${anchor.id}"]`);
+    if (!el) return;
+    const delta = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - anchor.top;
+    if (Math.abs(delta) > 0.5) scroller.scrollTop += delta;
+  }
+
+  function onscroll() {
+    if (!scroller) return;
+    stuck = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 8;
+    measureAnchor();
+    if (scroller.scrollTop < 800) void older();
+    if (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 800) void newer();
+  }
+
+  async function older() {
+    if (loadingOlder || !win || win.atOldest) return;
+    loadingOlder = true;
+    measureAnchor();
+    try {
+      await session.loadOlder(channel);
+      await tick();
+      restore();
+    } finally {
+      loadingOlder = false;
+    }
+  }
+
+  async function newer() {
+    if (loadingNewer || !win || win.atNewest) return;
+    loadingNewer = true;
+    measureAnchor();
+    try {
+      await session.loadNewer(channel);
+      await tick();
+      restore();
+    } finally {
+      loadingNewer = false;
+    }
+  }
+
+  async function present() {
+    stuck = true;
+    if (!win?.atNewest) await session.jumpToPresent(channel);
+    await tick();
+    if (scroller) scroller.scrollTop = scroller.scrollHeight;
+  }
+
+  // Opening a channel starts at the bottom; a jump starts at the target, centred and briefly highlighted.
+  $effect(() => {
+    void channel;
+    stuck = !target;
+    anchor = null;
+  });
+  $effect(() => {
+    if (!target || !content || !messages.some((x) => x.id === target)) return;
+    void tick().then(() => {
+      const el = content?.querySelector<HTMLElement>(`[data-id="${target}"]`);
+      if (!el || !scroller) return;
+      scroller.scrollTop += el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - scroller.clientHeight / 3;
+      highlighted = target;
+      stuck = false;
+      measureAnchor();
+    });
+  });
+
+  // Any change in content height (new messages, images, late embeds) keeps the view where it was.
+  $effect(() => {
+    if (!content) return;
+    const ro = new ResizeObserver(() => restore());
+    ro.observe(content);
+    return () => ro.disconnect();
+  });
+  $effect(() => {
+    void rows.length;
+    void tick().then(restore);
+  });
+</script>
+
+<div class="scroller" bind:this={scroller} {onscroll} role="log" aria-live={stuck ? 'polite' : 'off'} aria-label={m.conversation.messages} tabindex="-1">
+  <div class="content" bind:this={content}>
+    {#if win?.atOldest}
+      <div class="start">
+        <h2>{m.conversation.welcome(info?.kind === 'text' || info?.kind === 'group' ? info.name : '')}</h2>
+        <p>{m.conversation.start}</p>
+      </div>
+    {:else if win}
+      <div class="loading" aria-hidden="true">{m.app.loading}</div>
+    {/if}
+    {#each rows as row (row.message.id)}
+      {#if row.day}
+        <div class="divider day" role="separator"><span>{dayLabel(row.day)}</span></div>
+      {/if}
+      {#if row.unread}
+        <div class="divider new" role="separator"><span>{m.conversation.newMessages}</span></div>
+      {/if}
+      <MessageItem message={row.message} {store} {server} continuation={row.continuation} highlighted={highlighted === row.message.id} {onjump} />
+    {/each}
+    <div class="end"></div>
+  </div>
+</div>
+{#if win && (!win.atNewest || !stuck)}
+  <button class="present" onclick={present}>{m.conversation.jumpToPresent}<ArrowDown size={16} /></button>
+{/if}
+
+<style>
+  .scroller { flex: 1; min-height: 0; overflow-y: auto; overflow-anchor: none; }
+  .content { display: flex; flex-direction: column; min-height: 100%; justify-content: flex-end; padding-bottom: var(--space-5); }
+  .start { padding: var(--space-8) var(--space-5) var(--space-5); }
+  .start h2 { margin: 0 0 var(--space-2); color: var(--text-strong); font: 700 var(--text-xl) var(--font-sans); }
+  .start p { margin: 0; color: var(--text-secondary); }
+  .loading { padding: var(--space-6); text-align: center; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
+  .divider { display: flex; align-items: center; margin: var(--space-6) var(--space-5) 0; height: 0; border-top: 1px solid var(--border-default); }
+  .divider span { margin: 0 auto; padding: 0 var(--space-2); background: var(--surface-0); color: var(--text-secondary); font: 500 var(--text-xs) var(--font-sans); translate: 0 -50%; }
+  .divider.new { border-color: var(--danger); }
+  .divider.new span { margin: 0 0 0 auto; color: var(--danger); background: var(--surface-0); font-weight: 700; }
+  .end { height: 1px; }
+  .present {
+    position: absolute; left: 50%; bottom: calc(var(--composer-h) + var(--space-8)); translate: -50% 0; z-index: 5;
+    display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-5);
+    border: 1px solid var(--border-default); border-radius: var(--radius-full); background: var(--surface-4);
+    color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans); box-shadow: var(--shadow-popover);
+  }
+</style>

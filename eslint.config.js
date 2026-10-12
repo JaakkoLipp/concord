@@ -13,6 +13,8 @@ export default ts.config(
       'svelte/no-at-html-tags': 'error',
       // Reactive state is declared explicitly with SvelteMap; local Sets and Maps in computations are not state.
       'svelte/prefer-svelte-reactivity': 'off',
+      // Internal links go through resolve() by convention; external links (embeds, markdown) can't.
+      'svelte/no-navigation-without-resolve': ['error', { ignoreLinks: true }],
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },

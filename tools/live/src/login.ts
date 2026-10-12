@@ -13,7 +13,7 @@ export async function signIn(page: Page, handle: string): Promise<void> {
   const p = state?.personas[handle];
   if (!p) throw new Error(`unknown persona ${handle}`);
   await page.goto(APP, { waitUntil: 'networkidle' });
-  await page.waitForURL(/\/app\/login/);
+  await page.waitForURL(/\/app\/login/, { waitUntil: 'commit' });
   await page.getByLabel('Email').fill(p.email);
   await page.getByLabel('Password').fill(passwordFor(handle));
   await page.getByRole('button', { name: 'Log in' }).click();
@@ -25,7 +25,7 @@ export async function signIn(page: Page, handle: string): Promise<void> {
     await page.getByLabel('Authentication code').fill(totp(p.totpSecret));
     await page.getByRole('button', { name: 'Verify' }).click();
   }
-  await page.waitForURL((u) => !u.pathname.startsWith('/app/login'));
+  await page.waitForURL((u) => !u.pathname.startsWith('/app/login'), { waitUntil: 'commit' });
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
