@@ -14,11 +14,11 @@
   import UserDock from './UserDock.svelte';
   import ImageViewer from '$lib/conversation/ImageViewer.svelte';
 
-  interface Props { store: Store; server: string | null; channel: string | null; children: Snippet; panel?: Snippet | undefined }
-  let { store, server, channel, children, panel }: Props = $props();
+  interface Props { store: Store; server: string | null; channel: string | null; children: Snippet; panel?: Snippet | undefined; panelWidth?: 'members' | 'profile' }
+  let { store, server, channel, children, panel, panelWidth = 'members' }: Props = $props();
 </script>
 
-<div class="shell" class:panel={!!panel && shell.panelOpen} class:sidebar-open={shell.sidebarOpen}>
+<div class="shell" class:panel={!!panel && shell.panelOpen} class:sidebar-open={shell.sidebarOpen} style:--panel-w={panelWidth === 'profile' ? 'var(--dm-panel-w)' : 'var(--members-w)'}>
   <div class="rail"><ServerRail {store} active={server} /></div>
   <div class="sidebar">
     {#if server}
@@ -45,7 +45,7 @@
     grid-template-rows: minmax(0, 1fr) auto;
     grid-template-areas: 'rail sidebar main' 'dock dock main';
   }
-  .shell.panel { grid-template-columns: var(--rail-w) var(--sidebar-w) minmax(0, 1fr) var(--members-w); grid-template-areas: 'rail sidebar main panel' 'dock dock main panel'; }
+  .shell.panel { grid-template-columns: var(--rail-w) var(--sidebar-w) minmax(0, 1fr) var(--panel-w); grid-template-areas: 'rail sidebar main panel' 'dock dock main panel'; }
   .rail { grid-area: rail; display: flex; min-height: 0; }
   .rail > :global(*) { flex: 1; }
   .sidebar {
@@ -59,7 +59,7 @@
 
   @media (max-width: 1100px) {
     .shell.panel { grid-template-columns: var(--rail-w) var(--sidebar-w) minmax(0, 1fr); grid-template-areas: 'rail sidebar main' 'dock dock main'; }
-    .side-panel { position: fixed; z-index: 40; top: var(--header-h); right: 0; bottom: 0; width: var(--members-w); box-shadow: var(--shadow-popover); }
+    .side-panel { position: fixed; z-index: 40; top: var(--header-h); right: 0; bottom: 0; width: var(--panel-w); box-shadow: var(--shadow-popover); }
   }
   @media (max-width: 700px) {
     .shell, .shell.panel { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: 'main'; }
@@ -69,6 +69,6 @@
     .dock { bottom: 0; left: 0; width: min(calc(var(--rail-w) + var(--sidebar-w)), calc(100vw - 3rem)); }
     .sidebar-open .rail, .sidebar-open .sidebar, .sidebar-open .dock { translate: 0 0; }
     .scrim { display: block; position: fixed; inset: 0; z-index: 45; border: 0; background: var(--scrim); }
-    .side-panel { top: var(--header-h); width: min(var(--members-w), 85vw); }
+    .side-panel { top: var(--header-h); width: min(var(--panel-w), 85vw); }
   }
 </style>

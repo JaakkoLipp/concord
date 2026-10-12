@@ -111,6 +111,16 @@ export const en = {
     seeMessage: 'See message',
     call: (by: string) => `${by} started a call.`,
   },
+  people: {
+    profile: 'Profile',
+    about: 'About me',
+    memberSince: 'Member since',
+    accountCreated: 'Joined Concord',
+    roles: 'Roles',
+    mutualFriends: (n: number) => plural('en', n, { one: `${n} mutual friend`, other: `${n} mutual friends` }),
+    mutualServers: (n: number) => plural('en', n, { one: `${n} mutual server`, other: `${n} mutual servers` }),
+    openProfile: (name: string) => `Open profile of ${name}`,
+  },
   markdown: {
     spoiler: 'Spoiler, select to reveal',
     unknownUser: 'unknown-user',

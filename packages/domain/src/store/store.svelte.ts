@@ -51,6 +51,7 @@ export class Store {
   readonly messages = new SvelteMap<Id, Message>();
   readonly windows = new SvelteMap<Id, MessageWindow>();
   readonly profiles = new SvelteMap<Id, Profile>();
+  readonly mutuals = new SvelteMap<Id, { users: Id[]; servers: Id[]; channels: Id[] }>();
   /** Channel to user to the time their typing indicator expires. */
   readonly typing = new SvelteMap<Id, Record<Id, number>>();
   /** Servers whose full member list has been fetched. */
@@ -449,7 +450,7 @@ export class Store {
 
   clear(): void {
     this.self = null;
-    for (const map of [this.users, this.servers, this.channels, this.members, this.emojis, this.unreads, this.messages, this.windows, this.profiles, this.typing, this.memberListLoaded]) {
+    for (const map of [this.users, this.servers, this.channels, this.members, this.emojis, this.unreads, this.messages, this.windows, this.profiles, this.mutuals, this.typing, this.memberListLoaded]) {
       (map as SvelteMap<unknown, unknown>).clear();
     }
     this.settings = { servers: {}, channels: {}, serverOrder: [] };

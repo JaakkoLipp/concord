@@ -6,6 +6,7 @@
   import { m } from '$lib/i18n/index.ts';
   import { avatarUrl } from '$lib/view/users.ts';
   import { proxied } from '$lib/view/media.ts';
+  import { popout } from '$lib/view/popout.svelte.ts';
   import Attachment from './Attachment.svelte';
   import Embed from './Embed.svelte';
   import Reactions from './Reactions.svelte';
@@ -38,13 +39,13 @@
         {#if continuation}
           <time class="hover-time" datetime={sent.toISOString()} title={fullDate(sent)}>{timeOfDay(sent)}</time>
         {:else}
-          <Avatar src={avatar} size={40} />
+          <button class="avatar-button" tabindex="-1" aria-hidden="true" onclick={(e) => popout.open(message.author, server, e.currentTarget)}><Avatar src={avatar} size={40} /></button>
         {/if}
       </div>
       <div class="body">
         {#if !continuation}
           <header class="head">
-            <span class="name" id="author-{message.id}" style:--role={colour}>{name}</span>
+            <button class="name" id="author-{message.id}" style:--role={colour} onclick={(e) => popout.open(message.author, server, e.currentTarget)}>{name}</button>
             {#if user?.bot || message.webhook}<span class="tag">{message.webhook ? m.conversation.webhook : m.conversation.bot}</span>{/if}
             <time class="time" datetime={sent.toISOString()} title={fullDate(sent)}>{timeOfDay(sent)}</time>
           </header>
@@ -81,7 +82,9 @@
   .row:hover .hover-time { visibility: visible; }
   .body { min-width: 0; flex: 1; }
   .head { display: flex; align-items: baseline; gap: var(--space-3); min-width: 0; }
-  .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); }
+  .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0; border: 0; background: none; color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); }
+  .name:hover { text-decoration: underline; text-decoration-color: var(--text-strong); }
+  .avatar-button { padding: 0; border: 0; background: none; border-radius: 50%; height: fit-content; }
   .name[style*='--role'] { background: var(--role); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .tag { padding: 0 var(--space-2); border-radius: var(--radius-xs); background: var(--accent); color: var(--on-accent); font: 700 0.625rem/1rem var(--font-sans); text-transform: uppercase; }
   .time { color: var(--text-secondary); font: var(--text-xs) var(--font-sans); font-variant-numeric: tabular-nums; flex: none; }

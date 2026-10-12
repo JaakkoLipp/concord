@@ -157,6 +157,19 @@ export class Session {
     });
   }
 
+  /** A user's profile and mutual connections, fetched once per session and refreshed on request. */
+  async loadProfile(user: Id, refresh = false): Promise<void> {
+    if (this.store.profiles.has(user) && !refresh) return;
+    const [profile, mutual, fresh] = await Promise.all([
+      this.backend.profile(user).catch(() => ({})),
+      user === this.store.selfId ? Promise.resolve({ users: [], servers: [], channels: [] }) : this.backend.mutual(user).catch(() => ({ users: [], servers: [], channels: [] })),
+      this.store.users.has(user) ? Promise.resolve(null) : this.backend.user(user).catch(() => null),
+    ]);
+    if (fresh) this.store.upsertUsers([fresh]);
+    this.store.profiles.set(user, profile);
+    this.store.mutuals.set(user, mutual);
+  }
+
   jumpToPresent(channel: Id): Promise<void> {
     return this.loadLatest(channel);
   }
