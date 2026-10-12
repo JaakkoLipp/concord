@@ -1,0 +1,168 @@
+# Concord: milestones
+
+Status: draft for review, roadmap level. Each milestone gets its own detailed plan before work starts.
+Read with [product-brief.md](product-brief.md) and [architecture.md](architecture.md).
+
+Every milestone ends with a demo on Jaakko's real devices. A milestone is done when its acceptance criteria pass and the device test list is signed off, not when the code merges.
+
+**Devices referred to below**: Jaakko's Windows PC, Jaakko's Linux machine, one phone, and at least two other people on their own home connections.
+
+**Development runs against the VPS.** The client is built and served on Jaakko's machine against the Stoat stack at `concord.jaalip.com`, which runs from M0 for development only. M3 turns it into production for other people.
+
+## Overview
+
+| Milestone | Outcome | Depends on | Specs written before it starts |
+|---|---|---|---|
+| M0 | Stoat stack on the VPS for development, seed data, recorded fixtures, encoder measurements, decision gate part A | Nothing | [dev-environment.md](dev-environment.md) |
+| M1 | Read-only client with the final layout | M0 | [client.md](client.md) |
+| M2 | Full text chat, DMs and friends | M1 | client.md |
+| M3 | VPS to production, media validated on real networks, decision gate part B | M2 | [vps-runbook.md](vps-runbook.md), ops spec |
+| M4 | Voice and 1080p60 screen share in the browser | M3 | client.md voice section |
+| M5 | Desktop apps for Windows and Linux | M4 | desktop spec |
+| M6 | Website: invites, registration, account management, downloads | M3 | website spec |
+| M7 | Polish, Finnish locale, PWA with web push, closed beta | M2 to M6 | none new |
+| M8 | Launch to the whole community | M7 | none new |
+| M9 | Native Linux client | M8 | native client spec |
+
+M4 and M6 can run in parallel after M3. The desktop, website, ops and native-client specs are written just before their milestones, so they reflect what the client work has taught us.
+
+## Decision gate
+
+Section 10 of the architecture document lists five criteria for switching to our own backend. Building the client before inviting anyone splits the gate in two:
+
+- **Part A, end of M0**: registration mechanism, product must-haves, and how painful the stack is to run. Criteria 1, 2 and a first look at 3.
+- **Part B, end of M3**: 1080p60 on real networks, TURN, voice reliability, and operating the stack on the VPS. Criteria 3, 4 and 5.
+
+The cost of this order: part B comes after M1 and M2 are built. If part B fails, the client's UI, domain store and most voice code carry over, and the Stoat adapter is replaced. M0's encoder measurements reduce that risk early, because encoder choice and sharer CPU don't depend on the network.
+
+## M0: Development stack
+
+Detailed in [dev-environment.md](dev-environment.md).
+
+**Scope**:
+
+- Stoat 0.15.7 on the VPS behind Caddy, with Mailpit catching email, and the client's dev server on Jaakko's machine proxying to it.
+- First admin account, server-creation restriction, invite permission removed from members.
+- A seed script that builds a realistic dataset through the API.
+- A recorder that captures real REST responses and WebSocket events as test fixtures.
+- The screen-share test page, used against the VPS's LiveKit to measure encoders and sharer CPU at 1080p60 in Chrome, Firefox and a bare Electron shell, on Windows and Linux.
+
+**Acceptance criteria**:
+
+- One command starts the stack, and one command reseeds it from scratch.
+- Stoat's own web client works against the development stack: an account created with `create-account.sh` and verified through Mailpit can log in with TOTP, chat and join voice.
+- A non-admin account cannot create a server or an invite.
+- Fixtures for login, `Ready`, message history, member list and a set of live events are recorded and committed.
+- Encoder results are written to `docs/m0-results.md`: which encoder each browser and Electron uses, achieved framerate, and sharer CPU at 1080p60.
+- Decision gate part A is recorded in the same file.
+
+## M1: Read-only client
+
+**Scope**:
+
+- Monorepo, tooling, continuous integration, design tokens, and the layout from the reference screenshots.
+- `packages/stoat`: generated types, REST client, WebSocket with keepalive and cold-start reconnect, version capability table.
+- `packages/domain`: normalised store and permission calculator.
+- Login with TOTP and onboarding.
+- Server rail, categories and channel list with unread markers, DM list, message history with the bounded window and jump to present, markdown rendering, embeds and attachments as read-only, member list grouped by hoisted role, profile popout and DM profile panel, user dock.
+- Contract tests replaying the M0 fixtures, so a Stoat upgrade that changes the protocol fails CI.
+
+**Acceptance criteria**:
+
+- Side by side with the reference screenshots, layout, spacing, colours and density read as the same class of product. Jaakko signs this off explicitly.
+- Killing the network for a minute and restoring it brings the client back with correct state and no duplicate or missing messages.
+- Performance budgets from the product brief are measured and reported, even if not yet all met.
+
+**Device tests**: Windows Chrome and Firefox, Linux Chrome and Firefox, phone browser layout sanity check.
+
+## M2: Text chat
+
+**Scope**:
+
+- Messaging: send with optimistic updates, replies, mentions with autocomplete, reactions, edit, delete, pins, attachment upload with progress, emoji picker with custom emoji, favourites and frequently used, typing indicator, unread and mention tracking with acknowledgement, per-channel search.
+- Social: DMs and group DMs, friends list with online, all, pending and blocked tabs, profile popouts, status and presence with automatic idle.
+- Profile editing: avatar, banner, display name, bio and custom status.
+- Server management for admins: create a server, channels, categories, roles, per-channel permission overrides, custom emoji upload, invites, kicks and bans. Creating a server removes the invite permission from regular members immediately.
+- Browser notifications while the client is open.
+
+**Acceptance criteria**:
+
+- Two accounts on two machines see each other's messages, edits, deletes, reactions and typing within a second.
+- Unread and mention markers stay correct across two devices for the same account.
+- Every MVP messaging feature in the product brief works.
+
+**Device tests**: a scripted 30-minute chat session across two machines against the development stack. A session with friends follows at M3.
+
+## M3: VPS deployment and media validation
+
+Detailed in [vps-runbook.md](vps-runbook.md).
+
+**Scope**: wiping the development data, the email relay, the registration gate, TURN on a floating IP, backups with a restore drill, and our client deployed at `/app` for friends to try text chat.
+
+**Acceptance criteria**:
+
+- A direct account-create call from the internet is refused, and the internal path works.
+- Voice with at least four people on different home and mobile networks for 30 minutes without dropouts, using Stoat's own client.
+- The test page achieves 1080p60 from Windows to viewers on other networks, and steps down layers on a throttled viewer.
+- A forced-relay test with UDP 3478 closed shows media relayed over TLS on 443.
+- A restore from backup onto a fresh machine brings back accounts, messages, attachments and avatars.
+- Decision gate part B is recorded in `docs/m3-results.md`.
+
+## M4: Voice and screen share in the browser
+
+**Scope**: join and leave, voice occupancy in the channel list and DM list, DM calls with ringing, mute and deafen, speaking indicators, per-user volume, voice settings with device selection, volumes, microphone test, input sensitivity, noise suppression and echo cancellation, screen share with quality presets and our 1080p60 publishing settings, viewer layer selection, camera, connection-quality indicator, reconnect on network change.
+
+**Acceptance criteria**:
+
+- A 1080p60 share from Windows Chrome reaches a viewer at 1080p60 when bandwidth allows, confirmed in the client's stats overlay.
+- Throttling the sharer's upload makes the stream step down layers instead of freezing.
+- A voice call survives switching Wi-Fi networks.
+
+**Device tests**: a real voice evening with at least five people, including one screen share of a game. Include one Firefox sharer and one Firefox viewer.
+
+## M5: Desktop apps
+
+**Scope**: Electron shell loading the hosted client, screen and window picker, push-to-talk on Windows, X11 and Wayland where supported, screen-share audio on Windows without re-broadcasting the call, Linux hardware encoding setting, tray and notifications, deep links, Windows installer with auto-update and a Flatpak bundle published on GitHub Releases, then Flathub submission. The M6 downloads page links to these releases.
+
+**Acceptance criteria**:
+
+- Fresh install on Windows and on Linux through Flatpak, log in, join voice, share a window, use push-to-talk while a game has focus.
+- Idle memory within the product brief's budget, measured.
+- An auto-update on Windows from one shell version to the next.
+
+**Device tests**: Windows PC, Linux machine on Wayland and on X11 if available.
+
+## M6: Website
+
+**Scope**: landing, invite page with the server allowlist, registration through our server behind the Caddy rule, Stoat's email link targets, the standalone account page for email, password, TOTP, recovery codes, sessions and deletion, downloads page, the notification-link redirect, and the routing switch that moves Stoat's own client to `ref.concord.jaalip.com`.
+
+**Acceptance criteria**:
+
+- A new person opens an invite link on a phone, registers, verifies email, sets a username, and lands in the server in under three minutes.
+- Direct calls to Stoat's account-create endpoint from outside the server are still refused, and invites to servers outside the allowlist are rejected.
+- Password reset and TOTP recovery both work without an admin.
+
+**Device tests**: two people who have never seen the app go through the invite flow unassisted.
+
+## M7: Polish and closed beta
+
+**Scope**: Finnish translation, PWA install and mobile layout pass, web push notifications to the installed app, keyboard navigation and focus states everywhere, empty and error states, the performance budgets, settings screens, an accessibility pass, a final visual polish pass against the reference, and a two-week beta with about 20 members.
+
+**Acceptance criteria**:
+
+- All performance budgets met.
+- A mention or DM reaches an Android phone and an iPhone with the app installed to the home screen, and tapping it opens the right message.
+- No open bugs rated severe after the beta's last week.
+- Beta testers say they would move their chat over. We ask them directly.
+
+## M8: Launch
+
+**Scope**: invite the whole community, monitoring and alerting tuned, operations runbook for upgrades, backups and incidents, a feedback channel.
+
+**Acceptance criteria**: the success criteria in the product brief, checked after one month.
+
+## M9: Native Linux client
+
+**Scope**: a Rust desktop client reusing the protocol knowledge in `packages/stoat` and the domain model, the LiveKit Rust SDK with VA-API or NVENC encoding, and the same visual design. Planned in detail after launch, once the web client's design is settled.
+
+**Acceptance criteria, initial**: a 1080p60 share from Linux at under one CPU core, and idle memory well below the Electron app.

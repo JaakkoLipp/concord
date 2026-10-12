@@ -1,0 +1,48 @@
+# Concord's additions to Stoat's self-hosted compose.yml.
+# Never name this compose.override.yml: Stoat's generate_config.sh renames that file on --overwrite.
+# Always run compose through ./concord/dc so both files are used.
+services:
+  # Pin every Stoat service to 0.15.7 (self-hosted commit 9af5e90 still pins 0.15.5).
+  api:
+    image: ghcr.io/stoatchat/api:v0.15.7
+  events:
+    image: ghcr.io/stoatchat/events:v0.15.7
+  autumn:
+    image: ghcr.io/stoatchat/file-server:v0.15.7
+  january:
+    image: ghcr.io/stoatchat/proxy:v0.15.7
+  gifbox:
+    image: ghcr.io/stoatchat/gifbox:v0.15.7
+  crond:
+    image: ghcr.io/stoatchat/crond:v0.15.7
+  pushd:
+    image: ghcr.io/stoatchat/pushd:v0.15.7
+  voice-ingress:
+    image: ghcr.io/stoatchat/voice-ingress:v0.15.7
+
+  # MongoDB 7.0, not Stoat's mongo:8. Kernels 6.19+ broke TCMalloc, and 8.0.21 to 8.0.29 and 8.3.0 to 8.3.8 refuse to
+  # start on them. The fixed 8.0.30+ and 8.3.9+ still refuse Ubuntu's "7.0.0-N" kernels (SERVER-131779), and the images
+  # with that fix (8.0.35, 8.3.14) are not on Docker Hub yet. 7.0 has no guard and is supported on every kernel
+  # (SERVER-125742). Move to 8.0 once 8.0.35 is published: set featureCompatibilityVersion 7.0, bump the tag, then set 8.0.
+  # Never downgrade after 8.0 has run: the data files are not backward compatible.
+  # The WiredTiger cache is capped at 0.5 GB (the default is about 1.4 GB here) so the whole stack fits in 3.7 GB.
+  database:
+    image: docker.io/mongo:7.0.43
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.5"]
+
+  # Our Caddyfile replaces Stoat's. Same container path, so this mount wins.
+  caddy:
+    volumes:
+      - ./concord/Caddyfile:/etc/caddy/Caddyfile:ro
+
+  # Development mail catcher. Web UI on the server's loopback only; reach it with an SSH tunnel.
+  # Replaced by a real relay before other people register.
+  mailpit:
+    image: axllent/mailpit:v1.31.5
+    restart: always
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+      MP_MAX_MESSAGES: "2000"
+    ports:
+      - "127.0.0.1:8025:8025"

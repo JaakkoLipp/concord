@@ -1,0 +1,72 @@
+# Concord's Caddyfile: Stoat's self-hosted Caddyfile (commit 9af5e90) plus the marked additions.
+{$HOSTNAME} {
+	route /.well-known/stoat {
+		uri strip_prefix /.well-known/stoat
+		header {
+			Access-Control-Allow-Origin *
+		}
+		file_server {
+			root /stoat.json
+		}
+	}
+
+	route /api* {
+		# Concord: registration is invite-only. Public account creation is refused here;
+		# accounts are created by our website server (and deploy/create-account.sh) over the
+		# internal Docker network, which never passes through Caddy.
+		@signup {
+			method POST
+			path_regexp signup (?i)^/api/+auth/+account/+create/*$
+		}
+		respond @signup "Registration is by invitation only." 403
+
+		uri strip_prefix /api
+		reverse_proxy http://api:14702 {
+			header_down Location "^/" "/api/"
+		}
+	}
+
+	route /ws {
+		uri strip_prefix /ws
+		reverse_proxy http://events:14703 {
+			header_down Location "^/" "/ws/"
+		}
+	}
+
+	route /autumn* {
+		uri strip_prefix /autumn
+		reverse_proxy http://autumn:14704 {
+			header_down Location "^/" "/autumn/"
+		}
+	}
+
+	route /january* {
+		uri strip_prefix /january
+		reverse_proxy http://january:14705 {
+			header_down Location "^/" "/january/"
+		}
+	}
+
+	route /gifbox* {
+		uri strip_prefix /gifbox
+		reverse_proxy http://gifbox:14706 {
+			header_down Location "^/" "/gifbox/"
+		}
+	}
+
+	route /livekit* {
+		uri strip_prefix /livekit
+		reverse_proxy http://livekit:7880 {
+			header_down Location "^/" "/livekit/"
+		}
+	}
+
+	route /ingress* {
+		uri strip_prefix /ingress
+		reverse_proxy http://voice-ingress:8500 {
+			header_down Location "^/" "/ingress/"
+		}
+	}
+
+	reverse_proxy http://web:5000
+}
