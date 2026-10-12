@@ -46,4 +46,4 @@ There are no new fixture scenarios, no screenshot-diff suite and no gallery. CI 
 
 ## Progress, 2026-10-12
 
-All nine agent tasks are done and deployed; results, screenshots and measurements are in [m1-results.md](m1-results.md). Jaakko's tasks remain: the black-base call, the side-by-side sign-off, and the device tests.
+All nine agent tasks are done and deployed; results, screenshots and measurements are in [m1-results.md](m1-results.md). Jaakko approved the look, kept the black base, and passed the device tests on 2026-10-12. M1 is done.

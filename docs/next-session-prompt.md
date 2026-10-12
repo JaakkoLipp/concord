@@ -47,6 +47,6 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 
 ## Open with Jaakko
 
-1. **M1 device tests**: Chrome and Firefox on Windows and Linux, plus a phone. Jaakko has approved the UI's look.
-2. **Decision gate part A**: drafted at the end of `docs/m0-results.md`. It recommends go, and awaits Jaakko's sign-off.
-3. **M0 encoder runs**: one partial Firefox run is recorded in m0-results section 3, with tips. Chrome on Windows is next. The runs matter before M3.
+1. **M0 encoder runs**: one partial Firefox run is recorded in m0-results section 3, with tips. Chrome on Windows is next. The runs matter before M3.
+
+M1 is done, its device tests passed, and decision gate part A is signed off: go.

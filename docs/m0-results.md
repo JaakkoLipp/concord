@@ -222,7 +222,7 @@ The Electron builds are in `spikes/m0-electron/dist/` on the WSL machine. From W
 
 The raw page output for this run is in the conversation of 2026-10-12, not stored in the repo.
 
-## 4. Decision gate part A, draft for Jaakko's sign-off
+## 4. Decision gate part A, signed off by Jaakko on 2026-10-12
 
 Architecture section 10: we switch to our own backend if any criterion turns out true. Part A covers criteria 1 and 2, and a first look at 3.
 
