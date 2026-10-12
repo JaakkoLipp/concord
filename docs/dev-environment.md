@@ -152,7 +152,7 @@ Pitfalls, from Stoat's source:
 
 ## 6. Fixture recorder
 
-The tap is a recording wrapper around the transport in `packages/stoat`. The replay transport implements the same interface, so tests and the UI gallery replay exactly what the code saw. A recording proxy such as mitmproxy would need installing, and Caddy logs carry no bodies.
+The tap is a recording wrapper around the transport in `packages/stoat`. The replay transport implements the same interface, so tests replay exactly what the code saw. A recording proxy such as mitmproxy would need installing, and Caddy logs carry no bodies.
 
 - **Recording**: `pnpm --filter @concord/stoat record` drives scripted scenarios against the seeded stack with two sockets:
   - an actor that performs the actions,
@@ -171,7 +171,7 @@ The tap is a recording wrapper around the transport in `packages/stoat`. The rep
   - emails, IP addresses and invite codes.
 
   A value seen in a secret field is replaced everywhere it appears. A final pattern pass for emails, IPv4 addresses and JWTs fails the recording if anything remains.
-- **Normalisation**: every ULID maps to a stable fake ULID that keeps order and relative time. An optional `--spread-days` flag spreads message times over several days for the gallery. Contract tests compare structure and types, not values.
+- **Normalisation**: every ULID maps to a stable fake ULID that keeps order and relative time. An optional `--spread-days` flag spreads message times over several days. Contract tests compare structure and types, not values.
 - **Scenarios**:
   - Login, the MFA flow with TOTP and a recovery code, and onboarding.
   - `GET /`, plus the 401, 403, 404, 409 and 429 error shapes.

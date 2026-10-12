@@ -26,7 +26,7 @@ The live screenshots match the reference's pixel size: 125% scaling, CSS viewpor
 |---|---|
 | [discord-reference.webp](reference/discord-reference.webp) | [server-view.png](m1-results/server-view.png) |
 | [discord-dm-and-profile-panel.webp](reference/discord-dm-and-profile-panel.webp) | [dm-view.png](m1-results/dm-view.png) |
-| [discord-profile-popout.png](reference/discord-profile-popout.png) | Opened from the member list or a message author, live |
+| [discord-profile-popout.png](reference/discord-profile-popout.png) | [popout.png](m1-results/popout.png) |
 
 More live screenshots:
 - **Markdown, embeds and code**: [tekniikka.png](m1-results/tekniikka.png).
@@ -49,7 +49,7 @@ Lotta moved from Offline to Online in the member list, with her status text and 
 
 ## 4. Reconnect check
 
-`tools/live/src/reconnect.ts`, three runs: `dev` has `#yleinen` open, and the browser goes offline for 60 seconds. Meanwhile `aino` posts three messages, edits one and deletes one over the API.
+`tools/live/src/reconnect.ts`, three runs. The ID, duplicate, edit and delete checks passed in all three. The content comparison was broken in the first two runs, because it read raw markdown and then hidden rows, and it passed once fixed in the third: `dev` has `#yleinen` open, and the browser goes offline for 60 seconds. Meanwhile `aino` posts three messages, edits one and deletes one over the API.
 
 | Check | Result |
 |---|---|

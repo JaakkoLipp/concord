@@ -27,6 +27,13 @@ for (const [name, path, w, h, scale] of shots) {
   await page.goto(`${APP}${path}`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(2000);
   await page.screenshot({ path: join(out, name) });
+  if (name === 'server-view.png') {
+    // The profile popout, opened from the member list like the reference's.
+    await page.locator('aside[aria-label=Members]').getByRole('button', { name: /Aino Virtanen/ }).click();
+    await page.waitForTimeout(1500);
+    const box = await page.getByRole('dialog', { name: 'Profile' }).boundingBox();
+    if (box) await page.screenshot({ path: join(out, 'popout.png'), clip: box });
+  }
   await context.close();
   console.log(name);
 }

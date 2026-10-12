@@ -46,4 +46,4 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 
 - `pnpm verify` (or `node tools/verify.ts`) before every commit. `node tools/deploy/web.ts` deploys to `/app` and waits for it to answer.
 - `node tools/live/src/shot.ts dev out.png <channel>` takes a live screenshot. `review.ts`, `presence.ts`, `reconnect.ts` and `perf.ts` are the M1 checks.
-- Each finished task is committed and pushed. CI runs `pnpm verify`.
+- CI runs `pnpm verify` on every push to GitHub.

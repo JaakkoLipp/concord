@@ -90,7 +90,7 @@ export class Session {
     }
     // Windows held across a disconnect may miss edits and deletes. Reload the open one where it was,
     // and drop the rest so they reload when opened.
-    for (const channel of [...this.store.windows.keys()]) if (channel !== this.openChannelId) this.store.windows.delete(channel);
+    for (const channel of [...this.store.windows.keys()]) if (channel !== this.openChannelId) this.store.dropWindow(channel);
     if (this.openChannelId) await this.reloadWindow(this.openChannelId);
   }
 

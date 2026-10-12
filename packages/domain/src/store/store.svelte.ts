@@ -122,6 +122,11 @@ export class Store {
     this.windows.set(channel, { ids, atNewest, atOldest });
   }
 
+  /** Forget a channel's window and the messages only it held. */
+  dropWindow(channel: Id): void {
+    this.dropWindowMessages(channel);
+  }
+
   private dropWindowMessages(channel: Id): void {
     for (const id of this.windows.get(channel)?.ids ?? []) this.messages.delete(id);
     this.windows.delete(channel);

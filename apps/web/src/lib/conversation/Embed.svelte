@@ -8,13 +8,16 @@
   import { viewer } from '$lib/view/viewer.svelte.ts';
 
   let { embed }: { embed: Embed } = $props();
+  // Embeds come from senders; only http and https become links (client.md section 6.2).
+  const safe = (url: string | undefined) => (url && /^https?:\/\//i.test(url) ? url : undefined);
+  const link = $derived(embed.kind === 'website' || embed.kind === 'text' ? safe(embed.url) : undefined);
   const colour = $derived(embed.kind === 'website' || embed.kind === 'text' ? embed.colour : undefined);
 </script>
 
 {#if embed.kind === 'image'}
   {@const size = fit(embed.width, embed.height, 400, 300)}
   <button class="media" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.viewImage('')}
-    onclick={() => viewer.open({ src: proxied(embed.url), alt: '', width: embed.width, height: embed.height, original: embed.url })}>
+    onclick={() => viewer.open({ src: proxied(embed.url), alt: '', width: embed.width, height: embed.height, original: safe(embed.url) })}>
     <img src={proxied(embed.url)} alt="" loading="lazy" decoding="async" />
   </button>
 {:else if embed.kind === 'video'}
@@ -26,7 +29,7 @@
     <div class="text">
       {#if embed.kind === 'website' && embed.siteName}<p class="site">{embed.siteName}</p>{/if}
       {#if embed.title}
-        {#if embed.url}<a class="title" href={embed.url} target="_blank" rel="noopener noreferrer">{embed.title}</a>{:else}<p class="title">{embed.title}</p>{/if}
+        {#if link}<a class="title" href={link} target="_blank" rel="noopener noreferrer">{embed.title}</a>{:else}<p class="title">{embed.title}</p>{/if}
       {/if}
       {#if embed.description}
         <div class="description">{#if embed.kind === 'text'}<Markdown source={embed.description} />{:else}{embed.description}{/if}</div>
@@ -36,14 +39,14 @@
       {@const img = embed.image}
       {@const large = img.size === 'large' || !!embed.special}
       {@const size = large ? fit(img.width, img.height, 400, 300) : fit(img.width, img.height, 80, 80)}
-      {#if embed.special?.type === 'youtube' && embed.url}
-        <a class="media large video-link" href={embed.url} target="_blank" rel="noopener noreferrer" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.playVideo}>
+      {#if embed.special?.type === 'youtube' && link}
+        <a class="media large video-link" href={link} target="_blank" rel="noopener noreferrer" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.playVideo}>
           <img src={proxied(img.url)} alt="" loading="lazy" />
           <span class="play" aria-hidden="true"><Play size={28} /></span>
         </a>
       {:else}
         <button class="media" class:large class:thumb={!large} style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.viewImage(embed.title ?? '')}
-          onclick={() => viewer.open({ src: proxied(img.url), alt: embed.title ?? '', width: img.width, height: img.height, original: img.url })}>
+          onclick={() => viewer.open({ src: proxied(img.url), alt: embed.title ?? '', width: img.width, height: img.height, original: safe(img.url) })}>
           <img src={proxied(img.url)} alt="" loading="lazy" decoding="async" />
         </button>
       {/if}

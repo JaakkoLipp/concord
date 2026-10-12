@@ -1,6 +1,6 @@
 # M1 plan: read-only client
 
-Status: signed off 2026-10-12, layer 4. Implements the M1 section of [milestones.md](milestones.md) from [client.md](client.md). Results go in `docs/m1-results.md`.
+Status: signed off 2026-10-12, then revised the same day to Jaakko's testing direction (fewer tests and fixtures, the live deployment as the review surface), layer 4. Implements the M1 section of [milestones.md](milestones.md) from [client.md](client.md). Results go in `docs/m1-results.md`.
 
 **Read-only** means the client shows everything a member sees, but sends nothing except login, onboarding and `Subscribe`. Acknowledgements and automatic idle are M2, as the milestones say, so unread markers come from the server's state and are not cleared. The composer is drawn at its real size, disabled, so the layout can be judged against the reference.
 
