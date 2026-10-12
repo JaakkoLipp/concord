@@ -1,49 +1,52 @@
-# Concord: handoff for the next session
+# Concord: handoff for the next session (M2a, messaging)
 
-You are continuing Concord, a Discord-style chat client on a self-hosted, unmodified Stoat 0.15.5 backend, for a ~200-person community in Finland. Jaakko directs the product, reviews the experience and tests on real devices. Coding agents do most implementation. Jaakko's pronouns are not stated: use the name or they/them.
+You are continuing Concord, a Discord-style chat client on a self-hosted, unmodified Stoat 0.15.5 backend, for a ~200-person community in Finland. Jaakko directs the product, reviews the experience on the live client and tests on real devices. Coding agents do most implementation. Jaakko's pronouns are not stated: use the name or they/them.
+
+**This session's job is M2a, messaging.** Start by writing `docs/m2a-plan.md`, then stop for Jaakko's sign-off before writing code. M2 is split into M2a, M2b and M2c, each in its own chat. The scopes are in `docs/milestones.md`.
 
 ## How to work
 
-- Planning is layered and reviewed. Layers 1 to 3 are signed off: product brief, architecture, milestones, `dev-environment.md` and `client.md`. Each milestone gets a plan, `docs/m<N>-plan.md`, that Jaakko signs off before implementation.
-- Use Sonnet subagents (`model: "sonnet"`) for research and review. Keep synthesis and final writing in the main session. Run research agents read-only, and never run scripts or build tools inside downloaded clones.
-- Don't commit unless asked. The repo is private on GitHub as `JaakkoLipp/concord`. Commit author metadata may carry Jaakko's Gmail by Jaakko's choice. File contents and commit messages must not.
+- **Plan first.** Write the plan: ordered tasks, each with a done-check on the live client, then Jaakko's tasks and the decisions needed. Stop for sign-off. Recommend rather than list options. Keep documents short and plain.
+- **Testing stays light**, by Jaakko's choice. Unit tests cover the risky core: logic such as the composer's serialisation, optimistic reconciliation and permissions. Add no new fixture scenarios unless a bug needs one. Every task ends deployed at `https://concord.jaalip.com/app`, and that is where review happens.
+- **Commit and push at the end of each finished task**, after `pnpm verify`. CI runs it on GitHub (`JaakkoLipp/concord`, private).
+- Use Sonnet subagents (`model: "sonnet"`) for research and review. Keep synthesis and final writing in the main session. Never run scripts or build tools inside downloaded clones.
 - Never install system software on Jaakko's WSL machine. The VPS may be managed freely, with sudo.
-- Jaakko's admin account email is private. It must never appear in the repo, docs, fixtures or commit messages.
-- Keep documents short, plain and reviewable. Recommend rather than list options.
-
-## Tooling on the WSL machine
-
-- The `pnpm` on the PATH is the Windows install and fails on WSL paths. Use `npx -y pnpm@10.34.5 …` until Jaakko installs a Linux pnpm into nvm.
-- Node 26 runs TypeScript directly. The repo uses `erasableSyntaxOnly`: no enums, no constructor parameter properties, relative imports end in `.ts`.
-- Scripts reach the VPS as `jaakko@concord.jaalip.com`. `CONCORD_SSH` overrides it.
+- Jaakko's admin email is private. It must never appear in file contents or commit messages. Commit author metadata is fine, by Jaakko's choice.
 
 ## Read first
 
-1. `docs/m1-plan.md` and `docs/m1-results.md`: M1, the read-only client, is built and live at `https://concord.jaalip.com/app`. Testing is kept to the risky core, and the live deployment is the review surface.
-2. `docs/m0-plan.md`: M0 tasks and their progress.
-3. `docs/m0-results.md`: everything verified on the VPS, including the seed, fixtures, presence, `Ready` size, limits and the encoder-run checklist.
-4. `docs/client.md`: the M1 and M2 spec.
+1. `docs/milestones.md`, the M2a section, and `docs/client.md` sections 4 (data flow, optimistic updates, rate limits), 6 (conversation, composer, emoji picker, search) and 13 (CSP).
+2. `docs/m1-plan.md` and `docs/m1-results.md`: what exists and how it was checked.
+3. `docs/m0-results.md`: verified Stoat behaviour. Note especially the message limit of 2000 UTF-8 bytes, the MFA details, presence and `Subscribe`.
 
-## State
+## Commands (WSL, from the repo root)
 
-- **VPS stack**: healthy, Stoat `v0.15.5`, MongoDB `7.0.43`, every image pinned, memory limits on every service. Always run compose through `~/stoat/concord/dc`.
-- **Data**: seeded with `pnpm seed --reset`, then the recorder and `seed check` ran, which added friendships, a DM, an extra account and status changes. Reseed before re-recording fixtures. `dev-admin` owns the server and is the only server creator. `pnpm seed password <handle>` prints any persona's login. `~/stoat/concord/.allow-wipe` exists.
-- **Fixtures**: `packages/stoat/fixtures/0.15.5/`, 9 scenarios, contract tests pass. The OpenAPI schema is in `packages/stoat/api/0.15.5/`.
-- **Test page**: `https://concord.jaalip.com/spike/`. Electron builds are in `spikes/m0-electron/dist/`.
+| Task | Command |
+|---|---|
+| Everything CI checks | `pnpm verify` |
+| Deploy the client to `/app` | `pnpm deploy:web`. It waits until the server answers. |
+| Dev server with proxy to the VPS | `pnpm dev`, then open `http://localhost:5173/app` |
+| A persona's login | `pnpm seed password dev`. `totp` also prints its current code. |
+| Reseed from scratch | `pnpm seed --reset`, about 5 minutes |
+| Live screenshot | `node tools/live/src/shot.ts dev out.png <channel>` |
+| Live checks from M1 | `tools/live/src/{presence,reconnect,perf,review}.ts` |
+
+## What M2a builds on
+
+- **Stoat adapter** (`packages/stoat`): `rest.ts` waits out exhausted rate-limit buckets and retries a 429 once. `socket.ts` handles the gateway, and `events.ts` maps frames to domain events. Add the write calls to `StoatBackend` and the `Backend` interface in `packages/domain/src/backend.ts`.
+- **Store** (`packages/domain/src/store/store.svelte.ts`): idempotent handlers. `messageCreate` already carries `nonce`, so optimistic messages reconcile when Stoat echoes the `Idempotency-Key` back as `nonce` (client.md section 4.3). `unreads`, `isUnread`, `mentionCount` and the `ack` event exist. Acks are new in M2a.
+- **UI**: `apps/web/src/lib/shell/Composer.svelte` is the disabled placeholder, and `conversation/MessageItem.svelte` has no hover action bar yet. The markdown parser is in `lib/markdown/parse.ts`. The permission calculator is `channelPermissions` in `@concord/domain`; use it to show or hide send, react, upload and manage actions.
+- **Stoat facts that matter here**:
+  - Messages are limited to 2000 UTF-8 bytes and 5 attachments.
+  - Rate limits: 10 messages per 10 seconds per channel. Typing at most every 2.5 seconds, sent as the `BeginTyping` and `EndTyping` socket frames.
+  - Reactions take a unicode emoji from Stoat's allowlist of 3968, or a custom emoji's ULID.
+  - Pins use `POST` and `DELETE /channels/{c}/messages/{m}/pin` and post system messages.
+  - Mentioning a role needs `MentionRoles`.
+  - Search is `POST /channels/{c}/search`.
+  - Uploads go to `POST /autumn/attachments`, multipart, 20 MB at most.
 
 ## Open with Jaakko
 
-1. **M1 sign-off**: the black-base call, the side-by-side comparison in m1-results section 2, and the device tests.
-2. **M0 device tasks**: Stoat's client with TOTP and voice, the encoder runs, then decision gate part A.
-
-## Next steps
-
-1. Apply Jaakko's M1 review. Then write `docs/m2-plan.md` for text chat, including the server settings screens that client.md section 7 defers to it.
-2. Record Jaakko's encoder results in m0-results.md, and voice fixtures once the test page has joined a call.
-3. Draft decision gate part A at the end of m0-results.md for Jaakko's sign-off.
-
-## Working on the client
-
-- `pnpm verify` (or `node tools/verify.ts`) before every commit. `node tools/deploy/web.ts` deploys to `/app` and waits for it to answer.
-- `node tools/live/src/shot.ts dev out.png <channel>` takes a live screenshot. `review.ts`, `presence.ts`, `reconnect.ts` and `perf.ts` are the M1 checks.
-- CI runs `pnpm verify` on every push to GitHub.
+1. **M1 device tests**: Chrome and Firefox on Windows and Linux, plus a phone. Jaakko has approved the UI's look.
+2. **Decision gate part A**: drafted at the end of `docs/m0-results.md`. It recommends go, and awaits Jaakko's sign-off.
+3. **M0 encoder runs**: one partial Firefox run is recorded in m0-results section 3, with tips. Chrome on Windows is next. The runs matter before M3.
