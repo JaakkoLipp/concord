@@ -90,7 +90,6 @@ export async function seed(): Promise<SeedState> {
     return live;
   });
   const people = new Map<string, Live>([[ADMIN, admin], ...others.map((l) => [l.handle, l] as const)]);
-  const persona = (h: string) => PERSONAS.find((p) => p.handle === h)!;
   const live = (h: string) => people.get(h)!;
 
   // 3. Profiles: one PATCH each, because profile edits allow 2 per 10 seconds.

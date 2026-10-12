@@ -1,0 +1,8 @@
+{
+  "name": "@concord/live",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "playwright-core": "1.64.0"
+  }
+}

@@ -55,7 +55,10 @@ export function scrubAll(opts: ScrubOptions): { files: number } {
   };
   const walk = (v: unknown, key = ''): void => {
     if (Array.isArray(v)) {
-      for (const item of v) SECRET_ARRAY_KEYS.has(key) ? note(item, key) : walk(item, key);
+      for (const item of v) {
+        if (SECRET_ARRAY_KEYS.has(key)) note(item, key);
+        else walk(item, key);
+      }
     } else if (v && typeof v === 'object') {
       for (const [k, child] of Object.entries(v)) {
         const lower = k.toLowerCase();

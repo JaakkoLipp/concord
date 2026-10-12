@@ -1,0 +1,7 @@
+{
+	"/": [],
+	"/(app)/app": [
+		"src/routes/(app)/app/+layout.ts",
+		"src/routes/(app)/app/+layout.ts"
+	]
+}

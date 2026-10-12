@@ -9,11 +9,19 @@
   "scripts": {
     "seed": "node tools/seed/src/main.ts",
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "deploy:web": "node tools/deploy/web.ts",
+    "dev": "pnpm --filter @concord/web dev",
+    "verify": "node tools/verify.ts"
   },
   "devDependencies": {
     "@types/node": "26.6.5",
+    "eslint": "10.12.0",
+    "eslint-plugin-svelte": "3.23.1",
+    "globals": "17.13.0",
+    "svelte": "5.57.2",
     "typescript": "6.0.3",
+    "typescript-eslint": "8.71.1",
     "vitest": "5.0.4"
   }
 }

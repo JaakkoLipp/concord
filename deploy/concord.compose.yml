@@ -95,3 +95,22 @@ services:
 
   web:
     mem_limit: 128m
+
+  # Concord's web app (apps/web), built on Jaakko's machine and copied here by `pnpm deploy:web`.
+  # Node 24 is the LTS line. The build is self-contained, so the image needs nothing installed.
+  concord-web:
+    image: docker.io/node:24.21.0-alpine
+    restart: always
+    mem_limit: 192m
+    user: node
+    working_dir: /srv/web
+    command: ["node", "build/index.js"]
+    environment:
+      PORT: "3000"
+      ORIGIN: https://concord.jaalip.com
+      # Caddy sets X-Forwarded-For and discards any sent by clients (architecture section 3).
+      ADDRESS_HEADER: X-Forwarded-For
+      XFF_DEPTH: "1"
+      BODY_SIZE_LIMIT: 1M
+    volumes:
+      - ./concord/web:/srv/web:ro
