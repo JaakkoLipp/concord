@@ -23,4 +23,5 @@
   .icon { display: grid; color: var(--text-secondary); }
   .placeholder { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--text-md) var(--font-sans); }
   .readonly { color: var(--text-muted); font: var(--text-xs) var(--font-sans); white-space: nowrap; }
+  @media (max-width: 700px) { .readonly { display: none; } }
 </style>

@@ -64,6 +64,7 @@
   @media (max-width: 700px) {
     .shell, .shell.panel { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: 'main'; }
     .rail, .sidebar, .dock { position: fixed; z-index: 50; translate: -100% 0; transition: translate var(--dur-modal) var(--ease-out); background: var(--surface-0); }
+    .sidebar { translate: calc(-100% - var(--rail-w)) 0; }
     .rail { top: 0; bottom: var(--dock-h); left: 0; width: var(--rail-w); padding-bottom: var(--space-5); }
     .sidebar { top: 0; bottom: calc(var(--dock-h) + var(--space-5)); left: var(--rail-w); width: min(var(--sidebar-w), calc(100vw - var(--rail-w) - 3rem)); }
     .dock { bottom: 0; left: 0; width: min(calc(var(--rail-w) + var(--sidebar-w)), calc(100vw - 3rem)); }

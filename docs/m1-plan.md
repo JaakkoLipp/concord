@@ -43,3 +43,7 @@ There are no new fixture scenarios, no screenshot-diff suite and no gallery. CI 
 ## Carried over from M0
 
 - M0's device tasks and decision gate part A are still open. M1 proceeds in parallel.
+
+## Progress, 2026-10-12
+
+All nine agent tasks are done and deployed; results, screenshots and measurements are in [m1-results.md](m1-results.md). Jaakko's tasks remain: the black-base call, the side-by-side sign-off, and the device tests.

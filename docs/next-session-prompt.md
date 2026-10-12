@@ -19,7 +19,7 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 
 ## Read first
 
-1. `docs/m1-plan.md`: the M1 plan, signed off 2026-10-12. Testing is kept to the risky core, and the live deployment at `/app` is the review surface.
+1. `docs/m1-plan.md` and `docs/m1-results.md`: M1, the read-only client, is built and live at `https://concord.jaalip.com/app`. Testing is kept to the risky core, and the live deployment is the review surface.
 2. `docs/m0-plan.md`: M0 tasks and their progress.
 3. `docs/m0-results.md`: everything verified on the VPS, including the seed, fixtures, presence, `Ready` size, limits and the encoder-run checklist.
 4. `docs/client.md`: the M1 and M2 spec.
@@ -33,10 +33,17 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 
 ## Open with Jaakko
 
-1. **Jaakko's M0 device tasks**: Stoat's client with TOTP and voice, the encoder runs, then decision gate part A.
+1. **M1 sign-off**: the black-base call, the side-by-side comparison in m1-results section 2, and the device tests.
+2. **M0 device tasks**: Stoat's client with TOTP and voice, the encoder runs, then decision gate part A.
 
 ## Next steps
 
-1. Implement M1 in the plan's order.
+1. Apply Jaakko's M1 review. Then write `docs/m2-plan.md` for text chat, including the server settings screens that client.md section 7 defers to it.
 2. Record Jaakko's encoder results in m0-results.md, and voice fixtures once the test page has joined a call.
 3. Draft decision gate part A at the end of m0-results.md for Jaakko's sign-off.
+
+## Working on the client
+
+- `pnpm verify` (or `node tools/verify.ts`) before every commit. `node tools/deploy/web.ts` deploys to `/app` and waits for it to answer.
+- `node tools/live/src/shot.ts dev out.png <channel>` takes a live screenshot. `review.ts`, `presence.ts`, `reconnect.ts` and `perf.ts` are the M1 checks.
+- Each finished task is committed and pushed. CI runs `pnpm verify`.
