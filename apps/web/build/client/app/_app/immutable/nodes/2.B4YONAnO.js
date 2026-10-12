@@ -1,1 +1,0 @@
-import{P as e}from"../chunks/BGi8Mmo3.js";import{t}from"../chunks/BR6r-wvL.js";var n=e({prerender:()=>!1,ssr:()=>!1});export{t as component,n as universal};
