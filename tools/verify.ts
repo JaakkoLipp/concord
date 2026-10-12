@@ -10,11 +10,12 @@ const WEB = join(ROOT, 'apps', 'web');
 const bin = (dir: string, name: string) => join(dir, 'node_modules', '.bin', name);
 const steps: [string, string, string[], string][] = [
   ['assets', process.execPath, ['tools/assets/twemoji.ts'], ROOT],
+  // Generates apps/web/.svelte-kit, which the app's tsconfig and its tests extend.
+  ['svelte sync', bin(WEB, 'svelte-kit'), ['sync'], WEB],
   ['typecheck', bin(ROOT, 'tsc'), ['-p', 'tsconfig.json', '--noEmit'], ROOT],
   ['lint', bin(ROOT, 'eslint'), ['.'], ROOT],
   ['no literals', process.execPath, ['tools/lint/no-literals.ts'], ROOT],
   ['tests', bin(ROOT, 'vitest'), ['run'], ROOT],
-  ['svelte sync', bin(WEB, 'svelte-kit'), ['sync'], WEB],
   ['svelte-check', bin(WEB, 'svelte-check'), ['--tsconfig', './tsconfig.json', '--fail-on-warnings'], WEB],
   ['svelte-check ui', bin(WEB, 'svelte-check'), ['--workspace', join(ROOT, 'packages', 'ui'), '--tsconfig', join(ROOT, 'packages', 'ui', 'tsconfig.json'), '--fail-on-warnings'], WEB],
   ['build', bin(WEB, 'vite'), ['build', '--logLevel', 'warn'], WEB],
