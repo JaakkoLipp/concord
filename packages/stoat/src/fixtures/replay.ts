@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { routeOf } from '../route.ts';
 import type { Frame, HttpRequest, HttpResponse, Socket, Transport } from '../transport.ts';
 
 export interface RestFixture {
@@ -29,9 +30,7 @@ export function loadScenario(fixturesDir: string, name: string): Scenario {
   return { rest, ws };
 }
 
-/** Route template used to match requests to fixtures: IDs and query values don't have to match. */
-export const routeOf = (method: string, path: string) =>
-  `${method} ${path.split('?')[0]!.replace(/[0-9A-HJKMNP-TV-Z]{26}/g, ':id')}`;
+export { routeOf } from '../route.ts';
 
 /**
  * Plays a scenario back. Each request takes the next unused exchange with the same method and route.

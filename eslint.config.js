@@ -11,6 +11,8 @@ export default ts.config(
     rules: {
       // client.md section 13: user content never goes through innerHTML.
       'svelte/no-at-html-tags': 'error',
+      // Reactive state is declared explicitly with SvelteMap; local Sets and Maps in computations are not state.
+      'svelte/prefer-svelte-reactivity': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },

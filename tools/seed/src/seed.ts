@@ -342,8 +342,10 @@ export async function seed(): Promise<SeedState> {
   for (const key of textKeys) {
     const list = sent[key]!;
     const keep = key === 'yleinen' ? 20 : key === 'pelit' ? 6 : 0;
-    const target = list[list.length - 1 - keep];
-    if (target) await api('PUT', `/channels/${channels[key]}/ack/${target.id}`, { auth: D });
+    // Pins and joins post system messages after the seeded ones, so "read" means up to the channel's real last message.
+    const [latest] = keep ? [] : await api<{ _id: string }[]>('GET', `/channels/${channels[key]}/messages?limit=1`, { auth: D });
+    const target = latest?._id ?? list[list.length - 1 - keep]?.id;
+    if (target) await api('PUT', `/channels/${channels[key]}/ack/${target}`, { auth: D });
   }
   for (const [partner, dm] of Object.entries(dms)) {
     if (partner === 'eetu') continue;

@@ -1,0 +1,129 @@
+/** The Stoat implementation of the domain's Backend interface. */
+import type { Backend, Capabilities, Gateway, GatewayHandlers, LoginResult, MessagePage, MessageQuery, NodeInfo, User } from '@concord/domain';
+import type { components } from './api/types.ts';
+import { capabilitiesFor } from './capabilities.ts';
+import { mapChannel } from './map/channel.ts';
+import { mapMember } from './map/member.ts';
+import { mapMessage, mapUnread } from './map/message.ts';
+import { mapProfile, mapUser } from './map/user.ts';
+import type { WMember, WMessage, WUnread, WUser } from './map/wire.ts';
+import { Rest } from './rest.ts';
+import { StoatGateway } from './socket.ts';
+import type { Transport } from './transport.ts';
+
+type Root = components['schemas']['RevoltConfig'];
+type WLogin = components['schemas']['ResponseLogin'];
+
+const FRIENDLY_NAME = 'Concord';
+
+export class StoatBackend implements Backend {
+  capabilities: Capabilities = { serverSubscribe: false };
+  private token: string | null = null;
+  private readonly rest: Rest;
+  private readonly transport: Transport;
+
+  constructor(transport: Transport) {
+    this.transport = transport;
+    this.rest = new Rest(transport);
+  }
+
+  setToken(token: string | null): void {
+    this.token = token;
+    this.rest.setToken(token);
+  }
+
+  async root(): Promise<NodeInfo> {
+    const r = await this.rest.request<Root>('GET', '/');
+    this.capabilities = capabilitiesFor(r.revolt);
+    const limits = r.features.limits as unknown as {
+      global?: { restrict_server_creation?: string[] };
+      default?: { file_upload_size_limits?: Record<string, number> };
+    };
+    const livekit = (r.features as { livekit?: { enabled: boolean; nodes?: { name: string }[] } }).livekit;
+    return {
+      version: r.revolt,
+      serverCreators: limits.global?.restrict_server_creation ?? [],
+      uploadLimits: limits.default?.file_upload_size_limits ?? {},
+      voice: { enabled: livekit?.enabled ?? false, nodes: (livekit?.nodes ?? []).map((n) => ({ name: n.name })) },
+      ...(r.vapid ? { vapid: r.vapid } : {}),
+    };
+  }
+
+  private loginResult(r: WLogin): LoginResult {
+    if (r.result === 'Success') return { kind: 'session', token: r.token, userId: r.user_id };
+    if (r.result === 'MFA') return { kind: 'mfa', ticket: r.ticket, methods: r.allowed_methods };
+    return { kind: 'disabled', userId: r.user_id };
+  }
+
+  async login(email: string, password: string): Promise<LoginResult> {
+    return this.loginResult(await this.rest.request<WLogin>('POST', '/auth/session/login', { email, password, friendly_name: FRIENDLY_NAME }));
+  }
+
+  async loginMfa(ticket: string, response: { totp: string } | { recovery: string }): Promise<LoginResult> {
+    const mfa_response = 'totp' in response ? { totp_code: response.totp } : { recovery_code: response.recovery };
+    return this.loginResult(await this.rest.request<WLogin>('POST', '/auth/session/login', { mfa_ticket: ticket, mfa_response, friendly_name: FRIENDLY_NAME }));
+  }
+
+  async logout(): Promise<void> {
+    if (this.token) await this.rest.request('POST', '/auth/session/logout').catch(() => {});
+    this.setToken(null);
+  }
+
+  async onboarding(): Promise<boolean> {
+    return (await this.rest.request<{ onboarding: boolean }>('GET', '/onboard/hello')).onboarding;
+  }
+
+  async completeOnboarding(username: string): Promise<User> {
+    return mapUser(await this.rest.request<WUser>('POST', '/onboard/complete', { username }));
+  }
+
+  async self(): Promise<User> {
+    return mapUser(await this.rest.request<WUser>('GET', '/users/@me'));
+  }
+
+  async messages(channel: string, q: MessageQuery): Promise<MessagePage> {
+    const params = new URLSearchParams({ include_users: 'true', limit: String(q.limit ?? 50) });
+    if (q.before) params.set('before', q.before);
+    if (q.after) params.set('after', q.after);
+    if (q.nearby) params.set('nearby', q.nearby);
+    if (q.sort) params.set('sort', q.sort);
+    const r = await this.rest.request<{ messages: WMessage[]; users: WUser[]; members?: WMember[] }>('GET', `/channels/${channel}/messages?${params}`);
+    return { messages: r.messages.map(mapMessage), users: r.users.map(mapUser), members: (r.members ?? []).map(mapMember) };
+  }
+
+  async members(server: string) {
+    const r = await this.rest.request<{ members: WMember[]; users: WUser[] }>('GET', `/servers/${server}/members`);
+    return { members: r.members.map(mapMember), users: r.users.map(mapUser) };
+  }
+
+  async user(id: string) {
+    return mapUser(await this.rest.request<WUser>('GET', `/users/${id}`));
+  }
+
+  async profile(id: string) {
+    return mapProfile(await this.rest.request('GET', `/users/${id}/profile`));
+  }
+
+  async mutual(id: string) {
+    const r = await this.rest.request<{ users: string[]; servers: string[]; channels?: string[] }>('GET', `/users/${id}/mutual`);
+    return { users: r.users, servers: r.servers, channels: r.channels ?? [] };
+  }
+
+  async unreads() {
+    return (await this.rest.request<WUnread[]>('GET', '/sync/unreads')).map(mapUnread);
+  }
+
+  async settings(keys: string[]) {
+    const r = await this.rest.request<Record<string, [number, string]>>('POST', '/sync/settings/fetch', { keys });
+    return Object.fromEntries(Object.entries(r).map(([k, [updated, value]]) => [k, { updated, value }]));
+  }
+
+  async dms() {
+    return (await this.rest.request<components['schemas']['Channel'][]>('GET', '/users/dms')).map(mapChannel);
+  }
+
+  connect(handlers: GatewayHandlers): Gateway {
+    if (!this.token) throw new Error('connect() needs a session');
+    return new StoatGateway(this.transport, this.token, handlers, this.capabilities);
+  }
+}

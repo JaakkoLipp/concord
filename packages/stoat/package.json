@@ -2,8 +2,16 @@
   "name": "@concord/stoat",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts",
+    "./fixtures": "./src/fixtures/replay.ts"
+  },
   "scripts": {
     "record": "node src/fixtures/record.ts"
-  }
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "@concord/domain": "workspace:*"
+  },
+  "dependencies": {}
 }
