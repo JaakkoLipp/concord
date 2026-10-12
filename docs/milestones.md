@@ -15,7 +15,7 @@ Every milestone ends with a demo on Jaakko's real devices. A milestone is done w
 |---|---|---|---|
 | M0 | Stoat stack on the VPS for development, seed data, recorded fixtures, encoder measurements, decision gate part A | Nothing | [dev-environment.md](dev-environment.md) |
 | M1 | Read-only client with the final layout | M0 | [client.md](client.md) |
-| M2 | Full text chat, DMs and friends | M1 | client.md |
+| M2 | Full text chat, DMs and friends, in three parts: M2a messaging, M2b social, M2c administration | M1 | client.md, one plan per part |
 | M3 | VPS to production, media validated on real networks, decision gate part B | M2 | [vps-runbook.md](vps-runbook.md), ops spec |
 | M4 | Voice and 1080p60 screen share in the browser | M3 | client.md voice section |
 | M5 | Desktop apps for Windows and Linux | M4 | desktop spec |
@@ -77,21 +77,39 @@ Detailed in [dev-environment.md](dev-environment.md).
 
 ## M2: Text chat
 
-**Scope**:
+Split into three parts on 2026-10-12. Each gets its own plan, signed off before work starts, and its own working session. Each ends deployed at `/app` for review on the live client.
 
-- Messaging: send with optimistic updates, replies, mentions with autocomplete, reactions, edit, delete, pins, attachment upload with progress, emoji picker with custom emoji, favourites and frequently used, typing indicator, unread and mention tracking with acknowledgement, per-channel search.
-- Social: DMs and group DMs, friends list with online, all, pending and blocked tabs, profile popouts, status and presence with automatic idle.
-- Profile editing: avatar, banner, display name, bio and custom status.
-- Server management for admins: create a server, channels, categories, roles, per-channel permission overrides, custom emoji upload, invites, kicks and bans. Creating a server removes the invite permission from regular members immediately.
-- Browser notifications while the client is open.
+### M2a: Messaging
+
+**Scope**: the composer, starting with the two-day editor spike from client.md section 6.3. Then: send with optimistic updates, replies, mentions with autocomplete, reactions, edit, delete, pins, attachment upload with progress, the emoji picker with custom emoji, favourites and frequently used, the typing indicator, unread and mention tracking with acknowledgement, and per-channel search.
 
 **Acceptance criteria**:
 
 - Two accounts on two machines see each other's messages, edits, deletes, reactions and typing within a second.
 - Unread and mention markers stay correct across two devices for the same account.
-- Every MVP messaging feature in the product brief works.
+- Every messaging feature in the product brief's MVP list works.
 
-**Device tests**: a scripted 30-minute chat session across two machines against the development stack. A session with friends follows at M3.
+### M2b: Social
+
+**Scope**: DMs and group DMs, the friends list with online, all, pending and blocked tabs, status and presence with automatic idle, and profile editing: avatar, banner, display name, bio and custom status.
+
+**Acceptance criteria**:
+
+- Friend requests, DMs and groups work end to end between two accounts.
+- Automatic idle follows client.md section 7 across two devices for the same account.
+- A profile edit shows in the other account's popout without a reload.
+
+### M2c: Server administration and notifications
+
+**Scope**: server management for admins: create a server, channels, categories, roles, per-channel permission overrides, custom emoji upload, invites, kicks and bans. Creating a server removes the invite permission from regular members immediately. Also browser notifications while the client is open. The screen-by-screen spec for server settings comes with this part's plan.
+
+**Acceptance criteria**:
+
+- An admin builds a server like the seeded one from scratch in the client.
+- A non-admin can't create a server or an invite, and sees no controls for either.
+- Notifications follow the mute and "mentions only" settings, and never fire for the focused channel.
+
+**Device tests for M2 as a whole**: a scripted 30-minute chat session across two machines against the development stack. A session with friends follows at M3.
 
 ## M3: VPS deployment and media validation
 

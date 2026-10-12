@@ -392,7 +392,13 @@ A typed message catalogue of our own: one TypeScript module per locale, keys che
 
 ## 13. Security
 
-- Content Security Policy: scripts and styles from our origin only, media from our origin and Stoat's proxies, and WebSocket connections to our origin.
+- Content Security Policy, from `kit.csp` in `apps/web/svelte.config.js` plus two directives Caddy adds:
+  - Scripts from our origin only. SvelteKit hashes its inline bootstrap script into the policy.
+  - Styles from our origin, plus `unsafe-inline`, which KaTeX's inline styles and Svelte's style attributes need. Jaakko approved this on 2026-10-12. Script injection stays blocked, because `script-src` allows nothing inline beyond the hash.
+  - Fonts from our origin and `data:`, because Vite inlines KaTeX's smallest fonts.
+  - Images and media from our origin and `data:` and `blob:`. External images come through Stoat's January proxy on our origin.
+  - WebSocket connections to our origin.
+  - `frame-ancestors 'none'` and `form-action 'self'`.
 - No `innerHTML` with user content anywhere. A lint rule enforces it.
 - Session token in IndexedDB. Logout clears it and every cached store.
 - External links get `rel="noopener noreferrer"`.

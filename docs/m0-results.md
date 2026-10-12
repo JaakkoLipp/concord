@@ -198,3 +198,38 @@ Defaults for every run unless the row says otherwise: 1080p60, 8 Mbps, layers on
 | 11 | Viewer: Linux Firefox | Any sharer on H.264 | H.264 | Whether the picture appears at all |
 
 The Electron builds are in `spikes/m0-electron/dist/` on the WSL machine. From Windows, open `\\wsl.localhost\Ubuntu\home\jaakko\concord\spikes\m0-electron\dist`.
+
+**Tips for the remaining runs**, learned from the first one:
+- Share a **whole screen**, not a window. A window comes back at its own size, such as 810 × 1080, not 1080p.
+- Keep something **moving fast** the whole time. Static content keeps the bitrate near zero, and then the encoder never ramps up.
+- Note the **sharer's CPU %** from Task Manager. Firefox reports no encoder or CPU figures of its own.
+- Start with **Chrome**, rows 1 to 4. It is the main target and reports the encoder in use.
+
+### Results
+
+**Run 8, partial, 2026-10-12: Firefox 157 on Windows, 8 cores.** Two Firefox windows on the same PC, one sharing and one viewing, over direct UDP. The settings were 1080p60 requested, 8 Mbps, layers on, motion hint, maintain framerate.
+
+| Codec | Captured | Sent and received | Bitrate | Drops and freezes |
+|---|---|---|---|---|
+| H.264 | 810 × 1080 at 60 fps: a window, not a screen | **180 × 240 at 14 to 16 fps**, a single layer | under 0.1 Mbps for about 60 s | none |
+| VP8 | same window | **810 × 1080 at 14 to 16 fps** | 0.5 to 1.3 Mbps, only 4 s of samples | none |
+
+- **Firefox can send** VP8, VP9, H.264 constrained baseline and AV1. It sends a single layer, as expected.
+- **Firefox reports no encoder name**, no reason for limited quality, no hardware flag, and no CPU pressure.
+- **Reading**: the bitrate stayed near zero, so the content was barely moving and the bandwidth estimate never ramped up. With "maintain framerate", Firefox's H.264 encoder cut the resolution to a quarter instead. VP8 kept the full size but stayed at about 15 fps.
+- **Not a 1080p60 measurement yet**, but a warning: Firefox H.264 screen sharing degrades badly at low bitrate.
+- **To do**: rerun with a whole screen, fast motion and Task Manager CPU, then once with "maintain resolution" to see whether Firefox keeps the size at a lower frame rate.
+
+The raw page output for this run is in the conversation of 2026-10-12, not stored in the repo.
+
+## 4. Decision gate part A, draft for Jaakko's sign-off
+
+Architecture section 10: we switch to our own backend if any criterion turns out true. Part A covers criteria 1 and 2, and a first look at 3.
+
+| # | Criterion | Finding | Verdict |
+|---|---|---|---|
+| 1 | Invite-only registration can't be done with a proxy rule and an internal account-create call | Caddy refuses public account creation for every path variant tried. The internal path through `create-account.sh` works, and the seed has created about 150 accounts through it. M3 confirms it with the real email relay. | Not true: **pass** |
+| 2 | Server-wide search, threads or live rich presence became MVP must-haves | The product brief defers all three explicitly. Presence turned out better than feared: on 0.15.5, `Subscribe` brings live status changes from every server member. | Not true: **pass** |
+| 3 | Operating the stack is painful (first look) | Three one-off fixes, each now documented and pinned. First, MongoDB 8 refuses the VPS's kernel, so it is pinned to 7.0. Second, Stoat 0.15.6 and 0.15.7 aren't meant for self-hosters, so the stack runs 0.15.5. Third, five images floated, so they are pinned. Since then: no repeated manual repair. Five reseeds ran clean. Memory fits the 3.7 GB VPS with limits, the stack's idle use is 1.6 GB, and the client container adds 20 MB. | Not true so far: **pass**, with part B at M3 |
+
+**Recommendation: go.** Keep building on Stoat 0.15.5. Part B at the end of M3 covers 1080p60 on real networks, TURN, voice reliability and running the VPS in production. The encoder runs feed it, so the remaining rows in section 3 matter before M3 rather than now.
