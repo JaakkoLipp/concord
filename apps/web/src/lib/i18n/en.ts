@@ -62,7 +62,6 @@ export const en = {
         .filter(Boolean).join(', '),
     messageChannel: (name: string) => `Message #${name}`,
     messageUser: (name: string) => `Message @${name}`,
-    readOnly: 'Read-only until text chat arrives',
     search: 'Search',
     showMembers: 'Show member list',
     hideMembers: 'Hide member list',
@@ -120,6 +119,19 @@ export const en = {
     mutualFriends: (n: number) => plural('en', n, { one: `${n} mutual friend`, other: `${n} mutual friends` }),
     mutualServers: (n: number) => plural('en', n, { one: `${n} mutual server`, other: `${n} mutual servers` }),
     openProfile: (name: string) => `Open profile of ${name}`,
+  },
+  composer: {
+    send: 'Send message',
+    attach: 'Upload a file',
+    emoji: 'Choose an emoji',
+    bytesLeftLabel: (n: number) => (n >= 0 ? plural('en', n, { one: `${n} byte left`, other: `${n} bytes left` }) : plural('en', -n, { one: `${-n} byte over the limit`, other: `${-n} bytes over the limit` })),
+    spike: {
+      note: 'Editor test: sending is off. Send shows what would be sent.',
+      wouldSend: (bytes: number) => `Would send ${bytes} bytes:`,
+      nothing: 'Nothing to send.',
+      reset: 'Reset sample',
+      dismiss: 'Hide',
+    },
   },
   markdown: {
     spoiler: 'Spoiler, select to reveal',

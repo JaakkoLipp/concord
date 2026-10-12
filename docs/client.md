@@ -26,6 +26,7 @@ Every runtime dependency must earn its place. The list below is the whole budget
 | Stoat API types | `openapi-typescript`, generated at build time. Types only, no runtime code. | Build only |
 | Unicode emoji data | `emojibase-data`: names, shortcodes, keywords, categories | Lazily, on first picker or `:` autocomplete |
 | Emoji images | Twemoji SVGs, served from our origin | Per emoji, cached |
+| Composer editor | CodeMirror 6: `@codemirror/state`, `view` and `commands`. MIT. Chosen over our own editor on 2026-10-12 (m2a-plan.md decision 1). About 87 KB gzipped. | Lazily, when the composer first mounts |
 | Code highlighting | highlight.js core with a short language list | Lazily, on first code block |
 | Math | KaTeX | Lazily, on first `$$` block |
 | Voice | `livekit-client` and the RNNoise processor | Lazily, on first voice join |
@@ -136,8 +137,8 @@ Settings, profile popouts, the emoji picker and image viewers are overlays, not 
 
 ### 6.3 Composer
 
-- **Editor**: a small `contenteditable` editor of our own, with inline atomic tokens for mentions, channel links and custom emoji. Plain text otherwise. Markdown is typed as text. On send, tokens serialise to Stoat syntax.
-- **Risk**: inline editors are the most fragile part of a chat client. M2 starts with a two-day spike covering IME input, paste, undo and caret movement around tokens. If it fails, the fallback is a `textarea` with the same autocomplete, where mentions show as `@name` text and are mapped on send.
+- **Editor**: CodeMirror 6, as in Stoat's own client. The document is Stoat-syntax text: `<@ID>`, `<%ID>`, `<#ID>` and `:ID:`. These tokens are drawn as atomic widgets, so the caret steps over them, and Backspace deletes them whole. What the editor holds is what gets sent. Markdown is typed as text, and paste is plain text.
+- **Risk**: inline editors are the most fragile part of a chat client. CodeMirror brings tested IME, Android and undo handling. Jaakko decided on 2026-10-12 to use it rather than our own `contenteditable`. A one-day spike checks it on real devices. If it fails, the fallback is a `textarea` with the same autocomplete, where mentions show as `@name` text and are mapped on send.
 - **Autocomplete** popovers for `@` members and roles, `#` channels, and `:` emoji, keyboard driven.
 - **Replies** show a bar above the composer with a toggle for mentioning the author.
 - **Attachments**: drag and drop, paste, or the plus button. Up to Stoat's limit per message, with upload progress.
@@ -153,7 +154,8 @@ Settings, profile popouts, the emoji picker and image viewers are overlays, not 
   - The composer reads the current limits from `GET /api/` and rejects oversized files before uploading.
   - Autumn stores width, height and a thumbhash for images. The message list uses them to reserve space and paint a placeholder.
 - **Length**: Stoat limits a message to 2000 UTF-8 bytes, not characters, as verified in M0. Each `ä` or `ö` takes two bytes, and a mention token serialises to 29. The composer counts bytes of the serialised text and shows a counter near the limit.
-- **Keys**: Enter sends, Shift+Enter adds a line, Up arrow edits the last own message, Escape cancels a reply or edit.
+- **Keys**: Enter sends, Shift+Enter adds a line, Up arrow edits the last own message, Escape cancels a reply or edit. Enter never sends while an IME is composing.
+- **Touch screens**: a send button sends and Enter adds a line, as on Discord's phone app. Tapping send keeps the keyboard open.
 
 ### 6.4 Emoji picker
 

@@ -1,6 +1,6 @@
 # M2a plan: messaging
 
-Status: draft for Jaakko's sign-off, 2026-10-12. Implements the M2a section of [milestones.md](milestones.md) from [client.md](client.md) sections 4, 6 and 13. Results go in `docs/m2a-results.md`.
+Status: signed off by Jaakko on 2026-10-12, with all six recommendations accepted. Implements the M2a section of [milestones.md](milestones.md) from [client.md](client.md) sections 4, 6 and 13. Results go in `docs/m2a-results.md`.
 
 The working agreement from M1 still applies:
 - Every task ends deployed at `https://concord.jaalip.com/app`, where Jaakko reviews it.
@@ -111,3 +111,7 @@ This is the riskiest code in M2a, and its unit tests cover every rule below.
 3. Review each task on the live client.
 4. **Acceptance**: with one other person, or two of your own machines, check messages, edits, deletes, reactions and typing both ways, and unread markers with one account on two devices. The scripted 30-minute session is for M2 as a whole, after M2c.
 5. **Still open from M0**: the encoder runs, Chrome on Windows next (rows 1 to 4 in m0-results.md section 3). They matter before M3, not for M2a.
+
+## Progress
+
+- **Task 1**, 2026-10-12: the CodeMirror composer is deployed, waiting for Jaakko's device check. Results are in [m2a-results.md](m2a-results.md).
