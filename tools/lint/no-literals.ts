@@ -41,8 +41,15 @@ for (const dir of dirs) {
       if (Array.isArray(node)) return node.forEach(visit);
       const n = node as Node;
       if (n.type === 'Text' && typeof n.data === 'string' && LETTER.test(n.data)) report(n.start, `text "${n.data.trim().slice(0, 40)}"`);
-      if (n.type === 'Attribute' && n.name && TEXT_ATTRIBUTES.has(n.name) && Array.isArray(n.value)) {
-        for (const part of n.value as Node[]) if (part.type === 'Text' && LETTER.test(part.data ?? '')) report(part.start, `${n.name}="${part.data}"`);
+      if (n.type === 'Attribute' || n.type === 'StyleDirective') {
+        // Only attributes people read can hold user-visible text; class names and the like are not.
+        const parts = Array.isArray(n.value) ? (n.value as Node[]) : [];
+        for (const part of parts) {
+          if (part.type === 'Text') {
+            if (n.name && TEXT_ATTRIBUTES.has(n.name) && LETTER.test(part.data ?? '')) report(part.start, `${n.name}="${part.data}"`);
+          } else visit(part);
+        }
+        if (!Array.isArray(n.value)) visit(n.value);
         return;
       }
       for (const [k, v] of Object.entries(n)) if (k !== 'parent' && typeof v === 'object') visit(v);

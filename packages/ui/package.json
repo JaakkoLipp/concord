@@ -1,5 +1,17 @@
 {
   "name": "@concord/ui",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "svelte": "./src/index.ts",
+  "exports": {
+    ".": {
+      "svelte": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./tokens.css": "./src/tokens.css",
+    "./base.css": "./src/base.css"
+  },
+  "devDependencies": {
+    "svelte": "5.57.2"
+  }
 }

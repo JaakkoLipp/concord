@@ -1,0 +1,48 @@
+/* Design tokens, copied from client.md section 9. Components use these only. */
+:root {
+  /* Surfaces: the reference uses a black base, with close steps for raised elements, separated by 1 px lines */
+  --surface-0: #000000;   /* rail, sidebar, conversation, member list, dock, modal */
+  --surface-1: #0a0a0c;   /* embeds, popouts, emoji picker body */
+  --surface-2: #101013;   /* composer, DM profile panel */
+  --surface-3: #131313;   /* rail tiles, search button, add-reaction chip */
+  --surface-4: #1b1b1e;   /* secondary and icon buttons */
+  --surface-5: #242426;   /* selected row, chips */
+  --surface-6: #2c2c2f;   /* hovered emoji cell */
+  --hover-overlay: rgb(255 255 255 / 0.06);  /* proposal: 0.03 is invisible on black */
+  --scrim: rgb(0 0 0 / 0.73);
+
+  --border-faint: #18181a;  --border-subtle: #1e1e20;  --border-default: #26262a;
+  --border-control: #686972;  /* proposal: the reference's control edges fail 3:1 */
+
+  --text-strong: #dcdcdf;  --text-normal: #d4d5d8;  --text-secondary: #96979e;  --text-muted: #81828a;
+
+  --accent: #1fb6d1;  --accent-hover: #4fcbe3;  --accent-active: #1599b3;  /* proposal */
+  --on-accent: #021418;                          /* labels, toggle knob, radio dot on the accent */
+  --accent-subtle: rgb(31 182 209 / 0.24);       /* own reaction; alpha measured */
+  --accent-wash: rgb(31 182 209 / 0.12);         /* mention highlight, proposal */
+  --link: var(--accent);
+
+  --status-online: #3dbd7d;  --status-idle: #f5b942;  --status-busy: #f2555a;
+  --status-focus: var(--accent);  --status-offline: #85858a;   /* proposals, each with its own shape */
+  --danger: #f2555a;  --danger-fill: #d92f3a;  --on-danger: #ffffff;
+
+  --radius-xs: 0.25rem; --radius-md: 0.5rem; --radius-lg: 0.75rem; --radius-xl: 1rem; --radius-full: 9999px;
+  --space-1: 0.125rem; --space-2: 0.25rem; --space-3: 0.5rem; --space-4: 0.75rem; --space-5: 1rem;
+  --space-6: 1.25rem; --space-7: 1.5rem; --space-8: 2rem; --space-9: 2.5rem; --space-10: 3rem;
+
+  --font-sans: "Figtree Variable", system-ui, sans-serif;
+  --text-xs: 0.75rem/1rem;  --text-sm: 0.875rem/1.25rem;  --text-md: 1rem/1.375rem;
+  --text-lg: 1.25rem/1.5rem;  --text-xl: 1.5rem/1.875rem;
+  /* weights: 400 body, 500 names and labels, 700 display names and chips */
+
+  --rail-w: 72px; --sidebar-w: 264px; --members-w: 264px; --dm-panel-w: 304px;
+  --header-h: 48px; --composer-h: 58px; --dock-h: 58px;
+  --rail-icon: 40px; --rail-pitch: 48px; --row-channel: 32px; --row-dm: 42px; --row-member: 42px;
+  --avatar-sm: 32px; --avatar-md: 40px; --avatar-panel: 80px; --avatar-popout: 120px;
+  --popout-w: 400px; --picker-w: 500px; --picker-h: 486px; --settings-nav-w: 252px; --settings-col-w: 696px;
+  --control-h: 40px; --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px;
+
+  --shadow-popover: 0 8px 32px rgb(0 0 0 / 0.28);  /* proposal: on black, borders carry most elevation */
+  --dur-hover: 100ms; --dur-press: 60ms; --dur-popover: 140ms; --dur-modal: 200ms;   /* proposals */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1); --ease-in: cubic-bezier(0.4, 0, 1, 1);
+}

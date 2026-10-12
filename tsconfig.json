@@ -6,7 +6,8 @@
     ]
   },
   "include": [
-    "packages/*/src",
+    "packages/domain/src",
+    "packages/stoat/src",
     "tools/**/*.ts"
   ]
 }

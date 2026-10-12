@@ -9,6 +9,11 @@
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
   },
   "devDependencies": {
+    "@concord/domain": "workspace:*",
+    "@concord/stoat": "workspace:*",
+    "@concord/ui": "workspace:*",
+    "@fontsource-variable/figtree": "5.3.0",
+    "@lucide/svelte": "1.55.0",
     "@sveltejs/adapter-node": "5.5.7",
     "@sveltejs/kit": "2.70.3",
     "@sveltejs/vite-plugin-svelte": "7.3.1",

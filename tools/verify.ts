@@ -15,6 +15,7 @@ const steps: [string, string, string[], string][] = [
   ['tests', bin(ROOT, 'vitest'), ['run'], ROOT],
   ['svelte sync', bin(WEB, 'svelte-kit'), ['sync'], WEB],
   ['svelte-check', bin(WEB, 'svelte-check'), ['--tsconfig', './tsconfig.json', '--fail-on-warnings'], WEB],
+  ['svelte-check ui', bin(WEB, 'svelte-check'), ['--workspace', join(ROOT, 'packages', 'ui'), '--tsconfig', join(ROOT, 'packages', 'ui', 'tsconfig.json'), '--fail-on-warnings'], WEB],
   ['build', bin(WEB, 'vite'), ['build', '--logLevel', 'warn'], WEB],
 ];
 for (const [name, cmd, args, cwd] of steps) {
