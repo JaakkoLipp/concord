@@ -14,7 +14,7 @@ A probe against the dev stack, as `aino`, settled what the docs left open:
 | Question | Answer |
 |---|---|
 | Does Stoat echo the `Idempotency-Key` header as the message's `nonce`? | **Yes.** Optimistic sends can reconcile on it. |
-| What happens if a send is retried with the same key? | **409**, with an HTML body. A retry that gets 409 was already sent, so the message stays pending until its echo arrives. It is not marked as failed. |
+| What happens if a send is retried with the same key? | **409**, with an HTML body. A retry that gets 409 was already sent, so it is not marked as failed. Task 2 says how it then reconciles. |
 | Does sending acknowledge your own message? | **No.** The client must ack after its own send, or the channel shows unread on the user's other devices. |
 | Does deleting the newest message reset the channel's `last_message_id`? | **No.** It still points at the deleted message, so the channel stays unread until someone acks it. Acking a deleted ID works. |
 | How fast does an ack apply? | **A few seconds late.** `GET /sync/unreads` showed the old state right after the 204, then the new state. A reconnect within those seconds must not undo a local ack. |
@@ -23,7 +23,7 @@ A probe against the dev stack, as `aino`, settled what the docs left open:
 | Does `@everyone` exist on 0.15.5? | No. The schema has no everyone or online mention, so autocomplete offers members, roles and channels only. |
 | Pins and settings writes? | Already in the M0 fixtures. Pin and unpin are `POST` and `DELETE …/pin`, and `search` with `pinned: true` lists pins. Settings accept our own keys, such as `concord:recorder`, as strings, through `set?timestamp=`. |
 
-**Side effect**: the probe sent one message to `#tekniikka` and then deleted it. That channel now shows unread for every persona until they open it, as described above. Task 2's acks clear it.
+**Side effect**: the probe sent one message to `#tekniikka` and then deleted it. That channel now shows unread for every persona except `aino` until they open it, as described above. The ack probe also cleared `aino`'s seeded mention there. Task 2's acks clear the marker, and `pnpm seed --reset` restores the seeded state if a check needs it.
 
 **Also missing from the code today**:
 - `root()` drops the message limits, so they need adding: length, attachments, replies and reactions.
@@ -58,7 +58,7 @@ A probe against the dev stack, as `aino`, settled what the docs left open:
 
 | # | Task | Done when |
 |---|---|---|
-| 1 | **Editor spike, one day**: the composer on CodeMirror 6, loaded lazily. It covers the Stoat-syntax document and atomic widgets for user, role and channel mentions and custom emoji. It also covers Enter to send with an IME guard (`isComposing`), Shift+Enter for a new line, plain-text paste, undo, and a byte counter near 2000. Sending stays off: Enter shows the serialised text in a temporary readout. Measure the bundle cost. | Jaakko tries the checklist in "Jaakko's tasks" on Windows Chrome and Firefox and on the phone, then decides between CodeMirror and the fallback. The bundle cost is in the results. |
+| 1 | **Editor spike, one day**: the composer on CodeMirror 6, loaded lazily. It covers the Stoat-syntax document and atomic widgets for user, role and channel mentions and custom emoji. It also covers Enter to send with an IME guard (`isComposing`), Shift+Enter for a new line, plain-text paste, undo, and a byte counter near 2000. On touch screens, a send button sends and Enter adds a new line, as on Discord's phone app. Sending stays off: send shows the serialised text in a temporary readout. The composer opens with a sample draft containing a real mention, a channel link, a custom emoji and Finnish text, plus a button to reset it, so tokens can be tested before autocomplete exists. Measure the bundle cost. | Jaakko tries the checklist in "Jaakko's tasks" on Windows Chrome and Firefox and on the phone, then decides between CodeMirror and the fallback. The bundle cost is in the results. |
 | 2 | **Send, optimistic updates, acks, unreads and drafts**: `sendMessage` and `ack` on `Backend`, and the message limits in `NodeInfo`. Details are below the table. | `dev` and `aino` on two machines see each other's messages within a second. With one account in two browsers, reading on one clears the marker and the mention badge on the other. A send during a network drop ends up exactly once. `#tekniikka` is no longer stuck unread. |
 | 3 | **Hover action bar, replies, edit, delete and pin**: the bar has react, reply and edit (for your own messages), plus a menu with pin, copy link, copy ID and delete. Replies use a bar above the composer with the mention toggle. Edit happens inline: Up arrow edits your last message, Enter saves, and Escape cancels. Saving an empty edit offers to delete. Edits and deletes are optimistic and revert with a toast on failure. A failed delete puts the message back where it was. Pending messages have no action bar, and failed ones offer only retry and discard. If the message being replied to is deleted, the reply bar closes and says so. Actions are hidden without the permission: `ManageMessages` for pinning and for deleting others' messages. In DMs that means only your own messages, as Stoat's DM defaults give no `ManageMessages`. | All of it works live and shows on the other persona within a second. A plain member sees no pin action, and a moderator does. |
 | 4 | **Emoji picker and reactions**: the picker has search, favourites, frequently used, one section per server for custom emoji, and Unicode categories from `emojibase-data`, loaded lazily. A footer previews the hovered emoji. Favourites and usage are saved through a new `setSettings` on `Backend`. For reactions it offers only the vendored allowlist. Clicking a reaction chip toggles it. An add button sits after the chips, and hovering a chip shows who reacted. Adding needs `React`. A message holds at most 20 distinct reactions. Ctrl+E inserts an emoji into the composer. | Reactions show both ways within a second. Favourites survive a reload and appear on a second device. |
@@ -90,6 +90,7 @@ This is the riskiest code in M2a, and its unit tests cover every rule below.
 - They follow decision 5, and only ever for real message IDs.
 - The store keeps a local floor per channel. `ack` events, `Ready` and `GET /sync/unreads` can raise it but never lower it, so Stoat's delay in applying acks can't bring back a marker.
 - The "new messages" divider is set once when a channel opens. It doesn't vanish when that open acks the channel.
+- client.md section 4.3 is updated to this throttle, which replaces "debounced".
 
 **The composer** is enabled only with `SendMessage`. Otherwise it says why:
 - no permission,
@@ -103,8 +104,8 @@ This is the riskiest code in M2a, and its unit tests cover every rule below.
    - type Finnish text with ä and ö,
    - paste text,
    - undo and redo,
-   - move the caret across a mention with the arrow keys and delete it,
-   - on the phone, type with the keyboard's word suggestions on.
+   - in the sample draft, move the caret across the mention with the arrow keys and delete it,
+   - on the phone, type with the keyboard's word suggestions on, add a new line, and press the send button.
 
    Then choose CodeMirror or the textarea fallback.
 3. Review each task on the live client.
