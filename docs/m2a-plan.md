@@ -39,7 +39,7 @@ A probe against the dev stack, as `aino`, settled what the docs left open:
      - Caret bugs appear around non-editable tokens.
      - Native undo breaks once code edits the text.
    - **Why CodeMirror 6**: Stoat's own web client uses it for exactly this composer. It keeps the text in Stoat's syntax (`<@ID>`, `<#ID>`, `<%ID>`, `:ID:`), and it draws tokens as atomic widgets. That makes serialising trivial, and the byte count is simply the length of the text in bytes. It brings years of IME, Android and undo fixes that a two-day spike can't reproduce.
-   - **The cost**: an estimated 90 to 100 KB gzipped, measured during the spike. It loads just after the message list renders, so cold start stays fast. Initial JavaScript is 77 KB today, against a budget of 250 KB.
+   - **The cost**: an estimated 90 to 100 KB gzipped, measured during the spike. It loads lazily, so cold start stays fast: measured in m2a-results.md. Initial JavaScript is 77 KB today, against a budget of 250 KB.
    - **If accepted**: client.md section 6.3 and the dependency table are updated in task 1.
    - **The fallback** is unchanged: a `textarea` with the same autocomplete.
 2. **Replies**: one reply per message, with the mention toggle on by default, as on Discord. Stoat allows five.
@@ -101,11 +101,16 @@ This is the riskiest code in M2a, and its unit tests cover every rule below.
 
 1. Sign off this plan and the six decisions.
 2. **After task 1, about 15 minutes**: try the editor on Windows Chrome, Windows Firefox and the phone. Checklist:
-   - type Finnish text with ä and ö,
-   - paste text,
-   - undo and redo,
-   - in the sample draft, move the caret across the mention with the arrow keys and delete it,
-   - on the phone, type with the keyboard's word suggestions on, add a new line, and press the send button.
+   - **On the computer**:
+     - type Finnish text with ä and ö,
+     - paste text,
+     - undo and redo,
+     - in the sample draft, move the caret across a mention with the arrow keys, and Backspace it.
+   - **On the phone**, with word suggestions on:
+     - tap just after a token and backspace. The token should go whole, with nothing duplicated or eaten,
+     - type a word directly after a token with no space, accept a suggestion, then backspace through it,
+     - long-press to select across a token, then delete,
+     - add a new line with Enter, then tap send. The keyboard should stay open.
 
    Then choose CodeMirror or the textarea fallback.
 3. Review each task on the live client.
