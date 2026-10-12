@@ -28,14 +28,20 @@ export interface ComposerEditor {
 }
 
 export interface EditorOptions {
-  draft: string;
+  /** The draft to open and keep, or null for an editor without drafts, such as an inline edit. */
+  draft: string | null;
+  /** Starting text when there is no draft. */
+  text?: string;
   placeholder: string;
   /** On touch screens Enter adds a line and a button sends, as on Discord's phone app. */
   touch: boolean;
   label: Labeller;
   onChange(text: string): void;
   onSend(): void;
-  onEscape(): void;
+  /** Returns whether Escape was used, such as to cancel a reply. */
+  onEscape(): boolean;
+  /** Up arrow in an empty editor, to edit the last message. Returns whether it was used. */
+  onArrowUp?(): boolean;
 }
 
 class TokenWidget extends WidgetType {
@@ -135,7 +141,8 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
     keymap.of([
       { key: 'Enter', run: opts.touch ? insertNewline : send },
       { key: 'Shift-Enter', run: insertNewline },
-      { key: 'Escape', run: () => (opts.onEscape(), false) },
+      { key: 'Escape', run: () => opts.onEscape() },
+      { key: 'ArrowUp', run: (v) => v.state.doc.length === 0 && !!opts.onArrowUp?.() },
       ...historyKeymap,
       ...defaultKeymap,
     ]),
@@ -148,14 +155,15 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
     }),
   ];
   const fresh = (doc = '', caret = 0) => EditorState.create({ doc, selection: { anchor: Math.min(caret, doc.length) }, extensions: extensions() });
-  const saved = (draft: string) => {
-    const d = drafts.get(draft);
-    return d ? fresh(d.text, d.caret) : fresh();
+  const saved = (draft: string | null) => {
+    const d = draft === null ? undefined : drafts.get(draft);
+    return d ? fresh(d.text, d.caret) : fresh(opts.text ?? '', (opts.text ?? '').length);
   };
 
   let current = opts.draft;
   const view = new EditorView({ parent, state: saved(current) });
   const keep = () => {
+    if (current === null) return;
     if (view.state.doc.length) drafts.set(current, { text: view.state.doc.toString(), caret: view.state.selection.main.head });
     else drafts.delete(current);
   };
@@ -164,7 +172,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
     text: () => view.state.doc.toString(),
     clear: () => {
       view.setState(fresh());
-      drafts.delete(current);
+      if (current !== null) drafts.delete(current);
       opts.onChange('');
     },
     switchTo: (draft) => {

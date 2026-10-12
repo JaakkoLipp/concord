@@ -3,7 +3,7 @@
  * handler is an idempotent upsert, so a REST response and its WebSocket echo may arrive in either order.
  * Entries are replaced, never mutated, so a component reading one key re-renders only when that key changes.
  */
-import { SvelteMap } from 'svelte/reactivity';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { ConnectionState, DomainEvent } from '../backend.ts';
 import type { Channel, Emoji, Id, Member, Message, NodeInfo, Profile, Server, Unread, User } from '../entities.ts';
 
@@ -73,6 +73,8 @@ export class Store {
   readonly memberListLoaded = new SvelteMap<Id, number>();
   /** Messages sent from this client and not yet confirmed, by key. Window reloads and Ready leave them alone. */
   readonly pending = new SvelteMap<Id, PendingMessage>();
+  /** Messages deleted while this client watched, so a reply bar can tell deleted from merely unloaded. */
+  readonly deleted = new SvelteSet<Id>();
   /** Keys this client has sent with, so a confirmed message keeps its pending row's identity in the list. */
   readonly ownNonces = new Set<string>();
   /**
@@ -364,9 +366,20 @@ export class Store {
     return { ...w, ids, atOldest };
   }
 
+  /** Put back a message whose optimistic delete failed, in its place in the window if it was there. */
+  restoreMessage(m: Message, inWindow: boolean): void {
+    this.messages.set(m.id, m);
+    this.deleted.delete(m.id);
+    const w = this.windows.get(m.channel);
+    if (inWindow && w && !w.ids.includes(m.id)) this.windows.set(m.channel, { ...w, ids: [...w.ids, m.id].sort() });
+  }
+
   private deleteMessages(channel: Id, ids: Id[]): void {
     const gone = new Set(ids);
-    for (const id of ids) this.messages.delete(id);
+    for (const id of ids) {
+      this.messages.delete(id);
+      this.deleted.add(id);
+    }
     const w = this.windows.get(channel);
     if (w && w.ids.some((id) => gone.has(id))) this.windows.set(channel, { ...w, ids: w.ids.filter((id) => !gone.has(id)) });
     const u = this.unreads.get(channel);
@@ -514,6 +527,7 @@ export class Store {
     }
     this.ownNonces.clear();
     this.readFloor.clear();
+    this.deleted.clear();
     this.settings = { servers: {}, channels: {}, serverOrder: [] };
   }
 }

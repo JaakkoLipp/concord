@@ -227,6 +227,46 @@ export class Session {
     }
   }
 
+  // ---------- edit, delete, pin (m2a-plan.md task 3) ----------
+
+  /** Edit optimistically. On failure the old text comes back, unless something newer replaced it, and this throws. */
+  async editMessage(channel: Id, id: Id, content: string): Promise<void> {
+    const before = this.store.messages.get(id);
+    if (!before || before.content === content) return;
+    this.store.messages.set(id, { ...before, content, edited: new Date().toISOString() });
+    try {
+      const m = await this.backend.editMessage(channel, id, content);
+      this.store.apply({ type: 'messageUpdate', id, channel, data: { ...(m.content !== undefined ? { content: m.content } : {}), ...(m.edited ? { edited: m.edited } : {}) }, clear: [] });
+    } catch (e) {
+      const now = this.store.messages.get(id);
+      if (now?.content === content) {
+        const { content: _c, edited: _e, ...rest } = now;
+        this.store.messages.set(id, { ...rest, ...(before.content !== undefined ? { content: before.content } : {}), ...(before.edited ? { edited: before.edited } : {}) });
+      }
+      throw e;
+    }
+  }
+
+  /** Delete optimistically. On failure the message comes back where it was, and this throws. */
+  async deleteMessage(channel: Id, id: Id): Promise<void> {
+    const before = this.store.messages.get(id);
+    const inWindow = !!this.store.windows.get(channel)?.ids.includes(id);
+    this.store.apply({ type: 'messageDelete', id, channel });
+    try {
+      await this.backend.deleteMessage(channel, id);
+    } catch (e) {
+      // Already gone at Stoat: the delete happened, just not by us.
+      if (e instanceof BackendError && e.kind === 'NotFound') return;
+      if (before) this.store.restoreMessage(before, inWindow);
+      throw e;
+    }
+  }
+
+  /** Pin or unpin. Stoat's echo updates the message, and its system message says who did it. */
+  pinMessage(channel: Id, id: Id, pinned: boolean): Promise<void> {
+    return this.backend.pinMessage(channel, id, pinned);
+  }
+
   // ---------- acks ----------
 
   /**

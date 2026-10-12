@@ -155,3 +155,39 @@ describe('acks', () => {
     expect(calls.acks).toHaveLength(2);
   });
 });
+
+describe('optimistic edit and delete', () => {
+  it('reverts a failed edit and keeps the window place of a failed delete', async () => {
+    const { session, store } = setup(async () => message(OLD));
+    const fail = async () => {
+      throw new BackendError(403, 'MissingPermission', 'no');
+    };
+    Object.assign(session.backend, { editMessage: fail, deleteMessage: fail });
+    const NEWER = '01M00000000000000000000005';
+    store.setWindow(CH, [message(OLD), message(NEWER, { content: 'toka' })], { atNewest: true, atOldest: true });
+
+    const editing = session.editMessage(CH, OLD, 'muokattu');
+    expect(store.messages.get(OLD)!.content).toBe('muokattu');
+    expect(store.messages.get(OLD)!.edited).toBeDefined();
+    await expect(editing).rejects.toThrow();
+    expect(store.messages.get(OLD)!.content).toBe('hei');
+    expect(store.messages.get(OLD)!.edited).toBeUndefined();
+
+    const deleting = session.deleteMessage(CH, OLD);
+    expect(windowIds(session)).toEqual([NEWER]);
+    await expect(deleting).rejects.toThrow();
+    expect(windowIds(session)).toEqual([OLD, NEWER]);
+    expect(store.deleted.has(OLD)).toBe(false);
+  });
+
+  it('keeps a newer edit from elsewhere when its own edit fails', async () => {
+    const { session, store } = setup(async () => message(OLD));
+    let reject: (e: unknown) => void = () => {};
+    Object.assign(session.backend, { editMessage: () => new Promise((_, r) => (reject = r)) });
+    const editing = session.editMessage(CH, OLD, 'minun');
+    store.apply({ type: 'messageUpdate', id: OLD, channel: CH, data: { content: 'toisen' }, clear: [] });
+    reject(new BackendError(500, 'InternalError', 'x'));
+    await expect(editing).rejects.toThrow();
+    expect(store.messages.get(OLD)!.content).toBe('toisen');
+  });
+});

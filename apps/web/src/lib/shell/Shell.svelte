@@ -13,6 +13,7 @@
   import ServerRail from './ServerRail.svelte';
   import UserDock from './UserDock.svelte';
   import ImageViewer from '$lib/conversation/ImageViewer.svelte';
+  import Toaster from './Toaster.svelte';
 
   interface Props { store: Store; server: string | null; channel: string | null; children: Snippet; panel?: Snippet | undefined; panelWidth?: 'members' | 'profile' }
   let { store, server, channel, children, panel, panelWidth = 'members' }: Props = $props();
@@ -33,6 +34,7 @@
     <div class="side-panel">{@render panel()}</div>
   {/if}
   <ImageViewer />
+  <Toaster />
   {#if shell.sidebarOpen}
     <button class="scrim" aria-label={m.shell.closeSidebar} onclick={() => (shell.sidebarOpen = false)}></button>
   {/if}

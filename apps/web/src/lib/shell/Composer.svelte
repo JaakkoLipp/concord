@@ -5,15 +5,19 @@
    */
   import { untrack } from 'svelte';
   import Plus from '@lucide/svelte/icons/plus';
+  import AtSign from '@lucide/svelte/icons/at-sign';
+  import CircleX from '@lucide/svelte/icons/circle-x';
   import SendHorizontal from '@lucide/svelte/icons/send-horizontal';
   import Smile from '@lucide/svelte/icons/smile';
   import { IconButton } from '@concord/ui';
   import type { Channel, Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
-  import { customEmojiUrl } from '$lib/markdown/emoji.ts';
   import { COUNTER_FROM, byteLength, outgoing } from '$lib/composer/text.ts';
-  import type { ComposerEditor, Labeller } from '$lib/composer/editor.ts';
+  import type { ComposerEditor } from '$lib/composer/editor.ts';
+  import { labeller } from '$lib/composer/tokens.ts';
   import { sendBlock } from '$lib/view/channels.ts';
+  import { compose } from '$lib/view/compose.svelte.ts';
+  import { toasts } from '$lib/view/toast.svelte.ts';
 
   let { placeholder, session, channel }: { placeholder: string; session: Session; channel: Channel | undefined } = $props();
 
@@ -35,30 +39,56 @@
   const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   const left = $derived(limit - byteLength(outgoing(text)));
 
-  const label: Labeller = (kind, id) => {
-    if (kind === 'user') return { text: `@${store.displayName(id, server) || m.markdown.unknownUser}`, self: id === store.selfId };
-    if (kind === 'role') {
-      const role = server ? store.servers.get(server)?.roles[id] : undefined;
-      return { text: `@${role?.name ?? m.markdown.unknownRole}`, colour: role?.colour };
-    }
-    if (kind === 'channel') {
-      const c = store.channels.get(id);
-      return { text: `#${c && (c.kind === 'text' || c.kind === 'group') ? c.name : m.markdown.unknownChannel}` };
-    }
-    return { image: customEmojiUrl(id), alt: `:${store.emojis.get(id)?.name ?? id}:` };
-  };
+  const label = $derived(labeller(store, () => server));
+
+  const reply = $derived(channel ? compose.replies[channel.id] : undefined);
+  const replyTo = $derived(reply ? store.messages.get(reply.id) : undefined);
 
   function send() {
     if (!editor || !channel || block) return;
     const out = outgoing(editor.text());
     if (!out || byteLength(out) > limit) return;
-    void session.send(channel.id, out);
+    void session.send(channel.id, out, reply ? [reply] : []);
+    compose.clearReply(channel.id);
     editor.clear();
   }
 
-  function escape() {
-    if (channel) session.markRead(channel.id);
+  /** Escape cancels a reply first; otherwise it marks the channel read (m2a-plan.md decision 5). */
+  function escape(): boolean {
+    if (!channel) return false;
+    if (reply) {
+      compose.clearReply(channel.id);
+      return true;
+    }
+    session.markRead(channel.id);
+    return true;
   }
+
+  /** Up arrow in an empty composer edits this account's last message here. */
+  function editLast(): boolean {
+    if (!channel) return false;
+    const ids = store.windows.get(channel.id)?.ids ?? [];
+    for (let i = ids.length - 1; i >= 0; i--) {
+      const msg = store.messages.get(ids[i]!);
+      if (msg && msg.author === store.selfId && !msg.system && msg.content) {
+        compose.editing = msg.id;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // A reply whose message is deleted closes, and says so.
+  $effect(() => {
+    if (channel && reply && store.deleted.has(reply.id)) {
+      compose.clearReply(channel.id);
+      toasts.show(m.composer.replyDeleted, 'info');
+    }
+  });
+
+  $effect(() => {
+    if (compose.focusRequest) untrack(() => editor?.focus());
+  });
 
   // The editor exists while the box can be typed in, and is created once its code has loaded.
   $effect(() => {
@@ -69,7 +99,7 @@
     void import('$lib/composer/editor.ts').then(({ createEditor }) => {
       if (cancelled) return;
       untrack(() => {
-        ed = createEditor(el, { draft: channel?.id ?? '', placeholder, touch, label, onChange: (t) => (text = t), onSend: send, onEscape: escape });
+        ed = createEditor(el, { draft: channel?.id ?? '', placeholder, touch, label, onChange: (t) => (text = t), onSend: send, onEscape: escape, onArrowUp: editLast });
         text = ed.text();
         editor = ed;
       });
@@ -98,7 +128,17 @@
     <span class="placeholder">{m.composer.blocked[block]}</span>
   </div>
 {:else}
-  <div class="composer">
+  {#if reply && channel}
+    <div class="reply-bar">
+      <span class="replying">{m.composer.replyingTo(replyTo ? store.displayName(replyTo.author, server) : '')}</span>
+      <button class="mention" class:on={reply.mention} aria-pressed={reply.mention} aria-label={m.composer.mentionToggle}
+        onclick={() => channel && (compose.replies = { ...compose.replies, [channel.id]: { ...reply, mention: !reply.mention } })}>
+        <AtSign size={14} />{reply.mention ? m.composer.mentionOn : m.composer.mentionOff}
+      </button>
+      <IconButton size="sm" label={m.composer.cancelReply} onclick={() => channel && compose.clearReply(channel.id)}><CircleX size={16} /></IconButton>
+    </div>
+  {/if}
+  <div class="composer" class:with-reply={!!reply}>
     <span class="side"><IconButton label={m.composer.attach} disabled><Plus size={22} /></IconButton></span>
     <div class="editor" bind:this={host}>
       {#if !editor}<span class="placeholder">{placeholder}</span>{/if}
@@ -123,6 +163,15 @@
     padding: 0 var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-2);
   }
   .blocked { align-items: center; cursor: not-allowed; }
+  .with-reply { border-top-left-radius: 0; border-top-right-radius: 0; }
+  .reply-bar {
+    display: flex; align-items: center; gap: var(--space-3); margin: 0 var(--space-5); padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
+    border: 1px solid var(--border-subtle); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface-1);
+    color: var(--text-secondary); font: var(--text-sm) var(--font-sans);
+  }
+  .replying { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mention { display: inline-flex; align-items: center; gap: var(--space-1); padding: 0; border: 0; background: none; color: var(--text-secondary); font: 700 var(--text-xs) var(--font-sans); cursor: pointer; }
+  .mention.on { color: var(--link); }
   .side { display: grid; place-items: center; min-height: calc(var(--composer-h) - 2px); flex: none; }
   .editor { flex: 1; min-width: 0; align-self: stretch; display: flex; flex-direction: column; justify-content: center; }
   .editor :global(.cm-editor) { flex: 1; }

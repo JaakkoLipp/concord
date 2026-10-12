@@ -5,7 +5,13 @@
    * the bottom, new content keeps them there. Otherwise the message at the top of the view stays put while
    * history loads above it or media and late embeds change height.
    */
-  import type { Message, PendingMessage, Session } from '@concord/domain';
+  import { Permission, has, type Message, type PendingMessage, type Session } from '@concord/domain';
+  import { resolve } from '$app/paths';
+  import { permissionsIn } from '$lib/view/channels.ts';
+  import { compose } from '$lib/view/compose.svelte.ts';
+  import { toasts } from '$lib/view/toast.svelte.ts';
+  import type { MessageActions } from './actions.ts';
+  import DeleteDialog from './DeleteDialog.svelte';
   import { tick, untrack } from 'svelte';
   import ArrowDown from '@lucide/svelte/icons/arrow-down';
   import { setMarkdownContext } from '$lib/markdown/context.ts';
@@ -22,6 +28,42 @@
 
   const win = $derived(store.windows.get(channel));
   const messages = $derived((win?.ids ?? []).map((id) => store.messages.get(id)).filter((x): x is Message => !!x));
+
+  // What this account may do with messages here (m2a-plan.md task 3).
+  const perms = $derived(info ? permissionsIn(store, info) : 0n);
+  let selected = $state<string | null>(null);
+  let confirming = $state<Message | null>(null);
+  async function copy(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toasts.show(m.actions.copied, 'info');
+    } catch {
+      // Clipboard blocked: nothing to do.
+    }
+  }
+  const linkTo = (msg: Message) => location.origin + (info?.kind === 'text'
+    ? resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server: info.server, channel, message: msg.id })
+    : resolve('/(app)/app/channels/@me/[channel]', { channel }));
+  const remove = (msg: Message) => void session.deleteMessage(channel, msg.id).catch(() => toasts.show(m.actions.deleteFailed));
+  const actions: MessageActions = $derived({
+    send: has(perms, Permission.SendMessage),
+    manage: has(perms, Permission.ManageMessages),
+    reply: (msg) => { compose.reply(channel, msg.id); compose.focus(); },
+    edit: (msg) => { compose.editing = msg.id; },
+    saveEdit: (msg, text) => {
+      compose.editing = null;
+      compose.focus();
+      // Saving an empty edit offers to delete, as on Discord.
+      if (!text) { confirming = msg; return; }
+      void session.editMessage(channel, msg.id, text).catch(() => toasts.show(m.actions.editFailed));
+    },
+    cancelEdit: () => { compose.editing = null; compose.focus(); },
+    delete: (msg, skip) => { if (skip) remove(msg); else confirming = msg; },
+    pin: (msg) => void session.pinMessage(channel, msg.id, !msg.pinned).catch(() => toasts.show(m.actions.pinFailed)),
+    copyLink: (msg) => void copy(linkTo(msg)),
+    copyId: (msg) => void copy(msg.id),
+    select: (id) => (selected = id),
+  });
 
   // Messages sent from here and not yet confirmed, shown after the newest message (client.md section 4.3).
   const pending = $derived(win?.atNewest ? store.pendingIn(channel) : []);
@@ -207,11 +249,14 @@
         <div class="divider new" role="separator"><span>{m.conversation.newMessages}</span></div>
       {/if}
       <MessageItem message={row.message} pending={row.pending} {store} {server} continuation={row.continuation} highlighted={highlighted === row.message.id} {onjump}
-        onretry={(key) => void session.retry(key)} ondiscard={(key) => session.discard(key)} />
+        onretry={(key) => void session.retry(key)} ondiscard={(key) => session.discard(key)}
+        actions={row.pending || row.message.system ? undefined : actions} editing={compose.editing === row.message.id} selected={selected === row.message.id} />
     {/each}
     <div class="end"></div>
   </div>
 </div>
+<DeleteDialog message={confirming} author={confirming ? store.displayName(confirming.author, server) : ''}
+  onconfirm={() => { const msg = confirming; confirming = null; if (msg) remove(msg); }} oncancel={() => (confirming = null)} />
 {#if win && (!win.atNewest || !stuck)}
   <button class="present" onclick={present}>{m.conversation.jumpToPresent}<ArrowDown size={16} /></button>
 {/if}

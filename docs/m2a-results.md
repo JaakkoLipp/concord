@@ -61,3 +61,26 @@ Headless Chromium can't test IMEs, Android keyboards or Firefox. Those checks ar
 **Also checked**: a regular member in #säännöt sees "You don't have permission to send messages in this channel." in place of the editor.
 
 **Found on the way**: replaying the recorded events twice re-added a mention that had already been read. The store now ignores mentions at or before the read point.
+
+## Task 3: actions, replies, edit, delete and pin, 2026-10-12
+
+**Unit tests**: two more in `sending.test.ts`:
+- a failed edit reverts and a failed delete returns to its place,
+- a failed edit doesn't undo a newer edit made elsewhere.
+
+**Live check**: `node tools/live/src/actions.ts`, in #botti with `dev`, `aino` (a moderator) and `lauri` (a plain member). Times are from the action to the other persona's screen:
+
+| Check | Result |
+|---|---|
+| `dev` edits with Up arrow, Enter saves | `aino` sees it in 30 ms, with the "(edited)" marker |
+| Reply to `aino` with the mention on | The bar says "Replying to Aino Virtanen, Mention on". `aino` sees the reply preview, and the message is highlighted as a mention |
+| Delete through the dialog | The dialog shows. Gone for `aino` in 27 ms |
+| Shift+click delete | No dialog. Gone in 34 ms |
+| Pin as the moderator | The pin system message shows for `dev` in 38 ms. Unpinned afterwards |
+| A plain member's menu | No pin action |
+| Console errors or failed requests | None |
+
+**Details**:
+- On touch screens, tapping a message shows its action bar.
+- A reply is sent with Stoat's `fail_if_not_exists: false`. If the replied-to message is deleted before sending, the message goes out without the reply instead of failing.
+- The reply bar also closes with a notice when that message is deleted.

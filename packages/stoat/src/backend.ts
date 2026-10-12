@@ -127,7 +127,8 @@ export class StoatBackend implements Backend {
   async sendMessage(channel: string, message: OutgoingMessage, key: string): Promise<Message> {
     const body = {
       content: message.content,
-      ...(message.replies.length ? { replies: message.replies } : {}),
+      // A reply to a message deleted meanwhile is sent without the reply rather than refused.
+      ...(message.replies.length ? { replies: message.replies.map((r) => ({ ...r, fail_if_not_exists: false })) } : {}),
       ...(message.attachments.length ? { attachments: message.attachments } : {}),
     };
     // Stoat echoes the Idempotency-Key as the message's nonce (m2a-plan.md, checked live).
@@ -136,6 +137,18 @@ export class StoatBackend implements Backend {
 
   async ack(channel: string, message: string): Promise<void> {
     await this.rest.request('PUT', `/channels/${channel}/ack/${message}`);
+  }
+
+  async editMessage(channel: string, message: string, content: string): Promise<Message> {
+    return mapMessage(await this.rest.request<WMessage>('PATCH', `/channels/${channel}/messages/${message}`, { content }));
+  }
+
+  async deleteMessage(channel: string, message: string): Promise<void> {
+    await this.rest.request('DELETE', `/channels/${channel}/messages/${message}`);
+  }
+
+  async pinMessage(channel: string, message: string, pinned: boolean): Promise<void> {
+    await this.rest.request(pinned ? 'POST' : 'DELETE', `/channels/${channel}/messages/${message}/pin`);
   }
 
   async dms() {

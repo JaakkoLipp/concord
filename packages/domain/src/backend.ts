@@ -109,6 +109,9 @@ export interface Backend {
   /** Send with an idempotency key, which the backend echoes as the message's nonce. */
   sendMessage(channel: Id, message: OutgoingMessage, key: string): Promise<Message>;
   ack(channel: Id, message: Id): Promise<void>;
+  editMessage(channel: Id, message: Id, content: string): Promise<Message>;
+  deleteMessage(channel: Id, message: Id): Promise<void>;
+  pinMessage(channel: Id, message: Id, pinned: boolean): Promise<void>;
 
   connect(handlers: GatewayHandlers): Gateway;
 }

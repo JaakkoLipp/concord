@@ -12,13 +12,26 @@
   import Reactions from './Reactions.svelte';
   import ReplyPreview from './ReplyPreview.svelte';
   import SystemLine from './SystemLine.svelte';
+  import ActionBar from './ActionBar.svelte';
+  import EditBox from '$lib/composer/EditBox.svelte';
+
+  import type { MessageActions } from './actions.ts';
 
   interface Props {
     message: Message; store: Store; server: string | undefined; continuation: boolean; highlighted: boolean; onjump: (id: string) => void;
     /** Set while the message is sending or has failed. */
     pending?: PendingMessage | undefined; onretry?: (key: string) => void; ondiscard?: (key: string) => void;
+    actions?: MessageActions | undefined; editing?: boolean; selected?: boolean;
   }
-  let { message, store, server, continuation, highlighted, onjump, pending, onretry, ondiscard }: Props = $props();
+  let { message, store, server, continuation, highlighted, onjump, pending, onretry, ondiscard, actions, editing = false, selected = false }: Props = $props();
+  const own = $derived(message.author === store.selfId);
+  let menuOpen = $state(false);
+  const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+  /** On touch screens there is no hover: a tap on the message shows its actions. */
+  function tap(e: MouseEvent) {
+    if (!touch || !actions || (e.target as HTMLElement).closest('a, button, img, video, input, .cm-editor')) return;
+    actions.select(selected ? null : message.id);
+  }
   const failedReason = (error: string | undefined) => (m.composer.failed as Record<string, string>)[error ?? ''] ?? m.composer.failed.other;
 
   const user = $derived(store.users.get(message.author));
@@ -35,7 +48,9 @@
     <SystemLine {message} {store} {server} {onjump} />
   </div>
 {:else}
-  <article class="row message" class:continuation class:mentioned class:highlighted class:sending={pending?.state === 'sending'} class:failed={pending?.state === 'failed'} aria-busy={pending?.state === 'sending' || undefined} id="message-{message.id}" data-id={message.id} aria-labelledby="author-{message.id}">
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+  <article class="row message" class:continuation class:mentioned class:highlighted class:sending={pending?.state === 'sending'} class:failed={pending?.state === 'failed'} aria-busy={pending?.state === 'sending' || undefined}
+    class:selected class:menu-open={menuOpen} class:editing onclick={tap} id="message-{message.id}" data-id={message.id} aria-labelledby="author-{message.id}">
     {#each message.replies as reply (reply)}
       <ReplyPreview id={reply} {store} {server} {onjump} />
     {/each}
@@ -57,7 +72,9 @@
         {:else}
           <span class="visually-hidden" id="author-{message.id}">{name}</span>
         {/if}
-        {#if message.content}
+        {#if editing && actions}
+          <EditBox text={message.content ?? ''} {store} {server} onsave={(t) => actions.saveEdit(message, t)} oncancel={() => actions.cancelEdit()} />
+        {:else if message.content}
           <div class="content"><Markdown source={message.content} />{#if message.edited}<span class="edited" title={fullDate(new Date(message.edited))}>{m.conversation.edited}</span>{/if}</div>
         {/if}
         {#if pending?.state === 'failed'}
@@ -72,6 +89,14 @@
         {#if Object.keys(message.reactions).length}<Reactions reactions={message.reactions} {store} {server} />{/if}
       </div>
     </div>
+    {#if actions && !pending && !editing}
+      <div class="actions">
+        <ActionBar canReply={actions.send} canEdit={own && !!message.content} canDelete={own || actions.manage} canPin={actions.manage} pinned={message.pinned}
+          onreply={() => actions.reply(message)} onedit={() => actions.edit(message)} ondelete={(skip) => actions.delete(message, skip)}
+          onpin={() => actions.pin(message)} oncopylink={() => actions.copyLink(message)} oncopyid={() => actions.copyId(message)}
+          onmenu={(open) => (menuOpen = open)} />
+      </div>
+    {/if}
   </article>
 {/if}
 
@@ -101,6 +126,10 @@
   .tag { padding: 0 var(--space-2); border-radius: var(--radius-xs); background: var(--accent); color: var(--on-accent); font: 700 0.625rem/1rem var(--font-sans); text-transform: uppercase; }
   .time { color: var(--text-secondary); font: var(--text-xs) var(--font-sans); font-variant-numeric: tabular-nums; flex: none; }
   .content { color: var(--text-normal); font: var(--text-md) var(--font-sans); line-height: 1.375rem; overflow-wrap: anywhere; }
+  .actions { display: none; position: absolute; top: calc(-1 * var(--space-5)); right: var(--space-5); z-index: 2; }
+  .message:hover, .message:focus-within, .message.selected, .message.menu-open { content-visibility: visible; z-index: 1; }
+  .message:hover .actions, .message:focus-within .actions, .message.selected .actions, .message.menu-open .actions { display: block; }
+  .message.selected, .message.editing { background: var(--hover-overlay); }
   .sending .content { color: var(--text-muted); }
   .failed .content { color: var(--danger); }
   .not-sent { margin: var(--space-1) 0 0; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
