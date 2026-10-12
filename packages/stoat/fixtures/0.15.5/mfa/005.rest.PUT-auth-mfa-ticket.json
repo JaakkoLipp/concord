@@ -1,0 +1,27 @@
+{
+ "step": "ticket by password, refused",
+ "actor": "totp",
+ "request": {
+  "method": "PUT",
+  "path": "/auth/mfa/ticket",
+  "headers": {
+   "x-session-token": "<secret-15>"
+  },
+  "body": {
+   "password": "<secret-12>"
+  }
+ },
+ "response": {
+  "status": 400,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "10743416016757861634",
+   "x-ratelimit-remaining": "12",
+   "x-ratelimit-reset-after": "9980"
+  },
+  "body": {
+   "type": "DisallowedMFAMethod"
+  }
+ }
+}

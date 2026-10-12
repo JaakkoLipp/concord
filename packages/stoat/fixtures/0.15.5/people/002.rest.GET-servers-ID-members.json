@@ -1,0 +1,25 @@
+{
+ "step": "members",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/servers/01KE6P5YA800000WS1Q6NXSP7H/members?exclude_offline=true",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "5",
+   "x-ratelimit-bucket": "4355574530925212923",
+   "x-ratelimit-remaining": "3",
+   "x-ratelimit-reset-after": "9979"
+  },
+  "body": {
+   "members": [],
+   "users": []
+  }
+ }
+}

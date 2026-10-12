@@ -41,7 +41,7 @@ Detailed in [dev-environment.md](dev-environment.md).
 
 **Scope**:
 
-- Stoat 0.15.7 on the VPS behind Caddy, with Mailpit catching email, and the client's dev server on Jaakko's machine proxying to it.
+- Stoat 0.15.5 on the VPS behind Caddy, with Mailpit catching email, and the client's dev server on Jaakko's machine proxying to it.
 - First admin account, server-creation restriction, invite permission removed from members.
 - A seed script that builds a realistic dataset through the API.
 - A recorder that captures real REST responses and WebSocket events as test fixtures.
@@ -97,7 +97,7 @@ Detailed in [dev-environment.md](dev-environment.md).
 
 Detailed in [vps-runbook.md](vps-runbook.md).
 
-**Scope**: wiping the development data, the email relay, the registration gate, TURN on a floating IP, backups with a restore drill, and our client deployed at `/app` for friends to try text chat.
+**Scope**: wiping the development data, the email relay, the registration gate, TURN on a floating IP, backups with a restore drill, and our client deployed at `/app` for friends to try text chat. Friends' accounts are created by hand. Registration stays closed.
 
 **Acceptance criteria**:
 
@@ -134,7 +134,7 @@ Detailed in [vps-runbook.md](vps-runbook.md).
 
 ## M6: Website
 
-**Scope**: landing, invite page with the server allowlist, registration through our server behind the Caddy rule, Stoat's email link targets, the standalone account page for email, password, TOTP, recovery codes, sessions and deletion, downloads page, the notification-link redirect, and the routing switch that moves Stoat's own client to `ref.concord.jaalip.com`.
+**Scope**: landing, invite page with the server allowlist, registration through our server behind the Caddy rule and a switch that Jaakko turns on when they decide to open it, Stoat's email link targets, the standalone account page for email, password, TOTP, recovery codes, sessions and deletion, downloads page, the notification-link redirect, and the routing switch that moves Stoat's own client to `ref.concord.jaalip.com`.
 
 **Acceptance criteria**:
 

@@ -1,0 +1,21 @@
+{
+ "step": "pin",
+ "actor": "dev-admin",
+ "request": {
+  "method": "POST",
+  "path": "/channels/01KE6P5YA800000V76HDQ01P2E/messages/01KE6PCCFG0000AV29J1KP539E/pin",
+  "headers": {
+   "x-session-token": "<secret-4>"
+  }
+ },
+ "response": {
+  "status": 204,
+  "headers": {
+   "x-ratelimit-limit": "10",
+   "x-ratelimit-bucket": "5982006978037033858",
+   "x-ratelimit-remaining": "9",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": null
+ }
+}

@@ -1,0 +1,56 @@
+{
+ "step": "profile",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/users/01KE6P5328000005FDJX3VMBAG/profile",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "6381564301654686",
+   "x-ratelimit-remaining": "17",
+   "x-ratelimit-reset-after": "8748"
+  },
+  "body": {
+   "content": "Moderaattori. Kahvi ennen kaikkea ☕",
+   "background": {
+    "_id": "tPTny6IT3qGPHETd_EV5v2ECGx-Wo3YYx7O6O9OoVk",
+    "tag": "backgrounds",
+    "filename": "aino-banner.png",
+    "metadata": {
+     "type": "Image",
+     "width": 960,
+     "height": 384,
+     "thumbhash": [
+      24,
+      56,
+      6,
+      19,
+      138,
+      143,
+      136,
+      136,
+      127,
+      120,
+      136,
+      136,
+      112,
+      128,
+      247,
+      248,
+      135
+     ],
+     "animated": false
+    },
+    "content_type": "image/png",
+    "size": 139244
+   }
+  }
+ }
+}

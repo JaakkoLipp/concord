@@ -1,0 +1,175 @@
+{
+ "step": "before",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/channels/01KE6P5YA800000V76HDQ01P2E/messages?limit=20&before=01KE6PAJ7G000067TSAXV0GKVG",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "10461430989866481428",
+   "x-ratelimit-remaining": "11",
+   "x-ratelimit-reset-after": "8628"
+  },
+  "body": [
+   {
+    "_id": "01KE6PAJ73000065BBM1HZPQ7G",
+    "nonce": "01KE6PAJ6Y000064MV48X3PVAX",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5KZR00000MNARQ81PAQ6",
+    "content": "tänään satoi taas koko päivän"
+   },
+   {
+    "_id": "01KE6PAJ6M000063XTBE50YAHS",
+    "nonce": "01KE6PAJ6G000062NSAANWC2T4",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5CN600000F69T5RQJPFW",
+    "content": "lumet sulaa jo"
+   },
+   {
+    "_id": "01KE6PAJ660000618F3Z3ND682",
+    "nonce": "01KE6PAJ61000060BV2GVJ4BZX",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5CN600000F69T5RQJPFW",
+    "content": "agreed"
+   },
+   {
+    "_id": "01KE6PAJ5Q00005ZG6722N1M8E",
+    "nonce": "01KE6PAJ5G00005Y3QMB52Y7FF",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5CN600000F69T5RQJPFW",
+    "content": "works on my machine"
+   },
+   {
+    "_id": "01KE6PAJ5500005XG5HA7G3C5Q",
+    "nonce": "01KE6PAJ5000005WP6VY6FKXKP",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5MH900000NFB6JJZK0TC",
+    "content": "I will check it later"
+   },
+   {
+    "_id": "01KE6PAJ4N00005VRJGZJPGBYX",
+    "nonce": "01KE6PAJ4D00005T8HMXVD8MP6",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5MH900000NFB6JJZK0TC",
+    "content": "haha"
+   },
+   {
+    "_id": "01KE6PAATH00005S129T193HDS",
+    "nonce": "01KE6PAATE00005RJHP03QR7QS",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P54Y9000009SRY7YWD0ZW",
+    "content": "ei käy mulle valitettavasti"
+   },
+   {
+    "_id": "01KE6PAAT100005QREGJJM3C5A",
+    "nonce": "01KE6PAASW00005PZ73605X7BY",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P54Y9000009SRY7YWD0ZW",
+    "content": "toi on ihan hyvä pointti"
+   },
+   {
+    "_id": "01KE6PAASG00005NR8HTN6ZYDF",
+    "nonce": "01KE6PAASB00005MV9NPGR9JJR",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5KZR00000MNARQ81PAQ6",
+    "content": "works on my machine"
+   },
+   {
+    "_id": "01KE6PAARY00005KG83D94Q6MR",
+    "nonce": "01KE6PAARR00005J1N5ST4A17W",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5KZR00000MNARQ81PAQ6",
+    "content": "toi on ihan hyvä pointti"
+   },
+   {
+    "_id": "01KE6PAARE00005HCJH2HQX4G0",
+    "nonce": "01KE6PAAR900005GB2B9B5MQN4",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P52T4000004B2QQMXZ6WF",
+    "content": "just got back from the cabin :01KE6P8PSV00001GR1BS7FVGB2:"
+   },
+   {
+    "_id": "01KE6PAAQZ00005FT5WQ2GXDD1",
+    "nonce": "01KE6PAAQW00005E151DRETF1Y",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P52T4000004B2QQMXZ6WF",
+    "content": "hyvää yötä"
+   },
+   {
+    "_id": "01KE6PAAQH00005DA5P7SBW907",
+    "nonce": "01KE6PAAQB00005C8HTYAN6CJ5",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P52T4000004B2QQMXZ6WF",
+    "content": "moi kaikki :01KE6P90CZ00001Q2JBXYSANST:"
+   },
+   {
+    "_id": "01KE6PAAQ000005B8D5294K2HC",
+    "nonce": "01KE6PAAPV00005AKD7SDM0G3Y",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P54Y9000009SRY7YWD0ZW",
+    "content": "laitoin sen jo"
+   },
+   {
+    "_id": "01KE6PAAPD000059NYWHMKC013",
+    "nonce": "01KE6PAAPA00005803D0TNS8B7",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P54Y9000009SRY7YWD0ZW",
+    "content": "onko kellään laturia lainaksi?"
+   },
+   {
+    "_id": "01KE6PAAP1000057KKHT655W5Z",
+    "nonce": "01KE6PAANY0000560GX9TFT63Y",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P54Y9000009SRY7YWD0ZW",
+    "content": "mitä te ootte mieltä tästä?"
+   },
+   {
+    "_id": "01KE6PAANK000055WJX32Q43AD",
+    "nonce": "01KE6PAANG000054ZR7BT9VCGM",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5328000005FDJX3VMBAG",
+    "content": "toi on ihan hyvä pointti",
+    "mentions": [
+     "01KE6P575300000BF8B6EB7J6C"
+    ],
+    "replies": [
+     "01KE6PAAJ000004KX810PCG1VX"
+    ]
+   },
+   {
+    "_id": "01KE6PAAN6000053XJ6QDS7F45",
+    "nonce": "01KE6PAAN3000052SPA2719BJZ",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5QQA00000SQ58KDQZC4D",
+    "content": "thanks!",
+    "mentions": [
+     "01KE6P5EWG00000GHYPHWTVY8V"
+    ],
+    "replies": [
+     "01KE6PAAHK00004HY7DVBF0PAX"
+    ]
+   },
+   {
+    "_id": "01KE6PAAMV000051V6C9N3108S",
+    "nonce": "01KE6PAAMP0000505JV71D09YB",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P57KP00000CBHMHZXZMWY",
+    "content": "mitä te ootte mieltä tästä?"
+   },
+   {
+    "_id": "01KE6PAAME00004ZZCBB43KPXM",
+    "nonce": "01KE6PAAMA00004YYRGKQ7NDZH",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P57KP00000CBHMHZXZMWY",
+    "content": "huomenta!"
+   }
+  ]
+ }
+}

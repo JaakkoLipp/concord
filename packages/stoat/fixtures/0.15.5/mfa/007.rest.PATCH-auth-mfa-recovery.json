@@ -1,0 +1,34 @@
+{
+ "step": "ticket by totp",
+ "actor": "totp",
+ "request": {
+  "method": "PATCH",
+  "path": "/auth/mfa/recovery",
+  "headers": {
+   "x-session-token": "<secret-15>",
+   "x-mfa-ticket": "<secret-16>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "10743416016757861634",
+   "x-ratelimit-remaining": "10",
+   "x-ratelimit-reset-after": "9960"
+  },
+  "body": [
+   "<recovery_codes-17>",
+   "<recovery_codes-18>",
+   "<recovery_codes-19>",
+   "<recovery_codes-20>",
+   "<recovery_codes-21>",
+   "<recovery_codes-22>",
+   "<recovery_codes-23>",
+   "<recovery_codes-24>",
+   "<recovery_codes-25>",
+   "<recovery_codes-26>"
+  ]
+ }
+}

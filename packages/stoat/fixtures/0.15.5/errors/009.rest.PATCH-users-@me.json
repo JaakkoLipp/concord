@@ -1,0 +1,29 @@
+{
+ "step": "429",
+ "actor": "lauri",
+ "request": {
+  "method": "PATCH",
+  "path": "/users/@me",
+  "headers": {
+   "x-session-token": "<secret-2>"
+  },
+  "body": {
+   "status": {
+    "text": "Kuuntelee musiikkia"
+   }
+  }
+ },
+ "response": {
+  "status": 429,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "2",
+   "x-ratelimit-bucket": "14482201772407755375",
+   "x-ratelimit-remaining": "0",
+   "x-ratelimit-reset-after": "9971"
+  },
+  "body": {
+   "retry_after": 9971
+  }
+ }
+}

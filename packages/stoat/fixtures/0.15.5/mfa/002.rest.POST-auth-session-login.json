@@ -1,0 +1,35 @@
+{
+ "step": "totp step",
+ "actor": "totp",
+ "request": {
+  "method": "POST",
+  "path": "/auth/session/login",
+  "headers": {},
+  "body": {
+   "mfa_ticket": "<secret-13>",
+   "mfa_response": {
+    "totp_code": "<secret-14>"
+   },
+   "friendly_name": "Concord recorder"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "3290070096498229025",
+   "x-ratelimit-remaining": "11",
+   "x-ratelimit-reset-after": "8012"
+  },
+  "body": {
+   "result": "Success",
+   "_id": "01KE6PC4FS0000AMP49A4ZK9YF",
+   "user_id": "01KE6P54RN000008C22JDJ1QJM",
+   "token": "<secret-15>",
+   "name": "Concord recorder",
+   "last_seen": "2026-01-05T09:03:55.385Z",
+   "origin": "dev"
+  }
+ }
+}

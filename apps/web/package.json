@@ -1,0 +1,5 @@
+{
+  "name": "@concord/web",
+  "private": true,
+  "type": "module"
+}

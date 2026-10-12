@@ -1,0 +1,20 @@
+{
+ "step": "401",
+ "actor": "anonymous",
+ "request": {
+  "method": "GET",
+  "path": "/users/@me",
+  "headers": {}
+ },
+ "response": {
+  "status": 401,
+  "headers": {
+   "content-type": "text/html; charset=utf-8",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "6182921356239027822",
+   "x-ratelimit-remaining": "19",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"utf-8\">\n    <meta name=\"color-scheme\" content=\"light dark\">\n    <title>401 Unauthorized</title>\n</head>\n<body align=\"center\">\n    <div role=\"main\" align=\"center\">\n        <h1>401: Unauthorized</h1>\n        <p>The request requires user authentication.</p>\n        <hr />\n    </div>\n    <div role=\"contentinfo\" align=\"center\">\n        <small>Rocket</small>\n    </div>\n</body>\n</html>"
+ }
+}

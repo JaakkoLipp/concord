@@ -1,0 +1,18 @@
+{
+  "stoat": "0.15.5",
+  "build": "<failed to generate>",
+  "scrubRules": 4,
+  "seedHash": "3e2a88e2d18b5a39",
+  "spreadDays": 0,
+  "scenarios": [
+    "errors",
+    "events",
+    "history",
+    "login",
+    "mfa",
+    "onboarding",
+    "people",
+    "ready",
+    "sync"
+  ]
+}

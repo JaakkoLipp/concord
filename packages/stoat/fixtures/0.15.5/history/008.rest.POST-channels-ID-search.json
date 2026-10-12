@@ -1,0 +1,123 @@
+{
+ "step": "search",
+ "actor": "dev",
+ "request": {
+  "method": "POST",
+  "path": "/channels/01KE6P5YA800000V76HDQ01P2E/search",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  },
+  "body": {
+   "query": "sauna",
+   "limit": 10
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "10461430989866481428",
+   "x-ratelimit-remaining": "6",
+   "x-ratelimit-reset-after": "8562"
+  },
+  "body": [
+   {
+    "_id": "01KE6PAA5W000035PWPA9M8J8M",
+    "nonce": "01KE6PAA5S000034DQP85JEN4Y",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P575300000BF8B6EB7J6C",
+    "content": "sauna lämpiää"
+   },
+   {
+    "_id": "01KE6PAM8200008DQ77A663VRZ",
+    "nonce": "01KE6PAM7W00008CB9BSBW95CH",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P4YM0000002MKYT6YPE0Z",
+    "content": "sauna lämpiää"
+   },
+   {
+    "_id": "01KE6P9ZY100002T9NW7VE6T3A",
+    "nonce": "01KE6P9ZXV00002SDGY03QJ0PA",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P52T4000004B2QQMXZ6WF",
+    "content": "sauna lämpiää",
+    "mentions": [
+     "01KE6P5C6E00000DZV3Z4WC696"
+    ],
+    "replies": [
+     "01KE6P9ZPR00002QXJKFTTJK9X"
+    ]
+   },
+   {
+    "_id": "01KE6PAKXT000075892N8AH99Q",
+    "nonce": "01KE6PAKXP000074X9YE1H9WWG",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P4YM0000002MKYT6YPE0Z",
+    "content": "sauna lämpiää"
+   },
+   {
+    "_id": "01KE6P9PPA00002P3CVT5M4BXH",
+    "nonce": "01KE6P9PP300002NMMCFGD6MX2",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5H8X00000KM0HJWN7QTX",
+    "content": "sauna lämpiää",
+    "replies": [
+     "01KE6P9P9K00002J4EQ3F6AH1Z"
+    ],
+    "reactions": {
+     "🔥": [
+      "01KE6P52F2000003E7052YVB0E"
+     ],
+     "🙏": [
+      "01KE6P56R000000AA4WNP248F8",
+      "01KE6P5RX500000TZWAGCCMQ9H"
+     ],
+     "01KE6P90EE00001RP8PFJNS2G8": [
+      "01KE6P52F2000003E7052YVB0E"
+     ]
+    }
+   },
+   {
+    "_id": "01KE6P9PDY00002M483WGP7NDB",
+    "nonce": "01KE6P9PDJ00002KVS5BC0PKCJ",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5C6E00000DZV3Z4WC696",
+    "content": "sauna lämpiää",
+    "reactions": {
+     "01KE6P8PMV00001D1Q6DT7AZX0": [
+      "01KE6P5H8X00000KM0HJWN7QTX",
+      "01KE6P5CN600000F69T5RQJPFW",
+      "01KE6P5QQA00000SQ58KDQZC4D",
+      "01KE6P5Q4P00000R2N099H7W94",
+      "01KE6P5F0G00000H53MFN4DQGC"
+     ],
+     "01KE6P8PSV00001GR1BS7FVGB2": [
+      "01KE6P5P8W00000QKZ3DY5XA9H",
+      "01KE6P4YM0000002MKYT6YPE0Z"
+     ],
+     "🙏": [
+      "01KE6P575300000BF8B6EB7J6C",
+      "01KE6P57KP00000CBHMHZXZMWY",
+      "01KE6P5328000005FDJX3VMBAG",
+      "01KE6P52T4000004B2QQMXZ6WF"
+     ]
+    }
+   },
+   {
+    "_id": "01KE6P9P0T00002HKPAWXW86EC",
+    "nonce": "01KE6P9P0K00002G84TM4ZXSVT",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5C6E00000DZV3Z4WC696",
+    "content": "sauna lämpiää"
+   },
+   {
+    "_id": "01KE6PA8YT000031PR4BTAX8H9",
+    "nonce": "01KE6PA8YQ000030VT7FTYEX97",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5CN600000F69T5RQJPFW",
+    "content": "sauna lämpiää :01KE6P90GV00001T28FFQG1HMC:"
+   }
+  ]
+ }
+}

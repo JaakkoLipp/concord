@@ -1,0 +1,26 @@
+{
+ "step": "403",
+ "actor": "dev",
+ "request": {
+  "method": "POST",
+  "path": "/channels/01KE6P5YA800000V76HDQ01P2E/invites",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 403,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "10461430989866481428",
+   "x-ratelimit-remaining": "14",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": {
+   "type": "MissingPermission",
+   "permission": "InviteOthers",
+   "location": "crates/core/permissions/src/models/mod.rs:80:17"
+  }
+ }
+}

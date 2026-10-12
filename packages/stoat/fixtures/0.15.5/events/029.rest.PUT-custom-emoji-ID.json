@@ -1,0 +1,37 @@
+{
+ "step": "emoji",
+ "actor": "dev-admin",
+ "request": {
+  "method": "PUT",
+  "path": "/custom/emoji/01KE6PE1JC0000B620A9BZ0XAS",
+  "headers": {
+   "x-session-token": "<secret-4>"
+  },
+  "body": {
+   "name": "tallennus",
+   "parent": {
+    "type": "Server",
+    "id": "01KE6P5YA800000WS1Q6NXSP7H"
+   }
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "16512517219482665156",
+   "x-ratelimit-remaining": "19",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": {
+   "_id": "01KE6PE1JC0000B620A9BZ0XAS",
+   "parent": {
+    "type": "Server",
+    "id": "01KE6P5YA800000WS1Q6NXSP7H"
+   },
+   "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+   "name": "tallennus"
+  }
+ }
+}

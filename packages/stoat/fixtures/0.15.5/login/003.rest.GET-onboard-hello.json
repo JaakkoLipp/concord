@@ -1,0 +1,24 @@
+{
+ "step": "hello",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/onboard/hello",
+  "headers": {
+   "x-session-token": "<secret-10>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "17066014890611107462",
+   "x-ratelimit-remaining": "19",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": {
+   "onboarding": false
+  }
+ }
+}

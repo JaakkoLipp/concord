@@ -1,0 +1,24 @@
+{
+ "step": "role",
+ "actor": "dev-admin",
+ "request": {
+  "method": "DELETE",
+  "path": "/servers/01KE6P5YA800000WS1Q6NXSP7H/roles/01KE6PDQA50000B3NXCE459EEK",
+  "headers": {
+   "x-session-token": "<secret-4>"
+  }
+ },
+ "response": {
+  "status": 429,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "5",
+   "x-ratelimit-bucket": "15164974434513348461",
+   "x-ratelimit-remaining": "0",
+   "x-ratelimit-reset-after": "127"
+  },
+  "body": {
+   "retry_after": 127
+  }
+ }
+}

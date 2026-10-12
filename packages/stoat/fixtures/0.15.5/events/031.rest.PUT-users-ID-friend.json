@@ -1,0 +1,71 @@
+{
+ "step": "relationship",
+ "actor": "mikko",
+ "request": {
+  "method": "PUT",
+  "path": "/users/01KE6P52F2000003E7052YVB0E/friend",
+  "headers": {
+   "x-session-token": "<secret-6>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "10791217453418311482",
+   "x-ratelimit-remaining": "19",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": {
+   "_id": "01KE6P52F2000003E7052YVB0E",
+   "username": "dev",
+   "discriminator": "7991",
+   "display_name": "Dev",
+   "avatar": {
+    "_id": "gNlhT-V4pO9Clzh0xJwmxirTIMIaDATEE86nC5gtIb",
+    "tag": "avatars",
+    "filename": "dev.png",
+    "metadata": {
+     "type": "Image",
+     "width": 256,
+     "height": 256,
+     "thumbhash": [
+      214,
+      183,
+      9,
+      7,
+      14,
+      87,
+      71,
+      103,
+      135,
+      121,
+      134,
+      128,
+      137,
+      170,
+      152,
+      135,
+      120,
+      134,
+      134,
+      138,
+      248,
+      168,
+      136,
+      15
+     ],
+     "animated": false
+    },
+    "content_type": "image/png",
+    "size": 2033
+   },
+   "status": {
+    "text": "Testing Concord"
+   },
+   "relationship": "Friend",
+   "online": true
+  }
+ }
+}

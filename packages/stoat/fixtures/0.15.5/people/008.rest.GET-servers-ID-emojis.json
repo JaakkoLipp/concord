@@ -1,0 +1,293 @@
+{
+ "step": "server",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/servers/01KE6P5YA800000WS1Q6NXSP7H/emojis",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "5",
+   "x-ratelimit-bucket": "4355574530925212923",
+   "x-ratelimit-remaining": "0",
+   "x-ratelimit-reset-after": "9901"
+  },
+  "body": [
+   {
+    "_id": "01KE6P8PJB00001CHE530VTR5Q",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "kahvi"
+   },
+   {
+    "_id": "01KE6P8PMV00001D1Q6DT7AZX0",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "sauna"
+   },
+   {
+    "_id": "01KE6P8PPG00001E5WEGPW5QR0",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "pulla"
+   },
+   {
+    "_id": "01KE6P8PRA00001FH8GP0HDSYT",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "mokki"
+   },
+   {
+    "_id": "01KE6P8PSV00001GR1BS7FVGB2",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "lumi"
+   },
+   {
+    "_id": "01KE6P8PV400001HEQTAZYQZ4B",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "revontuli"
+   },
+   {
+    "_id": "01KE6P8PW900001JT52SEHXG5G",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "hirvi"
+   },
+   {
+    "_id": "01KE6P8PXJ00001K3VANSY3AJF",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "kuusi"
+   },
+   {
+    "_id": "01KE6P8PYS00001M1F0HJH7G5N",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "sieni"
+   },
+   {
+    "_id": "01KE6P8Q0400001N8RWH5XYEZX",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "mustikka"
+   },
+   {
+    "_id": "01KE6P90BH00001PFAMDPPRH2E",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "salmiakki"
+   },
+   {
+    "_id": "01KE6P90CZ00001Q2JBXYSANST",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "karhu"
+   },
+   {
+    "_id": "01KE6P90EE00001RP8PFJNS2G8",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "pog"
+   },
+   {
+    "_id": "01KE6P90FP00001S8Q4WE3JJHR",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "kekw"
+   },
+   {
+    "_id": "01KE6P90GV00001T28FFQG1HMC",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "pepega"
+   },
+   {
+    "_id": "01KE6P90J800001VYYPYVSYGFE",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "catjam"
+   },
+   {
+    "_id": "01KE6P90KJ00001WSTY1GE7PMZ",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "gg"
+   },
+   {
+    "_id": "01KE6P90N400001XG9TTN1M1SM",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "ez"
+   },
+   {
+    "_id": "01KE6P90PX00001Y1R0ZQ8RWKY",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "sadge"
+   },
+   {
+    "_id": "01KE6P90RH00001ZTE25GF6KA1",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "hype"
+   },
+   {
+    "_id": "01KE6P9A4H0000206B1C22NZNM",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "ok_hand_cat"
+   },
+   {
+    "_id": "01KE6P9A68000021GCSVNWANPH",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "thinking_fin"
+   },
+   {
+    "_id": "01KE6P9A7H000022TTJJBCD352",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "party"
+   },
+   {
+    "_id": "01KE6P9A8T0000239H0CN1J1NH",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "fire_fin"
+   },
+   {
+    "_id": "01KE6P9AAB0000242RNT8BGDX1",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "heart_fin"
+   },
+   {
+    "_id": "01KE6P9ABS0000257WPA2DEWEY",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "plus_one"
+   },
+   {
+    "_id": "01KE6P9AD0000026ZTT0JF5M89",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "minus_one"
+   },
+   {
+    "_id": "01KE6P9AE7000027Z2KQ28JA8X",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "ship_it"
+   },
+   {
+    "_id": "01KE6P9AG8000028721241YXKY",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "bug"
+   },
+   {
+    "_id": "01KE6P9AJ4000029P6YJNEBWY7",
+    "parent": {
+     "type": "Server",
+     "id": "01KE6P5YA800000WS1Q6NXSP7H"
+    },
+    "creator_id": "01KE6P4YM0000002MKYT6YPE0Z",
+    "name": "lgtm"
+   }
+  ]
+ }
+}

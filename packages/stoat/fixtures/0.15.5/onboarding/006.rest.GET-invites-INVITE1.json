@@ -1,0 +1,143 @@
+{
+ "step": "invite",
+ "actor": "new",
+ "request": {
+  "method": "GET",
+  "path": "/invites/INVITE1",
+  "headers": {
+   "x-session-token": "<secret-30>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "6962729812158154112",
+   "x-ratelimit-remaining": "16",
+   "x-ratelimit-reset-after": "9971"
+  },
+  "body": {
+   "type": "Server",
+   "code": "INVITE1",
+   "server_id": "01KE6P5YA800000WS1Q6NXSP7H",
+   "server_name": "Concord",
+   "server_icon": {
+    "_id": "9rYmzqFjhME0O33dpndCm3bZeYPZkTIugbhcdTbwd0",
+    "tag": "icons",
+    "filename": "icon.png",
+    "metadata": {
+     "type": "Image",
+     "width": 256,
+     "height": 256,
+     "thumbhash": [
+      148,
+      72,
+      6,
+      23,
+      6,
+      55,
+      7,
+      87,
+      132,
+      123,
+      120,
+      129,
+      134,
+      170,
+      184,
+      7,
+      200,
+      120,
+      120,
+      67,
+      8,
+      55,
+      132,
+      0
+     ],
+     "animated": false
+    },
+    "content_type": "image/png",
+    "size": 2033
+   },
+   "server_banner": {
+    "_id": "i1M_rP7jeTw14d2NQRpiDX52MH7F5Xgu5Ei-OKyOuN",
+    "tag": "banners",
+    "filename": "banner.png",
+    "metadata": {
+     "type": "Image",
+     "width": 960,
+     "height": 540,
+     "thumbhash": [
+      217,
+      248,
+      5,
+      44,
+      130,
+      127,
+      120,
+      136,
+      127,
+      119,
+      135,
+      135,
+      135,
+      120,
+      143,
+      127,
+      247,
+      247,
+      119
+     ],
+     "animated": false
+    },
+    "content_type": "image/png",
+    "size": 193684
+   },
+   "channel_id": "01KE6P5YA800000V76HDQ01P2E",
+   "channel_name": "yleinen",
+   "user_name": "dev_admin",
+   "user_avatar": {
+    "_id": "u3iTLS0_Qqf5-bsZqX7J0HdIHFvTl-DnYc2BLeenlk",
+    "tag": "avatars",
+    "filename": "dev-admin.png",
+    "metadata": {
+     "type": "Image",
+     "width": 256,
+     "height": 256,
+     "thumbhash": [
+      24,
+      249,
+      9,
+      31,
+      0,
+      39,
+      55,
+      71,
+      125,
+      132,
+      136,
+      133,
+      121,
+      135,
+      120,
+      8,
+      200,
+      132,
+      116,
+      224,
+      71,
+      248,
+      129,
+      11
+     ],
+     "animated": false
+    },
+    "content_type": "image/png",
+    "size": 2027
+   },
+   "member_count": 1
+  }
+ }
+}

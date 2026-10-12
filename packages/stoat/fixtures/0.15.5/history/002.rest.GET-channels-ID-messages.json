@@ -1,0 +1,2107 @@
+{
+ "step": "with users",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/channels/01KE6P5YA800000V76HDQ01P2E/messages?limit=100&include_users=true",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "10461430989866481428",
+   "x-ratelimit-remaining": "12",
+   "x-ratelimit-reset-after": "8646"
+  },
+  "body": {
+   "messages": [
+    {
+     "_id": "01KE6PBBTX0000AFTC8A4AVN9S",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "0000000000000000ZCB6Z8FRSJ",
+     "system": {
+      "type": "message_pinned",
+      "id": "01KE6PAAE7000043EAHX3VDY2Y",
+      "by": "01KE6P4YM0000002MKYT6YPE0Z"
+     }
+    },
+    {
+     "_id": "01KE6PBBTK0000AE5DX3Z8VQDT",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "0000000000000000ZCB6Z8FRSJ",
+     "system": {
+      "type": "message_pinned",
+      "id": "01KE6PA06M00002XE017WCJWPM",
+      "by": "01KE6P4YM0000002MKYT6YPE0Z"
+     }
+    },
+    {
+     "_id": "01KE6PBBT40000ADNDX31NN3GH",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "0000000000000000ZCB6Z8FRSJ",
+     "system": {
+      "type": "message_pinned",
+      "id": "01KE6P9NQ400002FR3BWMEA3YV",
+      "by": "01KE6P4YM0000002MKYT6YPE0Z"
+     }
+    },
+    {
+     "_id": "01KE6PAMD8000093KH074CDVGA",
+     "nonce": "01KE6PAMD400009299X00VB36K",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P575300000BF8B6EB7J6C",
+     "content": "just got back from the cabin (korjattu)",
+     "edited": "2026-01-05T09:03:27.419Z",
+     "embeds": [],
+     "reactions": {
+      "01KE6P9AJ4000029P6YJNEBWY7": [
+       "01KE6P5RX500000TZWAGCCMQ9H",
+       "01KE6P5KZR00000MNARQ81PAQ6",
+       "01KE6P5328000005FDJX3VMBAG",
+       "01KE6P5EWG00000GHYPHWTVY8V",
+       "01KE6P575300000BF8B6EB7J6C"
+      ],
+      "👍": [
+       "01KE6P5328000005FDJX3VMBAG"
+      ]
+     }
+    },
+    {
+     "_id": "01KE6PAMCS000091FRE3SW1SWN",
+     "nonce": "01KE6PAMCJ00009036QJFTQH31",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P575300000BF8B6EB7J6C",
+     "content": "olipas hyvä leffa"
+    },
+    {
+     "_id": "01KE6PAMC800008ZQDAW0R0P87",
+     "nonce": "01KE6PAMC300008Y0JC5VWMKVP",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P57KP00000CBHMHZXZMWY",
+     "content": "oikeesti? :01KE6P9AJ4000029P6YJNEBWY7:"
+    },
+    {
+     "_id": "01KE6PAMBQ00008X0HQMPTDSMZ",
+     "nonce": "01KE6PAMBH00008WY8DEXR5GP7",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5H8X00000KM0HJWN7QTX",
+     "content": "kokeile uudelleen :01KE6P9A8T0000239H0CN1J1NH:",
+     "replies": [
+      "01KE6PAM6Z000089PB4F5PNNZ2"
+     ]
+    },
+    {
+     "_id": "01KE6PAMB600008V05AQWQ8G00",
+     "nonce": "01KE6PAMB300008T711JJK6A4E",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P4YM0000002MKYT6YPE0Z",
+     "content": "that is a fair point"
+    },
+    {
+     "_id": "01KE6PAMAS00008SH1032RNRN2",
+     "nonce": "01KE6PAMAN00008RZA2HZF0QCS",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P4YM0000002MKYT6YPE0Z",
+     "content": "aika siistiä",
+     "replies": [
+      "01KE6PAM9H00008KTXV5Q5NG6M"
+     ]
+    },
+    {
+     "_id": "01KE6PAMAD00008QFSADKQ2AXN",
+     "nonce": "01KE6PAMAA00008PE2Y5C2NXT4",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P4YM0000002MKYT6YPE0Z",
+     "content": "mustikoita oli tosi paljon tänä vuonna"
+    },
+    {
+     "_id": "01KE6PAMA100008N7QS7MAD9AD",
+     "nonce": "01KE6PAM9X00008M7B0Q1KB1TQ",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5H8X00000KM0HJWN7QTX",
+     "content": "mustikoita oli tosi paljon tänä vuonna :01KE6P9A4H0000206B1C22NZNM:"
+    },
+    {
+     "_id": "01KE6PAM9H00008KTXV5Q5NG6M",
+     "nonce": "01KE6PAM9C00008JH171C55ZBC",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5H8X00000KM0HJWN7QTX",
+     "content": "kuka muistaa tän?"
+    },
+    {
+     "_id": "01KE6PAM9100008HGWBNRNX209",
+     "nonce": "01KE6PAM8V00008GWCBJ7CWV81",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5H8X00000KM0HJWN7QTX",
+     "content": "nice"
+    },
+    {
+     "_id": "01KE6PAM8J00008FPN9YX8QQ4Z",
+     "nonce": "01KE6PAM8C00008ERHS7QNT4YH",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P4YM0000002MKYT6YPE0Z",
+     "content": "joo kuulostaa hyvältä"
+    },
+    {
+     "_id": "01KE6PAM8200008DQ77A663VRZ",
+     "nonce": "01KE6PAM7W00008CB9BSBW95CH",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P4YM0000002MKYT6YPE0Z",
+     "content": "sauna lämpiää"
+    },
+    {
+     "_id": "01KE6PAM7F00008BAC3RV90RW4",
+     "nonce": "01KE6PAM7900008AAV7NFVKDFC",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5CDD00000E578H24K9GZ",
+     "content": "ping me when you are on"
+    },
+    {
+     "_id": "01KE6PAM6Z000089PB4F5PNNZ2",
+     "nonce": "01KE6PAM6S000088V59S3AY8DW",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5CDD00000E578H24K9GZ",
+     "content": "ehkä"
+    },
+    {
+     "_id": "01KE6PAM6E000087B81H6K5BP4",
+     "nonce": "01KE6PAM68000086YAJNTTNG01",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5CDD00000E578H24K9GZ",
+     "content": "joo"
+    },
+    {
+     "_id": "01KE6PAM5Y000085886P1JDC8N",
+     "nonce": "01KE6PAM5Q000084SV8MDT2JYX",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5CDD00000E578H24K9GZ",
+     "content": "mä oon tänään vähän myöhässä"
+    },
+    {
+     "_id": "01KE6PAM5C000083W5AKMVFRE2",
+     "nonce": "01KE6PAM540000823FEM1PJFE2",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P57KP00000CBHMHZXZMWY",
+     "content": "mökille viikonloppuna",
+     "replies": [
+      "01KE6PAM0100007FSZ88XHRSH9"
+     ]
+    },
+    {
+     "_id": "01KE6PAM4Q000081CQ04G7D3ZQ",
+     "nonce": "01KE6PAM4J000080H8A8B419MM",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5QQA00000SQ58KDQZC4D",
+     "content": "joo",
+     "reactions": {
+      "01KE6P9A68000021GCSVNWANPH": [
+       "01KE6P5F0G00000H53MFN4DQGC"
+      ],
+      "🎉": [
+       "01KE6P5C6E00000DZV3Z4WC696"
+      ],
+      "01KE6P9AJ4000029P6YJNEBWY7": [
+       "01KE6P54RN000008C22JDJ1QJM",
+       "01KE6P54Y9000009SRY7YWD0ZW",
+       "01KE6P5H8X00000KM0HJWN7QTX",
+       "01KE6P5KZR00000MNARQ81PAQ6",
+       "01KE6P4YM0000002MKYT6YPE0Z"
+      ]
+     }
+    },
+    {
+     "_id": "01KE6PAM4700007ZNPR4SCAF6E",
+     "nonce": "01KE6PAM4200007YNJSX0PVY0X",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5QQA00000SQ58KDQZC4D",
+     "content": "mökille viikonloppuna"
+    },
+    {
+     "_id": "01KE6PAM3R00007X76FW6JR77F",
+     "nonce": "01KE6PAM3K00007WP52BGRJPJ7",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5QQA00000SQ58KDQZC4D",
+     "content": "can't make it, sorry"
+    },
+    {
+     "_id": "01KE6PAM3500007V7XZZVD9MGK",
+     "nonce": "01KE6PAM3000007TY7BSH5K9WG",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5KZR00000MNARQ81PAQ6",
+     "content": "ei https://github.com/stoatchat/stoatchat",
+     "embeds": [
+      {
+       "type": "Website",
+       "url": "https://github.com/stoatchat/stoatchat",
+       "original_url": "https://github.com/stoatchat/stoatchat",
+       "title": "GitHub - stoatchat/stoatchat: The software powering Stoat",
+       "description": "The software powering Stoat. Contribute to stoatchat/stoatchat development by creating an account on GitHub.",
+       "image": {
+        "url": "https://opengraph.githubassets.com/3825831edc8fe39421d6cd63ed596bee9e4892fc119d8fc3160f1a872c53ac2c/stoatchat/stoatchat",
+        "width": 1200,
+        "height": 600,
+        "size": "Large"
+       },
+       "site_name": "GitHub",
+       "icon_url": "https://github.githubassets.com/favicons/favicon.svg",
+       "colour": "#1e2327"
+      }
+     ],
+     "reactions": {
+      "01KE6P8PJB00001CHE530VTR5Q": [
+       "01KE6P575300000BF8B6EB7J6C",
+       "01KE6P5F8T00000JE9SZ23HP31"
+      ],
+      "🇫🇮": [
+       "01KE6P5H8X00000KM0HJWN7QTX",
+       "01KE6P5C6E00000DZV3Z4WC696",
+       "01KE6P5EWG00000GHYPHWTVY8V",
+       "01KE6P5MZV00000PRZY7BJKBGD"
+      ]
+     }
+    },
+    {
+     "_id": "01KE6PAM2Q00007SZ81S2MNEE6",
+     "nonce": "01KE6PAM2J00007RPCNWNVET5W",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P575300000BF8B6EB7J6C",
+     "content": "haha"
+    },
+    {
+     "_id": "01KE6PAM2300007QSF0432N618",
+     "nonce": "01KE6PAM1Z00007PQ2FSK7BWCT",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P575300000BF8B6EB7J6C",
+     "content": "joo",
+     "mentions": [
+      "01KE6P575300000BF8B6EB7J6C"
+     ],
+     "replies": [
+      "01KE6PAKWS000071E5318P1R7X"
+     ],
+     "reactions": {
+      "😂": [
+       "01KE6P52F2000003E7052YVB0E",
+       "01KE6P56R000000AA4WNP248F8",
+       "01KE6P5P8W00000QKZ3DY5XA9H",
+       "01KE6P5QQA00000SQ58KDQZC4D"
+      ]
+     }
+    },
+    {
+     "_id": "01KE6PAM1Q00007N1TQAHA4CK7",
+     "nonce": "01KE6PAM1J00007M20W1V3X2EP",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5CDD00000E578H24K9GZ",
+     "content": "thanks! https://fi.wikipedia.org/wiki/Mustikka",
+     "embeds": [
+      {
+       "type": "Website",
+       "url": "https://fi.wikipedia.org/wiki/Mustikka",
+       "original_url": "https://fi.wikipedia.org/wiki/Mustikka",
+       "title": "Mustikka – Wikipedia",
+       "image": {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/1/10/203_Vaccinium_Murtillus_L.jpg?utm_source=fi.wikipedia.org&utm_campaign=index&utm_content=thumbnail_unscaled",
+        "width": 807,
+        "height": 1200,
+        "size": "Preview"
+       },
+       "icon_url": "https://fi.wikipedia.org/static/apple-touch/wikipedia.png"
+      }
+     ],
+     "reactions": {
+      "01KE6P9AJ4000029P6YJNEBWY7": [
+       "01KE6P5MH900000NFB6JJZK0TC"
+      ],
+      "01KE6P8PV400001HEQTAZYQZ4B": [
+       "01KE6P5H8X00000KM0HJWN7QTX",
+       "01KE6P5CDD00000E578H24K9GZ",
+       "01KE6P5MH900000NFB6JJZK0TC",
+       "01KE6P5P8W00000QKZ3DY5XA9H"
+      ]
+     }
+    },
+    {
+     "_id": "01KE6PAM1600007KJ4A0N0NC3N",
+     "nonce": "01KE6PAM0Z00007JM6PQ0Y2P0K",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5F0G00000H53MFN4DQGC",
+     "content": "anyone remember this? https://developer.mozilla.org/en-US/docs/Web/API/WebSocket",
+     "embeds": [
+      {
+       "type": "Website",
+       "url": "https://developer.mozilla.org/en-US/docs/Web/API/WebSocket",
+       "original_url": "https://developer.mozilla.org/en-US/docs/Web/API/WebSocket",
+       "title": "WebSocket - Web APIs | MDN",
+       "description": "The WebSocket object provides the API for creating and managing a WebSocket connection to a server, as well as for sending and receiving data on the connection.",
+       "image": {
+        "url": "https://developer.mozilla.org/mdn-social-image.46ac2375.png",
+        "width": 1024,
+        "height": 1024,
+        "size": "Preview"
+       },
+       "site_name": "MDN Web Docs",
+       "icon_url": "https://developer.mozilla.org/apple-touch-icon.png"
+      }
+     ]
+    },
+    {
+     "_id": "01KE6PAM0J00007HMZ6GABF6MN",
+     "nonce": "01KE6PAM0B00007GAHPJ99CDB6",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5F0G00000H53MFN4DQGC",
+     "content": "mökille viikonloppuna"
+    },
+    {
+     "_id": "01KE6PAM0100007FSZ88XHRSH9",
+     "nonce": "01KE6PAKZW00007EA42V0H78ZS",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5MH900000NFB6JJZK0TC",
+     "content": "did anyone see the update?"
+    },
+    {
+     "_id": "01KE6PAKZF00007DGWHFRPWDDK",
+     "nonce": "01KE6PAKZA00007CT4V3PW0ZFF",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5KZR00000MNARQ81PAQ6",
+     "content": "I will check it later",
+     "reactions": {
+      "01KE6P8Q0400001N8RWH5XYEZX": [
+       "01KE6P5Q4P00000R2N099H7W94",
+       "01KE6P54RN000008C22JDJ1QJM",
+       "01KE6P56R000000AA4WNP248F8"
+      ],
+      "01KE6P9A4H0000206B1C22NZNM": [
+       "01KE6P5P8W00000QKZ3DY5XA9H",
+       "01KE6P5F8T00000JE9SZ23HP31",
+       "01KE6P5EWG00000GHYPHWTVY8V",
+       "01KE6P52F2000003E7052YVB0E"
+      ]
+     }
+    },
+    {
+     "_id": "01KE6PAKZ200007BAD4VX408D3",
+     "nonce": "01KE6PAKYZ00007AHBHHRVCR4D",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5KZR00000MNARQ81PAQ6",
+     "content": "I will check it later"
+    },
+    {
+     "_id": "01KE6PAKYN0000790GT8TRG3T5",
+     "nonce": "01KE6PAKYJ0000783XY3MMARJ2",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P52T4000004B2QQMXZ6WF",
+     "content": "aika siistiä"
+    },
+    {
+     "_id": "01KE6PAKY9000077KDY0YRAV07",
+     "nonce": "01KE6PAKY50000760ACTNWFVB5",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5CDD00000E578H24K9GZ",
+     "content": "ping me when you are on :01KE6P90BH00001PFAMDPPRH2E:"
+    },
+    {
+     "_id": "01KE6PAKXT000075892N8AH99Q",
+     "nonce": "01KE6PAKXP000074X9YE1H9WWG",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P4YM0000002MKYT6YPE0Z",
+     "content": "sauna lämpiää"
+    },
+    {
+     "_id": "01KE6PAKXB000073Z6E3AAF6K2",
+     "nonce": "01KE6PAKX4000072FZ4V14E1EY",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P575300000BF8B6EB7J6C",
+     "content": "laitoin sen jo"
+    },
+    {
+     "_id": "01KE6PAKWS000071E5318P1R7X",
+     "nonce": "01KE6PAKWM000070459EAVF98X",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P575300000BF8B6EB7J6C",
+     "content": "lol",
+     "reactions": {
+      "01KE6P8PW900001JT52SEHXG5G": [
+       "01KE6P5QQA00000SQ58KDQZC4D"
+      ],
+      "😮": [
+       "01KE6P5MH900000NFB6JJZK0TC",
+       "01KE6P52T4000004B2QQMXZ6WF",
+       "01KE6P4YM0000002MKYT6YPE0Z"
+      ],
+      "01KE6P90PX00001Y1R0ZQ8RWKY": [
+       "01KE6P54RN000008C22JDJ1QJM",
+       "01KE6P52F2000003E7052YVB0E"
+      ]
+     }
+    },
+    {
+     "_id": "01KE6PAKWB00006ZPMT6DN7GGZ",
+     "nonce": "01KE6PAKW900006YV7NJJW9EHX",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P52F2000003E7052YVB0E",
+     "content": "this is pretty cool"
+    },
+    {
+     "_id": "01KE6PAJTY00006X793CBHM22K",
+     "nonce": "01KE6PAJTV00006WPSEDN23D5K",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5QQA00000SQ58KDQZC4D",
+     "content": "tarvitsisin apua yhden jutun kanssa"
+    },
+    {
+     "_id": "01KE6PAJTK00006VHF4KF205BG",
+     "nonce": "01KE6PAJTF00006TS6BGBW6SAR",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5QQA00000SQ58KDQZC4D",
+     "content": "that movie was great"
+    },
+    {
+     "_id": "01KE6PAJT600006SPTZ60CKR8Y",
+     "nonce": "01KE6PAJT000006RF11GFXM88M",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5QQA00000SQ58KDQZC4D",
+     "content": "joo",
+     "reactions": {
+      "🙏": [
+       "01KE6P57KP00000CBHMHZXZMWY",
+       "01KE6P5CN600000F69T5RQJPFW"
+      ],
+      "🔥": [
+       "01KE6P5P8W00000QKZ3DY5XA9H",
+       "01KE6P5KZR00000MNARQ81PAQ6",
+       "01KE6P5MZV00000PRZY7BJKBGD",
+       "01KE6P5328000005FDJX3VMBAG"
+      ]
+     }
+    },
+    {
+     "_id": "01KE6PAJSQ00006QR505ZVN28J",
+     "nonce": "01KE6PAJSG00006P0BGARSYDAD",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P57KP00000CBHMHZXZMWY",
+     "content": "haha"
+    },
+    {
+     "_id": "01KE6PAJS500006NMFMJPAGXW6",
+     "nonce": "01KE6PAJRY00006MTBTG8HSCY0",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P54Y9000009SRY7YWD0ZW",
+     "content": "it finally works"
+    },
+    {
+     "_id": "01KE6PAJA000006K9MM3EYA1BJ",
+     "nonce": "01KE6PAJ9V00006JJXKGXW5Y91",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5F8T00000JE9SZ23HP31",
+     "content": "onko kellään laturia lainaksi?"
+    },
+    {
+     "_id": "01KE6PAJ9J00006H3RMQ9EPWXS",
+     "nonce": "01KE6PAJ9F00006GDPF4NM4SXP",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5CN600000F69T5RQJPFW",
+     "content": "nähdään huomenna"
+    },
+    {
+     "_id": "01KE6PAJ9400006FP0PYERF9XD",
+     "nonce": "01KE6PAJ9000006EWM2BKRX50Z",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5328000005FDJX3VMBAG",
+     "content": "tarvitsisin apua yhden jutun kanssa",
+     "mentions": [
+      "01KE6P5CN600000F69T5RQJPFW"
+     ],
+     "replies": [
+      "01KE6PAJ5Q00005ZG6722N1M8E"
+     ]
+    },
+    {
+     "_id": "01KE6PAJ8P00006DR0TZD9YEST",
+     "nonce": "01KE6PAJ8J00006CWPV6M5BHV6",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P52T4000004B2QQMXZ6WF",
+     "content": "<@01KE6P52T4000004B2QQMXZ6WF> mitä te ootte mieltä tästä?",
+     "mentions": [
+      "01KE6P52T4000004B2QQMXZ6WF"
+     ]
+    },
+    {
+     "_id": "01KE6PAJ8900006B611NZ48C0T",
+     "nonce": "01KE6PAJ8500006A1YTE641ARY",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P54MA000007S29V4CAE6V",
+     "content": "what do you all think?"
+    },
+    {
+     "_id": "01KE6PAJ7W0000693QEQ06J73F",
+     "nonce": "01KE6PAJ7R0000687TWRXHRB02",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5C6E00000DZV3Z4WC696",
+     "content": "olipas hyvä leffa"
+    },
+    {
+     "_id": "01KE6PAJ7G000067TSAXV0GKVG",
+     "nonce": "01KE6PAJ7B00006640DYA81HQM",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5C6E00000DZV3Z4WC696",
+     "content": "good morning!"
+    },
+    {
+     "_id": "01KE6PAJ73000065BBM1HZPQ7G",
+     "nonce": "01KE6PAJ6Y000064MV48X3PVAX",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5KZR00000MNARQ81PAQ6",
+     "content": "tänään satoi taas koko päivän"
+    },
+    {
+     "_id": "01KE6PAJ6M000063XTBE50YAHS",
+     "nonce": "01KE6PAJ6G000062NSAANWC2T4",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5CN600000F69T5RQJPFW",
+     "content": "lumet sulaa jo"
+    },
+    {
+     "_id": "01KE6PAJ660000618F3Z3ND682",
+     "nonce": "01KE6PAJ61000060BV2GVJ4BZX",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5CN600000F69T5RQJPFW",
+     "content": "agreed"
+    },
+    {
+     "_id": "01KE6PAJ5Q00005ZG6722N1M8E",
+     "nonce": "01KE6PAJ5G00005Y3QMB52Y7FF",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5CN600000F69T5RQJPFW",
+     "content": "works on my machine"
+    },
+    {
+     "_id": "01KE6PAJ5500005XG5HA7G3C5Q",
+     "nonce": "01KE6PAJ5000005WP6VY6FKXKP",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5MH900000NFB6JJZK0TC",
+     "content": "I will check it later"
+    },
+    {
+     "_id": "01KE6PAJ4N00005VRJGZJPGBYX",
+     "nonce": "01KE6PAJ4D00005T8HMXVD8MP6",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5MH900000NFB6JJZK0TC",
+     "content": "haha"
+    },
+    {
+     "_id": "01KE6PAATH00005S129T193HDS",
+     "nonce": "01KE6PAATE00005RJHP03QR7QS",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P54Y9000009SRY7YWD0ZW",
+     "content": "ei käy mulle valitettavasti"
+    },
+    {
+     "_id": "01KE6PAAT100005QREGJJM3C5A",
+     "nonce": "01KE6PAASW00005PZ73605X7BY",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P54Y9000009SRY7YWD0ZW",
+     "content": "toi on ihan hyvä pointti"
+    },
+    {
+     "_id": "01KE6PAASG00005NR8HTN6ZYDF",
+     "nonce": "01KE6PAASB00005MV9NPGR9JJR",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5KZR00000MNARQ81PAQ6",
+     "content": "works on my machine"
+    },
+    {
+     "_id": "01KE6PAARY00005KG83D94Q6MR",
+     "nonce": "01KE6PAARR00005J1N5ST4A17W",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5KZR00000MNARQ81PAQ6",
+     "content": "toi on ihan hyvä pointti"
+    },
+    {
+     "_id": "01KE6PAARE00005HCJH2HQX4G0",
+     "nonce": "01KE6PAAR900005GB2B9B5MQN4",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P52T4000004B2QQMXZ6WF",
+     "content": "just got back from the cabin :01KE6P8PSV00001GR1BS7FVGB2:"
+    },
+    {
+     "_id": "01KE6PAAQZ00005FT5WQ2GXDD1",
+     "nonce": "01KE6PAAQW00005E151DRETF1Y",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P52T4000004B2QQMXZ6WF",
+     "content": "hyvää yötä"
+    },
+    {
+     "_id": "01KE6PAAQH00005DA5P7SBW907",
+     "nonce": "01KE6PAAQB00005C8HTYAN6CJ5",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P52T4000004B2QQMXZ6WF",
+     "content": "moi kaikki :01KE6P90CZ00001Q2JBXYSANST:"
+    },
+    {
+     "_id": "01KE6PAAQ000005B8D5294K2HC",
+     "nonce": "01KE6PAAPV00005AKD7SDM0G3Y",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P54Y9000009SRY7YWD0ZW",
+     "content": "laitoin sen jo"
+    },
+    {
+     "_id": "01KE6PAAPD000059NYWHMKC013",
+     "nonce": "01KE6PAAPA00005803D0TNS8B7",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P54Y9000009SRY7YWD0ZW",
+     "content": "onko kellään laturia lainaksi?"
+    },
+    {
+     "_id": "01KE6PAAP1000057KKHT655W5Z",
+     "nonce": "01KE6PAANY0000560GX9TFT63Y",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P54Y9000009SRY7YWD0ZW",
+     "content": "mitä te ootte mieltä tästä?"
+    },
+    {
+     "_id": "01KE6PAANK000055WJX32Q43AD",
+     "nonce": "01KE6PAANG000054ZR7BT9VCGM",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5328000005FDJX3VMBAG",
+     "content": "toi on ihan hyvä pointti",
+     "mentions": [
+      "01KE6P575300000BF8B6EB7J6C"
+     ],
+     "replies": [
+      "01KE6PAAJ000004KX810PCG1VX"
+     ]
+    },
+    {
+     "_id": "01KE6PAAN6000053XJ6QDS7F45",
+     "nonce": "01KE6PAAN3000052SPA2719BJZ",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5QQA00000SQ58KDQZC4D",
+     "content": "thanks!",
+     "mentions": [
+      "01KE6P5EWG00000GHYPHWTVY8V"
+     ],
+     "replies": [
+      "01KE6PAAHK00004HY7DVBF0PAX"
+     ]
+    },
+    {
+     "_id": "01KE6PAAMV000051V6C9N3108S",
+     "nonce": "01KE6PAAMP0000505JV71D09YB",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P57KP00000CBHMHZXZMWY",
+     "content": "mitä te ootte mieltä tästä?"
+    },
+    {
+     "_id": "01KE6PAAME00004ZZCBB43KPXM",
+     "nonce": "01KE6PAAMA00004YYRGKQ7NDZH",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P57KP00000CBHMHZXZMWY",
+     "content": "huomenta!"
+    },
+    {
+     "_id": "01KE6PAAM100004X7X2X9ZPTJJ",
+     "nonce": "01KE6PAAKX00004WFCS4ZXW4VA",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P57KP00000CBHMHZXZMWY",
+     "content": "kuka lähtee illalla pelaamaan?"
+    },
+    {
+     "_id": "01KE6PAAKN00004V1EVPCNRRGM",
+     "nonce": "01KE6PAAKJ00004TXEY5JB3GH1",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P54Y9000009SRY7YWD0ZW",
+     "content": "gn everyone"
+    },
+    {
+     "_id": "01KE6PAAKA00004S2CWK115T9N",
+     "nonce": "01KE6PAAK700004R4G6TJGN379",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5C6E00000DZV3Z4WC696",
+     "content": "still broken for me"
+    },
+    {
+     "_id": "01KE6PAAJY00004QE1BHNHJ3SQ",
+     "nonce": "01KE6PAAJT00004PT2XQYD2766",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P54RN000008C22JDJ1QJM",
+     "content": "brb",
+     "replies": [
+      "01KE6PAAF6000047K7GQPA97A5"
+     ]
+    },
+    {
+     "_id": "01KE6PAAJJ00004N5D834FP0XC",
+     "nonce": "01KE6PAAJD00004MCESBKDYNB7",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P575300000BF8B6EB7J6C",
+     "content": "tarvitsisin apua yhden jutun kanssa :01KE6P8PXJ00001K3VANSY3AJF:"
+    },
+    {
+     "_id": "01KE6PAAJ000004KX810PCG1VX",
+     "nonce": "01KE6PAAHW00004JAV4D7PSHQQ",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P575300000BF8B6EB7J6C",
+     "content": "voin katsoa sen myöhemmin ||ei käy mulle valitettavasti||",
+     "mentions": [
+      "01KE6P5F8T00000JE9SZ23HP31"
+     ],
+     "replies": [
+      "01KE6PAACZ00003XFEKQVGW7SB"
+     ]
+    },
+    {
+     "_id": "01KE6PAAHK00004HY7DVBF0PAX",
+     "nonce": "01KE6PAAHF00004GY109X261E2",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5EWG00000GHYPHWTVY8V",
+     "content": "what do you all think?"
+    },
+    {
+     "_id": "01KE6PAAH400004FPG7YG8E54K",
+     "nonce": "01KE6PAAGX00004EMEZR565MAR",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5CDD00000E578H24K9GZ",
+     "content": "joo"
+    },
+    {
+     "_id": "01KE6PAAGM00004DCXMG658PRJ",
+     "nonce": "01KE6PAAGG00004CVEQDJGR8FV",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5CDD00000E578H24K9GZ",
+     "content": "sounds good to me"
+    },
+    {
+     "_id": "01KE6PAAG800004BD7TQ5RGGBN",
+     "nonce": "01KE6PAAG400004AP43QK1BG0G",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5QQA00000SQ58KDQZC4D",
+     "content": "laitoin sen jo <#01KE6P75JF000018NYEHYGZ415>"
+    },
+    {
+     "_id": "01KE6PAAFS000049REEEPH8KJB",
+     "nonce": "01KE6PAAFJ000048PB25WZ4S2Y",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5QQA00000SQ58KDQZC4D",
+     "content": "it finally works",
+     "reactions": {
+      "🎉": [
+       "01KE6P5Q4P00000R2N099H7W94",
+       "01KE6P5EWG00000GHYPHWTVY8V",
+       "01KE6P5MZV00000PRZY7BJKBGD"
+      ],
+      "👀": [
+       "01KE6P575300000BF8B6EB7J6C",
+       "01KE6P52F2000003E7052YVB0E",
+       "01KE6P57KP00000CBHMHZXZMWY",
+       "01KE6P4YM0000002MKYT6YPE0Z"
+      ]
+     }
+    },
+    {
+     "_id": "01KE6PAAF6000047K7GQPA97A5",
+     "nonce": "01KE6PAAF0000046XRZYEM6GTS",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5QQA00000SQ58KDQZC4D",
+     "content": "it finally works"
+    },
+    {
+     "_id": "01KE6PAAEP000045JM37C2SPQX",
+     "nonce": "01KE6PAAEH000044VHYPV77J2C",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5KZR00000MNARQ81PAQ6",
+     "content": "mitä te ootte mieltä tästä? ||ping me when you are on||",
+     "reactions": {
+      "👍": [
+       "01KE6P5P8W00000QKZ3DY5XA9H",
+       "01KE6P4YM0000002MKYT6YPE0Z",
+       "01KE6P5C6E00000DZV3Z4WC696"
+      ],
+      "01KE6P90FP00001S8Q4WE3JJHR": [
+       "01KE6P5F0G00000H53MFN4DQGC",
+       "01KE6P575300000BF8B6EB7J6C",
+       "01KE6P5MH900000NFB6JJZK0TC",
+       "01KE6P5328000005FDJX3VMBAG",
+       "01KE6P5EWG00000GHYPHWTVY8V",
+       "01KE6P5C6E00000DZV3Z4WC696",
+       "01KE6P54MA000007S29V4CAE6V",
+       "01KE6P54Y9000009SRY7YWD0ZW"
+      ]
+     }
+    },
+    {
+     "_id": "01KE6PAAE7000043EAHX3VDY2Y",
+     "nonce": "01KE6PAAE2000042RPDPJCS009",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5QQA00000SQ58KDQZC4D",
+     "content": "mitä te ootte mieltä tästä?",
+     "reactions": {
+      "🙏": [
+       "01KE6P56R000000AA4WNP248F8",
+       "01KE6P5F8T00000JE9SZ23HP31",
+       "01KE6P5Q4P00000R2N099H7W94"
+      ],
+      "01KE6P90RH00001ZTE25GF6KA1": [
+       "01KE6P5F0G00000H53MFN4DQGC"
+      ],
+      "👍": [
+       "01KE6P5EWG00000GHYPHWTVY8V",
+       "01KE6P4YM0000002MKYT6YPE0Z",
+       "01KE6P54RN000008C22JDJ1QJM",
+       "01KE6P54MA000007S29V4CAE6V"
+      ]
+     },
+     "pinned": true
+    },
+    {
+     "_id": "01KE6PAADS000041563ETW3QCV",
+     "nonce": "01KE6PAADN00004077Q7RPB5G6",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P57KP00000CBHMHZXZMWY",
+     "content": "vähän tylsä päivä töissä",
+     "reactions": {
+      "01KE6P8Q0400001N8RWH5XYEZX": [
+       "01KE6P5P8W00000QKZ3DY5XA9H",
+       "01KE6P5CDD00000E578H24K9GZ",
+       "01KE6P5328000005FDJX3VMBAG"
+      ]
+     }
+    },
+    {
+     "_id": "01KE6PAADC00003ZJCSM1CF76X",
+     "nonce": "01KE6PAAD800003Y56SGW21KGW",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5MH900000NFB6JJZK0TC",
+     "content": "no way"
+    },
+    {
+     "_id": "01KE6PAACZ00003XFEKQVGW7SB",
+     "nonce": "01KE6PAACT00003WAZT3K1AA78",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5F8T00000JE9SZ23HP31",
+     "content": "link?"
+    },
+    {
+     "_id": "01KE6PAACG00003V654S02FX1Y",
+     "nonce": "01KE6PAACB00003TV0318E542H",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5F8T00000JE9SZ23HP31",
+     "content": "oikeesti?"
+    },
+    {
+     "_id": "01KE6PAAC300003S9AYR03JDPP",
+     "nonce": "01KE6PAABZ00003RATA9H6F9ZZ",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5P8W00000QKZ3DY5XA9H",
+     "content": "kuka lähtee illalla pelaamaan?"
+    },
+    {
+     "_id": "01KE6PAABQ00003QGRZNNY606S",
+     "nonce": "01KE6PAABK00003P5TFFGNDQP8",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5H8X00000KM0HJWN7QTX",
+     "content": "voin katsoa sen myöhemmin"
+    },
+    {
+     "_id": "01KE6PAABA00003NA8RG2R6PSV",
+     "nonce": "01KE6PAAB600003M5R16R96ZAY",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5H8X00000KM0HJWN7QTX",
+     "content": "voin katsoa sen myöhemmin"
+    },
+    {
+     "_id": "01KE6PAAAX00003K8T78X2KA0F",
+     "nonce": "01KE6PAAAP00003JZZXEHW70F8",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P575300000BF8B6EB7J6C",
+     "content": "kahvia ja pullaa ☕"
+    },
+    {
+     "_id": "01KE6PAAAE00003HC5E8ZQ8J84",
+     "nonce": "01KE6PAAAA00003GHNDAJ9GDZD",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P52T4000004B2QQMXZ6WF",
+     "content": "TIL"
+    },
+    {
+     "_id": "01KE6PAA9Z00003FP012C1MTT7",
+     "nonce": "01KE6PAA9R00003EVVAPSJ42S6",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5EWG00000GHYPHWTVY8V",
+     "content": "quick question about the server"
+    },
+    {
+     "_id": "01KE6PAA9C00003DFMBZK48K90",
+     "nonce": "01KE6PAA9600003CNQKE7SYT9K",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P52T4000004B2QQMXZ6WF",
+     "content": "anyone up for a game tonight?"
+    },
+    {
+     "_id": "01KE6PAA8X00003BK6JVP3BJV2",
+     "nonce": "01KE6PAA8S00003A8DPKFEX3HS",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P52T4000004B2QQMXZ6WF",
+     "content": "se toimii nyt"
+    },
+    {
+     "_id": "01KE6PAA6N000039JK9QYRVN06",
+     "nonce": "01KE6PAA6J000038YPXK5KAWHZ",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P57KP00000CBHMHZXZMWY",
+     "content": "agreed"
+    },
+    {
+     "_id": "01KE6PAA690000375F3CG8J9QF",
+     "nonce": "01KE6PAA66000036Q3FF5PF31Q",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5328000005FDJX3VMBAG",
+     "content": "kiitti! ||en tiennyt tota||"
+    },
+    {
+     "_id": "01KE6PAA5W000035PWPA9M8J8M",
+     "nonce": "01KE6PAA5S000034DQP85JEN4Y",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P575300000BF8B6EB7J6C",
+     "content": "sauna lämpiää"
+    },
+    {
+     "_id": "01KE6PAA5F000033CZG61XX1A2",
+     "nonce": "01KE6PAA5C0000329VC72VN05S",
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "author": "01KE6P5EWG00000GHYPHWTVY8V",
+     "content": "huomenta!"
+    }
+   ],
+   "users": [
+    {
+     "_id": "01KE6P4YM0000002MKYT6YPE0Z",
+     "username": "dev_admin",
+     "discriminator": "7703",
+     "display_name": "Ylläpito",
+     "avatar": {
+      "_id": "u3iTLS0_Qqf5-bsZqX7J0HdIHFvTl-DnYc2BLeenlk",
+      "tag": "avatars",
+      "filename": "dev-admin.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        24,
+        249,
+        9,
+        31,
+        0,
+        39,
+        55,
+        71,
+        125,
+        132,
+        136,
+        133,
+        121,
+        135,
+        120,
+        8,
+        200,
+        132,
+        116,
+        224,
+        71,
+        248,
+        129,
+        11
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2027
+     },
+     "relationship": "None",
+     "online": false
+    },
+    {
+     "_id": "01KE6P52F2000003E7052YVB0E",
+     "username": "dev",
+     "discriminator": "7991",
+     "display_name": "Dev",
+     "avatar": {
+      "_id": "gNlhT-V4pO9Clzh0xJwmxirTIMIaDATEE86nC5gtIb",
+      "tag": "avatars",
+      "filename": "dev.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        214,
+        183,
+        9,
+        7,
+        14,
+        87,
+        71,
+        103,
+        135,
+        121,
+        134,
+        128,
+        137,
+        170,
+        152,
+        135,
+        120,
+        134,
+        134,
+        138,
+        248,
+        168,
+        136,
+        15
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2033
+     },
+     "status": {
+      "text": "Testing Concord"
+     },
+     "relationship": "User",
+     "online": false
+    },
+    {
+     "_id": "01KE6P52T4000004B2QQMXZ6WF",
+     "username": "ben.carter",
+     "discriminator": "4977",
+     "display_name": "Ben Carter",
+     "avatar": {
+      "_id": "jLajslWQuaRFk-s4UoJfiuvxRFjbNIS_whQKry10LR",
+      "tag": "avatars",
+      "filename": "ben.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        157,
+        119,
+        13,
+        15,
+        8,
+        87,
+        7,
+        104,
+        134,
+        121,
+        134,
+        131,
+        135,
+        153,
+        120,
+        56,
+        136,
+        136,
+        133,
+        171,
+        248,
+        184,
+        138,
+        15
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 1966
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5328000005FDJX3VMBAG",
+     "username": "aino",
+     "discriminator": "6977",
+     "display_name": "Aino Virtanen",
+     "avatar": {
+      "_id": "XvZ2XI-NI5-8TrRA5lxA4Qs1GIQqv61C30i4nQQZhG",
+      "tag": "avatars",
+      "filename": "aino.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        149,
+        199,
+        9,
+        23,
+        12,
+        7,
+        119,
+        135,
+        124,
+        134,
+        135,
+        131,
+        121,
+        87,
+        104,
+        56,
+        152,
+        134,
+        139,
+        63,
+        200,
+        248,
+        131,
+        12
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 1995
+     },
+     "status": {
+      "text": "Moderoimassa"
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P54MA000007S29V4CAE6V",
+     "username": "eetu",
+     "discriminator": "7887",
+     "display_name": "Eetu Mäkinen",
+     "avatar": {
+      "_id": "aROYQ3iEyi87TQrRu2usNliSSN3ezL0cpF0jNFtyq4",
+      "tag": "avatars",
+      "filename": "eetu.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        149,
+        168,
+        5,
+        23,
+        10,
+        7,
+        23,
+        200,
+        138,
+        121,
+        134,
+        131,
+        136,
+        105,
+        152,
+        87,
+        184,
+        135,
+        114,
+        160,
+        56,
+        248,
+        133,
+        12
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2030
+     },
+     "status": {
+      "text": "Ranked, älä häiritse",
+      "presence": "Busy"
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P54RN000008C22JDJ1QJM",
+     "username": "tiina",
+     "discriminator": "8257",
+     "display_name": "Tiina Toivonen",
+     "avatar": {
+      "_id": "-dnPeqPl2areNXG844452-3oFRAhRAftea3KZHggBq",
+      "tag": "avatars",
+      "filename": "totp.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        21,
+        72,
+        6,
+        7,
+        8,
+        71,
+        23,
+        87,
+        127,
+        132,
+        136,
+        130,
+        135,
+        154,
+        184,
+        23,
+        184,
+        128,
+        120,
+        244,
+        39,
+        71,
+        127,
+        2
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2005
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P54Y9000009SRY7YWD0ZW",
+     "username": "sanna_k",
+     "discriminator": "8098",
+     "display_name": "Sanna Korhonen",
+     "avatar": {
+      "_id": "X7eqedBPEhYixEXce-HODno9ZI8YtKWDnuqEIkpuQk",
+      "tag": "avatars",
+      "filename": "sanna.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        148,
+        8,
+        10,
+        47,
+        2,
+        7,
+        103,
+        151,
+        136,
+        119,
+        134,
+        135,
+        133,
+        105,
+        136,
+        72,
+        200,
+        136,
+        115,
+        128,
+        120,
+        7,
+        136,
+        7
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2018
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P575300000BF8B6EB7J6C",
+     "username": "maija",
+     "discriminator": "0748",
+     "display_name": "Maija Heikkinen",
+     "avatar": {
+      "_id": "RQ_Hbph4FZZYEqGx1FmngJVuMRuix8fue1S_kr45it",
+      "tag": "avatars",
+      "filename": "maija.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        148,
+        200,
+        5,
+        23,
+        8,
+        23,
+        87,
+        103,
+        139,
+        121,
+        133,
+        136,
+        133,
+        104,
+        136,
+        56,
+        200,
+        134,
+        112,
+        192,
+        136,
+        248,
+        131,
+        7
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2042
+     },
+     "status": {
+      "presence": "Idle"
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P57KP00000CBHMHZXZMWY",
+     "username": "juho_l",
+     "discriminator": "3179",
+     "display_name": "Juho Laine",
+     "avatar": {
+      "_id": "gdP6BR2HZI7LZ4QiRbUb2tuwzh0I8yYrSBhvwrsdle",
+      "tag": "avatars",
+      "filename": "juho.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        150,
+        152,
+        9,
+        15,
+        6,
+        103,
+        7,
+        119,
+        137,
+        120,
+        134,
+        132,
+        136,
+        72,
+        104,
+        88,
+        136,
+        137,
+        114,
+        197,
+        8,
+        184,
+        131,
+        15
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2002
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5C6E00000DZV3Z4WC696",
+     "username": "emma.w",
+     "discriminator": "0126",
+     "display_name": "Emma Walsh",
+     "avatar": {
+      "_id": "HAcbVHb-I4iaBLJUUhMerhX7kcWjLtyknR-T-Jobmd",
+      "tag": "avatars",
+      "filename": "emma.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        213,
+        56,
+        10,
+        31,
+        6,
+        39,
+        39,
+        167,
+        135,
+        135,
+        122,
+        128,
+        136,
+        107,
+        152,
+        39,
+        136,
+        137,
+        124,
+        114,
+        8,
+        23,
+        135,
+        0
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2029
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5CDD00000E578H24K9GZ",
+     "username": "oliver",
+     "discriminator": "9576",
+     "display_name": "Oliver Grant",
+     "avatar": {
+      "_id": "ECCRqd5rNigGMralYjIhq3xB_ouHLVHU7Pqd15AMD_",
+      "tag": "avatars",
+      "filename": "oliver.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        22,
+        168,
+        9,
+        7,
+        6,
+        55,
+        71,
+        87,
+        135,
+        122,
+        120,
+        133,
+        135,
+        121,
+        136,
+        8,
+        120,
+        136,
+        120,
+        128,
+        56,
+        248,
+        119,
+        13
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2046
+     },
+     "status": {
+      "text": "Deadline week",
+      "presence": "Focus"
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5CN600000F69T5RQJPFW",
+     "username": "noora",
+     "discriminator": "8590",
+     "display_name": "Noora Koskinen",
+     "avatar": {
+      "_id": "xpAkkZE4JRn2XxTunZHGkbDNK1ZKHuQ1aUwHtXVyAO",
+      "tag": "avatars",
+      "filename": "noora.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        83,
+        7,
+        6,
+        47,
+        2,
+        7,
+        103,
+        151,
+        138,
+        121,
+        118,
+        131,
+        123,
+        137,
+        136,
+        104,
+        120,
+        133,
+        133,
+        95,
+        200,
+        7,
+        138,
+        3
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2035
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5EWG00000GHYPHWTVY8V",
+     "username": "villej",
+     "discriminator": "8889",
+     "display_name": "Ville Järvinen",
+     "relationship": "Incoming",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5F0G00000H53MFN4DQGC",
+     "username": "kaisa.l",
+     "discriminator": "9493",
+     "display_name": "Kaisa Lehtonen",
+     "avatar": {
+      "_id": "cTFjXn8EEwjqa0spyHbjltW73lnIzp4W6xFW2GjY8e",
+      "tag": "avatars",
+      "filename": "kaisa.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        213,
+        24,
+        10,
+        39,
+        4,
+        87,
+        87,
+        55,
+        134,
+        135,
+        136,
+        128,
+        137,
+        57,
+        120,
+        88,
+        152,
+        124,
+        121,
+        101,
+        8,
+        71,
+        134,
+        0
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2035
+     },
+     "relationship": "Incoming",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5F8T00000JE9SZ23HP31",
+     "username": "tomi",
+     "discriminator": "6921",
+     "avatar": {
+      "_id": "HMoC-9Hzv9D3rLQBp_6kbDYV0VTsRsrvoUHLVU44Rc",
+      "tag": "avatars",
+      "filename": "tomi.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        86,
+        199,
+        5,
+        23,
+        4,
+        55,
+        71,
+        7,
+        123,
+        129,
+        138,
+        129,
+        138,
+        87,
+        168,
+        71,
+        72,
+        135,
+        131,
+        76,
+        248,
+        216,
+        132,
+        15
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2021
+     },
+     "relationship": "None",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5H8X00000KM0HJWN7QTX",
+     "username": "riikka_h",
+     "discriminator": "0265",
+     "display_name": "Riikka Hämäläinen",
+     "avatar": {
+      "_id": "yZLr1oL4F3a-VOZd2YqYZuMwGMCOSvRdYjTTpEDDLo",
+      "tag": "avatars",
+      "filename": "riikka.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        150,
+        88,
+        10,
+        15,
+        8,
+        87,
+        87,
+        7,
+        131,
+        135,
+        136,
+        131,
+        134,
+        105,
+        136,
+        56,
+        152,
+        140,
+        118,
+        19,
+        8,
+        55,
+        129,
+        0
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2007
+     },
+     "relationship": "None",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5KZR00000MNARQ81PAQ6",
+     "username": "mikko",
+     "discriminator": "6394",
+     "display_name": "Mikko Rantanen",
+     "avatar": {
+      "_id": "4TyiIzgf8WRIxqnOqNih4bo59QFSBCpc6xtfo8exQP",
+      "tag": "avatars",
+      "filename": "mikko.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        148,
+        215,
+        9,
+        23,
+        6,
+        55,
+        103,
+        71,
+        134,
+        121,
+        134,
+        141,
+        120,
+        116,
+        136,
+        8,
+        152,
+        137,
+        128,
+        158,
+        7,
+        232,
+        137,
+        0
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2010
+     },
+     "relationship": "Outgoing",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5MH900000NFB6JJZK0TC",
+     "username": "sofia.l",
+     "discriminator": "8978",
+     "display_name": "Sofia Lindqvist",
+     "avatar": {
+      "_id": "0JHpDwXTNYu9_Ojjd9bqZSWtsVBwoYqtpwtEHgRB0A",
+      "tag": "avatars",
+      "filename": "sofia.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        84,
+        23,
+        10,
+        39,
+        4,
+        103,
+        71,
+        71,
+        129,
+        136,
+        122,
+        133,
+        136,
+        167,
+        103,
+        8,
+        136,
+        138,
+        139,
+        249,
+        183,
+        103,
+        128,
+        4
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2001
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5P8W00000QKZ3DY5XA9H",
+     "username": "helmi",
+     "discriminator": "1734",
+     "display_name": "Helmi Aaltonen",
+     "avatar": {
+      "_id": "LCXBI24jsREzy0LCwol_VTik-83HiDvJIdfTMf_6oR",
+      "tag": "avatars",
+      "filename": "helmi.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        151,
+        183,
+        5,
+        15,
+        6,
+        55,
+        7,
+        88,
+        127,
+        119,
+        131,
+        130,
+        126,
+        22,
+        104,
+        56,
+        72,
+        135,
+        130,
+        12,
+        216,
+        200,
+        128,
+        13
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2020
+     },
+     "relationship": "None",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5QQA00000SQ58KDQZC4D",
+     "username": "lotta",
+     "discriminator": "1041",
+     "display_name": "Lotta Saarinen",
+     "avatar": {
+      "_id": "o7AtljS0pSqMjOBncKgxO1T2cd1Z_otD8OmmvaoFlX",
+      "tag": "avatars",
+      "filename": "lotta.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        85,
+        88,
+        6,
+        15,
+        6,
+        39,
+        39,
+        71,
+        135,
+        122,
+        134,
+        135,
+        121,
+        41,
+        104,
+        8,
+        120,
+        140,
+        113,
+        112,
+        104,
+        7,
+        135,
+        6
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2041
+     },
+     "relationship": "None",
+     "online": false
+    }
+   ],
+   "members": [
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P4YM0000002MKYT6YPE0Z"
+     },
+     "joined_at": "2026-01-05T09:00:32.460Z",
+     "roles": [
+      "01KE6P5YB800000XNKTAC2RHMC"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P52F2000003E7052YVB0E"
+     },
+     "joined_at": "2026-01-05T09:01:21.934Z",
+     "roles": [
+      "01KE6P686M0000116KCQMAKMGD"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P52T4000004B2QQMXZ6WF"
+     },
+     "joined_at": "2026-01-05T09:01:21.929Z",
+     "roles": [
+      "01KE6P5YBY00000Y2B05CXBVFH"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5328000005FDJX3VMBAG"
+     },
+     "joined_at": "2026-01-05T09:01:21.928Z",
+     "roles": [
+      "01KE6P5YBY00000Y2B05CXBVFH",
+      "01KE6P686M0000116KCQMAKMGD"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P54MA000007S29V4CAE6V"
+     },
+     "joined_at": "2026-01-05T09:01:21.972Z",
+     "roles": [
+      "01KE6P686M0000116KCQMAKMGD",
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P54RN000008C22JDJ1QJM"
+     },
+     "joined_at": "2026-01-05T09:01:21.929Z",
+     "roles": [
+      "01KE6P685W0000102WWRC2SGGA"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P54Y9000009SRY7YWD0ZW"
+     },
+     "joined_at": "2026-01-05T09:01:21.974Z",
+     "roles": [
+      "01KE6P685W0000102WWRC2SGGA",
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P575300000BF8B6EB7J6C"
+     },
+     "joined_at": "2026-01-05T09:01:21.977Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P57KP00000CBHMHZXZMWY"
+     },
+     "joined_at": "2026-01-05T09:01:22.007Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY",
+      "01KE6P686M0000116KCQMAKMGD"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5C6E00000DZV3Z4WC696"
+     },
+     "joined_at": "2026-01-05T09:01:22.011Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5CDD00000E578H24K9GZ"
+     },
+     "joined_at": "2026-01-05T09:01:22.014Z",
+     "roles": [
+      "01KE6P686M0000116KCQMAKMGD"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5CN600000F69T5RQJPFW"
+     },
+     "joined_at": "2026-01-05T09:01:22.021Z",
+     "roles": [
+      "01KE6P685W0000102WWRC2SGGA"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5EWG00000GHYPHWTVY8V"
+     },
+     "joined_at": "2026-01-05T09:01:22.043Z",
+     "roles": [
+      "01KE6P686M0000116KCQMAKMGD"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5F0G00000H53MFN4DQGC"
+     },
+     "joined_at": "2026-01-05T09:01:22.060Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5F8T00000JE9SZ23HP31"
+     },
+     "joined_at": "2026-01-05T09:01:22.062Z",
+     "roles": [
+      "01KE6P686M0000116KCQMAKMGD"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5H8X00000KM0HJWN7QTX"
+     },
+     "joined_at": "2026-01-05T09:01:22.067Z",
+     "roles": [
+      "01KE6P685W0000102WWRC2SGGA"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5KZR00000MNARQ81PAQ6"
+     },
+     "joined_at": "2026-01-05T09:01:22.082Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5MH900000NFB6JJZK0TC"
+     },
+     "joined_at": "2026-01-05T09:01:22.105Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5P8W00000QKZ3DY5XA9H"
+     },
+     "joined_at": "2026-01-05T09:01:22.115Z",
+     "roles": [
+      "01KE6P685W0000102WWRC2SGGA"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5QQA00000SQ58KDQZC4D"
+     },
+     "joined_at": "2026-01-05T09:01:22.159Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    }
+   ]
+  }
+ }
+}

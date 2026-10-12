@@ -1,0 +1,21 @@
+{
+ "step": "logout",
+ "actor": "totp",
+ "request": {
+  "method": "POST",
+  "path": "/auth/session/logout",
+  "headers": {
+   "x-session-token": "<secret-28>"
+  }
+ },
+ "response": {
+  "status": 204,
+  "headers": {
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "14680569157041023182",
+   "x-ratelimit-remaining": "14",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": null
+ }
+}

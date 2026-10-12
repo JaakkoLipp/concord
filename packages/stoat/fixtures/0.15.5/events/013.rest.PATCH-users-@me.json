@@ -1,0 +1,30 @@
+{
+ "step": "presence",
+ "actor": "aino",
+ "request": {
+  "method": "PATCH",
+  "path": "/users/@me",
+  "headers": {
+   "x-session-token": "<secret-3>"
+  },
+  "body": {
+   "status": {
+    "text": "Moderoimassa",
+    "presence": "Focus"
+   }
+  }
+ },
+ "response": {
+  "status": 429,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "2",
+   "x-ratelimit-bucket": "602297658344481959",
+   "x-ratelimit-remaining": "0",
+   "x-ratelimit-reset-after": "400"
+  },
+  "body": {
+   "retry_after": 400
+  }
+ }
+}

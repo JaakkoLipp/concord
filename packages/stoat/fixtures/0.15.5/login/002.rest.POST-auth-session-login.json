@@ -1,0 +1,33 @@
+{
+ "step": "login",
+ "actor": "dev",
+ "request": {
+  "method": "POST",
+  "path": "/auth/session/login",
+  "headers": {},
+  "body": {
+   "email": "<email-7>",
+   "password": "<secret-9>",
+   "friendly_name": "Concord recorder"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "3290070096498229025",
+   "x-ratelimit-remaining": "13",
+   "x-ratelimit-reset-after": "9256"
+  },
+  "body": {
+   "result": "Success",
+   "_id": "01KE6PC3KS0000AKWNEQ6391HZ",
+   "user_id": "01KE6P52F2000003E7052YVB0E",
+   "token": "<secret-10>",
+   "name": "Concord recorder",
+   "last_seen": "2026-01-05T09:03:54.489Z",
+   "origin": "dev"
+  }
+ }
+}

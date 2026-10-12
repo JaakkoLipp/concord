@@ -1,0 +1,88 @@
+{
+ "step": "dms",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/users/dms",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "6381564301654686",
+   "x-ratelimit-remaining": "15",
+   "x-ratelimit-reset-after": "8703"
+  },
+  "body": [
+   {
+    "channel_type": "DirectMessage",
+    "_id": "01KE6PAMSM000096CWCBQ0HPNJ",
+    "active": true,
+    "recipients": [
+     "01KE6P52F2000003E7052YVB0E",
+     "01KE6P5328000005FDJX3VMBAG"
+    ],
+    "last_message_id": "01KE6PAMXC000097WXWNV2BEP5"
+   },
+   {
+    "channel_type": "DirectMessage",
+    "_id": "01KE6PAMXQ0000980RJ4BT8AXK",
+    "active": true,
+    "recipients": [
+     "01KE6P52F2000003E7052YVB0E",
+     "01KE6P54MA000007S29V4CAE6V"
+    ],
+    "last_message_id": "01KE6PAN1700009D3ASRBFAMF1"
+   },
+   {
+    "channel_type": "DirectMessage",
+    "_id": "01KE6PAN1G00009EK88CCM8C7A",
+    "active": true,
+    "recipients": [
+     "01KE6P52F2000003E7052YVB0E",
+     "01KE6P5C6E00000DZV3Z4WC696"
+    ],
+    "last_message_id": "01KE6PAN5W00009FBS0MKKQQRY"
+   },
+   {
+    "channel_type": "DirectMessage",
+    "_id": "01KE6PAN6900009GRM445Z1QVF",
+    "active": true,
+    "recipients": [
+     "01KE6P52F2000003E7052YVB0E",
+     "01KE6P57KP00000CBHMHZXZMWY"
+    ],
+    "last_message_id": "01KE6PANAS00009H9DRSZ80J8F"
+   },
+   {
+    "channel_type": "DirectMessage",
+    "_id": "01KE6PANBB00009JRRWETYJ90H",
+    "active": true,
+    "recipients": [
+     "01KE6P52F2000003E7052YVB0E",
+     "01KE6P54Y9000009SRY7YWD0ZW"
+    ],
+    "last_message_id": "01KE6PANEZ00009KDQ9MYMMZTQ"
+   },
+   {
+    "channel_type": "Group",
+    "_id": "01KE6PANF600009M81GEAY6MFM",
+    "name": "Sauna-ilta",
+    "owner": "01KE6P52F2000003E7052YVB0E",
+    "description": "Perjantain saunavuoro",
+    "recipients": [
+     "01KE6P5C6E00000DZV3Z4WC696",
+     "01KE6P54MA000007S29V4CAE6V",
+     "01KE6P57KP00000CBHMHZXZMWY",
+     "01KE6P5328000005FDJX3VMBAG",
+     "01KE6P52F2000003E7052YVB0E"
+    ],
+    "last_message_id": "01KE6PAZA30000ACH4MTJ7YP5P"
+   }
+  ]
+ }
+}

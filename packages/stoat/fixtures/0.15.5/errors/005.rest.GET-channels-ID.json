@@ -1,0 +1,25 @@
+{
+ "step": "404",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/channels/019KRYSDCS000001B6JKZMW1XB",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 404,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "8178246409517673130",
+   "x-ratelimit-remaining": "14",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": {
+   "type": "NotFound",
+   "location": "crates/core/database/src/models/channels/ops/mongodb.rs:23:70"
+  }
+ }
+}

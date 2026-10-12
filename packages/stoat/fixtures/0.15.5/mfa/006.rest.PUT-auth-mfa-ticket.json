@@ -1,0 +1,32 @@
+{
+ "step": "ticket by totp",
+ "actor": "totp",
+ "request": {
+  "method": "PUT",
+  "path": "/auth/mfa/ticket",
+  "headers": {
+   "x-session-token": "<secret-15>"
+  },
+  "body": {
+   "totp_code": "<secret-14>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "10743416016757861634",
+   "x-ratelimit-remaining": "11",
+   "x-ratelimit-reset-after": "9971"
+  },
+  "body": {
+   "_id": "01KE6PC4H20000ANJBD717V311",
+   "account_id": "01KE6P54RN000008C22JDJ1QJM",
+   "token": "<secret-16>",
+   "validated": true,
+   "authorised": false,
+   "last_totp_code": null
+  }
+ }
+}

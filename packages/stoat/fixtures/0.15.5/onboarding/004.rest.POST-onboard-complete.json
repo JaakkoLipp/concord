@@ -1,0 +1,29 @@
+{
+ "step": "invalid username",
+ "actor": "new",
+ "request": {
+  "method": "POST",
+  "path": "/onboard/complete",
+  "headers": {
+   "x-session-token": "<secret-30>"
+  },
+  "body": {
+   "username": "x"
+  }
+ },
+ "response": {
+  "status": 400,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "6962729812158154112",
+   "x-ratelimit-remaining": "18",
+   "x-ratelimit-reset-after": "9991"
+  },
+  "body": {
+   "type": "FailedValidation",
+   "error": "username: Validation error: length [{\"min\": Number(2), \"value\": String(\"x\"), \"max\": Number(32)}]",
+   "location": "crates/delta/src/routes/onboard/complete.rs:42:9"
+  }
+ }
+}

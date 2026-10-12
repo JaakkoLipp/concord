@@ -1,0 +1,137 @@
+{
+ "step": "self",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/users/@me",
+  "headers": {
+   "x-session-token": "<secret-10>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "11835086396146593585",
+   "x-ratelimit-remaining": "19",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": {
+   "_id": "01KE6P52F2000003E7052YVB0E",
+   "username": "dev",
+   "discriminator": "7991",
+   "display_name": "Dev",
+   "avatar": {
+    "_id": "gNlhT-V4pO9Clzh0xJwmxirTIMIaDATEE86nC5gtIb",
+    "tag": "avatars",
+    "filename": "dev.png",
+    "metadata": {
+     "type": "Image",
+     "width": 256,
+     "height": 256,
+     "thumbhash": [
+      214,
+      183,
+      9,
+      7,
+      14,
+      87,
+      71,
+      103,
+      135,
+      121,
+      134,
+      128,
+      137,
+      170,
+      152,
+      135,
+      120,
+      134,
+      134,
+      138,
+      248,
+      168,
+      136,
+      15
+     ],
+     "animated": false
+    },
+    "content_type": "image/png",
+    "size": 2033
+   },
+   "relations": [
+    {
+     "_id": "01KE6P5328000005FDJX3VMBAG",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P52T4000004B2QQMXZ6WF",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P54MA000007S29V4CAE6V",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P54Y9000009SRY7YWD0ZW",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P57KP00000CBHMHZXZMWY",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P5C6E00000DZV3Z4WC696",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P5CDD00000E578H24K9GZ",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P5CN600000F69T5RQJPFW",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P575300000BF8B6EB7J6C",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P54RN000008C22JDJ1QJM",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P56R000000AA4WNP248F8",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P5MH900000NFB6JJZK0TC",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P5EWG00000GHYPHWTVY8V",
+     "status": "Incoming"
+    },
+    {
+     "_id": "01KE6P5F0G00000H53MFN4DQGC",
+     "status": "Incoming"
+    },
+    {
+     "_id": "01KE6P5KZR00000MNARQ81PAQ6",
+     "status": "Outgoing"
+    },
+    {
+     "_id": "01KE6P5MZV00000PRZY7BJKBGD",
+     "status": "Blocked"
+    }
+   ],
+   "status": {
+    "text": "Testing Concord"
+   },
+   "relationship": "User",
+   "online": false
+  }
+ }
+}

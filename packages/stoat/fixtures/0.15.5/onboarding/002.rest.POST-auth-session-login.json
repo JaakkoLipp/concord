@@ -1,0 +1,32 @@
+{
+ "step": "ticket login",
+ "actor": "new",
+ "request": {
+  "method": "POST",
+  "path": "/auth/session/login",
+  "headers": {},
+  "body": {
+   "mfa_ticket": "<secret-29>",
+   "friendly_name": "Concord recorder"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "3290070096498229025",
+   "x-ratelimit-remaining": "9",
+   "x-ratelimit-reset-after": "3405"
+  },
+  "body": {
+   "result": "Success",
+   "_id": "01KE6PC8H50000ASTGZ4SST9SS",
+   "user_id": "01KE6PC8060000AQWN8W4ZM04V",
+   "token": "<secret-30>",
+   "name": "Concord recorder",
+   "last_seen": "2026-01-05T09:03:59.525Z",
+   "origin": "dev"
+  }
+ }
+}

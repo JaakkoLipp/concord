@@ -1,0 +1,25 @@
+{
+ "step": "account",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/auth/account/",
+  "headers": {
+   "x-session-token": "<secret-10>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "12557153814451408325",
+   "x-ratelimit-remaining": "14",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": {
+   "_id": "01KE6P52F2000003E7052YVB0E",
+   "email": "<email-7>"
+  }
+ }
+}

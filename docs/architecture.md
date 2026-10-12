@@ -2,13 +2,13 @@
 
 Status: draft for review, layer 2. Read [product-brief.md](product-brief.md) first.
 
-We target **Stoat 0.15.7**, the latest release, published September 2026. Facts about Stoat below were verified against its source. Where behaviour differs between versions it is called out. Estimates are labelled as estimates.
+We target **Stoat 0.15.5**, the version Stoat's self-hosted repo supports, published September 2026. The later 0.15.6 and 0.15.7 only dual-write events for testing Stoat's new gateway and change an anti-spam URL, and Stoat advises self-hosters against them. Facts about Stoat below were verified against its source. Where behaviour differs between versions it is called out. Estimates are labelled as estimates.
 
 ## 1. Decisions
 
 | Decision | Choice |
 |---|---|
-| Backend | Stoat self-hosted, unmodified, every image pinned to 0.15.7. Gaps go upstream as pull requests or get dropped. |
+| Backend | Stoat self-hosted, unmodified, every image pinned to 0.15.5. Gaps go upstream as pull requests or get dropped. |
 | Fallback backend | Our own Rust service, only if the decision gate in section 10 says so. |
 | Media | LiveKit, using Stoat's patched image. Stock LiveKit lacks the mute webhooks Stoat relies on. |
 | Client | Svelte 5 and SvelteKit. One web app serves both the website and the chat client from one origin. |
@@ -92,6 +92,8 @@ Stoat's own invite-only mode checks a separate collection of registration codes 
 
 Admins invite people by creating ordinary server invites, revocable as on Discord. Our website keeps no database.
 
+**Registration starts closed.** The website server has a registration switch in its configuration, off by default, and Jaakko decides when to turn it on. While it is off, `/register` and the invite page say registration is closed, and existing users can still log in and join through invites. Until then Jaakko creates accounts by hand over the internal network, as [vps-runbook.md](vps-runbook.md) describes. The Caddy rule in step 1 stays on either way.
+
 **Only server admins create invites.** New Stoat servers give every member the invite permission. Our server-creation flow removes it from the default role straight away, and the server settings screen warns when a channel override grants it back. The allowlist above stays even so, because group DM invites are not covered by server permissions.
 
 **Only global admins create servers.** Stoat's `restrict_server_creation` setting takes a list of user IDs. An empty list lets everyone create servers, so bootstrap order matters: create the first admin account, add its ID to the list, restart the API, and only then let anyone else register. The client reads the list from `GET /` and hides "Create server" from everyone else. Group DMs are not affected.
@@ -112,13 +114,13 @@ Admins invite people by creating ordinary server invites, revocable as on Discor
   5. For each open channel, fetch messages after the newest one we hold. If the gap exceeds one page of 100, drop the window and reload at the bottom.
   6. Clear typing indicators.
 - **Ready is partial.** It carries your own memberships, DM and group recipients, voice participants, and the users you have relationships with. It does not carry every server member. The member list comes from `GET /servers/<id>/members`, which returns all members with their user objects. That is about 200 rows for us.
-- **Presence**: online and offline changes reach every server member live. Status text and Busy changes reach only friends, as verified on 0.15.7 in [m0-results.md](m0-results.md). Idle, Focus and DM partners who are not friends are still to be checked in M0. The client re-polls the member list when the window gains focus and every two minutes while visible.
+- **Presence**: online and offline changes reach every server member live. Status text, Idle, Focus and Busy changes reach only friends and DM partners, as verified on 0.15.5 in [m0-results.md](m0-results.md). On 0.15.5 the client sends `Subscribe` for the open server, which brings live status changes from every member. It re-sends it every 10 minutes, because a subscription lasts 15. On versions without it, the client re-polls the member list on focus and every two minutes while visible.
 - **Idle is our job.** Stoat has no automatic idle. The client sets presence itself, and presence is per account, so the most recently active device wins.
 - **Permissions as BigInt**: permissions are 64-bit masks, and JavaScript's bitwise operators work on 32 bits. The adapter parses permission fields as BigInt.
 - **Edits versus pins**: `MessageUpdate` carries both edits and pin toggles. It counts as an edit only when `edited` is present.
 - **Late embeds**: link embeds arrive after the message, as `MessageAppend`. The message list keeps scroll anchored when they render.
 - **Unreads**: a channel is unread when its last message ID is newer than the user's acknowledged ID. Stoat sends no event for last-message changes, so the client bumps them from incoming messages. Mentions are a list of message IDs. Server-rail pills and mention badges are derived client-side, which matches Discord's model.
-- **Version capability table.** The adapter reads Stoat's version from `GET /` and switches behaviour where versions differ. One known case: the `Subscribe` message did something on 0.15.5, does nothing on later versions, and would get the socket closed by the Elixir gateway. It stays off.
+- **Version capability table.** The adapter reads Stoat's version from `GET /` and switches behaviour where versions differ. One known case: `Subscribe` delivers member status changes on 0.15.5, does nothing on later versions, and would get the socket closed by the Elixir gateway. The table switches it on for 0.15.5 only.
 
 ### 4.4 Messages and markdown
 
@@ -269,7 +271,7 @@ Account management stays reachable on the website without installing anything, a
 
 ## 8. Hosting and operations
 
-- **VPS**: the current server has 2 shared vCPU, 3.7 GB RAM and 4 GB swap, in Helsinki. It runs Ubuntu 26.04. Idle, the stack uses 1.6 GB. The estimate for production is 4 vCPU and 8 GB, and the M3 voice session decides whether to resize. Stoat's own guidance asks for 2 GB minimum, third-party guides suggest 4 GB with voice, and LiveKit needs CPU headroom for several 1080p60 streams. Each viewer of a 1080p60 share pulls roughly 6 to 10 Mbps, well within Hetzner's included traffic at our scale.
+- **VPS**: the current server has 2 shared vCPU, 3.7 GB RAM and 4 GB swap, in Helsinki. It runs Ubuntu 26.04. Idle, the stack uses 1.6 GB. The estimate for production is 4 vCPU and 8 GB, and the M3 voice session decides whether more is needed. If so, the VPS is resized rather than moving the stack to Jaakko's home server. Stoat's own guidance asks for 2 GB minimum, third-party guides suggest 4 GB with voice, and LiveKit needs CPU headroom for several 1080p60 streams. Each viewer of a 1080p60 share pulls roughly 6 to 10 Mbps, well within Hetzner's included traffic at our scale.
 - **Addresses**: a main IPv4 and IPv6, plus one floating IPv4 for TURN.
 - **Exact steps** for addresses, ports, files and backups live in [vps-runbook.md](vps-runbook.md). This section states the rules.
 - **Port bindings**:

@@ -1,0 +1,9 @@
+{
+  "name": "@concord/stoat",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "record": "node src/fixtures/record.ts"
+  }
+}

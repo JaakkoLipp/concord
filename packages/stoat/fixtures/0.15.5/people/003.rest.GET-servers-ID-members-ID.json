@@ -1,0 +1,32 @@
+{
+ "step": "members",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/servers/01KE6P5YA800000WS1Q6NXSP7H/members/01KE6P5328000005FDJX3VMBAG",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "5",
+   "x-ratelimit-bucket": "4355574530925212923",
+   "x-ratelimit-remaining": "2",
+   "x-ratelimit-reset-after": "9963"
+  },
+  "body": {
+   "_id": {
+    "server": "01KE6P5YA800000WS1Q6NXSP7H",
+    "user": "01KE6P5328000005FDJX3VMBAG"
+   },
+   "joined_at": "2026-01-05T09:01:21.928Z",
+   "roles": [
+    "01KE6P5YBY00000Y2B05CXBVFH",
+    "01KE6P686M0000116KCQMAKMGD"
+   ]
+  }
+ }
+}

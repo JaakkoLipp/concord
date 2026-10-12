@@ -1,0 +1,73 @@
+{
+ "step": "search",
+ "actor": "dev",
+ "request": {
+  "method": "POST",
+  "path": "/channels/01KE6P5YA800000V76HDQ01P2E/search",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  },
+  "body": {
+   "pinned": true,
+   "limit": 10
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "10461430989866481428",
+   "x-ratelimit-remaining": "5",
+   "x-ratelimit-reset-after": "8550"
+  },
+  "body": [
+   {
+    "_id": "01KE6PAAE7000043EAHX3VDY2Y",
+    "nonce": "01KE6PAAE2000042RPDPJCS009",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5QQA00000SQ58KDQZC4D",
+    "content": "mitä te ootte mieltä tästä?",
+    "reactions": {
+     "🙏": [
+      "01KE6P56R000000AA4WNP248F8",
+      "01KE6P5F8T00000JE9SZ23HP31",
+      "01KE6P5Q4P00000R2N099H7W94"
+     ],
+     "01KE6P90RH00001ZTE25GF6KA1": [
+      "01KE6P5F0G00000H53MFN4DQGC"
+     ],
+     "👍": [
+      "01KE6P5EWG00000GHYPHWTVY8V",
+      "01KE6P4YM0000002MKYT6YPE0Z",
+      "01KE6P54RN000008C22JDJ1QJM",
+      "01KE6P54MA000007S29V4CAE6V"
+     ]
+    },
+    "pinned": true
+   },
+   {
+    "_id": "01KE6PA06M00002XE017WCJWPM",
+    "nonce": "01KE6PA06E00002W214P9RCDAA",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P54MA000007S29V4CAE6V",
+    "content": "agreed",
+    "pinned": true
+   },
+   {
+    "_id": "01KE6P9NQ400002FR3BWMEA3YV",
+    "nonce": "01KE6P9NPN00002EMW10V2V5HJ",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5CN600000F69T5RQJPFW",
+    "content": "link?",
+    "mentions": [
+     "01KE6P5MH900000NFB6JJZK0TC"
+    ],
+    "replies": [
+     "01KE6P9NFK00002CQETYHE6S3B"
+    ],
+    "pinned": true
+   }
+  ]
+ }
+}

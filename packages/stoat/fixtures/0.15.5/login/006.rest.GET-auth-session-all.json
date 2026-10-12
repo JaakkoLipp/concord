@@ -1,0 +1,31 @@
+{
+ "step": "sessions",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/auth/session/all",
+  "headers": {
+   "x-session-token": "<secret-10>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "12557153814451408325",
+   "x-ratelimit-remaining": "13",
+   "x-ratelimit-reset-after": "9990"
+  },
+  "body": [
+   {
+    "_id": "01KE6P53D30000067P0HQEDQDK",
+    "name": "Concord seed"
+   },
+   {
+    "_id": "01KE6PC3KS0000AKWNEQ6391HZ",
+    "name": "Concord recorder"
+   }
+  ]
+ }
+}

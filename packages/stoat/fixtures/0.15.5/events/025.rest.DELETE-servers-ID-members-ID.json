@@ -1,0 +1,21 @@
+{
+ "step": "member",
+ "actor": "dev-admin",
+ "request": {
+  "method": "DELETE",
+  "path": "/servers/01KE6P5YA800000WS1Q6NXSP7H/members/01KE6P5Q4P00000R2N099H7W94",
+  "headers": {
+   "x-session-token": "<secret-4>"
+  }
+ },
+ "response": {
+  "status": 204,
+  "headers": {
+   "x-ratelimit-limit": "5",
+   "x-ratelimit-bucket": "15164974434513348461",
+   "x-ratelimit-remaining": "3",
+   "x-ratelimit-reset-after": "8094"
+  },
+  "body": null
+ }
+}

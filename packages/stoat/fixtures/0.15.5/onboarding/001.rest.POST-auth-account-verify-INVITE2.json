@@ -1,0 +1,29 @@
+{
+ "step": "verify",
+ "actor": "new",
+ "request": {
+  "method": "POST",
+  "path": "/auth/account/verify/INVITE2",
+  "headers": {}
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "3290070096498229025",
+   "x-ratelimit-remaining": "10",
+   "x-ratelimit-reset-after": "3415"
+  },
+  "body": {
+   "ticket": {
+    "_id": "01KE6PC8CF0000AR269XFJ80GV",
+    "account_id": "01KE6PC8060000AQWN8W4ZM04V",
+    "token": "<secret-29>",
+    "validated": false,
+    "authorised": true,
+    "last_totp_code": null
+   }
+  }
+ }
+}

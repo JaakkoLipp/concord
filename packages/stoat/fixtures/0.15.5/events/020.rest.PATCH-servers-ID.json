@@ -1,0 +1,225 @@
+{
+ "step": "server",
+ "actor": "dev-admin",
+ "request": {
+  "method": "PATCH",
+  "path": "/servers/01KE6P5YA800000WS1Q6NXSP7H",
+  "headers": {
+   "x-session-token": "<secret-4>"
+  },
+  "body": {
+   "description": "Concordin kehityspalvelin. The Concord development server."
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "5",
+   "x-ratelimit-bucket": "15164974434513348461",
+   "x-ratelimit-remaining": "2",
+   "x-ratelimit-reset-after": "4301"
+  },
+  "body": {
+   "_id": "01KE6P5YA800000WS1Q6NXSP7H",
+   "owner": "01KE6P4YM0000002MKYT6YPE0Z",
+   "name": "Concord",
+   "description": "Concordin kehityspalvelin. The Concord development server.",
+   "channels": [
+    "01KE6P5YA800000V76HDQ01P2E",
+    "01KE6P6VRX000013ZM2TG6VG4Y",
+    "01KE6P6VT7000014P587RH29GQ",
+    "01KE6P6VVY000015T1NQ1YXEEE",
+    "01KE6P6VW9000016E91J4BB6YA",
+    "01KE6P6VWP000017BH93Z92WTR",
+    "01KE6P75JF000018NYEHYGZ415",
+    "01KE6P75JW000019XHFK89CFR7",
+    "01KE6P75KP00001AK7WMAPED80",
+    "01KE6P75MK00001B4BKC24007V"
+   ],
+   "categories": [
+    {
+     "id": "cat0",
+     "title": "Tervetuloa",
+     "channels": [
+      "01KE6P6VRX000013ZM2TG6VG4Y",
+      "01KE6P6VT7000014P587RH29GQ"
+     ]
+    },
+    {
+     "id": "cat1",
+     "title": "Yleinen",
+     "channels": [
+      "01KE6P5YA800000V76HDQ01P2E",
+      "01KE6P6VVY000015T1NQ1YXEEE",
+      "01KE6P6VW9000016E91J4BB6YA",
+      "01KE6P6VWP000017BH93Z92WTR"
+     ]
+    },
+    {
+     "id": "cat2",
+     "title": "Pelit",
+     "channels": [
+      "01KE6P75JF000018NYEHYGZ415",
+      "01KE6P75JW000019XHFK89CFR7"
+     ]
+    },
+    {
+     "id": "cat3",
+     "title": "Tekniikka",
+     "channels": [
+      "01KE6P75KP00001AK7WMAPED80",
+      "01KE6P75MK00001B4BKC24007V"
+     ]
+    }
+   ],
+   "system_messages": {
+    "user_joined": "01KE6P75MK00001B4BKC24007V",
+    "user_left": "01KE6P75MK00001B4BKC24007V",
+    "user_kicked": "01KE6P75MK00001B4BKC24007V",
+    "user_banned": "01KE6P75MK00001B4BKC24007V"
+   },
+   "roles": {
+    "01KE6P685400000ZBYK88V9VN5": {
+     "_id": "01KE6P685400000ZBYK88V9VN5",
+     "name": "Botit",
+     "permissions": {
+      "a": 0,
+      "d": 0
+     },
+     "colour": "#8b8d98",
+     "hoist": true,
+     "rank": 2
+    },
+    "01KE6P5YB800000XNKTAC2RHMC": {
+     "_id": "01KE6P5YB800000XNKTAC2RHMC",
+     "name": "Admin",
+     "permissions": {
+      "a": 33554432,
+      "d": 0
+     },
+     "colour": "#e5484d",
+     "hoist": true,
+     "rank": 0
+    },
+    "01KE6P5YBY00000Y2B05CXBVFH": {
+     "_id": "01KE6P5YBY00000Y2B05CXBVFH",
+     "name": "Moderaattori",
+     "permissions": {
+      "a": 472454801856,
+      "d": 0
+     },
+     "colour": "#f5a524",
+     "hoist": true,
+     "rank": 1
+    },
+    "01KE6P686M0000116KCQMAKMGD": {
+     "_id": "01KE6P686M0000116KCQMAKMGD",
+     "name": "Pelaajat",
+     "permissions": {
+      "a": 0,
+      "d": 0
+     },
+     "colour": "#5b8def",
+     "hoist": true,
+     "rank": 4
+    },
+    "01KE6P6HZ10000126519561HAY": {
+     "_id": "01KE6P6HZ10000126519561HAY",
+     "name": "Vakio",
+     "permissions": {
+      "a": 0,
+      "d": 0
+     },
+     "colour": "#3dbd7d",
+     "rank": 5
+    },
+    "01KE6P685W0000102WWRC2SGGA": {
+     "_id": "01KE6P685W0000102WWRC2SGGA",
+     "name": "Taiteilijat",
+     "permissions": {
+      "a": 0,
+      "d": 0
+     },
+     "colour": "linear-gradient(90deg, #f472b6, #a78bfa)",
+     "rank": 3
+    }
+   },
+   "default_permissions": 76981212160,
+   "icon": {
+    "_id": "9rYmzqFjhME0O33dpndCm3bZeYPZkTIugbhcdTbwd0",
+    "tag": "icons",
+    "filename": "icon.png",
+    "metadata": {
+     "type": "Image",
+     "width": 256,
+     "height": 256,
+     "thumbhash": [
+      148,
+      72,
+      6,
+      23,
+      6,
+      55,
+      7,
+      87,
+      132,
+      123,
+      120,
+      129,
+      134,
+      170,
+      184,
+      7,
+      200,
+      120,
+      120,
+      67,
+      8,
+      55,
+      132,
+      0
+     ],
+     "animated": false
+    },
+    "content_type": "image/png",
+    "size": 2033
+   },
+   "banner": {
+    "_id": "i1M_rP7jeTw14d2NQRpiDX52MH7F5Xgu5Ei-OKyOuN",
+    "tag": "banners",
+    "filename": "banner.png",
+    "metadata": {
+     "type": "Image",
+     "width": 960,
+     "height": 540,
+     "thumbhash": [
+      217,
+      248,
+      5,
+      44,
+      130,
+      127,
+      120,
+      136,
+      127,
+      119,
+      135,
+      135,
+      135,
+      120,
+      143,
+      127,
+      247,
+      247,
+      119
+     ],
+     "animated": false
+    },
+    "content_type": "image/png",
+    "size": 193684
+   },
+   "approximate_member_count": 1
+  }
+ }
+}

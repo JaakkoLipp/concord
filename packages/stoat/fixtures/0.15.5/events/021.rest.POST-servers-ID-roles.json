@@ -1,0 +1,37 @@
+{
+ "step": "role",
+ "actor": "dev-admin",
+ "request": {
+  "method": "POST",
+  "path": "/servers/01KE6P5YA800000WS1Q6NXSP7H/roles",
+  "headers": {
+   "x-session-token": "<secret-4>"
+  },
+  "body": {
+   "name": "Tallentaja",
+   "rank": 10
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "5",
+   "x-ratelimit-bucket": "15164974434513348461",
+   "x-ratelimit-remaining": "1",
+   "x-ratelimit-reset-after": "2914"
+  },
+  "body": {
+   "id": "01KE6PDQA50000B3NXCE459EEK",
+   "role": {
+    "_id": "01KE6PDQA50000B3NXCE459EEK",
+    "name": "Tallentaja",
+    "permissions": {
+     "a": 0,
+     "d": 0
+    },
+    "rank": 6
+   }
+  }
+ }
+}

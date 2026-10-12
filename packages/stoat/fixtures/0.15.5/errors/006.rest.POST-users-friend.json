@@ -1,0 +1,28 @@
+{
+ "step": "409",
+ "actor": "dev",
+ "request": {
+  "method": "POST",
+  "path": "/users/friend",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  },
+  "body": {
+   "username": "aino#6977"
+  }
+ },
+ "response": {
+  "status": 409,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "6381564301654686",
+   "x-ratelimit-remaining": "19",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": {
+   "type": "AlreadyFriends",
+   "location": "crates/core/database/src/models/users/model.rs:552:47"
+  }
+ }
+}

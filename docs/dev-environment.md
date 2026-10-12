@@ -1,6 +1,6 @@
 # Concord: development environment
 
-Status: draft for review, layer 3. Covers M0. Read [architecture.md](architecture.md) and [milestones.md](milestones.md) first. Results go in [m0-results.md](m0-results.md).
+Status: signed off 2026-10-12, layer 3. Covers M0. Read [architecture.md](architecture.md) and [milestones.md](milestones.md) first. Results go in [m0-results.md](m0-results.md).
 
 ## 1. Shape
 
@@ -13,15 +13,16 @@ Jaakko's machine (WSL)                        VPS, concord.jaalip.com
   ssh -L 8025 ──────────────────────────────►   Mailpit on 127.0.0.1:8025
 ```
 
-Prerequisite: an SSH alias `concord-vps` in `~/.ssh/config` for Jaakko's login on the VPS. The scripts and the commands below use it, so the address and login stay out of the repo.
+Scripts and the commands below reach the VPS as `jaakko@concord.jaalip.com`, through the public hostname, so no address is written down. `CONCORD_SSH` overrides it.
 
 Why the VPS rather than WSL: nothing needs installing on Jaakko's machine, the routes and TLS are the ones production will use, and phones and other people can reach the stack. The cost is that development data lives on the machine that becomes production, which section 8 handles. A WSL fallback is in the appendix.
 
 ## 2. The VPS stack
 
 - **Layout**: `~/stoat` is Stoat's self-hosted repo at commit `9af5e90`. Our files from `deploy/` are copied to `~/stoat/concord/`. Every compose command goes through `~/stoat/concord/dc`.
-- **Versions**: Stoat `v0.15.7` for every Stoat image, and MongoDB `7.0.43`. MongoDB 8 refuses to start on the VPS's kernel 7.0. The reasons, and the upgrade path to 8.0, are in `deploy/concord.compose.yml` and m0-results.md.
+- **Versions**: Stoat `v0.15.5` for every Stoat image, the self-hosted repo's support line, and MongoDB `7.0.43`. MongoDB 8 refuses to start on the VPS's kernel 7.0. The reasons, and the upgrade path to 8.0, are in `deploy/concord.compose.yml` and m0-results.md.
 - **Configuration changes** to `Revolt.toml` are recorded in `deploy/revolt-changes.md`. After editing it, `dc restart api` picks the change up.
+- **Every image is pinned.** Stoat's compose floats Caddy, RabbitMQ, Valkey, Silo and mc. Our compose file pins them to the versions first deployed, Silo and mc by digest.
 - **Memory**: idle, the stack uses 1.6 GB of the 3.7 GB, and MongoDB's cache is capped at 0.5 GB.
   - **Main risk**: Autumn and January have hard-coded in-memory caches of up to 2 GiB and 512 MiB that ignore container limits.
   - **M0 adds a `mem_limit` to every service** in `concord.compose.yml`. Starting values: database 768 MB, autumn 640 MB, january and rabbit 384 MB, minio 256 MB, livekit 256 MB, redis 128 MB, the rest 128 to 192 MB.
@@ -29,7 +30,7 @@ Why the VPS rather than WSL: nothing needs installing on Jaakko's machine, the r
   - **Overcommit is deliberate**: the limits add up to more than the RAM. They stop one runaway service, they are not reservations.
   - **Restarts**: Stoat's compose file restarts every service on failure, so a service that hits its limit is killed and restarted rather than taking the box down.
   - **Tuning**: the limits are tuned with `dc stats` during M0. An OOM kill shows in `docker inspect -f '{{.State.OOMKilled}}'`. The MongoDB soak test is repeated at the 768 MB limit before that limit is adopted.
-- **Size**: the VPS has 2 vCPU and 3.7 GB, below the 4 vCPU and 8 GB that architecture section 8 estimates. It fits for development. The M3 voice session decides whether to resize. Resize if available memory stays under 500 MB through an evening, swap-in is sustained, or LiveKit uses more than one core.
+- **Size**: the VPS has 2 vCPU and 3.7 GB, below the 4 vCPU and 8 GB that architecture section 8 estimates. It fits for development. The M3 voice session decides whether it needs more. It does if available memory stays under 500 MB through an evening, swap-in is sustained, or LiveKit uses more than one core. Then the VPS is resized. Moving the stack to Jaakko's home server was considered and rejected.
 
 ## 3. Client dev server
 
@@ -66,7 +67,9 @@ export default defineConfig({
 
 Public sign-up is blocked by Caddy, so accounts are created on the VPS over the internal network. Email goes to Mailpit, which only the server itself can reach.
 
-1. Open the Mailpit tunnel: `ssh -N -L 8025:127.0.0.1:8025 concord-vps`, then browse to `http://127.0.0.1:8025`.
+The same script is how real people get accounts after M3: Jaakko creates each one by hand until they decide to open registration, as architecture section 4.2 describes.
+
+1. Open the Mailpit tunnel: `ssh -N -L 8025:127.0.0.1:8025 jaakko@concord.jaalip.com`, then browse to `http://127.0.0.1:8025`.
 2. Create the account: `~/stoat/concord/create-account.sh <email> <password>` on the VPS. Success is HTTP 204.
 3. Verify by opening the `/login/verify/<token>` link from the mail.
    - Scripts call `POST /api/auth/account/verify/{token}` instead. It returns a ticket, and `POST /api/auth/session/login` with `mfa_ticket` set to that ticket signs in without a password.
@@ -80,11 +83,14 @@ Pitfalls, from Stoat's source:
 
 ## 5. Seed script
 
-`tools/seed/` is a Node script in TypeScript with no dependencies, using `fetch`, `node:crypto` and `node:zlib`. It runs on Jaakko's machine with the Mailpit tunnel open. It uses `ssh concord-vps` for three things:
+`tools/seed/` is a Node script in TypeScript with no dependencies, using `fetch`, `node:crypto` and `node:zlib`. Node runs the TypeScript directly. It runs on Jaakko's machine and uses one multiplexed SSH connection for four things:
 
 - running `create-account.sh`, since public sign-up is blocked,
-- editing `restrict_server_creation` and restarting `api`,
-- running `reset-data.sh`. It refuses to run against a database that already has accounts. To start over, use `--reset`.
+- reading verification mail from Mailpit's API with `curl` on the VPS, so no tunnel is needed,
+- running `set-server-creators.sh`, which edits `restrict_server_creation` and restarts `api`,
+- running `reset-data.sh`. Without `--reset` the seed refuses to run against a database that already has accounts.
+
+`CONCORD_SSH` overrides the SSH destination. The IDs from the last run are saved in the gitignored `tools/seed/.state.json`, which `seed hold`, `seed check` and the recorder read.
 
 **Bootstrap**, run first after every reset:
 
@@ -154,7 +160,7 @@ The tap is a recording wrapper around the transport in `packages/stoat`. The rep
 - **Raw captures** go to a gitignored `.raw/`. An offline scrubber writes the committed files:
 
   ```
-  packages/stoat/fixtures/0.15.7/manifest.json      # Stoat version and build, scrub rules version, seed hash
+  packages/stoat/fixtures/0.15.5/manifest.json      # Stoat version and build, scrub rules version, seed hash
     <scenario>/NNN.rest.<METHOD>-<route>.json        # request and response, with rate-limit headers
     <scenario>/ws.jsonl                              # observer frames in order, with step markers
   ```
@@ -238,7 +244,7 @@ Results go in m0-results.md, per run: resolution and framerate achieved, bitrate
 - **People**: Caddy blocks sign-up, and seeded personas have secret passwords, so only Jaakko and the agents can log in.
 - **Email**: all mail lands in Mailpit, so no real person may be given an account before M3.
 - **Fixtures**: recorded only from seeded data.
-- **Exposure**: whether Stoat's Swagger page and `/metrics` are reachable through Caddy's `/api` route is unverified. M0 checks this, and Caddy blocks them if they are.
+- **Exposure**: Stoat's Swagger page, `openapi.json` and `/metrics` were reachable through Caddy's `/api` route, as m0-results.md records. Caddy blocks all three. `openapi.json` is fetched over the internal network and kept in `packages/stoat/api/0.15.5/`.
 
 **M3 cleanup**:
 
@@ -251,15 +257,17 @@ Results go in m0-results.md, per run: resolution and framerate achieved, bitrate
 
 | Task | Command |
 |---|---|
-| Start the stack | `ssh concord-vps '~/stoat/concord/dc up -d'` |
+| Start the stack | `ssh jaakko@concord.jaalip.com '~/stoat/concord/dc up -d'` |
 | Check the version | `curl -s https://concord.jaalip.com/api/ \| jq -r .revolt` |
-| Stop, keeping data | `ssh concord-vps '~/stoat/concord/dc stop'` |
-| Mailpit | `ssh -N -L 8025:127.0.0.1:8025 concord-vps` |
+| Stop, keeping data | `ssh jaakko@concord.jaalip.com '~/stoat/concord/dc stop'` |
+| Mailpit | `ssh -N -L 8025:127.0.0.1:8025 jaakko@concord.jaalip.com` |
 | One test account | `pnpm seed account <handle>` |
+| A persona's login | `pnpm seed password <handle>` |
+| M0 verifications | `pnpm seed check` |
 | Reseed from scratch | `pnpm seed --reset` |
 | Client | `pnpm dev` |
 | Record fixtures, then test | `pnpm --filter @concord/stoat record && pnpm test` |
-| Memory | `ssh concord-vps '~/stoat/concord/dc stats --no-stream'` |
+| Memory | `ssh jaakko@concord.jaalip.com '~/stoat/concord/dc stats --no-stream'` |
 
 ## Appendix: running the stack in WSL instead
 

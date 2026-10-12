@@ -1,0 +1,31 @@
+{
+ "step": "profile",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/users/01KE6P5328000005FDJX3VMBAG/mutual",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "6381564301654686",
+   "x-ratelimit-remaining": "16",
+   "x-ratelimit-reset-after": "8738"
+  },
+  "body": {
+   "users": [],
+   "servers": [
+    "01KE6P5YA800000WS1Q6NXSP7H"
+   ],
+   "channels": [
+    "01KE6PAMSM000096CWCBQ0HPNJ",
+    "01KE6PANF600009M81GEAY6MFM"
+   ]
+  }
+ }
+}

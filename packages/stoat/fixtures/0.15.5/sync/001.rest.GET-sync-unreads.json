@@ -1,0 +1,154 @@
+{
+ "step": "unreads",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/sync/unreads",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "3493474017276057627",
+   "x-ratelimit-remaining": "19",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": [
+   {
+    "_id": {
+     "channel": "01KE6P75KP00001AK7WMAPED80",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "last_id": "01KE6PA0QD00002Y3P4MSY0834"
+   },
+   {
+    "_id": {
+     "channel": "01KE6P75JF000018NYEHYGZ415",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "last_id": "01KE6P9ZX300002RBMB7VRA6PP",
+    "mentions": [
+     "01KE6PA01800002VX5VDFSFA8R"
+    ]
+   },
+   {
+    "_id": {
+     "channel": "01KE6P5YA800000V76HDQ01P2E",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "last_id": "01KE6PAM3500007V7XZZVD9MGK"
+   },
+   {
+    "_id": {
+     "channel": "01KE6PANBB00009JRRWETYJ90H",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "last_id": "01KE6PANEZ00009KDQ9MYMMZTQ"
+   },
+   {
+    "_id": {
+     "channel": "01KE6PAMXQ0000980RJ4BT8AXK",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "mentions": [
+     "01KE6PAMZ200009APBVD56W1E2",
+     "01KE6PAN0V00009CRVPMVTYETK",
+     "01KE6PAMYQ000099CNMTYZ1ZNS",
+     "01KE6PAMZP00009BG8H4Y46WZ7",
+     "01KE6PAN1700009D3ASRBFAMF1"
+    ]
+   },
+   {
+    "_id": {
+     "channel": "01KE6PANF600009M81GEAY6MFM",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "mentions": [
+     "01KE6PANFG00009N377EF755MJ",
+     "01KE6PANFS00009P2FPNTB9GY6",
+     "01KE6PANH800009VQTYMD0PD7A",
+     "01KE6PANQ10000A72C30VPEYHC",
+     "01KE6PANSK0000AAM6JAGJ4V3Y",
+     "01KE6PANG400009Q096C55DSPG",
+     "01KE6PANGD00009R6QP13A2W7B",
+     "01KE6PANJ200009YA019PD1QQP",
+     "01KE6PANKN0000A08242REW9YZ",
+     "01KE6PANMX0000A3S9CNPCQGAG",
+     "01KE6PANPB0000A6497HN4NYFY",
+     "01KE6PANR40000A84JRFJFHNZ2",
+     "01KE6PANS10000A97HPW26T3FJ",
+     "01KE6PANGP00009SEVYV1TJ036",
+     "01KE6PANGZ00009TM04Y30DRYH",
+     "01KE6PANKZ0000A1D3FC68M7AE",
+     "01KE6PANN70000A4GR0QDRMZCF",
+     "01KE6PANHH00009WT0HWQ4J2MP",
+     "01KE6PANHT00009XDYYF8YEPG2",
+     "01KE6PANKB00009ZN0HE84KD93",
+     "01KE6PANMJ0000A2HDH7SBN6QN",
+     "01KE6PANNZ0000A5YH32WXNJQB",
+     "01KE6PAZ9M0000ABBT6XZSCWC6"
+    ]
+   },
+   {
+    "_id": {
+     "channel": "01KE6PAN1G00009EK88CCM8C7A",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "last_id": "01KE6PAN5W00009FBS0MKKQQRY"
+   },
+   {
+    "_id": {
+     "channel": "01KE6PAN6900009GRM445Z1QVF",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "last_id": "01KE6PANAS00009H9DRSZ80J8F"
+   },
+   {
+    "_id": {
+     "channel": "01KE6PAMSM000096CWCBQ0HPNJ",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "last_id": "01KE6PAMXC000097WXWNV2BEP5"
+   },
+   {
+    "_id": {
+     "channel": "01KE6P6VVY000015T1NQ1YXEEE",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "last_id": "01KE6PAMS9000095WPPNHM7E05"
+   },
+   {
+    "_id": {
+     "channel": "01KE6P6VW9000016E91J4BB6YA",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "last_id": "01KE6PAMR5000094DPBAH1ARXR"
+   },
+   {
+    "_id": {
+     "channel": "01KE6P75MK00001B4BKC24007V",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "last_id": "01KE6PA8Y300002ZD8ZS1VF0X3"
+   },
+   {
+    "_id": {
+     "channel": "01KE6P6VT7000014P587RH29GQ",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "last_id": "01KE6P9NK600002D8AS2BEPQTB"
+   },
+   {
+    "_id": {
+     "channel": "01KE6P6VRX000013ZM2TG6VG4Y",
+     "user": "01KE6P52F2000003E7052YVB0E"
+    },
+    "last_id": "01KE6P9NE400002BK9B9W2Y697"
+   }
+  ]
+ }
+}

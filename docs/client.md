@@ -1,6 +1,6 @@
 # Concord: client specification
 
-Status: draft for review, layer 3. Covers M1 and M2 in detail, and M4 voice at outline level.
+Status: signed off 2026-10-12, layer 3. Covers M1 and M2 in detail, and M4 voice at outline level.
 Read [architecture.md](architecture.md) first. This document says how the client is built. The architecture says why.
 
 ## 1. Scope
@@ -41,7 +41,7 @@ packages/stoat/      Talks to Stoat. Nothing else imports Stoat types.
   socket.ts          WebSocket: connect, Ready, Ping, backoff, cold-start reconnect.
   map/               Stoat objects to domain entities, one file per entity.
   capabilities.ts    Behaviour switches by Stoat version.
-  fixtures/          Recorder and replay transport used by tests and the UI gallery.
+  fixtures/          Recorder and replay transport used by the contract tests.
 
 packages/domain/     Framework-light core, written as .svelte.ts modules using runes.
   entities.ts        User, Member, Server, Role, Channel, Message, Emoji, VoiceState, ...
@@ -57,7 +57,7 @@ apps/web/src/routes/(app)/   Screens that compose ui components with domain stat
 
 **The domain package uses Svelte runes.** Fine-grained reactivity on normalised maps is the main performance tool for a chat UI, and runes give it without a state library. The native client will be Rust, so it reuses the protocol knowledge and fixtures, not this code.
 
-**Dependency direction**: routes depend on `domain` and `ui`. `domain` depends on `stoat` only through an interface, `Backend`, so tests and the UI gallery can swap in the replay transport. `ui` depends on nothing but tokens.
+**Dependency direction**: routes depend on `domain` and `ui`. `domain` depends on `stoat` only through an interface, `Backend`, so tests can swap in the replay transport. `ui` depends on nothing but tokens.
 
 ## 4. Data flow
 
@@ -100,13 +100,12 @@ Stoat exposes `X-RateLimit-Remaining` and `X-RateLimit-Reset-After`. The REST wr
 | `/app/channels/<server>/<channel>/<message>` | Same, jumped to a message. |
 | `/login`, `/login/verify/<token>` | Login with MFA, email verification, onboarding. |
 | `/account` | Standalone account and security page, also shown inside settings. |
-| `/app/dev/gallery` | Development only: every component in every state. |
 
 **Until M6**, Caddy gives our app only `/app`, and every other path, including Stoat's email links, goes to Stoat's own client. Our login and account pages are therefore served at `/app/login` and `/app/account` until M6 moves them to the top-level paths above. Verification links open in Stoat's client until then.
 
 Settings, profile popouts, the emoji picker and image viewers are overlays, not routes. Settings uses SvelteKit shallow routing, so the browser's back button closes it.
 
-**Desktop layout**: a CSS grid with four columns, sized from the design tokens in section 9: server rail, channel or DM sidebar, conversation, and member list or DM profile panel. The user dock sits at the bottom of the sidebar column.
+**Desktop layout**: a CSS grid with four columns, sized from the design tokens in section 9: server rail, channel or DM sidebar, conversation, and member list or DM profile panel. The user dock sits at the bottom and spans the rail and sidebar columns, 336 px wide, as in the reference.
 
 **Narrow layouts**:
 
@@ -129,7 +128,7 @@ Settings, profile popouts, the emoji picker and image viewers are overlays, not 
 ### 6.2 Markdown and rich content
 
 - **Parser**: our own, producing a small syntax tree that Svelte components render. Content never goes through `innerHTML`.
-- **Supported subset**: as listed in section 4.4 of the architecture document. Fixtures are recorded from Stoat's renderer for each construct, including edge cases such as nested spoilers and code containing mention syntax. Parser tests compare against them.
+- **Supported subset**: as listed in section 4.4 of the architecture document. Parser tests are hand-written cases for each construct, including edge cases such as nested spoilers and code containing mention syntax, with Stoat's renderer as the reference.
 - **Mentions** render as pills with the member's display name and role colour. Unknown IDs render as a neutral "unknown user" pill and resolve when the user loads.
 - **Links**: only `http` and `https` become links. They open in a new tab, or in the system browser on desktop.
 - **Embeds**: rendered from Stoat's embed objects: website cards with title, description, site name and image, plus video, image and special cases such as YouTube. Media loads through Stoat's proxy.
@@ -153,11 +152,12 @@ Settings, profile popouts, the emoji picker and image viewers are overlays, not 
 
   - The composer reads the current limits from `GET /api/` and rejects oversized files before uploading.
   - Autumn stores width, height and a thumbhash for images. The message list uses them to reserve space and paint a placeholder.
+- **Length**: Stoat limits a message to 2000 UTF-8 bytes, not characters, as verified in M0. Each `ä` or `ö` takes two bytes, and a mention token serialises to 29. The composer counts bytes of the serialised text and shows a counter near the limit.
 - **Keys**: Enter sends, Shift+Enter adds a line, Up arrow edits the last own message, Escape cancels a reply or edit.
 
 ### 6.4 Emoji picker
 
-The picker has an emoji tab only. Stoat has no stickers, and the MVP has no GIF tab (question 7 in section 15). The emoji tab has search, favourites, frequently used, then one section per server for custom emoji, then Unicode categories. A preview footer shows the hovered emoji's name. Favourites and usage counts are stored in synced settings under `concord:emoji`.
+The picker has an emoji tab only. Stoat has no stickers, and the MVP has no GIF tab: Tenor's API may be retiring, and a GIF provider means another key and another privacy policy. Revisit after launch. The emoji tab has search, favourites, frequently used, then one section per server for custom emoji, then Unicode categories. A preview footer shows the hovered emoji's name. Favourites and usage counts are stored in synced settings under `concord:emoji`.
 
 - **Custom emoji** are written `:ULID:` in message text, and as the bare ULID in reactions. A server holds up to 100, each up to 500 KB.
 - **Unicode reactions** must be on Stoat's allowlist of 3968 entries, so the picker offers only allowlisted emoji when reacting.
@@ -203,12 +203,12 @@ Connections, profile accent colours, message requests and stickers don't exist i
 - DMs are friends-only.
 - "In voice" on a friend comes from `voice_states` for channels the user can see.
 
-**Presence**: Stoat's states are Online, Idle, Focus, Busy and Invisible. Focus means "only receive mentions". Whether the UI offers it is question 5 in section 15. It is displayed either way, because other Stoat clients can set it.
+**Presence**: Stoat's states are Online, Idle, Focus, Busy and Invisible. Focus means "only receive mentions". The status menu offers all five, since other Stoat clients can set Focus anyway.
 
-Behaviour verified on 0.15.7:
+Behaviour verified on 0.15.5:
 
 - **Online and offline** changes reach every server member live.
-- **Status text and Busy** changes reach friends only. Idle, Focus, and DM or group partners who are not friends are not verified yet. The seeded stack checks them in M0. The member list re-polls as section 4.3 of the architecture describes.
+- **Status text, Idle, Focus and Busy** changes reach friends and DM partners only, verified in M0. Other server members see them only when the member list re-polls, as section 4.3 of the architecture describes.
 - **New friendships**: when a friendship is accepted, the socket that was already open does not receive the new friend's status changes until it reconnects. The client therefore re-fetches that user on every `UserRelationship` event that makes a friend, and accepts a slightly stale status until the next reconnect.
 
 **Server and invite controls**:
@@ -217,7 +217,7 @@ Behaviour verified on 0.15.7:
 - **Invites**:
   - Only members with `InviteOthers` see invite buttons.
   - Invites created before a permission change stay valid, so server settings list existing invites with a revoke button.
-  - `GET /invites/{code}` returns the server, the channel, the member count and the creator's username, but not the creator's ID.
+  - `GET /invites/{code}` returns the server's name, icon and banner, the channel, the member count, and the creator's username and avatar, but not the creator's ID. The icon, banner and avatar are full file objects, present only when set.
 - **Superuser flag**: `user.privileged` is a platform superuser flag set only in the database. It doesn't bypass server-creation limits, and the client ignores it.
 
 **Idle detection**: after 10 minutes without input, or when every client window has been hidden for 10 minutes, the client sets presence to Idle and restores Online on return. It never overrides a status the user chose, such as Busy or Invisible. Presence is account-wide, so the most recently active device wins. On any input after it set Idle, a device restores Online. A device never sets Idle while it has seen input in the last 10 minutes. Presence changes share the profile-edit rate limit of 2 per 10 seconds, so the client sends only the latest pending change, at most once every 5 seconds.
@@ -239,7 +239,7 @@ Behaviour verified on 0.15.7:
   - **Any open WebSocket for the account suppresses message pushes**, so a desktop window that is open stops the phone getting pushes.
     - On phones, the client closes its socket after about 30 seconds in the background, unless it is in a voice call.
     - Desktop keeps its socket open. Closing it would show the user as offline rather than Idle, drop voice events, and stop desktop notifications.
-    - So while a desktop client runs, the phone stays quiet. Question 6 in section 15 covers this.
+    - So while a desktop client runs, the phone stays quiet. This is accepted for the beta, and testers are asked about it. If it bothers them, the push sidecar below can push while the desktop user is Idle.
   - **Payload format**: payloads use the legacy `aesgcm` encoding and carry the author's username with no title. Very long messages may exceed the push size limit.
   - **iOS will likely reject pushes silently**, because Stoat signs them without a `sub` claim. An iPhone test is a hard gate in M7.
 - **Our own service worker** builds the title from the payload. It uses server, channel and DM names that the client mirrors into IndexedDB, because the service worker can't read the in-memory store. It sets `tag` per channel, so a burst collapses into one notification. A click focuses an existing window. Otherwise it opens `/channel/<id>/<message>`, which redirects into the client, because the payload carries no server ID.
@@ -318,6 +318,8 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
   - Near-black on the accent measures 7.8, while white on the accent fails at 2.4. White never goes on the accent, including toggle knobs and radio dots.
   - Danger buttons and mention badges use `--danger-fill` with white, which passes AA.
 - **Focus**: a 2 px `--accent` ring with a 2 px offset, so it shows on accent-filled buttons too. It appears on keyboard focus only.
+- **Muted channels**: the reference's dim grey fails contrast on every surface. A muted channel's name is weight 400 in `--text-muted`, with a bell-off icon in `--text-secondary`. Selected or hovered, it steps up like any muted text, and the icon still marks it.
+- **Black base**: `--surface-0` stays pure black as measured. Jaakko judges on the live M1 client whether it needs lifting.
 - **Presence** is shown by shape as well as colour:
 
   | State | Shape |
@@ -347,7 +349,7 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
   - emoji picker,
   - settings modal with select, toggle, radio, slider and level meter.
 
-Each is built to the measured sizes above, and each lands in the gallery with every state before use.
+Each is built to the measured sizes above.
 
 **Not in any screenshot, but needed anyway**:
 
@@ -358,7 +360,7 @@ Each is built to the measured sizes above, and each lands in the gallery with ev
 - **Content rendering**: code, quote and spoiler blocks.
 - **Account screens**: login, MFA and onboarding.
 
-These follow the same tokens. Agents propose them in the gallery for Jaakko's review.
+These follow the same tokens. Agents propose them in the live client for Jaakko's review.
 
 ## 10. Voice, outline for M4
 
@@ -397,24 +399,22 @@ A typed message catalogue of our own: one TypeScript module per locale, keys che
 
 ## 14. Testing and agent workflow
 
+Jaakko decided on 2026-10-12 to keep testing to the risky core and review on the live deployment.
+
 | Layer | Tool | What it covers |
 |---|---|---|
-| Unit | Vitest | Domain store, permission calculator, markdown parser, mappers. |
-| Contract | Vitest with recorded fixtures | `packages/stoat` against real Stoat traffic recorded in M0. A Stoat upgrade re-records fixtures, and differences fail CI. |
-| Component | Vitest with Svelte Testing Library | Interaction logic of composite components. |
-| End to end | Playwright against the seeded development stack, run on Jaakko's machine after a reseed. Not in CI until a separate test stack exists. | Login with TOTP, send, edit, react, reconnect, unread sync across two browser contexts. |
-| Visual | Playwright screenshots of the UI gallery | Every component in every state, rendered from fixtures, diffed on each pull request. |
-| Accessibility | axe-core in Playwright | Gallery and main screens. |
+| Unit | Vitest | Permission calculator, store event handling, markdown parser. |
+| Contract | Vitest with the M0 fixtures | `packages/stoat` against recorded Stoat traffic. A Stoat upgrade re-records them, and differences fail CI. No new scenarios unless a bug needs one. |
+| Live checks | Playwright with the Chromium in Jaakko's user cache | Review screenshots of `https://concord.jaalip.com/app` and the reconnect check, against the seeded stack. Not in CI. |
 
-**UI gallery**: a development-only route rendering every component in every state from fixture data. It is where Jaakko reviews visual work, and where visual tests take their screenshots.
+**Review surface**: the live deployment at `/app`, against the seeded stack. Every task ends deployed there.
 
 **Definition of done for a component**:
 
-1. It is in the gallery with all its states.
+1. It is visible in the live client in its real states.
 2. It uses tokens only, with no raw colours or sizes.
 3. It works by keyboard.
-4. Its interaction logic has tests.
-5. Its visual snapshot is approved.
+4. Its logic has tests if it is in the risky core above.
 
 **Commands** for agents and Jaakko:
 
@@ -427,17 +427,21 @@ pnpm test
 ```
 
 ```bash
-pnpm test:e2e
+pnpm verify
 ```
 
-## 15. Open questions
+```bash
+pnpm deploy:web
+```
 
-Each has a recommendation. Jaakko decides.
+## 15. Decisions
 
-1. **Dock position.** In the reference, the user dock spans the server rail and the sidebar, 336 px wide. Section 5 currently puts it in the sidebar column only. Recommend matching the reference: the dock spans grid columns 1 and 2.
-2. **Black base.** The reference's base surface is pure black, with very close steps above it. Recommend keeping it as measured, and judging in the M1 gallery whether it needs lifting.
-3. **Muted channels.** The reference's dim grey for muted channels fails contrast on every surface. Recommend showing a muted channel's name at weight 400 in `--text-muted`, with a bell-off icon in `--text-secondary`. When selected or hovered it steps up like any muted text, and the icon still marks it.
-4. **Accent.** Recommend cyan `#1fb6d1`, distinct from Discord's blurple and green, with near-black labels. The alternative is orange `#ff8a3d`.
-5. **Focus presence.** Stoat has a fifth state, Focus, which the product brief doesn't list. Recommend supporting it, since other Stoat clients can set it anyway.
-6. **Phones are silent while a desktop client is open**, as section 8 explains. Recommend accepting this for the beta and asking testers about it. If it bothers them, the push sidecar can push when the desktop user is Idle. The rejected alternative is closing idle desktop sockets. It shows users as offline, drops voice events and stops desktop notifications.
-7. **GIFs.** Recommend no GIF tab in the MVP. Tenor's API may be retiring, and a GIF provider means another key and another privacy policy. Revisit after launch.
+Jaakko accepted every recommendation on 2026-10-12. They are written into the sections above:
+
+1. The user dock spans the rail and sidebar columns (section 5).
+2. The black base stays as measured and is judged on the live M1 client (section 9).
+3. Muted channels use `--text-muted` with a bell-off icon (section 9).
+4. The accent is cyan `#1fb6d1` with near-black labels (section 9).
+5. Focus presence is offered in the status menu (section 7).
+6. Phones stay quiet while a desktop client is open, for the beta (section 8).
+7. No GIF tab in the MVP (section 6.4).

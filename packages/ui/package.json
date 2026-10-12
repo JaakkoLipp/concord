@@ -1,0 +1,5 @@
+{
+  "name": "@concord/ui",
+  "private": true,
+  "type": "module"
+}

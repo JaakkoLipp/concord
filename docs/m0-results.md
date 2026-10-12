@@ -4,7 +4,7 @@ Measurements and verifications for M0, recorded as they happen. Decision gate pa
 
 ## 1. Stack on the VPS, 2026-10-11 and 12
 
-**Versions**: Stoat images `v0.15.7`, self-hosted commit `9af5e90`, MongoDB `7.0.43`, Mailpit `v1.31.5`. `GET /api/` reports `revolt: 0.15.7`.
+**Versions**: Stoat images `v0.15.7` at the time of this section. The stack moved to `v0.15.5` later the same day, as section 2 records. Self-hosted commit `9af5e90`, MongoDB `7.0.43`, Mailpit `v1.31.5`. `GET /api/` reports `revolt: 0.15.7`.
 
 ### MongoDB on kernel 7.0
 
@@ -75,9 +75,126 @@ So status text, idle and busy reach friends only. The client must poll non-frien
 
 `user_edit` allows 2 PATCHes per 10 seconds per user. A third returns 429 with `retry_after` in milliseconds.
 
+### Memory limits, 2026-10-12
+
+Every service now has a `mem_limit`, as dev-environment section 2 describes. Valkey runs with no persistence and `maxmemory 64mb`, and RabbitMQ's watermark is an absolute 192 MiB. All services came back up under their limits.
+
+| Service | Idle use / limit |
+|---|---|
+| database | 224 / 768 MiB |
+| rabbit | 175 / 384 MiB |
+| minio | 71 / 256 MiB |
+| web | 64 / 128 MiB |
+| api, events | 26 and 22 / 192 MiB |
+| others | under 21 MiB each |
+
+**MongoDB soak at the 768 MB limit**: a throwaway `mongo:7.0.43` container with `--memory 768m` and the 0.5 GB cache, written to for 4 minutes by 4 parallel `mongosh` writers in a separate container. 5.0 million documents, resident memory 538 MB, the cache held at its cap, no error or fatal log lines, no OOM kill. The limit is adopted.
+
+A first attempt ran the writers inside the database container. It was OOM-killed because the four `mongosh` processes counted against the limit, so it says nothing about `mongod`.
+
+### Public exposure, 2026-10-12
+
+Unauthenticated requests through Caddy's `/api` route:
+
+| Path | Result |
+|---|---|
+| `/api/metrics`, also with a trailing slash | 200, about 42 KB of Prometheus text: request counts and latencies per endpoint, method and status. Leaks activity, not data. |
+| `/api/swagger/index.html`, `/api/openapi.json` | 200. `/api/swagger` redirects to the UI. |
+
+As dev-environment section 8 requires, M0 blocks all three in Caddy. The client's types come from a copy of `openapi.json` fetched over the internal network and kept per Stoat version.
+
 ### State left on the VPS
 
-- The admin password is in `~/concord-private/admin-password`, mode 600. Jaakko logs in, changes it, then deletes the file.
-- The "Concord bootstrap (VPS)" session token is in `~/concord-private/bootstrap-session`. Revoke that session when seeding no longer needs it.
-- `test-b` is a member of the server, and its credentials are in `~/concord-private/`. The invite created in General is still valid.
+- **Superseded by the first reseed on 2026-10-12.** The wipe deleted `jaakko#0485`, the first "Concord" server and `test-b`, so the IDs above no longer exist. The stale credentials in `~/concord-private/` were deleted.
+- `~/stoat/concord/.allow-wipe` exists, so `reset-data.sh` may run. M3 cleanup deletes it.
 - `Revolt.toml.before-admin` is the pre-bootstrap backup in `~/stoat`.
+
+## 2. Seed, fixtures and checks, 2026-10-12
+
+**Moved to Stoat 0.15.5 the same day**, as Jaakko decided. The stack was wiped and reseeded, the fixtures re-recorded and `seed check` re-run. Every result below is from 0.15.5, and all of them matched the earlier 0.15.7 run except the `Subscribe` finding, which is new. The OpenAPI schemas of the two versions are identical apart from the version number.
+
+### Seed
+
+`pnpm seed --reset` builds the dataset in dev-environment section 5 from an empty database: 24 personas plus the `kello` bot, one server with 4 categories, 8 text and 2 voice channels, 6 roles, 30 custom emoji, 669 messages, friendships, 5 DMs and a group. A run takes about 3.5 minutes after a wipe of about 1 minute. It ran clean twice in a row.
+
+- **Email domain**: Stoat accepts `<handle>@seed.concord.test`, so the fallback domain isn't needed.
+- **Wipe**: `dc up --wait` reports a failure because the one-shot `createbuckets` container exits by design. `reset-data.sh` polls the API instead.
+- **Mention permission**: sending `<%role>` needs `MentionRoles`, which the default role lacks. Only moderators mention roles in the seed. The moderator role has `MentionRoles` and `MentionEveryone`.
+- **Unreads in DMs and groups**: every unread DM or group message is listed under `mentions` in `GET /sync/unreads`. The client can show DM badges from that list directly.
+
+### Message length limit
+
+Stoat's 2000 limit counts **UTF-8 bytes, not characters**. 2000 ASCII characters and 1000 × `ä` (2000 bytes) are accepted. 2001 ASCII characters and 1001 × `ä` are refused with 422 `PayloadTooLarge`. The composer's counter must count bytes, which matters for Finnish text.
+
+### MFA
+
+- **No clock tolerance**: Stoat accepts only the code for its own current 30-second window, plus the code current when the ticket was created. A client near a window edge with a slightly skewed clock gets `InvalidToken`. Three wrong codes delete the ticket. Tickets last 5 minutes.
+- **Tickets**: once TOTP is enabled, `PUT /auth/mfa/ticket` with a password is refused with `DisallowedMFAMethod`. It needs a TOTP or recovery code.
+- **Recovery codes**: `PATCH /auth/mfa/recovery` returns them as a bare array. The scrubber treats that route's whole response as secret.
+
+### Fixtures
+
+`pnpm --filter @concord/stoat record` recorded 9 scenarios into `packages/stoat/fixtures/0.15.5/`, 101 files: login, MFA, onboarding, error shapes, `Ready`, synced settings and unreads, members and profiles, history, and live events. The events scenario covers the message lifecycle, reactions, pins, embeds, typing, presence, channels, server, roles, members, emoji, relationships and acks. The scrubber's pattern pass is clean, and `pnpm test` runs 7 contract tests against them. Voice fixtures wait for the screen-share test page.
+
+### Invite response
+
+With a server icon and banner set, `GET /invites/{code}` returns `server_icon`, `server_banner` and `user_avatar` as full file objects with size, dimensions and a thumbhash. They are absent while unset. The invite page can show the icon without a second request.
+
+### `Ready` size on the seeded dataset
+
+Measured for `dev`, who has 16 relationships and DMs, one server and 30 emoji:
+
+| Fields | Raw | Gzipped |
+|---|---|---|
+| Default | 19.0 KB | 4.8 KB |
+| The client's list, with `channel_unreads` | 21.6 KB | 5.5 KB |
+
+`Ready` carries 17 users and 1 member, not the server's 25 members, as architecture section 4.3 expects. It stays small at our scale.
+
+### Presence fan-out
+
+Actor `lotta` changed status. Observers had fresh sockets: a friend, a server member who is not a friend, and a former friend who still shares a DM.
+
+| Change | Friend | Server member, not friend | DM partner, not friend |
+|---|---|---|---|
+| Idle, Focus, Busy | live `UserUpdate` | nothing | live `UserUpdate` |
+| Status text | live | nothing | live |
+| Connect and disconnect | live | live | live |
+
+- Stoat fans status changes out to users with a relationship or a shared DM, not to fellow server members. The member list must keep polling, as architecture section 4.3 says.
+- **`Subscribe` works on 0.15.5.** After the non-friend member's socket sent `{"type":"Subscribe","server_id":…}`, it received the actor's status change live. In Stoat's 0.15.5 source, each socket keeps up to 5 subscribed servers, and each expires 15 minutes after its last `Subscribe`. Stoat's own client re-sends it while a server is open. Later versions ignore it, and Stoat's coming Elixir gateway would close the socket. The client could switch it on through the capability table for 0.15.5 only, as m1-plan.md proposes.
+- **DMs need a friendship.** Opening a DM with a non-friend is refused with 403 `MissingPermission: SendMessage`. After unfriending, the DM still exists, but sending into it is refused with the same error.
+
+### Voice join
+
+- **Voice channels** on 0.15.5 are `TextChannel`s with a `voice` object, `{}` when no user limit is set, not a separate channel type.
+- `GET /api/` lists one LiveKit node, `worldwide`, at `wss://concord.jaalip.com/livekit`.
+- `join_call` returns a LiveKit token that is valid for 10 seconds. It allows publishing microphone, camera, screen share and screen-share audio, but not data (`canPublishData: false`). voice-ingress also disconnects anyone who publishes a data track, so the client must never use LiveKit data tracks.
+
+### Backend version
+
+Stoat's release notes say 0.15.6 "dual-writes events to both redis and amqp. It is not recommended for self-hosters", and 0.15.7 is an "internal release, not needed for self-hosted". The self-hosted repo pins 0.15.5. On this stack the extra AMQP events go to a topic exchange with no bound queue, so RabbitMQ drops them: no queue grows, and RabbitMQ stayed at 113 MiB during seeding. Between 0.15.5 and 0.15.7 there are only two functional commits: the dual write, and a new URL for the shield anti-spam service, which we don't configure. Nothing in our docs depends on them. 0.15.5 carries all six security fixes.
+
+**Decision, 2026-10-12**: moved to 0.15.5, the version Stoat supports for self-hosters, before M1 builds on the fixtures.
+
+## 3. Encoder runs: checklist for Jaakko
+
+The test page is at `https://concord.jaalip.com/spike/`. The sharer logs in as `dev` and the viewer as `aino`, on a second device or browser. They must be different personas: joining as the same persona disconnects the other session. Print each login with `node tools/seed/src/main.ts password dev` and `… password aino` from the repo root in WSL. Both join **Pelaamo**, and the sharer shares a screen with a game or fast video playing for two minutes. Watch the sharer's CPU in Task Manager or `top` during the run. When done, press **Copy results** on the sharer and paste the text into a file under `docs/m0-runs/`, one file per run. The page records the settings, the encoder, the quality limit and the per-second statistics.
+
+Defaults for every run unless the row says otherwise: 1080p60, 8 Mbps, layers on, content hint motion, maintain framerate, relay off.
+
+| # | Sharer | How to start it | Codec | Note down |
+|---|---|---|---|---|
+| 1 | Windows, Chrome | Normal Chrome | H.264 | Sharer CPU %, the encoder name shown on the tile |
+| 2 | Windows, Chrome | Normal Chrome | VP8 | Same |
+| 3 | Windows, Chrome | Normal Chrome | VP9 | Same |
+| 4 | Windows, Chrome | Normal Chrome | AV1 | Same |
+| 5 | Linux, Chrome | Normal Chrome | H.264 | Same, plus X11 or Wayland |
+| 6 | Linux, Chrome | Normal Chrome | VP8 | Same |
+| 7 | Linux, Chrome | `google-chrome --enable-features=VaapiVideoEncoder --ignore-gpu-blocklist` | H.264 | Whether the encoder name changes to a hardware one |
+| 8 | Windows or Linux, Firefox | Normal Firefox | H.264 | Same. Expect one layer. |
+| 9 | Windows, Electron shell | Unzip `concord-m0-win32-x64.zip`, run `concord-m0.exe` | Best of runs 1 to 4 | Same, plus the codec list under the buttons |
+| 10 | Linux, Electron shell | Unpack `concord-m0-linux-x64.tar.gz`, run `./concord-m0`. Then again with `CONCORD_VAAPI=1 ./concord-m0` | Same | Same |
+| 11 | Viewer: Linux Firefox | Any sharer on H.264 | H.264 | Whether the picture appears at all |
+
+The Electron builds are in `spikes/m0-electron/dist/` on the WSL machine. From Windows, open `\\wsl.localhost\Ubuntu\home\jaakko\concord\spikes\m0-electron\dist`.

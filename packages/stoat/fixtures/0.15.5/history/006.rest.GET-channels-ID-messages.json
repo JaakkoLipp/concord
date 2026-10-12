@@ -1,0 +1,198 @@
+{
+ "step": "nearby",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/channels/01KE6P5YA800000V76HDQ01P2E/messages?limit=20&nearby=01KE6PAJ7G000067TSAXV0GKVG",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "10461430989866481428",
+   "x-ratelimit-remaining": "8",
+   "x-ratelimit-reset-after": "8593"
+  },
+  "body": [
+   {
+    "_id": "01KE6PAJ7G000067TSAXV0GKVG",
+    "nonce": "01KE6PAJ7B00006640DYA81HQM",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5C6E00000DZV3Z4WC696",
+    "content": "good morning!"
+   },
+   {
+    "_id": "01KE6PAJ7W0000693QEQ06J73F",
+    "nonce": "01KE6PAJ7R0000687TWRXHRB02",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5C6E00000DZV3Z4WC696",
+    "content": "olipas hyvä leffa"
+   },
+   {
+    "_id": "01KE6PAJ8900006B611NZ48C0T",
+    "nonce": "01KE6PAJ8500006A1YTE641ARY",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P54MA000007S29V4CAE6V",
+    "content": "what do you all think?"
+   },
+   {
+    "_id": "01KE6PAJ8P00006DR0TZD9YEST",
+    "nonce": "01KE6PAJ8J00006CWPV6M5BHV6",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P52T4000004B2QQMXZ6WF",
+    "content": "<@01KE6P52T4000004B2QQMXZ6WF> mitä te ootte mieltä tästä?",
+    "mentions": [
+     "01KE6P52T4000004B2QQMXZ6WF"
+    ]
+   },
+   {
+    "_id": "01KE6PAJ9400006FP0PYERF9XD",
+    "nonce": "01KE6PAJ9000006EWM2BKRX50Z",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5328000005FDJX3VMBAG",
+    "content": "tarvitsisin apua yhden jutun kanssa",
+    "mentions": [
+     "01KE6P5CN600000F69T5RQJPFW"
+    ],
+    "replies": [
+     "01KE6PAJ5Q00005ZG6722N1M8E"
+    ]
+   },
+   {
+    "_id": "01KE6PAJ9J00006H3RMQ9EPWXS",
+    "nonce": "01KE6PAJ9F00006GDPF4NM4SXP",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5CN600000F69T5RQJPFW",
+    "content": "nähdään huomenna"
+   },
+   {
+    "_id": "01KE6PAJA000006K9MM3EYA1BJ",
+    "nonce": "01KE6PAJ9V00006JJXKGXW5Y91",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5F8T00000JE9SZ23HP31",
+    "content": "onko kellään laturia lainaksi?"
+   },
+   {
+    "_id": "01KE6PAJS500006NMFMJPAGXW6",
+    "nonce": "01KE6PAJRY00006MTBTG8HSCY0",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P54Y9000009SRY7YWD0ZW",
+    "content": "it finally works"
+   },
+   {
+    "_id": "01KE6PAJSQ00006QR505ZVN28J",
+    "nonce": "01KE6PAJSG00006P0BGARSYDAD",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P57KP00000CBHMHZXZMWY",
+    "content": "haha"
+   },
+   {
+    "_id": "01KE6PAJT600006SPTZ60CKR8Y",
+    "nonce": "01KE6PAJT000006RF11GFXM88M",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5QQA00000SQ58KDQZC4D",
+    "content": "joo",
+    "reactions": {
+     "🙏": [
+      "01KE6P57KP00000CBHMHZXZMWY",
+      "01KE6P5CN600000F69T5RQJPFW"
+     ],
+     "🔥": [
+      "01KE6P5P8W00000QKZ3DY5XA9H",
+      "01KE6P5KZR00000MNARQ81PAQ6",
+      "01KE6P5MZV00000PRZY7BJKBGD",
+      "01KE6P5328000005FDJX3VMBAG"
+     ]
+    }
+   },
+   {
+    "_id": "01KE6PAJTK00006VHF4KF205BG",
+    "nonce": "01KE6PAJTF00006TS6BGBW6SAR",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5QQA00000SQ58KDQZC4D",
+    "content": "that movie was great"
+   },
+   {
+    "_id": "01KE6PAJ73000065BBM1HZPQ7G",
+    "nonce": "01KE6PAJ6Y000064MV48X3PVAX",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5KZR00000MNARQ81PAQ6",
+    "content": "tänään satoi taas koko päivän"
+   },
+   {
+    "_id": "01KE6PAJ6M000063XTBE50YAHS",
+    "nonce": "01KE6PAJ6G000062NSAANWC2T4",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5CN600000F69T5RQJPFW",
+    "content": "lumet sulaa jo"
+   },
+   {
+    "_id": "01KE6PAJ660000618F3Z3ND682",
+    "nonce": "01KE6PAJ61000060BV2GVJ4BZX",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5CN600000F69T5RQJPFW",
+    "content": "agreed"
+   },
+   {
+    "_id": "01KE6PAJ5Q00005ZG6722N1M8E",
+    "nonce": "01KE6PAJ5G00005Y3QMB52Y7FF",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5CN600000F69T5RQJPFW",
+    "content": "works on my machine"
+   },
+   {
+    "_id": "01KE6PAJ5500005XG5HA7G3C5Q",
+    "nonce": "01KE6PAJ5000005WP6VY6FKXKP",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5MH900000NFB6JJZK0TC",
+    "content": "I will check it later"
+   },
+   {
+    "_id": "01KE6PAJ4N00005VRJGZJPGBYX",
+    "nonce": "01KE6PAJ4D00005T8HMXVD8MP6",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5MH900000NFB6JJZK0TC",
+    "content": "haha"
+   },
+   {
+    "_id": "01KE6PAATH00005S129T193HDS",
+    "nonce": "01KE6PAATE00005RJHP03QR7QS",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P54Y9000009SRY7YWD0ZW",
+    "content": "ei käy mulle valitettavasti"
+   },
+   {
+    "_id": "01KE6PAAT100005QREGJJM3C5A",
+    "nonce": "01KE6PAASW00005PZ73605X7BY",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P54Y9000009SRY7YWD0ZW",
+    "content": "toi on ihan hyvä pointti"
+   },
+   {
+    "_id": "01KE6PAASG00005NR8HTN6ZYDF",
+    "nonce": "01KE6PAASB00005MV9NPGR9JJR",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5KZR00000MNARQ81PAQ6",
+    "content": "works on my machine"
+   },
+   {
+    "_id": "01KE6PAARY00005KG83D94Q6MR",
+    "nonce": "01KE6PAARR00005J1N5ST4A17W",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P5KZR00000MNARQ81PAQ6",
+    "content": "toi on ihan hyvä pointti"
+   },
+   {
+    "_id": "01KE6PAARE00005HCJH2HQX4G0",
+    "nonce": "01KE6PAAR900005GB2B9B5MQN4",
+    "channel": "01KE6P5YA800000V76HDQ01P2E",
+    "author": "01KE6P52T4000004B2QQMXZ6WF",
+    "content": "just got back from the cabin :01KE6P8PSV00001GR1BS7FVGB2:"
+   }
+  ]
+ }
+}

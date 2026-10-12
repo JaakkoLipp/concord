@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Screen-share test</title>
+    <style>
+      :root { color-scheme: dark; --bg: #0b0b0c; --panel: #161618; --line: #2a2a2e; --text: #dcdcdf; --muted: #96979e; --accent: #1fb6d1; --bad: #f2555a; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
+      main { max-width: 1400px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+      section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+      h1 { font-size: 18px; margin: 0; } h2 { font-size: 15px; margin: 0 0 8px; }
+      label { display: inline-flex; flex-direction: column; gap: 4px; margin: 0 12px 8px 0; color: var(--muted); font-size: 12px; }
+      input, select, button { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 6px 8px; }
+      button { background: var(--accent); color: #021418; border: 0; font-weight: 600; cursor: pointer; }
+      button:disabled { opacity: 0.4; cursor: default; }
+      button.secondary { background: transparent; color: var(--text); border: 1px solid var(--line); }
+      .row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 0 4px; }
+      .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 12px; }
+      .tile { background: #000; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+      .tile video { width: 100%; aspect-ratio: 16 / 9; display: block; background: #000; object-fit: contain; }
+      .tile .meta { padding: 8px; font: 12px/1.5 ui-monospace, monospace; white-space: pre-wrap; color: var(--muted); }
+      .tile .meta b { color: var(--text); }
+      #log { font: 12px/1.5 ui-monospace, monospace; color: var(--muted); max-height: 160px; overflow: auto; white-space: pre-wrap; }
+      .err { color: var(--bad); }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Concord M0 screen-share test</h1>
+
+      <section id="login">
+        <h2>1. Log in</h2>
+        <form id="login-form" class="row">
+          <label>Email <input name="email" type="email" autocomplete="username" required /></label>
+          <label>Password <input name="password" type="password" autocomplete="current-password" required /></label>
+          <label>TOTP code, if enabled <input name="totp" inputmode="numeric" autocomplete="one-time-code" /></label>
+          <button>Log in</button>
+        </form>
+      </section>
+
+      <section id="setup" hidden>
+        <h2>2. Join and share</h2>
+        <div class="row">
+          <label>Voice channel <select id="channel"></select></label>
+          <label>Capture <select id="capture">
+            <option value="1920x1080@60">1080p60</option><option value="1920x1080@30">1080p30</option>
+            <option value="1280x720@60">720p60</option><option value="2560x1440@60">1440p60</option>
+          </select></label>
+          <label>Codec <select id="codec"><option>h264</option><option>vp8</option><option>vp9</option><option>av1</option></select></label>
+          <label>Bitrate <select id="bitrate"><option value="4">4 Mbps</option><option value="6">6 Mbps</option><option value="8" selected>8 Mbps</option><option value="10">10 Mbps</option></select></label>
+          <label>Layers <select id="layers"><option value="layered">simulcast or SVC</option><option value="off">off</option></select></label>
+          <label>Content hint <select id="hint"><option>motion</option><option>detail</option></select></label>
+          <label>Degradation <select id="degradation">
+            <option value="maintain-framerate">maintain framerate</option><option value="balanced">balanced</option><option value="maintain-resolution">maintain resolution</option>
+          </select></label>
+          <label>Force TURN relay <select id="relay"><option value="no">off</option><option value="yes">on</option></select></label>
+        </div>
+        <div class="row">
+          <button id="join">Join</button>
+          <button id="share" disabled>Share screen</button>
+          <button id="stop" class="secondary" disabled>Stop sharing</button>
+          <button id="leave" class="secondary" disabled>Leave</button>
+          <button id="copy" class="secondary" disabled>Copy results</button>
+        </div>
+        <p id="caps" style="color: var(--muted); font-size: 12px"></p>
+      </section>
+
+      <section>
+        <h2>Shares</h2>
+        <div id="tiles" class="tiles"></div>
+      </section>
+
+      <section>
+        <h2>Log</h2>
+        <div id="log"></div>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -5,7 +5,7 @@ Goal: put Stoat and our client on `concord.jaalip.com`, prove the media path on 
 **Already done in M0, October 2026**, with results in [m0-results.md](m0-results.md):
 
 - **Section 1**: the VPS at 2 vCPU and 3.7 GB, ufw instead of the cloud firewall, Docker.
-- **Section 2**: Stoat at 0.15.7 with our compose file, the Caddyfile with the registration block, Mailpit for mail, and the admin bootstrap.
+- **Section 2**: Stoat at 0.15.5 with our compose file, the Caddyfile with the registration block, Mailpit for mail, and the admin bootstrap.
 - **Section 3**: the registration gate, tested on every path variant.
 - **Section 5**: step 5, the presence check.
 
@@ -41,14 +41,14 @@ You need to decide or buy these. Nothing else in M3 can start without the first 
    - SPF, DKIM and DMARC for the email relay.
 5. Install Docker Engine with the Compose plugin, unattended security upgrades, and fail2ban or equivalent for SSH.
 
-## 2. Deploy Stoat at 0.15.7
+## 2. Deploy Stoat at 0.15.5
 
 1. Clone `stoatchat/self-hosted` at commit `9af5e90` from 7 October 2026. The repo has no release tags, so we pin a commit. Its compose file still pins Stoat 0.15.5.
 2. Run `generate_config.sh` with `concord.jaalip.com`:
    - Answer yes to enabling camera and screen sharing.
    - Answer no to using your own reverse proxy, so the bundled Caddy is used.
 3. Copy this repo's `deploy/` directory to the server. The production compose file, `deploy/concord.compose.yml`:
-   - Sets every Stoat image tag to `v0.15.7`, the latest release, published for all services.
+   - Sets every Stoat image tag to `v0.15.5`, the version the self-hosted repo supports. Stoat advises self-hosters against 0.15.6 and 0.15.7.
    - Pins MongoDB to `7.0.43`, because MongoDB 8 refuses to start on Ubuntu 26.04's kernel 7.0.
    - Mounts `deploy/Caddyfile` over Stoat's Caddyfile. At M3 that is Stoat's Caddyfile plus the additions in this runbook and a `/app` route to our client.
    - Rebinds Caddy's ports to the main IPv4 and IPv6, on 80 and 443 over TCP and 443 over UDP. It uses Compose's `!override` tag to replace Stoat's port list. Caddy also gets port 80 on the floating IP.
@@ -71,9 +71,13 @@ Stoat's generator renames `Revolt.toml`, `livekit.yml`, `compose.override.yml` a
 1. In `deploy/Caddyfile`, refuse `POST /api/auth/account/create` with a 403 before the `/api` route.
 2. Add `deploy/create-account.sh`. It runs `curl` in a temporary container on the stack's Docker network and posts email and password straight to the API container, with an `X-Forwarded-For` header.
 3. Test from your own machine: a direct account-create call to `https://concord.jaalip.com/api/auth/account/create` must get 403.
-4. Test the script: it must create an account, and the verification email must arrive and not be marked as spam.
+4. Test the script: it must create an account, and the verification email must arrive and not be marked as spam. Click the link in the received mail itself, not in a preview. Two upstream bugs affect this:
+   - **Wrapped links** (self-hosted issue #274): Stoat's plain-text mail is quoted-printable, and a mail client that doesn't decode it shows a broken link.
+   - **EHLO** (issue #223): the API greets the relay with its container ID, and strict relays reject that with "550 Invalid EHLO domain". Choose a relay that accepts it, or use port 465 with implicit TLS.
 
 This is the same path our website will use in M6. M0 tested the Caddy rule and the script on this VPS, with every path variant. M3 repeats the outside test and adds the real relay's spam check, for decision gate criterion 1.
+
+**Adding people by hand**, until Jaakko opens registration in M6: run `create-account.sh` with the person's email and a random password that nobody keeps. The person verifies through the email link, then sets their own password with "Forgot password" on the login page. Test this once with a second address of Jaakko's on the real relay. It must be a different mailbox, not a `+` or dotted variant, because Stoat treats those as the same email. Then give the person an invite link to the server.
 
 ## 4. Enable TURN
 
@@ -103,7 +107,7 @@ This is the same path our website will use in M6. M0 tested the Caddy rule and t
 2. Enable TOTP on one account, log out, and log back in with a code and then with a recovery code.
 3. Create a server with categories, text and voice channels, a hoisted role with a colour, and a custom emoji.
 4. Hold a voice call with at least four people on different networks for 30 minutes. Note any dropouts, echo or one-way audio.
-5. **Presence check**, done in M0, recorded in m0-results.md. Repeat only after a Stoat upgrade. On 0.15.7: with accounts A and B in the same server but not friends, change A's status text and presence. Note whether B sees it live without reloading. Repeat after making them friends. This decides how often our member list must poll.
+5. **Presence check**, done in M0, recorded in m0-results.md. Repeat only after a Stoat upgrade. On 0.15.5: with accounts A and B in the same server but not friends, change A's status text and presence. Note whether B sees it live without reloading. Repeat after making them friends. This decides how often our member list must poll.
 
 Stoat's own client tops out at 1080p30 for screen share, so the 60 fps measurements happen in section 6.
 
@@ -120,9 +124,12 @@ The test page and the M0 encoder runs are specified in section 7 of [dev-environ
 ## 7. Operations checks
 
 1. Record memory and CPU per container at idle and during the voice session, using `deploy/dc stats`.
-2. Set up nightly backups with restic to the Storage Box. They cover a MongoDB dump, the object storage data, `secrets.env`, `Revolt.toml`, the LiveKit keys file, `.env.web` and Caddy's data directory. `secrets.env` is critical, because it holds the key that decrypts every stored file.
+2. Set up nightly backups with restic to the Storage Box. They cover a MongoDB dump, the object storage data, `secrets.env`, `Revolt.toml`, `livekit.yml`, the LiveKit keys file, `.env.web` and Caddy's data directory. `secrets.env` is critical, because it holds the key that decrypts every stored file. Take the dump and the object-storage copy back to back, because `crond` deletes files from storage on its own schedule.
 3. **Restore drill**: restore last night's backup onto a fresh small VPS or a local machine and start the stack. Log in to an existing account and check that its message history is intact, an image attachment opens, and avatars render. Delete the drill machine afterwards.
-4. **Upgrade drill**, if Stoat releases a new version during M3: back up, bump the pinned tags in our compose file, restart, and smoke test.
+4. **Upgrade drill**, if Stoat releases a new version during M3:
+   1. Take a MongoDB dump. Migrations run automatically at startup and there is no downgrade, so rolling back means restoring this dump.
+   2. Read the release notes and the self-hosted repo's notices. Diff its `compose.yml`, `Caddyfile` and `generate_config.sh` against our pinned commit, and carry new configuration keys over by hand.
+   3. Bump the pinned tags in our compose file, restart, and smoke test.
 5. Note every manual repair you had to do. This feeds decision gate criterion 3.
 
 ## 8. Results and decision

@@ -1,0 +1,15 @@
+{
+  "name": "concord-m0-electron",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Bare Electron shell for the M0 screen-share encoder runs",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "package": "electron-packager . concord-m0 --platform=win32,linux --arch=x64 --out=dist --overwrite --no-prune --ignore='^/(dist|node_modules)'"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "electron": "44.7.0"
+  }
+}

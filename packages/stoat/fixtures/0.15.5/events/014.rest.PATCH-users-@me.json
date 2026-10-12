@@ -1,0 +1,88 @@
+{
+ "step": "presence",
+ "actor": "aino",
+ "request": {
+  "method": "PATCH",
+  "path": "/users/@me",
+  "headers": {
+   "x-session-token": "<secret-3>"
+  },
+  "body": {
+   "status": {
+    "text": "Moderoimassa",
+    "presence": "Focus"
+   }
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "2",
+   "x-ratelimit-bucket": "602297658344481959",
+   "x-ratelimit-remaining": "1",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": {
+   "_id": "01KE6P5328000005FDJX3VMBAG",
+   "username": "aino",
+   "discriminator": "6977",
+   "display_name": "Aino Virtanen",
+   "avatar": {
+    "_id": "XvZ2XI-NI5-8TrRA5lxA4Qs1GIQqv61C30i4nQQZhG",
+    "tag": "avatars",
+    "filename": "aino.png",
+    "metadata": {
+     "type": "Image",
+     "width": 256,
+     "height": 256,
+     "thumbhash": [
+      149,
+      199,
+      9,
+      23,
+      12,
+      7,
+      119,
+      135,
+      124,
+      134,
+      135,
+      131,
+      121,
+      87,
+      104,
+      56,
+      152,
+      134,
+      139,
+      63,
+      200,
+      248,
+      131,
+      12
+     ],
+     "animated": false
+    },
+    "content_type": "image/png",
+    "size": 1995
+   },
+   "relations": [
+    {
+     "_id": "01KE6P52F2000003E7052YVB0E",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P5P8W00000QKZ3DY5XA9H",
+     "status": "Friend"
+    }
+   ],
+   "status": {
+    "text": "Moderoimassa",
+    "presence": "Focus"
+   },
+   "relationship": "User",
+   "online": true
+  }
+ }
+}

@@ -1,6 +1,10 @@
 # Reference screenshots show real members, DMs and profiles from private Discord servers.
 # Keep them local; never commit them to a public history.
 docs/reference/
-# Secrets and raw captures used by the seed script and fixture recorder (docs/dev-environment.md).
+# Secrets, state and raw captures used by the seed script and fixture recorder (docs/dev-environment.md).
 tools/seed/.seed-secret
+tools/seed/.state.json
 packages/stoat/fixtures/.raw/
+# Dependencies and build output
+node_modules/
+dist/

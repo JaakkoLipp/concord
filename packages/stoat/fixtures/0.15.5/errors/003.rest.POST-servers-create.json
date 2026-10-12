@@ -1,0 +1,28 @@
+{
+ "step": "403",
+ "actor": "dev",
+ "request": {
+  "method": "POST",
+  "path": "/servers/create",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  },
+  "body": {
+   "name": "Not allowed"
+  }
+ },
+ "response": {
+  "status": 403,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "5",
+   "x-ratelimit-bucket": "5695040569593089980",
+   "x-ratelimit-remaining": "4",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": {
+   "type": "CantCreateServers",
+   "location": "crates/delta/src/routes/servers/server_create.rs:39:20"
+  }
+ }
+}

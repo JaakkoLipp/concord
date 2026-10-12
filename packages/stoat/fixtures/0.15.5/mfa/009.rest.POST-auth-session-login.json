@@ -1,0 +1,37 @@
+{
+ "step": "recovery login",
+ "actor": "totp",
+ "request": {
+  "method": "POST",
+  "path": "/auth/session/login",
+  "headers": {
+   "x-session-token": "<secret-15>"
+  },
+  "body": {
+   "mfa_ticket": "<secret-27>",
+   "mfa_response": {
+    "recovery_code": "<recovery_codes-17>"
+   },
+   "friendly_name": "Concord recorder"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "10743416016757861634",
+   "x-ratelimit-remaining": "8",
+   "x-ratelimit-reset-after": "9606"
+  },
+  "body": {
+   "result": "Success",
+   "_id": "01KE6PC4WK0000AP2R93952F2A",
+   "user_id": "01KE6P54RN000008C22JDJ1QJM",
+   "token": "<secret-28>",
+   "name": "Concord recorder",
+   "last_seen": "2026-01-05T09:03:55.795Z",
+   "origin": "dev"
+  }
+ }
+}

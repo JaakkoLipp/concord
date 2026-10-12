@@ -1,0 +1,51 @@
+{
+ "step": "429",
+ "actor": "lauri",
+ "request": {
+  "method": "PATCH",
+  "path": "/users/@me",
+  "headers": {
+   "x-session-token": "<secret-2>"
+  },
+  "body": {
+   "status": {
+    "text": "Kuuntelee musiikkia"
+   }
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "2",
+   "x-ratelimit-bucket": "14482201772407755375",
+   "x-ratelimit-remaining": "0",
+   "x-ratelimit-reset-after": "9988"
+  },
+  "body": {
+   "_id": "01KE6P56R000000AA4WNP248F8",
+   "username": "lauri.n",
+   "discriminator": "5603",
+   "display_name": "Lauri Nieminen",
+   "relations": [
+    {
+     "_id": "01KE6P52F2000003E7052YVB0E",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P5EWG00000GHYPHWTVY8V",
+     "status": "Friend"
+    },
+    {
+     "_id": "01KE6P5C6E00000DZV3Z4WC696",
+     "status": "Friend"
+    }
+   ],
+   "status": {
+    "text": "Kuuntelee musiikkia"
+   },
+   "relationship": "User",
+   "online": false
+  }
+ }
+}

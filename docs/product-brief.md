@@ -40,7 +40,7 @@ The product is the client experience. The backend is a dependency we operate, no
 | Area | In the MVP |
 |---|---|
 | Accounts | Invite-only registration, email verification, login, password reset, TOTP 2FA with recovery codes, session list with sign-out. |
-| Profile | Avatar, banner, display name, bio, custom status, presence (online, idle, busy, invisible). |
+| Profile | Avatar, banner, display name, bio, custom status, presence (online, idle, focus, busy, invisible). |
 | Communities | Servers with icon and banner, categories, text and voice channels, roles with colours, basic per-channel permissions, invites, kicks and bans. Invites are created by server admins only, and servers by global admins only. |
 | Messaging | Persistent history, markdown, replies, mentions, reactions, edit, delete, pins, attachments with image previews, link embeds, custom and Unicode emoji, typing indicator, unread and mention markers. |
 | Search | Message search. Scope is per channel in Stoat today; server-wide search is a known gap. |

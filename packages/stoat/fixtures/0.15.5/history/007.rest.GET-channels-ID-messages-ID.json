@@ -1,0 +1,28 @@
+{
+ "step": "single",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/channels/01KE6P5YA800000V76HDQ01P2E/messages/01KE6PAJ7G000067TSAXV0GKVG",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "10461430989866481428",
+   "x-ratelimit-remaining": "7",
+   "x-ratelimit-reset-after": "8578"
+  },
+  "body": {
+   "_id": "01KE6PAJ7G000067TSAXV0GKVG",
+   "nonce": "01KE6PAJ7B00006640DYA81HQM",
+   "channel": "01KE6P5YA800000V76HDQ01P2E",
+   "author": "01KE6P5C6E00000DZV3Z4WC696",
+   "content": "good morning!"
+  }
+ }
+}

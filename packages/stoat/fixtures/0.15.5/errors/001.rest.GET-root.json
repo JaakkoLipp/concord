@@ -1,0 +1,130 @@
+{
+ "step": "root",
+ "actor": "anonymous",
+ "request": {
+  "method": "GET",
+  "path": "/",
+  "headers": {}
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "10484835531474886121",
+   "x-ratelimit-remaining": "18",
+   "x-ratelimit-reset-after": "2196"
+  },
+  "body": {
+   "revolt": "0.15.5",
+   "features": {
+    "captcha": {
+     "enabled": false,
+     "key": ""
+    },
+    "email": true,
+    "invite_only": false,
+    "autumn": {
+     "enabled": true,
+     "url": "https://concord.jaalip.com/autumn"
+    },
+    "january": {
+     "enabled": true,
+     "url": "https://concord.jaalip.com/january"
+    },
+    "livekit": {
+     "enabled": true,
+     "nodes": [
+      {
+       "name": "worldwide",
+       "lat": 0,
+       "lon": 0,
+       "public_url": "wss://concord.jaalip.com/livekit"
+      }
+     ]
+    },
+    "limits": {
+     "global": {
+      "group_size": 100,
+      "message_embeds": 5,
+      "message_replies": 5,
+      "message_reactions": 20,
+      "server_emoji": 100,
+      "server_roles": 200,
+      "server_channels": 200,
+      "body_limit_size": 20000000,
+      "restrict_server_creation": [
+       "01KE6P4YM0000002MKYT6YPE0Z"
+      ],
+      "new_user_hours": 72
+     },
+     "new_user": {
+      "outgoing_friend_requests": 5,
+      "bots": 2,
+      "message_length": 2000,
+      "message_attachments": 5,
+      "servers": 50,
+      "voice_quality": 16000,
+      "video": true,
+      "video_resolution": [
+       2560,
+       1440
+      ],
+      "video_aspect_ratio": [
+       0.30000001192092896,
+       10
+      ],
+      "file_upload_size_limits": {
+       "backgrounds": 6000000,
+       "attachments": 20000000,
+       "avatars": 4000000,
+       "emojis": 500000,
+       "icons": 2500000,
+       "banners": 6000000
+      }
+     },
+     "default": {
+      "outgoing_friend_requests": 10,
+      "bots": 5,
+      "message_length": 2000,
+      "message_attachments": 5,
+      "servers": 100,
+      "voice_quality": 16000,
+      "video": true,
+      "video_resolution": [
+       2560,
+       1440
+      ],
+      "video_aspect_ratio": [
+       0.30000001192092896,
+       10
+      ],
+      "file_upload_size_limits": {
+       "backgrounds": 6000000,
+       "attachments": 20000000,
+       "banners": 6000000,
+       "emojis": 500000,
+       "avatars": 4000000,
+       "icons": 2500000
+      }
+     }
+    },
+    "legal_links": {
+     "terms_of_service": "",
+     "privacy_policy": "",
+     "guidelines": ""
+    }
+   },
+   "ws": "wss://concord.jaalip.com/ws",
+   "app": "https://concord.jaalip.com",
+   "vapid": "BH1WxEKSLpPBYRo60Tk-2HQdH9FkWqK3i2MiTHeU54pPOYwj-4pyHL3HaCShWklPMqaYmRzeOr3wo74-0SoXgUs",
+   "build": {
+    "commit_sha": "<failed to generate>",
+    "commit_timestamp": "<failed to generate>",
+    "semver": "<failed to generate>",
+    "origin_url": "<failed to generate>",
+    "timestamp": "<failed to generate>"
+   }
+  }
+ }
+}

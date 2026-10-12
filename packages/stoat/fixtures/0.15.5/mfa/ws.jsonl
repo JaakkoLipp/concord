@@ -1,0 +1,8 @@
+{"step":"password step"}
+{"step":"totp step"}
+{"step":"mfa status"}
+{"step":"recovery codes"}
+{"step":"ticket by password, refused"}
+{"step":"ticket by totp"}
+{"step":"recovery login"}
+{"step":"logout"}

@@ -1,0 +1,29 @@
+{
+ "step": "settings",
+ "actor": "dev",
+ "request": {
+  "method": "POST",
+  "path": "/sync/settings/fetch",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  },
+  "body": {
+   "keys": [
+    "ordering",
+    "notifications",
+    "concord:emoji"
+   ]
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "3493474017276057627",
+   "x-ratelimit-remaining": "18",
+   "x-ratelimit-reset-after": "9991"
+  },
+  "body": {}
+ }
+}

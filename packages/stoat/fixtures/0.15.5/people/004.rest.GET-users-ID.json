@@ -1,0 +1,71 @@
+{
+ "step": "profile",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/users/01KE6P5328000005FDJX3VMBAG",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "20",
+   "x-ratelimit-bucket": "6381564301654686",
+   "x-ratelimit-remaining": "18",
+   "x-ratelimit-reset-after": "8761"
+  },
+  "body": {
+   "_id": "01KE6P5328000005FDJX3VMBAG",
+   "username": "aino",
+   "discriminator": "6977",
+   "display_name": "Aino Virtanen",
+   "avatar": {
+    "_id": "XvZ2XI-NI5-8TrRA5lxA4Qs1GIQqv61C30i4nQQZhG",
+    "tag": "avatars",
+    "filename": "aino.png",
+    "metadata": {
+     "type": "Image",
+     "width": 256,
+     "height": 256,
+     "thumbhash": [
+      149,
+      199,
+      9,
+      23,
+      12,
+      7,
+      119,
+      135,
+      124,
+      134,
+      135,
+      131,
+      121,
+      87,
+      104,
+      56,
+      152,
+      134,
+      139,
+      63,
+      200,
+      248,
+      131,
+      12
+     ],
+     "animated": false
+    },
+    "content_type": "image/png",
+    "size": 1995
+   },
+   "status": {
+    "text": "Moderoimassa"
+   },
+   "relationship": "Friend",
+   "online": false
+  }
+ }
+}

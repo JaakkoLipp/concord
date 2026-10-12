@@ -10,6 +10,13 @@
 		}
 	}
 
+	# Concord: the M0 screen-share test page, a static build of spikes/m0-screenshare. Removed after M3.
+	redir /spike /spike/ 308
+	handle_path /spike/* {
+		root * /srv/spike
+		file_server
+	}
+
 	route /api* {
 		# Concord: registration is invite-only. Public account creation is refused here;
 		# accounts are created by our website server (and deploy/create-account.sh) over the
@@ -19,6 +26,10 @@
 			path_regexp signup (?i)^/api/+auth/+account/+create/*$
 		}
 		respond @signup "Registration is by invitation only." 403
+
+		# Concord: Stoat's Prometheus metrics and API docs stay internal.
+		@internal path_regexp internal (?i)^/api/+(metrics|swagger|openapi\.json)(/.*)?$
+		respond @internal 404
 
 		uri strip_prefix /api
 		reverse_proxy http://api:14702 {

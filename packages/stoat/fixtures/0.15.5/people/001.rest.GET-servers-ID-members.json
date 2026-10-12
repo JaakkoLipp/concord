@@ -1,0 +1,1369 @@
+{
+ "step": "members",
+ "actor": "dev",
+ "request": {
+  "method": "GET",
+  "path": "/servers/01KE6P5YA800000WS1Q6NXSP7H/members",
+  "headers": {
+   "x-session-token": "<secret-1>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "5",
+   "x-ratelimit-bucket": "4355574530925212923",
+   "x-ratelimit-remaining": "4",
+   "x-ratelimit-reset-after": "10000"
+  },
+  "body": {
+   "members": [
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P4YM0000002MKYT6YPE0Z"
+     },
+     "joined_at": "2026-01-05T09:00:32.460Z",
+     "roles": [
+      "01KE6P5YB800000XNKTAC2RHMC"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P52F2000003E7052YVB0E"
+     },
+     "joined_at": "2026-01-05T09:01:21.934Z",
+     "roles": [
+      "01KE6P686M0000116KCQMAKMGD"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P52T4000004B2QQMXZ6WF"
+     },
+     "joined_at": "2026-01-05T09:01:21.929Z",
+     "roles": [
+      "01KE6P5YBY00000Y2B05CXBVFH"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5328000005FDJX3VMBAG"
+     },
+     "joined_at": "2026-01-05T09:01:21.928Z",
+     "roles": [
+      "01KE6P5YBY00000Y2B05CXBVFH",
+      "01KE6P686M0000116KCQMAKMGD"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P54MA000007S29V4CAE6V"
+     },
+     "joined_at": "2026-01-05T09:01:21.972Z",
+     "roles": [
+      "01KE6P686M0000116KCQMAKMGD",
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P54RN000008C22JDJ1QJM"
+     },
+     "joined_at": "2026-01-05T09:01:21.929Z",
+     "roles": [
+      "01KE6P685W0000102WWRC2SGGA"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P54Y9000009SRY7YWD0ZW"
+     },
+     "joined_at": "2026-01-05T09:01:21.974Z",
+     "roles": [
+      "01KE6P685W0000102WWRC2SGGA",
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P56R000000AA4WNP248F8"
+     },
+     "joined_at": "2026-01-05T09:01:21.973Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P575300000BF8B6EB7J6C"
+     },
+     "joined_at": "2026-01-05T09:01:21.977Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P57KP00000CBHMHZXZMWY"
+     },
+     "joined_at": "2026-01-05T09:01:22.007Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY",
+      "01KE6P686M0000116KCQMAKMGD"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5C6E00000DZV3Z4WC696"
+     },
+     "joined_at": "2026-01-05T09:01:22.011Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5CDD00000E578H24K9GZ"
+     },
+     "joined_at": "2026-01-05T09:01:22.014Z",
+     "roles": [
+      "01KE6P686M0000116KCQMAKMGD"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5CN600000F69T5RQJPFW"
+     },
+     "joined_at": "2026-01-05T09:01:22.021Z",
+     "roles": [
+      "01KE6P685W0000102WWRC2SGGA"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5EWG00000GHYPHWTVY8V"
+     },
+     "joined_at": "2026-01-05T09:01:22.043Z",
+     "roles": [
+      "01KE6P686M0000116KCQMAKMGD"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5F0G00000H53MFN4DQGC"
+     },
+     "joined_at": "2026-01-05T09:01:22.060Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5F8T00000JE9SZ23HP31"
+     },
+     "joined_at": "2026-01-05T09:01:22.062Z",
+     "roles": [
+      "01KE6P686M0000116KCQMAKMGD"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5H8X00000KM0HJWN7QTX"
+     },
+     "joined_at": "2026-01-05T09:01:22.067Z",
+     "roles": [
+      "01KE6P685W0000102WWRC2SGGA"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5KZR00000MNARQ81PAQ6"
+     },
+     "joined_at": "2026-01-05T09:01:22.082Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5MH900000NFB6JJZK0TC"
+     },
+     "joined_at": "2026-01-05T09:01:22.105Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5MZV00000PRZY7BJKBGD"
+     },
+     "joined_at": "2026-01-05T09:01:22.112Z"
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5P8W00000QKZ3DY5XA9H"
+     },
+     "joined_at": "2026-01-05T09:01:22.115Z",
+     "roles": [
+      "01KE6P685W0000102WWRC2SGGA"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5Q4P00000R2N099H7W94"
+     },
+     "joined_at": "2026-01-05T09:01:22.136Z"
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5QQA00000SQ58KDQZC4D"
+     },
+     "joined_at": "2026-01-05T09:01:22.159Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P5RX500000TZWAGCCMQ9H"
+     },
+     "joined_at": "2026-01-05T09:01:22.164Z",
+     "roles": [
+      "01KE6P6HZ10000126519561HAY"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6P9K6Q00002AB2DYPB60E2"
+     },
+     "joined_at": "2026-01-05T09:02:32.171Z",
+     "roles": [
+      "01KE6P685400000ZBYK88V9VN5"
+     ]
+    },
+    {
+     "_id": {
+      "server": "01KE6P5YA800000WS1Q6NXSP7H",
+      "user": "01KE6PC8060000AQWN8W4ZM04V"
+     },
+     "joined_at": "2026-01-05T09:03:59.580Z"
+    }
+   ],
+   "users": [
+    {
+     "_id": "01KE6P4YM0000002MKYT6YPE0Z",
+     "username": "dev_admin",
+     "discriminator": "7703",
+     "display_name": "Ylläpito",
+     "avatar": {
+      "_id": "u3iTLS0_Qqf5-bsZqX7J0HdIHFvTl-DnYc2BLeenlk",
+      "tag": "avatars",
+      "filename": "dev-admin.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        24,
+        249,
+        9,
+        31,
+        0,
+        39,
+        55,
+        71,
+        125,
+        132,
+        136,
+        133,
+        121,
+        135,
+        120,
+        8,
+        200,
+        132,
+        116,
+        224,
+        71,
+        248,
+        129,
+        11
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2027
+     },
+     "relationship": "None",
+     "online": false
+    },
+    {
+     "_id": "01KE6P52F2000003E7052YVB0E",
+     "username": "dev",
+     "discriminator": "7991",
+     "display_name": "Dev",
+     "avatar": {
+      "_id": "gNlhT-V4pO9Clzh0xJwmxirTIMIaDATEE86nC5gtIb",
+      "tag": "avatars",
+      "filename": "dev.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        214,
+        183,
+        9,
+        7,
+        14,
+        87,
+        71,
+        103,
+        135,
+        121,
+        134,
+        128,
+        137,
+        170,
+        152,
+        135,
+        120,
+        134,
+        134,
+        138,
+        248,
+        168,
+        136,
+        15
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2033
+     },
+     "status": {
+      "text": "Testing Concord"
+     },
+     "relationship": "User",
+     "online": false
+    },
+    {
+     "_id": "01KE6P52T4000004B2QQMXZ6WF",
+     "username": "ben.carter",
+     "discriminator": "4977",
+     "display_name": "Ben Carter",
+     "avatar": {
+      "_id": "jLajslWQuaRFk-s4UoJfiuvxRFjbNIS_whQKry10LR",
+      "tag": "avatars",
+      "filename": "ben.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        157,
+        119,
+        13,
+        15,
+        8,
+        87,
+        7,
+        104,
+        134,
+        121,
+        134,
+        131,
+        135,
+        153,
+        120,
+        56,
+        136,
+        136,
+        133,
+        171,
+        248,
+        184,
+        138,
+        15
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 1966
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5328000005FDJX3VMBAG",
+     "username": "aino",
+     "discriminator": "6977",
+     "display_name": "Aino Virtanen",
+     "avatar": {
+      "_id": "XvZ2XI-NI5-8TrRA5lxA4Qs1GIQqv61C30i4nQQZhG",
+      "tag": "avatars",
+      "filename": "aino.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        149,
+        199,
+        9,
+        23,
+        12,
+        7,
+        119,
+        135,
+        124,
+        134,
+        135,
+        131,
+        121,
+        87,
+        104,
+        56,
+        152,
+        134,
+        139,
+        63,
+        200,
+        248,
+        131,
+        12
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 1995
+     },
+     "status": {
+      "text": "Moderoimassa"
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P54MA000007S29V4CAE6V",
+     "username": "eetu",
+     "discriminator": "7887",
+     "display_name": "Eetu Mäkinen",
+     "avatar": {
+      "_id": "aROYQ3iEyi87TQrRu2usNliSSN3ezL0cpF0jNFtyq4",
+      "tag": "avatars",
+      "filename": "eetu.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        149,
+        168,
+        5,
+        23,
+        10,
+        7,
+        23,
+        200,
+        138,
+        121,
+        134,
+        131,
+        136,
+        105,
+        152,
+        87,
+        184,
+        135,
+        114,
+        160,
+        56,
+        248,
+        133,
+        12
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2030
+     },
+     "status": {
+      "text": "Ranked, älä häiritse",
+      "presence": "Busy"
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P54RN000008C22JDJ1QJM",
+     "username": "tiina",
+     "discriminator": "8257",
+     "display_name": "Tiina Toivonen",
+     "avatar": {
+      "_id": "-dnPeqPl2areNXG844452-3oFRAhRAftea3KZHggBq",
+      "tag": "avatars",
+      "filename": "totp.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        21,
+        72,
+        6,
+        7,
+        8,
+        71,
+        23,
+        87,
+        127,
+        132,
+        136,
+        130,
+        135,
+        154,
+        184,
+        23,
+        184,
+        128,
+        120,
+        244,
+        39,
+        71,
+        127,
+        2
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2005
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P54Y9000009SRY7YWD0ZW",
+     "username": "sanna_k",
+     "discriminator": "8098",
+     "display_name": "Sanna Korhonen",
+     "avatar": {
+      "_id": "X7eqedBPEhYixEXce-HODno9ZI8YtKWDnuqEIkpuQk",
+      "tag": "avatars",
+      "filename": "sanna.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        148,
+        8,
+        10,
+        47,
+        2,
+        7,
+        103,
+        151,
+        136,
+        119,
+        134,
+        135,
+        133,
+        105,
+        136,
+        72,
+        200,
+        136,
+        115,
+        128,
+        120,
+        7,
+        136,
+        7
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2018
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P56R000000AA4WNP248F8",
+     "username": "lauri.n",
+     "discriminator": "5603",
+     "display_name": "Lauri Nieminen",
+     "status": {
+      "text": "Kuuntelee musiikkia"
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P575300000BF8B6EB7J6C",
+     "username": "maija",
+     "discriminator": "0748",
+     "display_name": "Maija Heikkinen",
+     "avatar": {
+      "_id": "RQ_Hbph4FZZYEqGx1FmngJVuMRuix8fue1S_kr45it",
+      "tag": "avatars",
+      "filename": "maija.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        148,
+        200,
+        5,
+        23,
+        8,
+        23,
+        87,
+        103,
+        139,
+        121,
+        133,
+        136,
+        133,
+        104,
+        136,
+        56,
+        200,
+        134,
+        112,
+        192,
+        136,
+        248,
+        131,
+        7
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2042
+     },
+     "status": {
+      "presence": "Idle"
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P57KP00000CBHMHZXZMWY",
+     "username": "juho_l",
+     "discriminator": "3179",
+     "display_name": "Juho Laine",
+     "avatar": {
+      "_id": "gdP6BR2HZI7LZ4QiRbUb2tuwzh0I8yYrSBhvwrsdle",
+      "tag": "avatars",
+      "filename": "juho.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        150,
+        152,
+        9,
+        15,
+        6,
+        103,
+        7,
+        119,
+        137,
+        120,
+        134,
+        132,
+        136,
+        72,
+        104,
+        88,
+        136,
+        137,
+        114,
+        197,
+        8,
+        184,
+        131,
+        15
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2002
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5C6E00000DZV3Z4WC696",
+     "username": "emma.w",
+     "discriminator": "0126",
+     "display_name": "Emma Walsh",
+     "avatar": {
+      "_id": "HAcbVHb-I4iaBLJUUhMerhX7kcWjLtyknR-T-Jobmd",
+      "tag": "avatars",
+      "filename": "emma.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        213,
+        56,
+        10,
+        31,
+        6,
+        39,
+        39,
+        167,
+        135,
+        135,
+        122,
+        128,
+        136,
+        107,
+        152,
+        39,
+        136,
+        137,
+        124,
+        114,
+        8,
+        23,
+        135,
+        0
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2029
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5CDD00000E578H24K9GZ",
+     "username": "oliver",
+     "discriminator": "9576",
+     "display_name": "Oliver Grant",
+     "avatar": {
+      "_id": "ECCRqd5rNigGMralYjIhq3xB_ouHLVHU7Pqd15AMD_",
+      "tag": "avatars",
+      "filename": "oliver.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        22,
+        168,
+        9,
+        7,
+        6,
+        55,
+        71,
+        87,
+        135,
+        122,
+        120,
+        133,
+        135,
+        121,
+        136,
+        8,
+        120,
+        136,
+        120,
+        128,
+        56,
+        248,
+        119,
+        13
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2046
+     },
+     "status": {
+      "text": "Deadline week",
+      "presence": "Focus"
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5CN600000F69T5RQJPFW",
+     "username": "noora",
+     "discriminator": "8590",
+     "display_name": "Noora Koskinen",
+     "avatar": {
+      "_id": "xpAkkZE4JRn2XxTunZHGkbDNK1ZKHuQ1aUwHtXVyAO",
+      "tag": "avatars",
+      "filename": "noora.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        83,
+        7,
+        6,
+        47,
+        2,
+        7,
+        103,
+        151,
+        138,
+        121,
+        118,
+        131,
+        123,
+        137,
+        136,
+        104,
+        120,
+        133,
+        133,
+        95,
+        200,
+        7,
+        138,
+        3
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2035
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5EWG00000GHYPHWTVY8V",
+     "username": "villej",
+     "discriminator": "8889",
+     "display_name": "Ville Järvinen",
+     "relationship": "Incoming",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5F0G00000H53MFN4DQGC",
+     "username": "kaisa.l",
+     "discriminator": "9493",
+     "display_name": "Kaisa Lehtonen",
+     "avatar": {
+      "_id": "cTFjXn8EEwjqa0spyHbjltW73lnIzp4W6xFW2GjY8e",
+      "tag": "avatars",
+      "filename": "kaisa.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        213,
+        24,
+        10,
+        39,
+        4,
+        87,
+        87,
+        55,
+        134,
+        135,
+        136,
+        128,
+        137,
+        57,
+        120,
+        88,
+        152,
+        124,
+        121,
+        101,
+        8,
+        71,
+        134,
+        0
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2035
+     },
+     "relationship": "Incoming",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5F8T00000JE9SZ23HP31",
+     "username": "tomi",
+     "discriminator": "6921",
+     "avatar": {
+      "_id": "HMoC-9Hzv9D3rLQBp_6kbDYV0VTsRsrvoUHLVU44Rc",
+      "tag": "avatars",
+      "filename": "tomi.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        86,
+        199,
+        5,
+        23,
+        4,
+        55,
+        71,
+        7,
+        123,
+        129,
+        138,
+        129,
+        138,
+        87,
+        168,
+        71,
+        72,
+        135,
+        131,
+        76,
+        248,
+        216,
+        132,
+        15
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2021
+     },
+     "relationship": "None",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5H8X00000KM0HJWN7QTX",
+     "username": "riikka_h",
+     "discriminator": "0265",
+     "display_name": "Riikka Hämäläinen",
+     "avatar": {
+      "_id": "yZLr1oL4F3a-VOZd2YqYZuMwGMCOSvRdYjTTpEDDLo",
+      "tag": "avatars",
+      "filename": "riikka.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        150,
+        88,
+        10,
+        15,
+        8,
+        87,
+        87,
+        7,
+        131,
+        135,
+        136,
+        131,
+        134,
+        105,
+        136,
+        56,
+        152,
+        140,
+        118,
+        19,
+        8,
+        55,
+        129,
+        0
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2007
+     },
+     "relationship": "None",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5KZR00000MNARQ81PAQ6",
+     "username": "mikko",
+     "discriminator": "6394",
+     "display_name": "Mikko Rantanen",
+     "avatar": {
+      "_id": "4TyiIzgf8WRIxqnOqNih4bo59QFSBCpc6xtfo8exQP",
+      "tag": "avatars",
+      "filename": "mikko.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        148,
+        215,
+        9,
+        23,
+        6,
+        55,
+        103,
+        71,
+        134,
+        121,
+        134,
+        141,
+        120,
+        116,
+        136,
+        8,
+        152,
+        137,
+        128,
+        158,
+        7,
+        232,
+        137,
+        0
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2010
+     },
+     "relationship": "Outgoing",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5MH900000NFB6JJZK0TC",
+     "username": "sofia.l",
+     "discriminator": "8978",
+     "display_name": "Sofia Lindqvist",
+     "avatar": {
+      "_id": "0JHpDwXTNYu9_Ojjd9bqZSWtsVBwoYqtpwtEHgRB0A",
+      "tag": "avatars",
+      "filename": "sofia.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        84,
+        23,
+        10,
+        39,
+        4,
+        103,
+        71,
+        71,
+        129,
+        136,
+        122,
+        133,
+        136,
+        167,
+        103,
+        8,
+        136,
+        138,
+        139,
+        249,
+        183,
+        103,
+        128,
+        4
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2001
+     },
+     "relationship": "Friend",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5MZV00000PRZY7BJKBGD",
+     "username": "jack_m",
+     "discriminator": "5919",
+     "display_name": "Jack Morrison",
+     "relationship": "Blocked",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5P8W00000QKZ3DY5XA9H",
+     "username": "helmi",
+     "discriminator": "1734",
+     "display_name": "Helmi Aaltonen",
+     "avatar": {
+      "_id": "LCXBI24jsREzy0LCwol_VTik-83HiDvJIdfTMf_6oR",
+      "tag": "avatars",
+      "filename": "helmi.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        151,
+        183,
+        5,
+        15,
+        6,
+        55,
+        7,
+        88,
+        127,
+        119,
+        131,
+        130,
+        126,
+        22,
+        104,
+        56,
+        72,
+        135,
+        130,
+        12,
+        216,
+        200,
+        128,
+        13
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2020
+     },
+     "relationship": "None",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5Q4P00000R2N099H7W94",
+     "username": "pekka.o",
+     "discriminator": "2310",
+     "display_name": "Pekka Ojala",
+     "avatar": {
+      "_id": "PntYNd3iVNwtxfUG2s7QT8AcOlJNqLHgt5Yiu1xABg",
+      "tag": "avatars",
+      "filename": "pekka.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        81,
+        232,
+        5,
+        15,
+        2,
+        87,
+        39,
+        103,
+        134,
+        136,
+        136,
+        122,
+        124,
+        52,
+        168,
+        40,
+        104,
+        124,
+        112,
+        32,
+        248,
+        248,
+        125,
+        0
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2038
+     },
+     "relationship": "None",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5QQA00000SQ58KDQZC4D",
+     "username": "lotta",
+     "discriminator": "1041",
+     "display_name": "Lotta Saarinen",
+     "avatar": {
+      "_id": "o7AtljS0pSqMjOBncKgxO1T2cd1Z_otD8OmmvaoFlX",
+      "tag": "avatars",
+      "filename": "lotta.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        85,
+        88,
+        6,
+        15,
+        6,
+        39,
+        39,
+        71,
+        135,
+        122,
+        134,
+        135,
+        121,
+        41,
+        104,
+        8,
+        120,
+        140,
+        113,
+        112,
+        104,
+        7,
+        135,
+        6
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2041
+     },
+     "relationship": "None",
+     "online": false
+    },
+    {
+     "_id": "01KE6P5RX500000TZWAGCCMQ9H",
+     "username": "max_pietikainen_long_name",
+     "discriminator": "5107",
+     "display_name": "Maximilian Alexander Pietikäinen",
+     "avatar": {
+      "_id": "L5Uo01pOrFN1NmUZ2OJGHqDPppGv-uhks216OvzVVS",
+      "tag": "avatars",
+      "filename": "long.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        217,
+        182,
+        9,
+        31,
+        8,
+        23,
+        39,
+        119,
+        137,
+        134,
+        135,
+        128,
+        136,
+        91,
+        104,
+        104,
+        136,
+        137,
+        131,
+        110,
+        248,
+        232,
+        134,
+        15
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2046
+     },
+     "relationship": "None",
+     "online": false
+    },
+    {
+     "_id": "01KE6P9K6Q00002AB2DYPB60E2",
+     "username": "kello",
+     "discriminator": "7024",
+     "display_name": "Kello",
+     "avatar": {
+      "_id": "1UEIAipZ39TqN4uempf9ekqwjgb3ZHwxdrqpXyiY4K",
+      "tag": "avatars",
+      "filename": "kello.png",
+      "metadata": {
+       "type": "Image",
+       "width": 256,
+       "height": 256,
+       "thumbhash": [
+        81,
+        248,
+        9,
+        47,
+        2,
+        7,
+        103,
+        200,
+        136,
+        136,
+        136,
+        134,
+        121,
+        118,
+        120,
+        104,
+        152,
+        135,
+        116,
+        112,
+        104,
+        248,
+        136,
+        9
+       ],
+       "animated": false
+      },
+      "content_type": "image/png",
+      "size": 2037
+     },
+     "bot": {
+      "owner": "01KE6P4YM0000002MKYT6YPE0Z"
+     },
+     "relationship": "None",
+     "online": false
+    },
+    {
+     "_id": "01KE6PC8060000AQWN8W4ZM04V",
+     "username": "recmv58mapr",
+     "discriminator": "1354",
+     "relationship": "None",
+     "online": false
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "step": "mfa status",
+ "actor": "totp",
+ "request": {
+  "method": "GET",
+  "path": "/auth/mfa/methods",
+  "headers": {
+   "x-session-token": "<secret-15>"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "10743416016757861634",
+   "x-ratelimit-remaining": "13",
+   "x-ratelimit-reset-after": "9990"
+  },
+  "body": [
+   "Totp"
+  ]
+ }
+}

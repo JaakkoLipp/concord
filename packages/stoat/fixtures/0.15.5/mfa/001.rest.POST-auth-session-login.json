@@ -1,0 +1,31 @@
+{
+ "step": "password step",
+ "actor": "totp",
+ "request": {
+  "method": "POST",
+  "path": "/auth/session/login",
+  "headers": {},
+  "body": {
+   "email": "<email-11>",
+   "password": "<secret-12>",
+   "friendly_name": "Concord recorder"
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "15",
+   "x-ratelimit-bucket": "3290070096498229025",
+   "x-ratelimit-remaining": "12",
+   "x-ratelimit-reset-after": "8234"
+  },
+  "body": {
+   "result": "MFA",
+   "ticket": "<secret-13>",
+   "allowed_methods": [
+    "Totp"
+   ]
+  }
+ }
+}

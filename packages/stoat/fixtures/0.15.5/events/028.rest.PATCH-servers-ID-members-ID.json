@@ -1,0 +1,33 @@
+{
+ "step": "member",
+ "actor": "dev-admin",
+ "request": {
+  "method": "PATCH",
+  "path": "/servers/01KE6P5YA800000WS1Q6NXSP7H/members/01KE6P5Q4P00000R2N099H7W94",
+  "headers": {
+   "x-session-token": "<secret-4>"
+  },
+  "body": {
+   "remove": [
+    "Nickname"
+   ]
+  }
+ },
+ "response": {
+  "status": 200,
+  "headers": {
+   "content-type": "application/json",
+   "x-ratelimit-limit": "5",
+   "x-ratelimit-bucket": "15164974434513348461",
+   "x-ratelimit-remaining": "1",
+   "x-ratelimit-reset-after": "3910"
+  },
+  "body": {
+   "_id": {
+    "server": "01KE6P5YA800000WS1Q6NXSP7H",
+    "user": "01KE6P5Q4P00000R2N099H7W94"
+   },
+   "joined_at": "2026-01-05T09:04:53.730Z"
+  }
+ }
+}
