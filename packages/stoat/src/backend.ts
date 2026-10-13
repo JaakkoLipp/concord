@@ -7,7 +7,7 @@ import { mapMember } from './map/member.ts';
 import { mapMessage, mapUnread } from './map/message.ts';
 import { mapProfile, mapUser } from './map/user.ts';
 import type { WMember, WMessage, WUnread, WUser } from './map/wire.ts';
-import { Rest } from './rest.ts';
+import { Rest, StoatError } from './rest.ts';
 import { StoatGateway } from './socket.ts';
 import type { Transport } from './transport.ts';
 
@@ -175,6 +175,15 @@ export class StoatBackend implements Backend {
   async setSettings(values: Record<string, string>): Promise<void> {
     // The timestamp lets other clients order writes; the last write wins.
     await this.rest.request('POST', `/sync/settings/set?timestamp=${Date.now()}`, values);
+  }
+
+  async upload(file: Blob, name: string, onProgress?: (fraction: number) => void): Promise<string> {
+    if (!this.transport.upload) throw new Error('this transport cannot upload');
+    const form = new FormData();
+    form.append('file', file, name);
+    const res = await this.transport.upload('/attachments', form, this.token ? { 'x-session-token': this.token } : {}, onProgress);
+    if (res.status >= 400) throw new StoatError(res.status, res.body, 'POST /autumn/attachments');
+    return (res.body as { id: string }).id;
   }
 
   async dms() {

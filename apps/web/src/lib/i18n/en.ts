@@ -175,6 +175,18 @@ export const en = {
     pinFailed: "Couldn't change the pin.",
   },
   toast: { dismiss: 'Dismiss' },
+  files: {
+    size: (bytes: number) => bytes >= 1_000_000
+      ? new Intl.NumberFormat('en', { style: 'unit', unit: 'megabyte', maximumFractionDigits: 1 }).format(bytes / 1_000_000)
+      : new Intl.NumberFormat('en', { style: 'unit', unit: 'kilobyte', maximumFractionDigits: 0 }).format(Math.max(1, bytes / 1000)),
+    tooLarge: (name: string, limit: string) => `${name} is larger than ${limit}, the most one file can be.`,
+    tooMany: (n: number) => `You can attach up to ${n} files to one message.`,
+    remove: (name: string) => `Remove ${name}`,
+    dropTitle: (where: string) => `Upload to ${where}`,
+    dropHint: 'Drop files to attach them to your message.',
+    noPermission: "You don't have permission to upload files here.",
+    uploading: (name: string, percent: number) => `${name}, ${percent}% uploaded`,
+  },
   emoji: {
     picker: 'Emoji picker',
     search: 'Find the perfect emoji',

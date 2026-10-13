@@ -54,6 +54,8 @@ export interface EditorOptions {
   onQuery?(query: Query | null): void;
   /** Keys for an open autocomplete list. Returns whether the list used the key. */
   onListKey?(key: ListKey): boolean;
+  /** Files pasted into the editor, such as a screenshot. */
+  onPasteFiles?(files: File[]): void;
 }
 
 function queryAt(state: EditorState): Query | null {
@@ -176,6 +178,15 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
       ...defaultKeymap,
     ]),
     EditorView.lineWrapping,
+    EditorView.domEventHandlers({
+      paste: (e) => {
+        const files = [...(e.clipboardData?.files ?? [])];
+        if (!files.length || !opts.onPasteFiles) return false;
+        e.preventDefault();
+        opts.onPasteFiles(files);
+        return true;
+      },
+    }),
     hint.of(attributes(placeholderText)),
     tokens(opts.label),
     theme,

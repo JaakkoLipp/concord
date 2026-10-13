@@ -119,6 +119,8 @@ export interface Backend {
    */
   reactionEmoji(): Promise<(emoji: string) => string | null>;
   setSettings(values: Record<string, string>): Promise<void>;
+  /** Upload a message attachment, reporting progress as a fraction. Returns the file's ID. */
+  upload(file: Blob, name: string, onProgress?: (fraction: number) => void): Promise<Id>;
 
   connect(handlers: GatewayHandlers): Gateway;
 }

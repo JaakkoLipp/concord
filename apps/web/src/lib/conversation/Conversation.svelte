@@ -7,6 +7,8 @@
   import { m } from '$lib/i18n/index.ts';
   import { channelName, rememberChannel } from '$lib/view/channels.ts';
   import MessageList from './MessageList.svelte';
+  import Upload from '@lucide/svelte/icons/upload';
+  import { attachFiles } from '$lib/composer/files.ts';
 
   let { channel, message }: { channel: string; message?: string | undefined } = $props();
   const session = $derived(app.session!);
@@ -33,15 +35,41 @@
     }
   }
 
+  let dragDepth = $state(0);
+  const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types.includes('Files');
+
   const placeholder = $derived(info ? (info.kind === 'dm' ? m.shell.messageUser(channelName(store, info)) : m.shell.messageChannel(channelName(store, info))) : '');
 </script>
 
-<ChatHeader {store} channel={info} />
-<div class="body">
-  <MessageList {session} {channel} {target} onjump={jump} />
+<!-- Files dragged over the conversation attach to the next message (m2a-plan.md task 6). -->
+<div class="conversation" role="region" aria-label={m.conversation.messages}
+  ondragenter={(e) => { if (hasFiles(e)) { e.preventDefault(); dragDepth++; } }}
+  ondragover={(e) => { if (hasFiles(e)) e.preventDefault(); }}
+  ondragleave={() => (dragDepth = Math.max(0, dragDepth - 1))}
+  ondrop={(e) => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth = 0; if (info) attachFiles(store, info, [...(e.dataTransfer?.files ?? [])]); }}>
+  <ChatHeader {store} channel={info} />
+  <div class="body">
+    <MessageList {session} {channel} {target} onjump={jump} />
+  </div>
+  <Composer {placeholder} {session} channel={info} />
+  {#if dragDepth > 0 && info}
+    <div class="drop" aria-hidden="true">
+      <div class="drop-card">
+        <Upload size={40} />
+        <strong>{m.files.dropTitle(info.kind === 'dm' ? `@${channelName(store, info)}` : `#${channelName(store, info)}`)}</strong>
+        <span>{m.files.dropHint}</span>
+      </div>
+    </div>
+  {/if}
 </div>
-<Composer {placeholder} {session} channel={info} />
 
 <style>
+  .conversation { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .drop { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; background: var(--scrim); pointer-events: none; }
+  .drop-card {
+    display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-8) var(--space-10);
+    border: 2px dashed var(--accent); border-radius: var(--radius-xl); background: var(--surface-1); color: var(--text-strong); font: var(--text-md) var(--font-sans);
+  }
+  .drop-card span { color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
 </style>

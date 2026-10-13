@@ -7,6 +7,9 @@
   import Plus from '@lucide/svelte/icons/plus';
   import AtSign from '@lucide/svelte/icons/at-sign';
   import CircleX from '@lucide/svelte/icons/circle-x';
+  import FileText from '@lucide/svelte/icons/file-text';
+  import Trash from '@lucide/svelte/icons/trash-2';
+  import { attachFiles } from '$lib/composer/files.ts';
   import SendHorizontal from '@lucide/svelte/icons/send-horizontal';
   import Smile from '@lucide/svelte/icons/smile';
   import { IconButton } from '@concord/ui';
@@ -47,11 +50,18 @@
   const reply = $derived(channel ? compose.replies[channel.id] : undefined);
   const replyTo = $derived(reply ? store.messages.get(reply.id) : undefined);
 
+  // Attachments (m2a-plan.md task 6): chosen here, uploaded by the session when the message is sent.
+  const chosen = $derived(channel ? (compose.files[channel.id] ?? []) : []);
+  const canUpload = $derived(!!channel && has(permissionsIn(store, channel), Permission.UploadFiles));
+  let fileInput = $state<HTMLInputElement | null>(null);
+  const addFiles = (files: File[]) => channel && attachFiles(store, channel, files);
+
   function send() {
     if (!editor || !channel || block) return;
     const out = outgoing(editor.text());
-    if (!out || byteLength(out) > limit) return;
-    void session.send(channel.id, out, reply ? [reply] : []);
+    if ((!out && !chosen.length) || byteLength(out) > limit) return;
+    const files = compose.takeFiles(channel.id).map((c) => ({ file: c.file, name: c.file.name, preview: c.preview }));
+    void session.send(channel.id, out, reply ? [reply] : [], files);
     compose.clearReply(channel.id);
     editor.clear();
   }
@@ -151,7 +161,7 @@
     void import('$lib/composer/editor.ts').then(({ createEditor }) => {
       if (cancelled) return;
       untrack(() => {
-        ed = createEditor(el, { draft: channel?.id ?? '', placeholder, touch, label, onChange: (t) => (text = t), onSend: send, onEscape: escape, onArrowUp: editLast, onQuery, onListKey: listKey });
+        ed = createEditor(el, { draft: channel?.id ?? '', placeholder, touch, label, onChange: (t) => (text = t), onSend: send, onEscape: escape, onArrowUp: editLast, onQuery, onListKey: listKey, onPasteFiles: addFiles });
         text = ed.text();
         editor = ed;
       });
@@ -205,8 +215,22 @@
       <IconButton size="sm" label={m.composer.cancelReply} onclick={() => channel && compose.clearReply(channel.id)}><CircleX size={16} /></IconButton>
     </div>
   {/if}
-  <div class="composer" class:with-reply={!!reply}>
-    <span class="side"><IconButton label={m.composer.attach} disabled><Plus size={22} /></IconButton></span>
+  {#if chosen.length && channel}
+    <ul class="tiles" class:after-reply={!!reply}>
+      {#each chosen as c (c.key)}
+        <li class="tile">
+          {#if c.preview}<img src={c.preview} alt="" />{:else}<span class="file-icon"><FileText size={32} /></span>{/if}
+          <span class="file-name">{c.file.name}</span>
+          <span class="file-size">{m.files.size(c.file.size)}</span>
+          <span class="remove"><IconButton size="sm" label={m.files.remove(c.file.name)} onclick={() => channel && compose.removeFile(channel.id, c.key)}><Trash size={16} /></IconButton></span>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+  <div class="composer" class:with-reply={!!reply || !!chosen.length}>
+    <span class="side"><IconButton label={m.composer.attach} disabled={!canUpload} onclick={() => fileInput?.click()}><Plus size={22} /></IconButton></span>
+    <input class="file-input" type="file" multiple tabindex="-1" aria-hidden="true" bind:this={fileInput}
+      onchange={(e) => { const input = e.currentTarget; addFiles([...(input.files ?? [])]); input.value = ''; }} />
     <div class="editor" bind:this={host}>
       {#if !editor}<span class="placeholder">{placeholder}</span>{/if}
     </div>
@@ -216,7 +240,7 @@
     <span class="side" bind:this={emojiButton}><IconButton label={m.composer.emoji} disabled={!editor} active={!!picker.request && picker.request.anchor === emojiButton} onclick={openPicker}><Smile size={22} /></IconButton></span>
     {#if touch}
       <span class="side">
-        <IconButton label={m.composer.send} disabled={!editor || left < 0 || !outgoing(text)} onmousedown={(e: MouseEvent) => e.preventDefault()} onclick={send}>
+        <IconButton label={m.composer.send} disabled={!editor || left < 0 || (!outgoing(text) && !chosen.length)} onmousedown={(e: MouseEvent) => e.preventDefault()} onclick={send}>
           <SendHorizontal size={22} />
         </IconButton>
       </span>
@@ -234,6 +258,21 @@
   }
   .blocked { align-items: center; cursor: not-allowed; }
   .wrap { position: relative; }
+  .file-input { display: none; }
+  .tiles {
+    display: flex; gap: var(--space-4); overflow-x: auto; margin: 0 var(--space-5); padding: var(--space-4); list-style: none;
+    border: 1px solid var(--border-subtle); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface-2);
+  }
+  .tiles.after-reply { border-radius: 0; }
+  .tile {
+    position: relative; display: flex; flex-direction: column; flex: none; width: 12rem; padding: var(--space-3);
+    border-radius: var(--radius-md); background: var(--surface-1);
+  }
+  .tile img { width: 100%; height: 8rem; object-fit: contain; border-radius: var(--radius-xs); }
+  .file-icon { display: grid; place-items: center; height: 8rem; color: var(--text-secondary); }
+  .file-name { margin-top: var(--space-2); color: var(--text-normal); font: var(--text-sm) var(--font-sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-size { color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
+  .remove { position: absolute; top: var(--space-1); right: var(--space-1); border-radius: var(--radius-md); background: var(--surface-3); }
   .suggestions {
     position: absolute; left: var(--space-5); right: var(--space-5); bottom: 100%; z-index: 10; margin: 0 0 var(--space-2); padding: var(--space-2);
     list-style: none; border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--surface-1); box-shadow: var(--shadow-popover);

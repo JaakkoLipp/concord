@@ -24,9 +24,21 @@ export interface PendingMessage {
   content: string;
   replies: { id: Id; mention: boolean }[];
   attachments: Id[];
+  /** Files to upload before sending, with progress, and their ID once uploaded. A retry uploads only what is missing. */
+  files: PendingFile[];
   state: 'sending' | 'failed';
   /** Why it failed: the backend's error type, or `network` when the request may not have arrived. */
   error?: string;
+}
+
+export interface PendingFile {
+  file: Blob;
+  name: string;
+  size: number;
+  /** A local preview URL for images, made by the UI. */
+  preview?: string | undefined;
+  progress: number;
+  id?: Id | undefined;
 }
 
 export type NotificationLevel = 'all' | 'mention' | 'none' | 'muted';

@@ -36,6 +36,28 @@ export class LiveTransport implements Transport {
     return { status: res.status, headers: kept, body };
   }
 
+  /** XMLHttpRequest rather than fetch, because only it reports upload progress. */
+  upload(path: string, form: FormData, headers: Record<string, string>, onProgress?: (fraction: number) => void): Promise<HttpResponse> {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${this.origin}/autumn${path}`);
+      for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress?.(e.loaded / e.total); };
+      xhr.onload = () => {
+        let body: unknown = xhr.responseText;
+        try {
+          body = JSON.parse(xhr.responseText);
+        } catch {
+          // Not JSON: keep the text.
+        }
+        resolve({ status: xhr.status, headers: {}, body });
+      };
+      xhr.onerror = () => reject(new TypeError(`upload failed: ${path}`));
+      xhr.ontimeout = () => reject(new TypeError(`upload timed out: ${path}`));
+      xhr.send(form);
+    });
+  }
+
   connect(query = ''): Promise<Socket> {
     const url = `${this.origin.replace(/^http/, 'ws')}/ws?version=1&format=json${query ? `&${query}` : ''}`;
     const ws = new WebSocket(url);

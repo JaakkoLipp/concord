@@ -35,6 +35,8 @@ export interface Transport {
   request(req: HttpRequest): Promise<HttpResponse>;
   /** `query` is the socket URL's query string after `version=1&format=json`, such as `ready=users&ready=servers`. */
   connect(query?: string): Promise<Socket>;
+  /** A multipart upload to Autumn at `/autumn{path}`, reporting progress as a fraction. Only the live transport has it. */
+  upload?(path: string, form: FormData, headers: Record<string, string>, onProgress?: (fraction: number) => void): Promise<HttpResponse>;
 }
 
 /** Ready fields the client requests: every field except synced settings, which Stoat's Ready never delivers. */

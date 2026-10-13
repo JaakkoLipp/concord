@@ -164,3 +164,31 @@ Headless Chromium can't test IMEs, Android keyboards or Firefox. Those checks ar
 | `@Mod` as `lauri` or `dev`, who lack `MentionRoles` | No roles offered |
 | `@Mod` as `aino`, a moderator | Moderaattori, in the role's colour |
 | Console errors or failed requests | None |
+
+## Task 6: attachments, 2026-10-13
+
+**What is deployed**:
+- Files come from the plus button, from paste (such as a screenshot) or from drag and drop onto the conversation, which shows a drop overlay.
+- Tiles above the composer show an image preview or a file icon, the name, the size and a remove button.
+- The limits come from `GET /api/`: 5 files per message, each at most 20 MB. Anything over is refused before uploading, with a notice.
+- On send, the message appears at once as pending, with the images dimmed and a progress bar per file. The files then upload over XHR to the same-origin `/autumn/attachments`, and the message sends with their IDs.
+- A failed upload marks the message failed. Retry uploads only the files that didn't finish.
+- A message can be files without text.
+- Everything is gated on `UploadFiles`.
+- Toasts moved from the bottom of the window to the top, under the header, because they covered the composer.
+
+**Unit test**: two files, one failing to upload. The retry uploads only that one, and the message is sent once, with both IDs.
+
+**Live check**: `node tools/live/src/attachments.ts`, `dev` sending in #botti while `aino` watches:
+
+| Check | Result |
+|---|---|
+| A 21 MB file | Refused: "iso.bin is larger than 20 MB, the most one file can be." No tile, no upload |
+| Six images at once | Five tiles. "You can attach up to 5 files to one message." |
+| An image and a PDF through the button, one image by paste, one by drop | Four tiles |
+| Send | The pending message shows four uploads. `aino` has the message 239 ms after Enter |
+| What `aino` sees | Three images from `/autumn/attachments/` and the PDF's file card |
+| Left behind for `dev` | No pending message, no tiles |
+| Console errors or failed requests | None |
+
+**Not checked by script**: sending from a phone, which is in Jaakko's device check.

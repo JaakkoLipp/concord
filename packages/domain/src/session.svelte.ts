@@ -212,20 +212,36 @@ export class Session {
   // ---------- sending (m2a-plan.md task 2) ----------
 
   /** Send a message optimistically. It shows at once as pending and is replaced when Stoat confirms it. */
-  async send(channel: Id, content: string, replies: PendingMessage['replies'] = [], attachments: Id[] = []): Promise<void> {
+  async send(channel: Id, content: string, replies: PendingMessage['replies'] = [], files: { file: Blob; name: string; preview?: string | undefined }[] = []): Promise<void> {
     // A message sent from older history would land outside the window, so go to the present first.
     if (!this.store.windows.get(channel)?.atNewest) await this.loadLatest(channel).catch(() => {});
     const key = ulid();
     this.store.ownNonces.add(key);
-    this.store.pending.set(key, { key, channel, content, replies, attachments, state: 'sending' });
+    const pendingFiles = files.map((f) => ({ file: f.file, name: f.name, size: f.file.size, preview: f.preview, progress: 0 }));
+    this.store.pending.set(key, { key, channel, content, replies, attachments: [], files: pendingFiles, state: 'sending' });
     await this.deliver(key);
+  }
+
+  /** Upload a pending message's files that have no ID yet, updating their progress. Throws on the first failure. */
+  private async uploadFiles(key: Id): Promise<void> {
+    const update = (i: number, change: Partial<PendingMessage['files'][number]>) => {
+      const p = this.store.pending.get(key);
+      if (!p) return;
+      this.store.pending.set(key, { ...p, files: p.files.map((f, j) => (j === i ? { ...f, ...change } : f)) });
+    };
+    const p = this.store.pending.get(key);
+    await Promise.all((p?.files ?? []).map(async (f, i) => {
+      if (f.id) return;
+      const id = await this.backend.upload(f.file, f.name, (progress) => update(i, { progress }));
+      update(i, { id, progress: 1 });
+    }));
   }
 
   /** Try a failed message again with the same key, so Stoat can't store it twice. */
   retry(key: Id): Promise<void> {
     const p = this.store.pending.get(key);
     if (!p || p.state !== 'failed') return Promise.resolve();
-    this.store.pending.set(key, { key, channel: p.channel, content: p.content, replies: p.replies, attachments: p.attachments, state: 'sending' });
+    this.store.pending.set(key, { key, channel: p.channel, content: p.content, replies: p.replies, attachments: p.attachments, files: p.files, state: 'sending' });
     return this.deliver(key);
   }
 
@@ -234,22 +250,30 @@ export class Session {
   }
 
   private async deliver(key: Id): Promise<void> {
-    const p = this.store.pending.get(key);
+    let p = this.store.pending.get(key);
     if (!p) return;
+    const channel = p.channel;
     try {
-      const message = await this.backend.sendMessage(p.channel, { content: p.content, replies: p.replies, attachments: p.attachments }, key);
+      if (p.files.some((f) => !f.id)) {
+        await this.uploadFiles(key);
+        p = this.store.pending.get(key);
+        if (!p) return;
+      }
+      const attachments = [...p.attachments, ...p.files.map((f) => f.id!)];
+      const message = await this.backend.sendMessage(p.channel, { content: p.content, replies: p.replies, attachments }, key);
       this.store.apply({ type: 'messageCreate', message });
       this.markRead(p.channel);
     } catch (e) {
       if (e instanceof BackendError && e.status === 409) {
         // The key was used: an earlier attempt reached Stoat after all. The newest page holds it.
-        await this.loadLatest(p.channel).catch(() => {});
+        await this.loadLatest(channel).catch(() => {});
         this.store.pending.delete(key);
-        this.markRead(p.channel);
+        this.markRead(channel);
         return;
       }
       const error = e instanceof BackendError ? e.kind : 'network';
-      if (this.store.pending.has(key)) this.store.pending.set(key, { ...p, state: 'failed', error });
+      const now = this.store.pending.get(key);
+      if (now) this.store.pending.set(key, { ...now, state: 'failed', error });
     }
   }
 

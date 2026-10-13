@@ -206,3 +206,33 @@ describe('reactions', () => {
     expect(store.messages.get(OLD)!.reactions['👍']).toEqual([SELF.id]);
   });
 });
+
+describe('attachments', () => {
+  it('uploads before sending, and a retry uploads only what failed', async () => {
+    const sentWith: string[][] = [];
+    const { session, store, nextId } = setup(async (_c, m, key) => {
+      sentWith.push(m.attachments);
+      return message(nextId(), { nonce: key });
+    });
+    const uploads: string[] = [];
+    let failB = true;
+    Object.assign(session.backend, {
+      upload: async (_f: Blob, name: string, progress?: (f: number) => void) => {
+        uploads.push(name);
+        progress?.(0.5);
+        if (name === 'b.png' && failB) throw new TypeError('offline');
+        return `file-${name}`;
+      },
+    });
+    const file = (name: string) => ({ file: new Blob(['x']), name });
+    await session.send(CH, '', [], [file('a.png'), file('b.png')]);
+    const [p] = store.pendingIn(CH);
+    expect(p).toMatchObject({ state: 'failed', error: 'network' });
+    expect(p!.files.map((f) => f.id)).toEqual(['file-a.png', undefined]);
+    failB = false;
+    await session.retry(p!.key);
+    expect(uploads).toEqual(['a.png', 'b.png', 'b.png']);
+    expect(sentWith).toEqual([['file-a.png', 'file-b.png']]);
+    expect(store.pending.size).toBe(0);
+  });
+});

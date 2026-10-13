@@ -124,3 +124,4 @@ This is the riskiest code in M2a, and its unit tests cover every rule below.
 - **Task 3**, 2026-10-12: done and deployed. The live check passed.
 - **Task 4**, 2026-10-13: done and deployed. The live check passed.
 - **Task 5**, 2026-10-13: done and deployed. The live check passed.
+- **Task 6**, 2026-10-13: done and deployed. The live check passed on the desktop. Sending from a phone is Jaakko's check.

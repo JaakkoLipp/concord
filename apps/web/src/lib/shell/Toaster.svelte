@@ -14,7 +14,7 @@
 </div>
 
 <style>
-  .toaster { position: fixed; left: 50%; bottom: var(--space-8); translate: -50% 0; z-index: 1000; display: flex; flex-direction: column; gap: var(--space-2); align-items: center; pointer-events: none; }
+  .toaster { position: fixed; left: 50%; top: calc(var(--header-h) + var(--space-4)); translate: -50% 0; z-index: 1000; display: flex; flex-direction: column; gap: var(--space-2); align-items: center; pointer-events: none; }
   .toast {
     display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); pointer-events: auto;
     border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-4); color: var(--text-strong);
@@ -22,6 +22,6 @@
   }
   .toast.error { border-color: var(--danger); }
   button { display: grid; padding: 0; border: 0; background: none; color: var(--text-secondary); cursor: pointer; }
-  @keyframes rise { from { opacity: 0; transform: translateY(4px); } }
+  @keyframes rise { from { opacity: 0; transform: translateY(-4px); } }
   @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
 </style>

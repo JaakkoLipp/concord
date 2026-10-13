@@ -77,6 +77,16 @@
         {:else if message.content}
           <div class="content"><Markdown source={message.content} />{#if message.edited}<span class="edited" title={fullDate(new Date(message.edited))}>{m.conversation.edited}</span>{/if}</div>
         {/if}
+        {#if pending?.files.length}
+          <ul class="uploads">
+            {#each pending.files as f, i (i)}
+              <li aria-label={m.files.uploading(f.name, Math.round(f.progress * 100))}>
+                {#if f.preview}<img src={f.preview} alt="" />{:else}<span class="upload-name">{f.name}</span>{/if}
+                {#if !f.id}<progress max="1" value={f.progress}></progress>{/if}
+              </li>
+            {/each}
+          </ul>
+        {/if}
         {#if pending?.state === 'failed'}
           <p class="not-sent" role="alert">
             {m.composer.notSent} {failedReason(pending.error)}
@@ -135,6 +145,11 @@
   .message:hover .actions, .message:focus-within .actions, .message.selected .actions, .message.menu-open .actions { display: block; }
   .message.selected, .message.editing { background: var(--hover-overlay); }
   .sending .content { color: var(--text-muted); }
+  .uploads { display: flex; flex-wrap: wrap; gap: var(--space-3); margin: var(--space-2) 0 0; padding: 0; list-style: none; }
+  .uploads li { display: flex; flex-direction: column; gap: var(--space-1); max-width: 16rem; }
+  .uploads img { max-width: 16rem; max-height: 12rem; border-radius: var(--radius-md); opacity: 0.6; }
+  .upload-name { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--surface-2); color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
+  .uploads progress { width: 100%; height: 4px; accent-color: var(--accent); }
   .failed .content { color: var(--danger); }
   .not-sent { margin: var(--space-1) 0 0; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
   .not-sent button { margin-left: var(--space-2); padding: 0; border: 0; background: none; color: var(--link); font: inherit; cursor: pointer; }
