@@ -127,3 +127,6 @@ This is the riskiest code in M2a, and its unit tests cover every rule below.
 - **Task 6**, 2026-10-13: done and deployed. The live check passed on the desktop. Sending from a phone is Jaakko's check.
 - **Task 7**, 2026-10-13: done and deployed. The live check passed and verified the typing frames.
 - **Task 8**, 2026-10-13: done and deployed. The live check passed.
+- **Task 9**, 2026-10-13: done. Every event reaches the other browser in well under a second, and unread and mention markers sync across two devices of one account. The acceptance check found and fixed one autocomplete bug.
+
+**M2a status**: all nine agent tasks are done and deployed. Jaakko's acceptance is next: the device check in "Jaakko's tasks", item 4, plus sending attachments from the phone and trying an Android phone if one is at hand.

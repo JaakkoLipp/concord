@@ -24,7 +24,7 @@ Every runtime dependency must earn its place. The list below is the whole budget
 | Icons | Lucide through `@lucide/svelte`, deep imports per icon. ISC licence. | Per icon, tree-shaken |
 | Font | Figtree through `@fontsource-variable/figtree`, self-hosted, variable weight. OFL. The Latin subset is about 20 KB. Latin Extended and italic load on first use. | Always |
 | Stoat API types | `openapi-typescript`, generated at build time. Types only, no runtime code. | Build only |
-| Unicode emoji data | `emojibase-data`: names, shortcodes, keywords, categories | Lazily, on first picker or `:` autocomplete |
+| Unicode emoji data | `emojibase-data` 15.0, matching the Twemoji 15.0 images: names, GitHub shortcodes, keywords, categories. About 100 KB gzipped. | Lazily, on first picker or `:` autocomplete |
 | Emoji images | Twemoji SVGs, served from our origin | Per emoji, cached |
 | Composer editor | CodeMirror 6: `@codemirror/state`, `view` and `commands`. MIT. Chosen over our own editor on 2026-10-12 (m2a-plan.md decision 1). About 87 KB gzipped. | Lazily, when the composer first mounts |
 | Code highlighting | highlight.js core with a short language list | Lazily, on first code block |
@@ -97,6 +97,7 @@ Stoat exposes `X-RateLimit-Remaining` and `X-RateLimit-Reset-After`. The REST wr
 | `/app` | Redirects to the last visited channel. |
 | `/app/channels/@me` | Friends: online, all, pending, blocked. |
 | `/app/channels/@me/<channel>` | DM or group DM. |
+| `/app/channels/@me/<channel>/<message>` | Same, jumped to a message. Added in M2a. |
 | `/app/channels/<server>/<channel>` | Server channel. |
 | `/app/channels/<server>/<channel>/<message>` | Same, jumped to a message. |
 | `/login`, `/login/verify/<token>` | Login with MFA, email verification, onboarding. |

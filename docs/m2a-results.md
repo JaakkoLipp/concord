@@ -235,3 +235,42 @@ Headless Chromium can't test IMEs, Android keyboards or Firefox. Those checks ar
 | Close | The member list returns |
 | Search in the group DM for "oikeesti", a word from its history | 3 results, as Stoat's API returns. Jump lands on the message through the new DM route |
 | Console errors or failed requests | None |
+
+## Task 9: the acceptance check, 2026-10-13
+
+`node tools/live/src/m2a.ts`: `dev` and `aino` in #botti, in two browsers, five runs. Times run from the action in one browser to the change appearing in the other, on a monotonic clock. A first run used the wall clock, which jumped by 2.3 s under WSL and gave one negative time.
+
+| Event | Median | Worst of 5 |
+|---|---|---|
+| Message | 57 ms | 102 ms |
+| Edit | 41 ms | 53 ms |
+| Delete | 63 ms | 502 ms |
+| Reaction | 49 ms | 202 ms |
+| Typing starts | 16 ms | 42 ms |
+| Typing stops, on clearing the draft | 17 ms | 29 ms |
+
+**One account on two devices**, with `dev` in #pelit and #offtopic while `aino` mentions `dev` in #botti:
+
+| Check | Result |
+|---|---|
+| Device one shows "botti, unread, 1 mention" | 45 ms |
+| Device two shows the same | 48 ms |
+| Device one opens #botti, until device two's marker and badge clear | 140 ms |
+
+No console errors or failed requests in any of the three browsers.
+
+**Found and fixed**: `@dev` sometimes picked "Ylläpito", whose username is `dev_admin`, instead of "Dev". Both matched at the start, and ties fell back to the order members happened to load in. Ties now break on an exact match, then a display-name match before a username match, then the alphabet. `rank.test.ts` covers it.
+
+## What is left for Jaakko
+
+1. **Device check**:
+   - With one other person, or two of your own machines, try messages, edits, deletes, reactions and typing both ways.
+   - Check unread markers with one account on two devices.
+2. **On the phone**:
+   - send a photo,
+   - reply,
+   - react through the picker,
+   - long-press an emoji in the picker to favourite it.
+
+   An Android phone with Gboard is still untested if one is at hand.
+3. **Still open from M0**: the Windows Chrome encoder runs, before M3.

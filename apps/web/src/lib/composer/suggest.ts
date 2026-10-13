@@ -7,6 +7,7 @@ import { customEmojiUrl, twemojiUrl } from '$lib/markdown/emoji.ts';
 import { avatarUrl } from '$lib/view/users.ts';
 import { canView } from '$lib/view/channels.ts';
 import type { UnicodeEmoji } from '$lib/emoji/data.ts';
+import { best } from './rank.ts';
 import { serialise, type QueryKind } from './text.ts';
 
 export interface Suggestion {
@@ -21,25 +22,6 @@ export interface Suggestion {
 }
 
 const LIMIT = 8;
-
-/** 0 for a match at the start, 1 at the start of a word, 2 anywhere, -1 for none. */
-export function rank(name: string, query: string): number {
-  if (!query) return 0;
-  const n = name.toLocaleLowerCase();
-  const q = query.toLocaleLowerCase();
-  const i = n.indexOf(q);
-  if (i < 0) return -1;
-  if (i === 0) return 0;
-  return /[\s._\-:]/.test(n[i - 1]!) ? 1 : 2;
-}
-
-function best<T>(items: T[], names: (t: T) => string[], query: string): T[] {
-  return items
-    .map((t) => ({ t, r: Math.min(...names(t).map((n) => rank(n, query)).map((r) => (r < 0 ? 99 : r))) }))
-    .filter((x) => x.r < 99)
-    .sort((a, b) => a.r - b.r)
-    .map((x) => x.t);
-}
 
 export function suggest(
   store: Store,
