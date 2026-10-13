@@ -10,13 +10,15 @@
   import SendHorizontal from '@lucide/svelte/icons/send-horizontal';
   import Smile from '@lucide/svelte/icons/smile';
   import { IconButton } from '@concord/ui';
-  import type { Channel, Session } from '@concord/domain';
+  import { Permission, has, type Channel, type Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
   import { COUNTER_FROM, byteLength, outgoing, serialise } from '$lib/composer/text.ts';
-  import type { ComposerEditor } from '$lib/composer/editor.ts';
+  import type { ComposerEditor, ListKey, Query } from '$lib/composer/editor.ts';
+  import { suggest, type Suggestion } from '$lib/composer/suggest.ts';
+  import { unicodeEmoji, type UnicodeEmoji } from '$lib/emoji/data.ts';
   import { labeller } from '$lib/composer/tokens.ts';
   import { picker } from '$lib/emoji/picker.svelte.ts';
-  import { sendBlock } from '$lib/view/channels.ts';
+  import { permissionsIn, sendBlock } from '$lib/view/channels.ts';
   import { compose } from '$lib/view/compose.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
 
@@ -79,6 +81,42 @@
     return false;
   }
 
+  // Autocomplete (m2a-plan.md task 5): the editor reports the query under the caret, the list follows it.
+  let query = $state<Query | null>(null);
+  let dismissedAt = -1;
+  let unicode = $state<UnicodeEmoji[]>([]);
+  let active = $state(0);
+  const suggestions = $derived(query && channel
+    ? suggest(store, channel, query.kind, query.query, { mentionRoles: has(permissionsIn(store, channel), Permission.MentionRoles), unicode })
+    : []);
+  $effect(() => {
+    if (query?.kind === ':' && !unicode.length) void unicodeEmoji().then((d) => (unicode = d));
+  });
+  function onQuery(q: Query | null) {
+    // Escape closes the list until the caret leaves that query.
+    if (q && q.from === dismissedAt) return void (query = null);
+    if (!q) dismissedAt = -1;
+    if (q?.kind !== query?.kind || q?.query !== query?.query) active = 0;
+    query = q;
+  }
+  function choose(s: Suggestion) {
+    if (!query || !editor) return;
+    editor.replace(query.from, query.to, `${s.insert} `);
+    query = null;
+  }
+  function listKey(key: ListKey): boolean {
+    if (!query || !suggestions.length) return false;
+    const n = suggestions.length;
+    if (key === 'up') active = (active - 1 + n) % n;
+    else if (key === 'down') active = (active + 1) % n;
+    else if (key === 'pick') choose(suggestions[active]!);
+    else {
+      dismissedAt = query.from;
+      query = null;
+    }
+    return true;
+  }
+
   // A reply whose message is deleted closes, and says so.
   $effect(() => {
     if (channel && reply && store.deleted.has(reply.id)) {
@@ -113,7 +151,7 @@
     void import('$lib/composer/editor.ts').then(({ createEditor }) => {
       if (cancelled) return;
       untrack(() => {
-        ed = createEditor(el, { draft: channel?.id ?? '', placeholder, touch, label, onChange: (t) => (text = t), onSend: send, onEscape: escape, onArrowUp: editLast });
+        ed = createEditor(el, { draft: channel?.id ?? '', placeholder, touch, label, onChange: (t) => (text = t), onSend: send, onEscape: escape, onArrowUp: editLast, onQuery, onListKey: listKey });
         text = ed.text();
         editor = ed;
       });
@@ -142,6 +180,21 @@
     <span class="placeholder">{m.composer.blocked[block]}</span>
   </div>
 {:else}
+  <div class="wrap">
+  {#if suggestions.length}
+    <ul class="suggestions" role="listbox" aria-label={m.composer.suggestions}>
+      {#each suggestions as s, i (s.kind + s.id)}
+        <!-- Keys reach the list through the editor, which keeps focus, as in an ARIA combobox. -->
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <li role="option" aria-selected={i === active} class:active={i === active}
+          onmousedown={(e) => e.preventDefault()} onmouseenter={() => (active = i)} onclick={() => choose(s)}>
+          {#if s.kind === 'channel'}<span class="sym">#</span>{:else if s.kind === 'role'}<span class="sym" style:color={s.colour}>@</span>{:else if s.image}<img class:round={s.kind === 'user'} src={s.image} alt="" width="24" height="24" />{/if}
+          <span class="label" style:color={s.kind === 'user' ? s.colour : undefined}>{s.label}</span>
+          {#if s.detail}<span class="detail">{s.detail}</span>{/if}
+        </li>
+      {/each}
+    </ul>
+  {/if}
   {#if reply && channel}
     <div class="reply-bar">
       <span class="replying">{m.composer.replyingTo(replyTo ? store.displayName(replyTo.author, server) : '')}</span>
@@ -169,6 +222,7 @@
       </span>
     {/if}
   </div>
+  </div>
 {/if}
 
 <svelte:window {onkeydown} />
@@ -179,6 +233,21 @@
     padding: 0 var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-2);
   }
   .blocked { align-items: center; cursor: not-allowed; }
+  .wrap { position: relative; }
+  .suggestions {
+    position: absolute; left: var(--space-5); right: var(--space-5); bottom: 100%; z-index: 10; margin: 0 0 var(--space-2); padding: var(--space-2);
+    list-style: none; border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--surface-1); box-shadow: var(--shadow-popover);
+  }
+  .suggestions li {
+    display: flex; align-items: center; gap: var(--space-3); min-height: 2.25rem; padding: 0 var(--space-3); border-radius: var(--radius-md);
+    color: var(--text-normal); font: 500 var(--text-md) var(--font-sans); cursor: pointer;
+  }
+  .suggestions li.active { background: var(--hover-overlay); color: var(--text-strong); }
+  .suggestions img { width: 1.5rem; height: 1.5rem; object-fit: contain; flex: none; }
+  .suggestions img.round { border-radius: 50%; }
+  .sym { width: 1.5rem; text-align: center; color: var(--text-secondary); font-weight: 700; flex: none; }
+  .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .detail { margin-left: auto; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); white-space: nowrap; }
   .with-reply { border-top-left-radius: 0; border-top-right-radius: 0; }
   .reply-bar {
     display: flex; align-items: center; gap: var(--space-3); margin: 0 var(--space-5); padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);

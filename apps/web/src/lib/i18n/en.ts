@@ -148,6 +148,7 @@ export const en = {
     mentionOn: 'Mention on',
     mentionOff: 'Mention off',
     mentionToggle: 'Mention the author',
+    suggestions: 'Suggestions',
     cancelReply: 'Cancel reply',
     replyDeleted: 'The message you were replying to was deleted.',
   },

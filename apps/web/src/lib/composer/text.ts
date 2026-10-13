@@ -32,3 +32,19 @@ export const outgoing = (text: string) => text.trim();
 
 /** The counter shows from this many bytes left, as Discord shows its counter near the limit. */
 export const COUNTER_FROM = 200;
+
+export type QueryKind = '@' | '#' | ':';
+
+/**
+ * The autocomplete query the caret is in, from the text before it on its line: `@` for members and roles,
+ * `#` for channels, `:` for emoji from two characters on. It must start a word.
+ */
+export function activeQuery(before: string): { kind: QueryKind; query: string; start: number } | null {
+  const m = /(^|[\s(])([@#:])([^\s@#:<>]*)$/u.exec(before);
+  if (!m) return null;
+  const kind = m[2] as QueryKind;
+  const query = m[3]!;
+  if (kind === ':' && query.length < 2) return null;
+  if (query.length > 32) return null;
+  return { kind, query, start: before.length - query.length - 1 };
+}

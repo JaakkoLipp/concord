@@ -2,14 +2,18 @@
  * The composer's editor: CodeMirror 6 holding Stoat-syntax text, with tokens drawn as atomic widgets
  * (m2a-plan.md decision 1). Loaded lazily by Composer.svelte, so CodeMirror stays out of the initial bundle.
  */
-import { Compartment, EditorState } from '@codemirror/state';
+import { Compartment, EditorState, Prec } from '@codemirror/state';
 import {
   Decoration, EditorView, MatchDecorator, ViewPlugin, WidgetType, keymap, placeholder,
   type DecorationSet, type ViewUpdate,
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, insertNewline } from '@codemirror/commands';
 import { drafts } from './drafts.ts';
-import { TOKEN, tokenAt, type TokenKind } from './text.ts';
+import { TOKEN, activeQuery, tokenAt, type QueryKind, type TokenKind } from './text.ts';
+
+/** An autocomplete query under the caret, with the range a pick replaces. */
+export interface Query { kind: QueryKind; query: string; from: number; to: number }
+export type ListKey = 'up' | 'down' | 'pick' | 'close';
 
 /** How a token looks: a pill with text, or an image for custom emoji. */
 export type TokenLook = { text: string; colour?: string | undefined; self?: boolean } | { image: string; alt: string };
@@ -24,6 +28,8 @@ export interface ComposerEditor {
   setPlaceholder(text: string): void;
   /** Put text at the caret, replacing any selection, such as an emoji from the picker. */
   insert(text: string): void;
+  /** Replace a range, such as an autocomplete query with its token, and put the caret after it. */
+  replace(from: number, to: number, text: string): void;
   focus(): void;
   /** Keeps the current draft. */
   destroy(): void;
@@ -44,6 +50,18 @@ export interface EditorOptions {
   onEscape(): boolean;
   /** Up arrow in an empty editor, to edit the last message. Returns whether it was used. */
   onArrowUp?(): boolean;
+  /** The autocomplete query under the caret, or null, after every change of text or caret. */
+  onQuery?(query: Query | null): void;
+  /** Keys for an open autocomplete list. Returns whether the list used the key. */
+  onListKey?(key: ListKey): boolean;
+}
+
+function queryAt(state: EditorState): Query | null {
+  const sel = state.selection.main;
+  if (!sel.empty) return null;
+  const line = state.doc.lineAt(sel.head);
+  const q = activeQuery(line.text.slice(0, sel.head - line.from));
+  return q ? { kind: q.kind, query: q.query, from: line.from + q.start, to: sel.head } : null;
 }
 
 class TokenWidget extends WidgetType {
@@ -138,8 +156,17 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
   };
 
   let placeholderText = opts.placeholder;
+  const list = (key: ListKey) => () => !!opts.onListKey?.(key);
   const extensions = () => [
     history(),
+    // While an autocomplete list is open it gets these keys first.
+    Prec.highest(keymap.of([
+      { key: 'ArrowUp', run: list('up') },
+      { key: 'ArrowDown', run: list('down') },
+      { key: 'Enter', run: list('pick') },
+      { key: 'Tab', run: list('pick') },
+      { key: 'Escape', run: list('close') },
+    ])),
     keymap.of([
       { key: 'Enter', run: opts.touch ? insertNewline : send },
       { key: 'Shift-Enter', run: insertNewline },
@@ -154,6 +181,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
     theme,
     EditorView.updateListener.of((u) => {
       if (u.docChanged) opts.onChange(u.state.doc.toString());
+      if (u.docChanged || u.selectionSet || u.focusChanged) opts.onQuery?.(u.view.hasFocus ? queryAt(u.state) : null);
     }),
   ];
   const fresh = (doc = '', caret = 0) => EditorState.create({ doc, selection: { anchor: Math.min(caret, doc.length) }, extensions: extensions() });
@@ -191,6 +219,10 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
     insert: (text) => {
       const r = view.state.selection.main;
       view.dispatch({ changes: { from: r.from, to: r.to, insert: text }, selection: { anchor: r.from + text.length }, scrollIntoView: true });
+      view.focus();
+    },
+    replace: (from, to, text) => {
+      view.dispatch({ changes: { from, to, insert: text }, selection: { anchor: from + text.length }, scrollIntoView: true });
       view.focus();
     },
     focus: () => view.focus(),

@@ -136,3 +136,31 @@ Headless Chromium can't test IMEs, Android keyboards or Firefox. Those checks ar
 | Console errors or failed requests | None |
 
 **Not checked**: every seeded member has `React`, because the seeded server's default role grants it. Hiding the controls without `React` follows the same permission gating as pinning, which task 3 checked.
+
+## Task 5: autocomplete, 2026-10-13
+
+**What is deployed**:
+- `@` suggests members, or recipients in DMs and groups, and roles when the user has `MentionRoles`.
+- `#` suggests channels the user can see.
+- `:` suggests emoji from two characters on: custom emoji first, then Unicode by shortcode and name.
+- Matches at the start of a name rank first, then at the start of a word, then anywhere. Eight suggestions at most.
+- While the list is open, arrows move, Enter or Tab picks, and Escape closes it until the caret leaves that word. These keys take precedence over the composer's own, such as Enter to send and Up to edit.
+- A pick replaces the typed word with a token and a space.
+- The editor keeps focus throughout, so phones keep their keyboard open.
+
+**Unit tests**: query detection. A trigger must start a word, so `email@host` and `klo 12:3` don't open the list, and `:` needs two characters.
+
+**Live check**: `node tools/live/src/autocomplete.ts`, with `dev` in #botti, `aino` in #pelit and `lauri` in #botti:
+
+| Check | Result |
+|---|---|
+| `@ai` | Aino Virtanen first, then other names containing "ai" |
+| `#yle`, Tab | `#yleinen` |
+| `:sau`, Enter | `:sauna:` |
+| Escape | The list closes |
+| Tokens in the composer | `@Aino Virtanen`, `#yleinen`, `:sauna:` as pills and an image |
+| `aino`'s sidebar after the send | "botti, unread, 1 mention", within 30 ms |
+| The sent message, as `lauri` sees it | The same three pills |
+| `@Mod` as `lauri` or `dev`, who lack `MentionRoles` | No roles offered |
+| `@Mod` as `aino`, a moderator | Moderaattori, in the role's colour |
+| Console errors or failed requests | None |
