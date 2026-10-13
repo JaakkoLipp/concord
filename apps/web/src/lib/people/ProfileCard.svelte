@@ -2,15 +2,16 @@
   /** Profile contents for the popout and the DM profile panel (client.md section 7, reference screenshots). */
   import { Avatar } from '@concord/ui';
   import { fileUrl } from '@concord/stoat';
-  import { memberKey, type Store } from '@concord/domain';
+  import { memberKey, type Session, type Store } from '@concord/domain';
+  import PersonActions from './PersonActions.svelte';
   import Markdown from '$lib/markdown/Markdown.svelte';
   import { setMarkdownContext } from '$lib/markdown/context.ts';
   import { dayLabel, ulidTime } from '$lib/markdown/time.ts';
   import { m } from '$lib/i18n/index.ts';
   import { avatarUrl, presenceOf, statusTextOf } from '$lib/view/users.ts';
 
-  interface Props { store: Store; user: string; server: string | undefined; variant: 'popout' | 'panel' }
-  let { store, user, server, variant }: Props = $props();
+  interface Props { store: Store; user: string; server: string | undefined; variant: 'popout' | 'panel'; session?: Session | undefined; inDm?: boolean }
+  let { store, user, server, variant, session, inDm = false }: Props = $props();
   setMarkdownContext(() => ({ store, server }));
 
   const u = $derived(store.users.get(user));
@@ -28,6 +29,7 @@
 
 <div class="card {variant}">
   <div class="banner" style:background-image={banner ? `url(${banner})` : undefined}></div>
+  {#if session}<div class="actions"><PersonActions {session} {user} {inDm} /></div>{/if}
   <div class="avatar-wrap">
     <span class="avatar-ring"><Avatar src={avatarUrl(u ?? { id: user }, member?.avatar)} size={variant === 'popout' ? 80 : 80} {presence} presenceLabel={m.presence[presence]} /></span>
   </div>
@@ -74,6 +76,7 @@
   .banner { height: 7.5rem; background: var(--surface-5) center / cover no-repeat; }
   .panel .banner { height: 7.5rem; }
   .avatar-wrap { position: absolute; top: 4.75rem; left: var(--space-5); }
+  .actions { position: absolute; top: calc(7.5rem + var(--space-3)); right: var(--space-4); z-index: 1; }
   .avatar-ring { display: inline-block; padding: 6px; border-radius: 50%; background: var(--surface-1); }
   .panel .avatar-ring { background: var(--surface-2); }
   .details { padding: 3.25rem var(--space-5) var(--space-5); display: grid; gap: var(--space-4); }

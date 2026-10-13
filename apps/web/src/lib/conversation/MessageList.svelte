@@ -15,6 +15,7 @@
   import { reactionKey } from '$lib/emoji/data.ts';
   import { picker } from '$lib/emoji/picker.svelte.ts';
   import { tick, untrack } from 'svelte';
+  import { SvelteSet } from 'svelte/reactivity';
   import ArrowDown from '@lucide/svelte/icons/arrow-down';
   import { setMarkdownContext } from '$lib/markdown/context.ts';
   import { dayLabel, sameDay, ulidTime } from '$lib/markdown/time.ts';
@@ -100,7 +101,11 @@
     });
   });
 
-  interface Row { key: string; message: Message; pending?: PendingMessage; continuation: boolean; day: Date | null; unread: boolean }
+  /** A run of consecutive messages from blocked users, collapsed until shown (m2b-plan.md decision 5). */
+  interface BlockedRun { first: string; count: number }
+  interface Row { key: string; message: Message; pending?: PendingMessage; continuation: boolean; day: Date | null; unread: boolean; blocked?: BlockedRun }
+  const shownBlocked = new SvelteSet<string>();
+  const isBlocked = (msg: Message) => !msg.system && store.users.get(msg.author)?.relationship === 'Blocked';
   const rows = $derived.by(() => {
     const out: Row[] = [];
     let prev: Message | undefined;
@@ -119,6 +124,14 @@
       const key = p ? p.key : msg.nonce && store.ownNonces.has(msg.nonce) ? msg.nonce : msg.id;
       out.push({ key, message: msg, ...(p ? { pending: p } : {}), continuation, day, unread });
       prev = msg;
+    }
+    // Group blocked authors' messages into runs, which share one object so the first row can count it.
+    let run: BlockedRun | null = null;
+    for (const row of out) {
+      if (!isBlocked(row.message)) { run = null; continue; }
+      if (!run || row.day || row.unread) run = { first: row.message.id, count: 0 };
+      run.count++;
+      row.blocked = run;
     }
     return out;
   });
@@ -275,9 +288,19 @@
       {#if row.unread}
         <div class="divider new" role="separator"><span>{m.conversation.newMessages}</span></div>
       {/if}
-      <MessageItem message={row.message} pending={row.pending} {store} {server} continuation={row.continuation} highlighted={highlighted === row.message.id} {onjump}
-        onretry={(key) => void session.retry(key)} ondiscard={(key) => session.discard(key)}
-        actions={row.pending || row.message.system ? undefined : actions} editing={compose.editing === row.message.id} selected={selected === row.message.id} />
+      {#if row.blocked?.first === row.message.id}
+        {@const open = shownBlocked.has(row.blocked.first)}
+        {@const first = row.blocked.first}
+        <div class="blocked-run" data-id={first}>
+          <span>{m.conversation.blockedRun(row.blocked.count)}</span>
+          <button onclick={() => (open ? shownBlocked.delete(first) : shownBlocked.add(first))} aria-expanded={open}>{open ? m.conversation.hideBlocked : m.conversation.showBlocked}</button>
+        </div>
+      {/if}
+      {#if !row.blocked || shownBlocked.has(row.blocked.first)}
+        <MessageItem message={row.message} pending={row.pending} {store} {server} continuation={row.continuation && row.blocked?.first !== row.message.id} highlighted={highlighted === row.message.id} {onjump}
+          onretry={(key) => void session.retry(key)} ondiscard={(key) => session.discard(key)}
+          actions={row.pending || row.message.system ? undefined : actions} editing={compose.editing === row.message.id} selected={selected === row.message.id} />
+      {/if}
     {/each}
     <div class="end"></div>
   </div>
@@ -300,6 +323,12 @@
   .divider.new { border-color: var(--danger); }
   .divider.new span { margin: 0 0 0 auto; color: var(--danger); background: var(--surface-0); font-weight: 700; }
   .end { height: 1px; }
+  .blocked-run {
+    display: flex; align-items: center; gap: var(--space-3); margin: var(--space-4) var(--space-5) 0; padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md); background: var(--surface-2); color: var(--text-secondary); font: var(--text-sm) var(--font-sans);
+  }
+  .blocked-run button { padding: 0; border: 0; background: none; color: var(--link); font: 500 var(--text-sm) var(--font-sans); }
+  .blocked-run button:hover { text-decoration: underline; }
   .present {
     position: absolute; left: 50%; bottom: calc(var(--composer-h) + var(--space-8)); translate: -50% 0; z-index: 5;
     display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-5);

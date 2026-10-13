@@ -437,6 +437,11 @@ export class Session {
     return user;
   }
 
+  /** Send a friend request to someone already known by ID, such as from their profile. */
+  requestFriend(user: Id): Promise<void> {
+    return this.relate(user, 'Outgoing', () => this.backend.acceptFriend(user));
+  }
+
   acceptFriend(user: Id): Promise<void> {
     return this.relate(user, 'Friend', () => this.backend.acceptFriend(user));
   }

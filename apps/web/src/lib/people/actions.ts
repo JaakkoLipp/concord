@@ -40,6 +40,10 @@ export async function message(session: Session, user: Id): Promise<void> {
   }
 }
 
+export function request(session: Session, user: Id): void {
+  session.requestFriend(user).catch((e: unknown) => toasts.show(friendError(session, e)));
+}
+
 export function accept(session: Session, user: Id): void {
   session.acceptFriend(user).catch(failed);
 }
@@ -63,6 +67,49 @@ export async function block(session: Session, user: Id): Promise<void> {
 
 export function unblock(session: Session, user: Id): void {
   session.unblock(user).catch(failed);
+}
+
+async function copy(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    toasts.show(m.actions.copied, 'info');
+  } catch {
+    // Clipboard blocked: nothing to do.
+  }
+}
+
+/**
+ * Everything you can do about a person, for context menus. With `primary: false`, the actions a profile
+ * card already shows as buttons are left out.
+ */
+export function personMenu(session: Session, user: Id, opts: { profile?: () => void; primary?: boolean; inDm?: boolean } = {}): MenuItem[] {
+  const u = session.store.users.get(user);
+  const primary = opts.primary ?? true;
+  const items: MenuItem[] = [];
+  if (opts.profile) items.push({ label: m.people.viewProfile, onselect: opts.profile });
+  if (u && user !== session.store.selfId && !u.bot) {
+    const rel = u.relationship;
+    if (primary) {
+      if (rel === 'Friend' && !opts.inDm) items.push({ label: m.friends.actions.message, onselect: () => void message(session, user) });
+      if (rel === 'None') items.push({ label: m.people.addFriend, onselect: () => request(session, user) });
+      if (rel === 'Incoming') {
+        items.push({ label: m.friends.actions.accept, onselect: () => accept(session, user) });
+        items.push({ label: m.friends.actions.ignore, onselect: () => dropRequest(session, user) });
+      }
+      if (rel === 'Outgoing') items.push({ label: m.friends.actions.cancel, onselect: () => dropRequest(session, user) });
+    }
+    if (items.length) items.push('separator');
+    if (rel === 'Friend') items.push({ label: m.friends.actions.remove, danger: true, onselect: () => void removeFriend(session, user) });
+    if (rel === 'Blocked') {
+      if (primary) items.push({ label: m.friends.actions.unblock, onselect: () => unblock(session, user) });
+    } else {
+      items.push({ label: m.friends.actions.block, danger: true, onselect: () => void block(session, user) });
+    }
+  }
+  if (items.length && items.at(-1) !== 'separator') items.push('separator');
+  if (u) items.push({ label: m.people.copyUsername, onselect: () => void copy(`${u.username}#${u.discriminator}`) });
+  items.push({ label: m.people.copyId, onselect: () => void copy(user) });
+  return items;
 }
 
 /** The overflow menu for a friend in the friends list. */

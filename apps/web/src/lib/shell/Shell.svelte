@@ -15,6 +15,7 @@
   import ImageViewer from '$lib/conversation/ImageViewer.svelte';
   import Toaster from './Toaster.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
+  import ContextMenuHost from './ContextMenuHost.svelte';
   import EmojiPicker from '$lib/emoji/EmojiPicker.svelte';
 
   interface Props { store: Store; server: string | null; channel: string | null; children: Snippet; panel?: Snippet | undefined; panelWidth?: 'members' | 'profile' | 'find' }
@@ -39,6 +40,7 @@
   <Toaster />
   <EmojiPicker />
   <ConfirmDialog />
+  <ContextMenuHost />
   {#if shell.sidebarOpen}
     <button class="scrim" aria-label={m.shell.closeSidebar} onclick={() => (shell.sidebarOpen = false)}></button>
   {/if}

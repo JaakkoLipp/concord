@@ -7,6 +7,9 @@
   import { m } from '$lib/i18n/index.ts';
   import { channelName, dmPartner } from '$lib/view/channels.ts';
   import { avatarUrl, presenceOf, statusTextOf } from '$lib/view/users.ts';
+  import { menuOn } from '$lib/view/contextmenu.svelte.ts';
+  import { app } from '$lib/session/app.svelte.ts';
+  import { personMenu } from '$lib/people/actions.ts';
 
   interface Props { store: Store; active: string | null }
   let { store, active }: Props = $props();
@@ -33,6 +36,7 @@
       class="row" class:active={channel.id === active} class:unread
       href={resolve('/(app)/app/channels/@me/[channel]/[[message]]', { channel: channel.id })}
       aria-current={channel.id === active ? 'page' : undefined}
+      use:menuOn={() => (app.session && partner ? personMenu(app.session, partner, { inDm: true }) : [])}
     >
       {#if channel.kind === 'group'}
         {#if channel.icon}

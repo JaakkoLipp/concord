@@ -17,6 +17,6 @@
 
 <Popover anchor={popout.anchor} open={!!popout.user} onclose={() => popout.close()} side={popout.side} label={m.people.profile}>
   {#if popout.user}
-    <ProfileCard store={session.store} user={popout.user} server={popout.server} variant="popout" />
+    <ProfileCard store={session.store} {session} user={popout.user} server={popout.server} variant="popout" />
   {/if}
 </Popover>

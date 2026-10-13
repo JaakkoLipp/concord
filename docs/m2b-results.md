@@ -86,3 +86,30 @@ Everything the check changes is put back. The relationships it makes with `tuuli
 | Console errors or failed requests | Only the expected 400 from that refused sixth request |
 
 The check removes every relationship it made.
+
+## Task 3: people actions everywhere, 2026-10-13
+
+**What is deployed**:
+- **Profile cards**: the popout and the DM profile panel show the main action as a button:
+  - Message for a friend, not shown in the DM's own panel,
+  - Add friend,
+  - Accept and Ignore,
+  - a disabled "Friend request sent",
+  - Unblock.
+
+  A menu holds the rest: remove friend, block, copy username and copy user ID.
+- **One context menu** opens on right-click, or a long press on touch screens, on a member, a message author's avatar or name, a DM row and a friends row. It offers Profile, the friend actions, Block or Unblock, and the copy items. iOS sends no `contextmenu` event, so a 500 ms long press opens it there. On Android, where both fire, the menu opens once.
+- **Blocked users' messages** collapse into one line per run, "2 blocked messages — Show", in channels, DMs and groups. Show and Hide toggle each run.
+- **Adding a friend** from a profile uses Stoat's request by ID, optimistically, so the card switches to "Friend request sent" at once.
+
+**Live check**: `node tools/live/src/people-actions.ts`, with `tuuli` in `#botti` and `onni` on the Friends screen:
+
+| Check | Result |
+|---|---|
+| `tuuli` clicks Add friend in `onni`'s popout, until `onni`'s Pending tab lists it | 277 ms. The popout says "Friend request sent". |
+| `onni` accepts, until the popout's button turns into Message | 64 ms |
+| Message | Opens the DM |
+| Right-click on `onni` in the member list | Profile, Message, Remove friend, Block, Copy username, Copy user ID |
+| Block from `onni`'s message author menu, through the dialog | `#botti` shows "2 blocked messages — Show" and hides them. Show brings them back. |
+| A group the two share | "1 blocked message — Show" |
+| Console errors or failed requests | One 404, when the cleanup left the group while `tuuli`'s page still showed it. That case belongs to task 4, which fixes it. |

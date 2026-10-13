@@ -140,7 +140,7 @@ export interface Backend {
 
   /** Send a friend request by `name#1234`. Returns the user, as this account now sees them. */
   addFriend(tag: string): Promise<User>;
-  /** Accept someone's friend request. */
+  /** Accept someone's friend request, or send them one if there is none. */
   acceptFriend(user: Id): Promise<User>;
   /** Deny or cancel a friend request, or remove a friend. */
   removeFriend(user: Id): Promise<User>;

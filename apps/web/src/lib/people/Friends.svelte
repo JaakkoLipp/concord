@@ -16,6 +16,7 @@
   import { shell } from '$lib/view/shell.svelte.ts';
   import { avatarUrl, presenceOf, statusTextOf } from '$lib/view/users.ts';
   import * as act from './actions.ts';
+  import { menuOn } from '$lib/view/contextmenu.svelte.ts';
 
   type TabId = 'online' | 'all' | 'pending' | 'blocked' | 'add';
   let { session }: { session: Session } = $props();
@@ -139,7 +140,7 @@
             <ul>
               {#each section.users as u (u.id)}
                 {@const presence = presenceOf(u)}
-                <li class="row" data-user={u.id}>
+                <li class="row" data-user={u.id} use:menuOn={() => act.personMenu(session, u.id)}>
                   <svelte:element this={u.relationship === 'Friend' ? 'button' : 'div'} class="who" role={u.relationship === 'Friend' ? undefined : 'presentation'}
                     onclick={u.relationship === 'Friend' ? () => void act.message(session, u.id) : undefined}>
                     <Avatar src={avatarUrl(u)} size={32} presence={u.relationship === 'Friend' ? presence : undefined} presenceLabel={m.presence[presence]} />

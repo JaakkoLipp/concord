@@ -14,7 +14,7 @@
 
 {#if partner}
   <aside class="panel" aria-label={m.people.profile}>
-    <ProfileCard store={session.store} user={partner} server={undefined} variant="panel" />
+    <ProfileCard store={session.store} {session} user={partner} server={undefined} variant="panel" inDm />
   </aside>
 {/if}
 

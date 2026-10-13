@@ -7,6 +7,9 @@
   import { avatarUrl } from '$lib/view/users.ts';
   import { proxied } from '$lib/view/media.ts';
   import { popout } from '$lib/view/popout.svelte.ts';
+  import { menuOn } from '$lib/view/contextmenu.svelte.ts';
+  import { app } from '$lib/session/app.svelte.ts';
+  import { personMenu } from '$lib/people/actions.ts';
   import Attachment from './Attachment.svelte';
   import Embed from './Embed.svelte';
   import Reactions from './Reactions.svelte';
@@ -25,6 +28,9 @@
   }
   let { message, store, server, continuation, highlighted, onjump, pending, onretry, ondiscard, actions, editing = false, selected = false }: Props = $props();
   const own = $derived(message.author === store.selfId);
+  /** The author's context menu. Webhook messages have no user behind them. */
+  const authorMenu = (node: HTMLElement) =>
+    app.session && !message.webhook ? personMenu(app.session, message.author, { profile: () => popout.open(message.author, server, node) }) : [];
   let menuOpen = $state(false);
   const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   /** On touch screens there is no hover: a tap on the message shows its actions. */
@@ -59,13 +65,13 @@
         {#if continuation}
           <time class="hover-time" datetime={sent.toISOString()} title={fullDate(sent)}>{timeOfDay(sent)}</time>
         {:else}
-          <button class="avatar-button" tabindex="-1" aria-hidden="true" onclick={(e) => popout.open(message.author, server, e.currentTarget)}><Avatar src={avatar} size={40} /></button>
+          <button class="avatar-button" tabindex="-1" aria-hidden="true" onclick={(e) => popout.open(message.author, server, e.currentTarget)} use:menuOn={authorMenu}><Avatar src={avatar} size={40} /></button>
         {/if}
       </div>
       <div class="body">
         {#if !continuation}
           <header class="head">
-            <button class="name" id="author-{message.id}" style:--role={colour} onclick={(e) => popout.open(message.author, server, e.currentTarget)}>{name}</button>
+            <button class="name" id="author-{message.id}" style:--role={colour} onclick={(e) => popout.open(message.author, server, e.currentTarget)} use:menuOn={authorMenu}>{name}</button>
             {#if user?.bot || message.webhook}<span class="tag">{message.webhook ? m.conversation.webhook : m.conversation.bot}</span>{/if}
             <time class="time" datetime={sent.toISOString()} title={fullDate(sent)}>{timeOfDay(sent)}</time>
           </header>
