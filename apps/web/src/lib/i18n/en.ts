@@ -175,6 +175,12 @@ export const en = {
     pinFailed: "Couldn't change the pin.",
   },
   toast: { dismiss: 'Dismiss' },
+  typing: {
+    one: (a: string) => `${a} is typing…`,
+    two: (a: string, b: string) => `${a} and ${b} are typing…`,
+    three: (a: string, b: string, c: string) => `${a}, ${b} and ${c} are typing…`,
+    several: 'Several people are typing…',
+  },
   files: {
     size: (bytes: number) => bytes >= 1_000_000
       ? new Intl.NumberFormat('en', { style: 'unit', unit: 'megabyte', maximumFractionDigits: 1 }).format(bytes / 1_000_000)

@@ -47,6 +47,8 @@ export type ConnectionState = 'connecting' | 'ready' | 'reconnecting' | 'offline
 export interface Gateway {
   /** Ask for live member updates for a server, where the backend supports it. */
   subscribe(server: Id): void;
+  /** Tell others in a channel that this account started or stopped typing. */
+  typing(channel: Id, typing: boolean): void;
   close(): void;
 }
 

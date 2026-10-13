@@ -10,6 +10,7 @@
   import FileText from '@lucide/svelte/icons/file-text';
   import Trash from '@lucide/svelte/icons/trash-2';
   import { attachFiles } from '$lib/composer/files.ts';
+  import TypingIndicator from './TypingIndicator.svelte';
   import SendHorizontal from '@lucide/svelte/icons/send-horizontal';
   import Smile from '@lucide/svelte/icons/smile';
   import { IconButton } from '@concord/ui';
@@ -61,6 +62,7 @@
     const out = outgoing(editor.text());
     if ((!out && !chosen.length) || byteLength(out) > limit) return;
     const files = compose.takeFiles(channel.id).map((c) => ({ file: c.file, name: c.file.name, preview: c.preview }));
+    session.stopTyping(channel.id);
     void session.send(channel.id, out, reply ? [reply] : [], files);
     compose.clearReply(channel.id);
     editor.clear();
@@ -161,7 +163,8 @@
     void import('$lib/composer/editor.ts').then(({ createEditor }) => {
       if (cancelled) return;
       untrack(() => {
-        ed = createEditor(el, { draft: channel?.id ?? '', placeholder, touch, label, onChange: (t) => (text = t), onSend: send, onEscape: escape, onArrowUp: editLast, onQuery, onListKey: listKey, onPasteFiles: addFiles });
+        ed = createEditor(el, { draft: channel?.id ?? '', placeholder, touch, label, onChange: (t) => (text = t), onSend: send, onEscape: escape, onArrowUp: editLast, onQuery, onListKey: listKey, onPasteFiles: addFiles,
+          onEdit: (t) => { if (!channel) return; if (outgoing(t)) session.typing(channel.id); else session.stopTyping(channel.id); } });
         text = ed.text();
         editor = ed;
       });
@@ -246,6 +249,7 @@
       </span>
     {/if}
   </div>
+  {#if channel}<TypingIndicator {store} channel={channel.id} {server} />{/if}
   </div>
 {/if}
 
@@ -257,7 +261,7 @@
     padding: 0 var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-2);
   }
   .blocked { align-items: center; cursor: not-allowed; }
-  .wrap { position: relative; }
+  .wrap { position: relative; display: flow-root; }
   .file-input { display: none; }
   .tiles {
     display: flex; gap: var(--space-4); overflow-x: auto; margin: 0 var(--space-5); padding: var(--space-4); list-style: none;

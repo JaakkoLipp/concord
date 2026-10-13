@@ -236,3 +236,26 @@ describe('attachments', () => {
     expect(store.pending.size).toBe(0);
   });
 });
+
+describe('typing', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("follows Stoat's timing: start at most every 2.5 s, stop after 1 s of quiet or on send", async () => {
+    const { session } = setup(async () => message(OLD));
+    const frames: string[] = [];
+    (session as unknown as { gateway: unknown }).gateway = { typing: (_c: string, on: boolean) => frames.push(on ? 'begin' : 'end') };
+    for (let i = 0; i < 10; i++) {
+      session.typing(CH);
+      await vi.advanceTimersByTimeAsync(300);
+    }
+    expect(frames).toEqual(['begin', 'begin']);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(frames).toEqual(['begin', 'begin', 'end']);
+    session.typing(CH);
+    session.stopTyping(CH);
+    expect(frames).toEqual(['begin', 'begin', 'end', 'begin', 'end']);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(frames).toHaveLength(5);
+  });
+});

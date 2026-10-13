@@ -54,6 +54,8 @@ export interface EditorOptions {
   onQuery?(query: Query | null): void;
   /** Keys for an open autocomplete list. Returns whether the list used the key. */
   onListKey?(key: ListKey): boolean;
+  /** An edit by the user or a pick, but not a draft switch or a clear. For the typing indicator. */
+  onEdit?(text: string): void;
   /** Files pasted into the editor, such as a screenshot. */
   onPasteFiles?(files: File[]): void;
 }
@@ -191,7 +193,10 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
     tokens(opts.label),
     theme,
     EditorView.updateListener.of((u) => {
-      if (u.docChanged) opts.onChange(u.state.doc.toString());
+      if (u.docChanged) {
+        opts.onChange(u.state.doc.toString());
+        opts.onEdit?.(u.state.doc.toString());
+      }
       if (u.docChanged || u.selectionSet || u.focusChanged) opts.onQuery?.(u.view.hasFocus ? queryAt(u.state) : null);
     }),
   ];

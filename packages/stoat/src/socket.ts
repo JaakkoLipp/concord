@@ -44,6 +44,10 @@ export class StoatGateway implements Gateway {
     if (Date.now() - last > 60_000) this.send({ type: 'Subscribe', server_id: server });
   }
 
+  typing(channel: string, typing: boolean): void {
+    this.send({ type: typing ? 'BeginTyping' : 'EndTyping', channel });
+  }
+
   close(): void {
     this.closed = true;
     globalThis.removeEventListener?.('online', this.onOnline);

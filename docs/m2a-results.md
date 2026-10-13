@@ -192,3 +192,24 @@ Headless Chromium can't test IMEs, Android keyboards or Firefox. Those checks ar
 | Console errors or failed requests | None |
 
 **Not checked by script**: sending from a phone, which is in Jaakko's device check.
+
+## Task 7: typing indicator, 2026-10-13
+
+**What is deployed**:
+- Stoat's own client's timing: `BeginTyping` at most every 2.5 s while the draft has text, and `EndTyping` 1 s after the last edit. `EndTyping` is also sent on send and when the draft is emptied.
+- Switching drafts or clearing after a send doesn't count as typing.
+- The line under the composer reads "Aino is typing…", "Aino and Ville are typing…", "Aino, Ville and Eetu are typing…", or "Several people are typing…", with animated dots that respect reduced motion.
+- Entries expire after 10 seconds, re-checked every second, so a lost stop event can't leave the line stuck.
+
+**Unit test**: the start throttle, the stop after a pause, and the stop on send, with fake timers.
+
+**Live check**: `node tools/live/src/typing.ts`. This is also the first check of the frame shapes against Stoat, which the fixtures only had from recorder code. They work:
+
+| Check | Result |
+|---|---|
+| `dev` types, until `aino` sees "Dev is typing…" | 30 ms |
+| `dev` pauses, until the line clears | 1042 ms, the 1 s stop delay plus delivery |
+| `dev` sends, until the line clears | 2 ms |
+| `aino` and `lauri` type at once, as `dev` sees it | "Aino Virtanen and Lauri Nieminen are typing…" |
+| Both clear their drafts, until the line clears | 29 ms |
+| Console errors or failed requests | None |

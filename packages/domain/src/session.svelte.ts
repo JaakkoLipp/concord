@@ -10,6 +10,9 @@ import { ulid } from './ulid.ts';
 
 const PAGE = 100;
 const FOCUS_REFETCH_MS = 60_000;
+/** Typing timing from Stoat's own client: start at most this often, and stop after this long without input. */
+export const TYPING_EVERY_MS = 2_500;
+export const TYPING_STOP_MS = 1_000;
 /** At most one ack per channel in this time (m2a-plan.md decision 5). */
 export const ACK_EVERY_MS = 2_000;
 const POLL_MS = 2 * 60_000;
@@ -65,6 +68,8 @@ export class Session {
     void this.refreshEmojiPrefs();
   };
   private emojiSave: ReturnType<typeof setTimeout> | null = null;
+  /** Per channel: when BeginTyping was last sent, and the timer that sends EndTyping. */
+  private readonly typingState = new Map<Id, { began: number; stop: ReturnType<typeof setTimeout> | null }>();
   private emojiFetchedAt = 0;
   private onSignedOut: () => void = () => {};
   /** Per channel: when the last ack was sent, what it was for, and a trailing ack waiting to go. */
@@ -100,6 +105,8 @@ export class Session {
     for (const a of this.acks.values()) clearTimeout(a.timer);
     if (this.emojiSave) clearTimeout(this.emojiSave);
     this.emojiSave = null;
+    for (const t of this.typingState.values()) if (t.stop) clearTimeout(t.stop);
+    this.typingState.clear();
     this.acks.clear();
     this.gateway?.close();
     this.gateway = null;
@@ -365,6 +372,29 @@ export class Session {
     this.emojiFetchedAt = Date.now();
     const s = await this.backend.settings([EMOJI_KEY]).catch(() => null);
     if (s && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(s[EMOJI_KEY]?.value);
+  }
+
+  // ---------- typing (m2a-plan.md task 7) ----------
+
+  /** Called on each edit of a non-empty draft. Sends BeginTyping at most every 2.5 s, and EndTyping after 1 s of quiet. */
+  typing(channel: Id): void {
+    const t = this.typingState.get(channel) ?? { began: 0, stop: null };
+    this.typingState.set(channel, t);
+    if (Date.now() - t.began >= TYPING_EVERY_MS) {
+      t.began = Date.now();
+      this.gateway?.typing(channel, true);
+    }
+    if (t.stop) clearTimeout(t.stop);
+    t.stop = setTimeout(() => this.stopTyping(channel), TYPING_STOP_MS);
+  }
+
+  /** On send, on clearing the draft, and after a pause. */
+  stopTyping(channel: Id): void {
+    const t = this.typingState.get(channel);
+    if (!t) return;
+    if (t.stop) clearTimeout(t.stop);
+    this.typingState.delete(channel);
+    this.gateway?.typing(channel, false);
   }
 
   // ---------- acks ----------
