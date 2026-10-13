@@ -16,11 +16,11 @@
   import Toaster from './Toaster.svelte';
   import EmojiPicker from '$lib/emoji/EmojiPicker.svelte';
 
-  interface Props { store: Store; server: string | null; channel: string | null; children: Snippet; panel?: Snippet | undefined; panelWidth?: 'members' | 'profile' }
+  interface Props { store: Store; server: string | null; channel: string | null; children: Snippet; panel?: Snippet | undefined; panelWidth?: 'members' | 'profile' | 'find' }
   let { store, server, channel, children, panel, panelWidth = 'members' }: Props = $props();
 </script>
 
-<div class="shell" class:panel={!!panel && shell.panelOpen} class:sidebar-open={shell.sidebarOpen} style:--panel-w={panelWidth === 'profile' ? 'var(--dm-panel-w)' : 'var(--members-w)'}>
+<div class="shell" class:panel={!!panel && shell.panelOpen} class:sidebar-open={shell.sidebarOpen} style:--panel-w={panelWidth === 'profile' ? 'var(--dm-panel-w)' : panelWidth === 'find' ? 'var(--popout-w)' : 'var(--members-w)'}>
   <div class="rail"><ServerRail {store} active={server} /></div>
   <div class="sidebar">
     {#if server}

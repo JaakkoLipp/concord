@@ -213,3 +213,25 @@ Headless Chromium can't test IMEs, Android keyboards or Firefox. Those checks ar
 | `aino` and `lauri` type at once, as `dev` sees it | "Aino Virtanen and Lauri Nieminen are typing…" |
 | Both clear their drafts, until the line clears | 29 ms |
 | Console errors or failed requests | None |
+
+## Task 8: pins and search, 2026-10-13
+
+**What is deployed**:
+- The header's pin button opens "Pinned messages" in the side column. Enter in the search box opens the channel's results there instead, newest first, 50 at a time with "Load more".
+- Results show the author, a short date and the message. Jump goes to the message through the URL, centred and highlighted.
+- Results read newer copies from the store, so edits show. Unpinned or deleted messages drop out while the panel is open.
+- Closing the panel brings back the member list or the DM profile.
+- DMs and groups gained the optional message parameter in their route, `/app/channels/@me/<channel>/<message>`, as server channels have. Jumping and "Copy message link" now work the same everywhere.
+
+**Fixed on the way**: the header's search box was cleared whenever the channel object changed, such as on every new message, not only on switching channels.
+
+**Live check**: `node tools/live/src/find.ts`, as `dev`:
+
+| Check | Result |
+|---|---|
+| Search "sauna" in #yleinen | "8 results" in 53 ms, matching Stoat's own count |
+| Jump on the fifth result | The URL gains the message ID, and the message is visible and highlighted |
+| The pins panel in #yleinen | The 3 seeded pins |
+| Close | The member list returns |
+| Search in the group DM for "oikeesti", a word from its history | 3 results, as Stoat's API returns. Jump lands on the message through the new DM route |
+| Console errors or failed requests | None |

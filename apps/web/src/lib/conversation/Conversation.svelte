@@ -25,14 +25,11 @@
     if (info) rememberChannel(info.kind === 'text' ? info.server : '@me', channel);
   });
 
-  /** Jump to a message in this channel: through the URL for server channels, in place for DMs. */
+  /** Jump to a message in this channel, through the URL. */
   function jump(id: string) {
-    if (info?.kind === 'text') {
-      void goto(resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server: info.server, channel, message: id }));
-    } else {
-      target = id;
-      if (!store.messages.has(id) || !store.windows.get(channel)?.ids.includes(id)) void session.jumpTo(channel, id);
-    }
+    void goto(info?.kind === 'text'
+      ? resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server: info.server, channel, message: id })
+      : resolve('/(app)/app/channels/@me/[channel]/[[message]]', { channel, message: id }));
   }
 
   let dragDepth = $state(0);

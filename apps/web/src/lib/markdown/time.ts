@@ -34,5 +34,6 @@ export function relative(date: Date, now = new Date()): string {
 
 export const timeOfDay = (d: Date) => d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 export const fullDate = (d: Date) => d.toLocaleString(locale(), { dateStyle: 'full', timeStyle: 'short' });
+export const shortDate = (d: Date) => d.toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' });
 export const dayLabel = (d: Date) => d.toLocaleDateString(locale(), { dateStyle: 'long' });
 export const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();

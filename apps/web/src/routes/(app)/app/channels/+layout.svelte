@@ -5,6 +5,7 @@
   import Shell from '$lib/shell/Shell.svelte';
   import MemberList from '$lib/shell/MemberList.svelte';
   import DmProfilePanel from '$lib/people/DmProfilePanel.svelte';
+  import FindPanel from '$lib/conversation/FindPanel.svelte';
   import UserPopout from '$lib/people/UserPopout.svelte';
   import { shell } from '$lib/view/shell.svelte.ts';
 
@@ -25,7 +26,9 @@
 
 {#if session}
   {@const info = channel ? session.store.channels.get(channel) : undefined}
-  <Shell store={session.store} {server} {channel} panel={server ? members : info?.kind === 'dm' ? profile : undefined} panelWidth={server ? 'members' : 'profile'}>
+  {@const finding = !!shell.find && shell.find.channel === channel}
+  <Shell store={session.store} {server} {channel} panel={finding ? find : server ? members : info?.kind === 'dm' ? profile : undefined}
+    panelWidth={finding ? 'find' : server ? 'members' : 'profile'}>
     {@render children()}
   </Shell>
   <UserPopout {session} />
@@ -33,6 +36,10 @@
 
 {#snippet profile()}
   {#if session && channel}<DmProfilePanel {session} {channel} />{/if}
+{/snippet}
+
+{#snippet find()}
+  {#if session && shell.find}<FindPanel {session} channel={shell.find.channel} mode={shell.find.mode} query={shell.find.query} />{/if}
 {/snippet}
 
 {#snippet members()}

@@ -45,7 +45,7 @@
   }
   const linkTo = (msg: Message) => location.origin + (info?.kind === 'text'
     ? resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server: info.server, channel, message: msg.id })
-    : resolve('/(app)/app/channels/@me/[channel]', { channel }));
+    : resolve('/(app)/app/channels/@me/[channel]/[[message]]', { channel, message: msg.id }));
   const remove = (msg: Message) => void session.deleteMessage(channel, msg.id).catch(() => toasts.show(m.actions.deleteFailed));
   const actions: MessageActions = $derived({
     send: has(perms, Permission.SendMessage),

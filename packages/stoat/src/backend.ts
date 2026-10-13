@@ -1,5 +1,5 @@
 /** The Stoat implementation of the domain's Backend interface. */
-import type { Backend, Capabilities, Gateway, GatewayHandlers, LoginResult, Message, MessagePage, MessageQuery, NodeInfo, OutgoingMessage, User } from '@concord/domain';
+import type { Backend, Capabilities, Gateway, GatewayHandlers, LoginResult, Message, MessagePage, MessageQuery, NodeInfo, OutgoingMessage, SearchQuery, User } from '@concord/domain';
 import type { components } from './api/types.ts';
 import { capabilitiesFor } from './capabilities.ts';
 import { mapChannel } from './map/channel.ts';
@@ -175,6 +175,13 @@ export class StoatBackend implements Backend {
   async setSettings(values: Record<string, string>): Promise<void> {
     // The timestamp lets other clients order writes; the last write wins.
     await this.rest.request('POST', `/sync/settings/set?timestamp=${Date.now()}`, values);
+  }
+
+  async search(channel: string, q: SearchQuery): Promise<MessagePage> {
+    // Stoat refuses `pinned` together with `query`, so a pins search sends only `pinned`.
+    const body = { ...(q.pinned ? { pinned: true } : { query: q.query }), limit: q.limit, sort: q.sort, include_users: true, ...(q.before ? { before: q.before } : {}) };
+    const r = await this.rest.request<{ messages: WMessage[]; users: WUser[]; members?: WMember[] }>('POST', `/channels/${channel}/search`, body);
+    return { messages: r.messages.map(mapMessage), users: r.users.map(mapUser), members: (r.members ?? []).map(mapMember) };
   }
 
   async upload(file: Blob, name: string, onProgress?: (fraction: number) => void): Promise<string> {

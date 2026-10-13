@@ -13,6 +13,13 @@
   import { shell } from '$lib/view/shell.svelte.ts';
 
   let { store, channel }: { store: Store; channel: Channel | undefined } = $props();
+  let searchText = $state('');
+  // Each channel starts with an empty search box. Keyed on the ID, so updates to the channel don't clear it.
+  const channelId = $derived(channel?.id);
+  $effect(() => {
+    void channelId;
+    searchText = '';
+  });
   const panelLabel = $derived(channel?.kind === 'dm' ? (shell.panelOpen ? m.shell.hideProfile : m.shell.showProfile) : (shell.panelOpen ? m.shell.hideMembers : m.shell.showMembers));
 </script>
 
@@ -28,11 +35,17 @@
       <p class="topic">{channel.description}</p>
     {/if}
     <span class="spacer"></span>
-    <IconButton label={m.shell.pinsLater} disabled><Pin /></IconButton>
+    {@const pinsOpen = shell.find?.channel === channel.id && shell.find.mode === 'pins'}
+    <IconButton label={m.find.pins} active={pinsOpen} aria-pressed={pinsOpen} onclick={() => (pinsOpen ? (shell.find = null) : shell.openFind(channel.id, 'pins'))}><Pin /></IconButton>
     <IconButton label={panelLabel} active={shell.panelOpen} aria-pressed={shell.panelOpen} onclick={() => (shell.panelOpen = !shell.panelOpen)}>
       {#if channel.kind === 'dm'}<UserRound />{:else}<Users />{/if}
     </IconButton>
-    <input class="search" type="search" placeholder={m.shell.search} aria-label={m.shell.search} disabled />
+    <input class="search" type="search" placeholder={m.shell.search} aria-label={m.shell.search} bind:value={searchText}
+      onkeydown={(e) => {
+        const q = searchText.trim();
+        if (e.key === 'Enter' && q) shell.openFind(channel.id, 'search', q.slice(0, 64));
+        if (e.key === 'Escape') { searchText = ''; if (shell.find?.mode === 'search') shell.find = null; }
+      }} />
   {/if}
 </header>
 

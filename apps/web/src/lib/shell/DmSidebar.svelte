@@ -29,7 +29,7 @@
     {@const mentions = store.mentionCount(channel.id)}
     <a
       class="row" class:active={channel.id === active} class:unread
-      href={resolve('/(app)/app/channels/@me/[channel]', { channel: channel.id })}
+      href={resolve('/(app)/app/channels/@me/[channel]/[[message]]', { channel: channel.id })}
       aria-current={channel.id === active ? 'page' : undefined}
     >
       {#if channel.kind === 'group'}

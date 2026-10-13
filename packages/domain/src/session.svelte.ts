@@ -2,7 +2,7 @@
  * One signed-in session: connects the backend to the store and runs the cold start after every connect
  * (architecture section 4.3). Commands the UI calls live here; M2 adds the write actions.
  */
-import type { Backend, Gateway } from './backend.ts';
+import type { Backend, Gateway, SearchQuery } from './backend.ts';
 import type { Id, Message } from './entities.ts';
 import { BackendError } from './errors.ts';
 import { Store, type EmojiPrefs, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
@@ -372,6 +372,18 @@ export class Session {
     this.emojiFetchedAt = Date.now();
     const s = await this.backend.settings([EMOJI_KEY]).catch(() => null);
     if (s && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(s[EMOJI_KEY]?.value);
+  }
+
+  // ---------- pins and search (m2a-plan.md task 8) ----------
+
+  /**
+   * A page of search results, newest first. The messages stay out of the store's windows: the results
+   * panel keeps them, and reads newer copies from the store when they are loaded there.
+   */
+  async search(channel: Id, q: Pick<SearchQuery, 'query' | 'pinned' | 'before'>, limit = 50): Promise<Message[]> {
+    const page = await this.backend.search(channel, { ...q, limit, sort: 'Latest' });
+    this.absorb(page);
+    return [...page.messages].sort((a, b) => (a.id < b.id ? 1 : -1));
   }
 
   // ---------- typing (m2a-plan.md task 7) ----------

@@ -83,6 +83,15 @@ export interface OutgoingMessage {
   attachments: Id[];
 }
 
+/** Per-channel search: text, or the pinned messages, newest first unless sorted otherwise. */
+export interface SearchQuery {
+  query?: string;
+  pinned?: boolean;
+  limit: number;
+  before?: Id;
+  sort: 'Latest' | 'Oldest' | 'Relevance';
+}
+
 export interface Capabilities {
   /** `Subscribe` brings live status changes from non-friend members (Stoat 0.15.5). */
   serverSubscribe: boolean;
@@ -121,6 +130,7 @@ export interface Backend {
    */
   reactionEmoji(): Promise<(emoji: string) => string | null>;
   setSettings(values: Record<string, string>): Promise<void>;
+  search(channel: Id, q: SearchQuery): Promise<MessagePage>;
   /** Upload a message attachment, reporting progress as a fraction. Returns the file's ID. */
   upload(file: Blob, name: string, onProgress?: (fraction: number) => void): Promise<Id>;
 

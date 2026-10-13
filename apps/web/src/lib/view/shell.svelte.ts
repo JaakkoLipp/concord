@@ -6,6 +6,13 @@ class ShellState {
   panelOpen = $state(typeof matchMedia === 'undefined' || matchMedia(WIDE).matches);
   /** Narrow layouts only: the slide-over sidebar. */
   sidebarOpen = $state(false);
+  /** The pins or search panel, which takes the side column while open (m2a-plan.md task 8). */
+  find = $state<{ channel: string; mode: 'pins' | 'search'; query: string } | null>(null);
+
+  openFind(channel: string, mode: 'pins' | 'search', query = ''): void {
+    this.find = { channel, mode, query };
+    this.panelOpen = true;
+  }
 
   constructor() {
     // Crossing the breakpoint resets the panel to that width's default, so it never covers the conversation.
