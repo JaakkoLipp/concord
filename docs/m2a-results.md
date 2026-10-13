@@ -261,6 +261,17 @@ No console errors or failed requests in any of the three browsers.
 
 **Found and fixed**: `@dev` sometimes picked "Ylläpito", whose username is `dev_admin`, instead of "Dev". Both matched at the start, and ties fell back to the order members happened to load in. Ties now break on an exact match, then a display-name match before a username match, then the alphabet. `rank.test.ts` covers it.
 
+## Fixed after the acceptance check, 2026-10-13
+
+A review of what happens after a Jump found a bug in the message list, older than M2a but only visible now that messages arrive live everywhere:
+- **Snapping back**: after jumping to a message, from search, pins, a reply preview or a link, every later change in the window scrolled the view back to that message. That meant every new message, edit or reaction. It also stopped the channel from being read automatically. Each jump target is now scrolled to once.
+- **Sending after a jump**: the session already reloaded the newest messages, but the list stayed where it was, so the sent message could land out of view. Sending now takes the list to the bottom.
+
+`node tools/live/src/jump.ts` reproduced the first problem before the fix, when the view moved from the bottom back up by 750 px. After the fix:
+- the view stays at the bottom when `aino` posts,
+- a send after a jump shows the new message at the bottom,
+- the channel is read at Stoat.
+
 ## What is left for Jaakko
 
 1. **Device check**:

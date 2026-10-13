@@ -195,6 +195,15 @@
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }
 
+  // Sending takes the list to the present, as the session takes the window there (m2a-plan.md task 2).
+  $effect(() => {
+    if (!compose.presentRequest) return;
+    untrack(() => {
+      stuck = true;
+      void tick().then(() => { if (scroller) scroller.scrollTop = scroller.scrollHeight; });
+    });
+  });
+
   // Read when the newest message is in view in a visible, focused window (m2a-plan.md decision 5).
   let active = $state(typeof document !== 'undefined' && document.visibilityState === 'visible' && document.hasFocus());
   $effect(() => {
@@ -213,13 +222,17 @@
   });
 
   // Opening a channel starts at the bottom; a jump starts at the target, centred and briefly highlighted.
+  // Each target is scrolled to once: later messages, edits and reactions must not pull the view back.
+  let scrolledTo: string | null = null;
   $effect(() => {
     void channel;
     stuck = !target;
     anchor = null;
+    scrolledTo = null;
   });
   $effect(() => {
-    if (!target || !content || !messages.some((x) => x.id === target)) return;
+    if (!target || !content || target === scrolledTo || !messages.some((x) => x.id === target)) return;
+    scrolledTo = target;
     void tick().then(() => {
       const el = content?.querySelector<HTMLElement>(`[data-id="${target}"]`);
       if (!el || !scroller) return;

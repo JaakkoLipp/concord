@@ -63,6 +63,7 @@
     if ((!out && !chosen.length) || byteLength(out) > limit) return;
     const files = compose.takeFiles(channel.id).map((c) => ({ file: c.file, name: c.file.name, preview: c.preview }));
     session.stopTyping(channel.id);
+    compose.presentRequest++;
     void session.send(channel.id, out, reply ? [reply] : [], files);
     compose.clearReply(channel.id);
     editor.clear();

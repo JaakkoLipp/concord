@@ -31,6 +31,9 @@ class Compose {
     return taken;
   }
 
+  /** Bumped to ask the message list to go to the newest message, such as on sending. */
+  presentRequest = $state(0);
+
   /** Bumped to ask the composer to take focus, such as after choosing Reply. */
   focusRequest = $state(0);
 
