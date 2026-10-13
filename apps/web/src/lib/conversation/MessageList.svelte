@@ -275,7 +275,7 @@
   <div class="content" bind:this={content}>
     {#if win?.atOldest}
       <div class="start">
-        <h2>{m.conversation.welcome(info?.kind === 'text' || info?.kind === 'group' ? info.name : '')}</h2>
+        <h2>{info?.kind === 'group' ? m.conversation.welcomeGroup(info.name) : m.conversation.welcome(info?.kind === 'text' ? info.name : '')}</h2>
         <p>{m.conversation.start}</p>
       </div>
     {:else if win}

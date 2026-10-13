@@ -10,11 +10,24 @@
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import { app } from '$lib/session/app.svelte.ts';
   import { personMenu } from '$lib/people/actions.ts';
+  import { closeDm, leaveGroup, room, startConversation } from '$lib/people/groups.ts';
+  import FriendPicker from '$lib/people/FriendPicker.svelte';
+  import { IconButton, type MenuItem } from '@concord/ui';
+  import Plus from '@lucide/svelte/icons/plus';
+  import X from '@lucide/svelte/icons/x';
 
   interface Props { store: Store; active: string | null }
   let { store, active }: Props = $props();
   const dms = $derived(store.dmList());
   const incoming = $derived(store.related('Incoming').length);
+  let picking = $state(false);
+
+  function rowMenu(channel: string, partner: string | undefined): MenuItem[] {
+    const session = app.session;
+    if (!session) return [];
+    if (partner) return [...personMenu(session, partner, { inDm: true }), 'separator', { label: m.groups.closeDm, onselect: () => closeDm(session, channel) }];
+    return [{ label: m.groups.leave, danger: true, onselect: () => void leaveGroup(session, channel) }];
+  }
 </script>
 
 <header class="search-header">
@@ -26,17 +39,21 @@
     <span class="name">{m.shell.friends}</span>
     {#if incoming}<Badge count={incoming} label={m.friends.waiting(incoming)} />{/if}
   </a>
-  <h3 class="section">{m.shell.directMessages}</h3>
+  <h3 class="section">
+    <span>{m.shell.directMessages}</span>
+    {#if app.session}<IconButton size="sm" label={m.groups.newMessageButton} onclick={() => (picking = true)}><Plus size={16} /></IconButton>{/if}
+  </h3>
   {#each dms as channel (channel.id)}
     {@const partner = dmPartner(store, channel)}
     {@const user = partner ? store.users.get(partner) : undefined}
     {@const unread = store.isUnread(channel.id)}
     {@const mentions = store.mentionCount(channel.id)}
+    <div class="row-wrap">
     <a
       class="row" class:active={channel.id === active} class:unread
       href={resolve('/(app)/app/channels/@me/[channel]/[[message]]', { channel: channel.id })}
       aria-current={channel.id === active ? 'page' : undefined}
-      use:menuOn={() => (app.session && partner ? personMenu(app.session, partner, { inDm: true }) : [])}
+      use:menuOn={() => rowMenu(channel.id, partner)}
     >
       {#if channel.kind === 'group'}
         {#if channel.icon}
@@ -57,8 +74,18 @@
       </span>
       {#if mentions}<Badge count={mentions} label={m.shell.mentions(mentions)} />{/if}
     </a>
+    {#if channel.kind === 'dm' && app.session}
+      {@const session = app.session}
+      <span class="close"><IconButton size="sm" label={m.groups.closeDm} onclick={() => closeDm(session, channel.id)}><X size={14} /></IconButton></span>
+    {/if}
+    </div>
   {/each}
 </nav>
+{#if app.session}
+  {@const session = app.session}
+  <FriendPicker {session} open={picking} title={m.groups.newMessage} fresh max={room(session, 1)}
+    onclose={() => (picking = false)} onpick={(users, name) => startConversation(session, users, name)} />
+{/if}
 
 <style>
   .search-header { display: flex; align-items: center; min-height: var(--header-h); padding: 0 var(--space-3); border-bottom: 1px solid var(--border-subtle); }
@@ -67,7 +94,12 @@
     color: var(--text-secondary); font: 500 var(--text-sm) var(--font-sans); cursor: default;
   }
   .dms { flex: 1; overflow-y: auto; padding: var(--space-3); }
-  .section { margin: var(--space-6) var(--space-3) var(--space-3); color: var(--text-secondary); font: 500 var(--text-sm) var(--font-sans); }
+  .section { display: flex; align-items: center; justify-content: space-between; margin: var(--space-6) var(--space-3) var(--space-3); color: var(--text-secondary); font: 500 var(--text-sm) var(--font-sans); }
+  .row-wrap { position: relative; }
+  .close { position: absolute; top: 50%; right: var(--space-3); translate: 0 -50%; display: none; }
+  .row-wrap:hover .close, .row-wrap:focus-within .close { display: block; }
+  .row-wrap:hover .row :global(.badge) { visibility: hidden; }
+  @media (pointer: coarse) { .close { display: none !important; } }
   .row {
     display: flex; align-items: center; gap: var(--space-4); min-height: var(--row-dm); margin-top: 2px; padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none;

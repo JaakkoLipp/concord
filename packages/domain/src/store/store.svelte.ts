@@ -75,6 +75,8 @@ export class Store {
   connection = $state<ConnectionState>('offline');
   settings = $state<Settings>({ servers: {}, channels: {}, serverOrder: [] });
   emojiPrefs = $state<EmojiPrefs>({ favourites: [], usage: {} });
+  /** DMs this account closed, with the newest message at the time (m2b-plan.md decision 3). */
+  closedDms = $state<Record<Id, Id>>({});
 
   readonly users = new SvelteMap<Id, User>();
   readonly servers = new SvelteMap<Id, Server>();
@@ -239,6 +241,8 @@ export class Store {
         if (w?.atNewest) this.windows.set(m.channel, this.withId(w, m.id));
         if (m.author !== this.selfId && this.mentionsSelf(m)) this.addMention(m.channel, m.id);
         this.clearTyping(m.channel, m.author);
+        // An owner who leaves hands the group to someone Stoat picks, and only this message says who.
+        if (m.system?.type === 'channel_ownership_changed' && c?.kind === 'group') this.channels.set(c.id, { ...this.channels.get(c.id) as typeof c, owner: m.system.to });
         return;
       }
       case 'messageUpdate': {
@@ -283,15 +287,12 @@ export class Store {
         return;
       }
       case 'channelDelete':
-        this.channels.delete(e.id);
-        this.dropWindowMessages(e.id);
-        this.unreads.delete(e.id);
-        return;
+        return this.forgetChannel(e.id);
       case 'groupJoin':
       case 'groupLeave': {
         const c = this.channels.get(e.id);
         if (c?.kind !== 'group') return;
-        if (e.type === 'groupLeave' && e.user === this.selfId) return void this.channels.delete(e.id);
+        if (e.type === 'groupLeave' && e.user === this.selfId) return this.forgetChannel(e.id);
         const recipients = e.type === 'groupJoin' ? [...new Set([...c.recipients, e.user])] : c.recipients.filter((r) => r !== e.user);
         this.channels.set(e.id, { ...c, recipients });
         return;
@@ -415,6 +416,13 @@ export class Store {
     if (u && u.mentions.some((id) => gone.has(id))) this.unreads.set(channel, { ...u, mentions: u.mentions.filter((id) => !gone.has(id)) });
   }
 
+  /** A channel this account can no longer see: deleted, or a group it left or was removed from. */
+  forgetChannel(id: Id): void {
+    this.channels.delete(id);
+    this.dropWindowMessages(id);
+    this.unreads.delete(id);
+  }
+
   private removeServer(id: Id): void {
     const s = this.servers.get(id);
     this.servers.delete(id);
@@ -500,10 +508,13 @@ export class Store {
     return loose.length ? [{ id: null, title: '', channels: loose }, ...tree] : tree;
   }
 
-  /** DMs and groups, most recent activity first. Inactive DMs are hidden, as Stoat's client does. */
+  /**
+   * DMs and groups, most recent activity first. Stoat's shared `active` flag is ignored: a DM is hidden only
+   * when this account closed it and nothing newer has arrived since.
+   */
   dmList(): Channel[] {
     return [...this.channels.values()]
-      .filter((c) => (c.kind === 'dm' && c.active) || c.kind === 'group')
+      .filter((c) => c.kind === 'group' || (c.kind === 'dm' && !(c.id in this.closedDms && !newer(c.lastMessageId, this.closedDms[c.id]))))
       .sort((a, b) => ((b as { lastMessageId?: Id }).lastMessageId ?? b.id).localeCompare((a as { lastMessageId?: Id }).lastMessageId ?? a.id));
   }
 
@@ -565,5 +576,6 @@ export class Store {
     this.deleted.clear();
     this.settings = { servers: {}, channels: {}, serverOrder: [] };
     this.emojiPrefs = { favourites: [], usage: {} };
+    this.closedDms = {};
   }
 }

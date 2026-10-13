@@ -99,3 +99,34 @@ describe('UserSettingsUpdate', () => {
     expect(e).toEqual({ type: 'settings', values: { 'concord:probe': { updated: 1791922628734, value: 'v0' } } });
   });
 });
+
+describe('DMs and groups', () => {
+  const dm = { kind: 'dm' as const, id: 'DM', recipients: ['ME', 'LOTTA'], active: false, lastMessageId: '01M4VF0000000000000000000A' };
+  const group = { kind: 'group' as const, id: 'G', name: 'Sauna', owner: 'ME', recipients: ['ME', 'LOTTA'] };
+
+  it('shows a DM despite Stoat\'s shared active flag, and hides it only when closed here with nothing newer', () => {
+    const s = store();
+    s.channels.set('DM', dm);
+    expect(s.dmList().map((c) => c.id)).toEqual(['DM']);
+    s.closedDms = { DM: dm.lastMessageId };
+    expect(s.dmList()).toEqual([]);
+    apply(s, { type: 'Message', _id: '01M4VF0000000000000000000B', channel: 'DM', author: 'LOTTA', content: 'moi' });
+    expect(s.dmList().map((c) => c.id)).toEqual(['DM']);
+  });
+
+  it('takes a new owner from the system message, which is all Stoat sends when an owner leaves', () => {
+    const s = store();
+    s.channels.set('G', group);
+    apply(s, { type: 'Message', _id: '01M4VF0000000000000000000C', channel: 'G', author: '00000000000000000000000000', system: { type: 'channel_ownership_changed', from: 'ME', to: 'LOTTA' } });
+    expect(s.channels.get('G')).toMatchObject({ owner: 'LOTTA' });
+  });
+
+  it('forgets a group this account leaves, with its unread state', () => {
+    const s = store();
+    s.channels.set('G', group);
+    s.unreads.set('G', { channel: 'G', mentions: ['X'] });
+    apply(s, { type: 'ChannelGroupLeave', id: 'G', user: 'ME' });
+    expect(s.channels.has('G')).toBe(false);
+    expect(s.unreads.has('G')).toBe(false);
+  });
+});

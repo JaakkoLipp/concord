@@ -113,3 +113,40 @@ The check removes every relationship it made.
 | Block from `onni`'s message author menu, through the dialog | `#botti` shows "2 blocked messages — Show" and hides them. Show brings them back. |
 | A group the two share | "1 blocked message — Show" |
 | Console errors or failed requests | One 404, when the cleanup left the group while `tuuli`'s page still showed it. That case belongs to task 4, which fixes it. |
+
+## Task 4: DMs and groups, 2026-10-13
+
+**What is deployed**:
+- **New conversations**: a "+" beside "Direct messages" opens a friend picker with search. One friend opens or reuses the DM, and several make a group with an optional name. Stoat needs a name, so an unnamed group takes its members' names, up to 32 characters. At most 49 friends can be invited at creation, and Stoat's group size, 100, caps the total.
+- **Close DM**:
+  - An × on the DM row's hover, or "Close DM" in its menu, hides the DM for this account only, per decision 3.
+  - The DM comes back when a newer message arrives, or when it is opened again.
+  - The list is kept in `concord:closedDms` and syncs live to other devices.
+  - Stoat's shared `active` flag is ignored.
+- **The group panel**:
+  - lists members with the owner first and marked with a crown,
+  - has Add members, Edit group (name, description and icon, with the 2.5 MB icon limit checked first) and Leave group,
+  - gives the owner "Make group owner" and "Remove from group" in each member's menu, both asking first.
+- **Ownership**: when an owner leaves, Stoat picks the new owner and says so only in a system message. The client takes the owner from that message.
+- **Members**: members the account hasn't met, from a new group or DM or a join, are fetched.
+- **Leaving**: leaving a group clears its messages and unread state. A conversation that disappears while open goes to the Friends screen. A load for a channel that is gone no longer fires.
+- **Wording**: group system lines now say "the group", not "the channel" or "the server", and a group's history starts with "Welcome to Saunaporukka" without the `#`.
+
+**Unit tests**, 3 more in `social.test.ts`:
+- a DM shows despite Stoat's `active: false`, hides when closed here, and returns on a newer message,
+- the owner comes from the ownership message,
+- leaving a group forgets its unread state.
+
+**Live check**: `node tools/live/src/groups.ts`, with `tuuli` and `onni` in two browsers and `aino` over the API. Times run until the other browser shows the change:
+
+| Check | Result |
+|---|---|
+| `tuuli` creates "Testiryhmä" with `onni` and `aino` through the picker | 60 ms |
+| `tuuli`, the owner, removes `aino` | 61 ms, with the line "tuuli removed Aino Virtanen from the group." |
+| Add members puts her back | 64 ms |
+| Edit group: rename to "Saunaporukka" and upload an icon | 119 ms, with the new name and icon in `onni`'s sidebar and the rename line |
+| Make group owner `onni` | 62 ms, the crown moves |
+| `onni` leaves as owner | 61 ms. Stoat made `tuuli` owner, and `tuuli`'s panel shows it from the system message. `onni` lands on the Friends screen. |
+| `tuuli` closes the DM with `onni` | Gone for `tuuli`, still there for `onni` after a reload |
+| `onni` writes in it | Back in `tuuli`'s list after 24 ms |
+| Console errors or failed requests | None. The first run had a 403 after leaving, which the `untrack` fix removed. |

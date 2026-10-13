@@ -99,6 +99,15 @@ export interface SearchQuery {
   sort: 'Latest' | 'Oldest' | 'Relevance';
 }
 
+export interface GroupEdit {
+  name?: string;
+  description?: string;
+  /** An uploaded file's ID, from `upload(…, 'icons')`. */
+  icon?: Id;
+  owner?: Id;
+  remove?: ('description' | 'icon')[];
+}
+
 export interface Capabilities {
   /** `Subscribe` brings live status changes from non-friend members (Stoat 0.15.5). */
   serverSubscribe: boolean;
@@ -148,6 +157,15 @@ export interface Backend {
   unblock(user: Id): Promise<User>;
   /** The DM with a user, created if there is none. */
   openDm(user: Id): Promise<Channel>;
+  /** A group with these friends, who become members at once. */
+  createGroup(name: string, users: Id[]): Promise<Channel>;
+  addGroupMember(group: Id, user: Id): Promise<void>;
+  /** Only the owner may remove someone. */
+  removeGroupMember(group: Id, user: Id): Promise<void>;
+  /** Leave a group without the "left" system message when `silent`. */
+  leaveGroup(group: Id, silent?: boolean): Promise<void>;
+  /** Rename, describe, set the icon, or hand over ownership (owner only). `remove` clears the description or icon. */
+  editGroup(group: Id, change: GroupEdit): Promise<Channel>;
   search(channel: Id, q: SearchQuery): Promise<MessagePage>;
   /**
    * Upload a file, reporting progress as a fraction. Returns the file's ID. The tag says what it is for:

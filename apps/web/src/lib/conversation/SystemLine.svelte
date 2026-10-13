@@ -21,7 +21,7 @@
   <span class="text">
     {#if s.type === 'text'}{s.content}
     {:else if s.type === 'user_joined'}{m.system.joined(name(s.id))}
-    {:else if s.type === 'user_left'}{m.system.left(name(s.id))}
+    {:else if s.type === 'user_left'}{store.channels.get(message.channel)?.kind === 'group' ? m.system.leftGroup(name(s.id)) : m.system.left(name(s.id))}
     {:else if s.type === 'user_kicked'}{m.system.kicked(name(s.id))}
     {:else if s.type === 'user_banned'}{m.system.banned(name(s.id))}
     {:else if s.type === 'user_added'}{m.system.added(name(s.by), name(s.id))}

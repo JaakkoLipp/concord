@@ -1,5 +1,5 @@
 /** The Stoat implementation of the domain's Backend interface. */
-import type { Backend, Capabilities, Channel, Gateway, GatewayHandlers, LoginResult, Message, MessagePage, MessageQuery, NodeInfo, OutgoingMessage, SearchQuery, User } from '@concord/domain';
+import type { Backend, Capabilities, Channel, Gateway, GatewayHandlers, GroupEdit, LoginResult, Message, MessagePage, MessageQuery, NodeInfo, OutgoingMessage, SearchQuery, User } from '@concord/domain';
 import type { components } from './api/types.ts';
 import { capabilitiesFor } from './capabilities.ts';
 import { mapChannel } from './map/channel.ts';
@@ -208,6 +208,34 @@ export class StoatBackend implements Backend {
 
   async openDm(user: string): Promise<Channel> {
     return mapChannel(await this.rest.request<WChannel>('GET', `/users/${user}/dm`));
+  }
+
+  async createGroup(name: string, users: string[]): Promise<Channel> {
+    return mapChannel(await this.rest.request<WChannel>('POST', '/channels/create', { name, users }));
+  }
+
+  async addGroupMember(group: string, user: string): Promise<void> {
+    await this.rest.request('PUT', `/channels/${group}/recipients/${user}`);
+  }
+
+  async removeGroupMember(group: string, user: string): Promise<void> {
+    await this.rest.request('DELETE', `/channels/${group}/recipients/${user}`);
+  }
+
+  async leaveGroup(group: string, silent = false): Promise<void> {
+    await this.rest.request('DELETE', `/channels/${group}${silent ? '?leave_silently=true' : ''}`);
+  }
+
+  async editGroup(group: string, change: GroupEdit): Promise<Channel> {
+    const remove = (change.remove ?? []).map((f) => (f === 'icon' ? 'Icon' : 'Description'));
+    const body = {
+      ...(change.name !== undefined ? { name: change.name } : {}),
+      ...(change.description !== undefined ? { description: change.description } : {}),
+      ...(change.icon !== undefined ? { icon: change.icon } : {}),
+      ...(change.owner !== undefined ? { owner: change.owner } : {}),
+      ...(remove.length ? { remove } : {}),
+    };
+    return mapChannel(await this.rest.request<WChannel>('PATCH', `/channels/${group}`, body));
   }
 
   async search(channel: string, q: SearchQuery): Promise<MessagePage> {

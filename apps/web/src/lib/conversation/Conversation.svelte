@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { app } from '$lib/session/app.svelte.ts';
@@ -18,8 +19,19 @@
 
   $effect(() => {
     target = message;
-    if (message) void session.jumpTo(channel, message);
-    else void session.openChannel(channel);
+    // A channel that is gone, or never was, shows an empty conversation rather than an error. untrack:
+    // these read the store, and dropping the window of a group just left must not load it again.
+    const [c, msg] = [channel, message];
+    untrack(() => {
+      if (msg) void session.jumpTo(c, msg).catch(() => {});
+      else void session.openChannel(c).catch(() => {});
+    });
+  });
+  // Left, removed or deleted while open: go to the friends screen.
+  let seen = $state<string | null>(null);
+  $effect(() => {
+    if (info) seen = channel;
+    else if (seen === channel && store.connection === 'ready') void goto(resolve('/app/channels/@me'));
   });
   $effect(() => {
     if (info) rememberChannel(info.kind === 'text' ? info.server : '@me', channel);

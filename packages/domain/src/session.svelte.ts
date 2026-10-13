@@ -2,10 +2,10 @@
  * One signed-in session: connects the backend to the store and runs the cold start after every connect
  * (architecture section 4.3). Commands the UI calls live here; M2 adds the write actions.
  */
-import type { Backend, DomainEvent, Gateway, SearchQuery } from './backend.ts';
+import type { Backend, DomainEvent, Gateway, GroupEdit, SearchQuery } from './backend.ts';
 import type { Id, Message, Relationship, User } from './entities.ts';
 import { BackendError } from './errors.ts';
-import { Store, type EmojiPrefs, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
+import { Store, newer, type EmojiPrefs, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
 import { ulid, ulidTime } from './ulid.ts';
 
 const PAGE = 100;
@@ -42,6 +42,20 @@ export function parseSettings(raw: Record<string, { value: string }>): Settings 
 
 /** Synced-settings key for emoji favourites and use counts (m2a-plan.md decision 4). */
 export const EMOJI_KEY = 'concord:emoji';
+/** Synced-settings key for DMs this account closed (m2b-plan.md decision 3). */
+export const CLOSED_DMS_KEY = 'concord:closedDms';
+/** Closed DMs remembered at most, the most recently closed. */
+const CLOSED_KEPT = 200;
+
+export function parseClosedDms(raw: string | undefined): Record<Id, Id> {
+  try {
+    const v = JSON.parse(raw ?? '{}') as Record<string, unknown>;
+    return Object.fromEntries(Object.entries(v).filter((e): e is [string, string] => typeof e[1] === 'string'));
+  } catch {
+    return {};
+  }
+}
+
 /** Use counts kept for at most this many emoji, the most used. */
 const USAGE_KEPT = 60;
 
@@ -133,7 +147,8 @@ export class Session {
   /** After Ready: settings, the open server's members, and fresh history for the open channel. */
   private async coldStart(): Promise<void> {
     const fetchedAt = Date.now();
-    const settings: Record<string, { value: string }> = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY]).catch(() => ({}));
+    const settings: Record<string, { value: string }> = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY, CLOSED_DMS_KEY]).catch(() => ({}));
+    if (settings[CLOSED_DMS_KEY]) this.store.closedDms = parseClosedDms(settings[CLOSED_DMS_KEY].value);
     this.rawSettings = { ...this.rawSettings, ...settings };
     this.store.settings = parseSettings(this.rawSettings);
     if (this.emojiChangedAt < fetchedAt) this.store.emojiPrefs = parseEmojiPrefs(settings[EMOJI_KEY]?.value);
@@ -402,11 +417,21 @@ export class Session {
 
   private follow(e: DomainEvent): void {
     switch (e.type) {
+      case 'groupJoin':
+        // Stoat sends only IDs: fetch members this account hasn't met.
+        return this.meet([e.user]);
+      case 'channelCreate':
+        if (e.channel.kind === 'dm' || e.channel.kind === 'group') this.meet(e.channel.recipients);
+        return;
       case 'profileChanged':
         return this.profileChanged(e.id);
       case 'settings':
         return this.settingsChanged(e.values);
     }
+  }
+
+  private meet(users: Id[]): void {
+    for (const id of users) if (!this.store.users.has(id)) void this.backend.user(id).then((u) => this.store.upsertUsers([u])).catch(() => {});
   }
 
   /** Fetch a changed profile again, but only if this session has shown it. A burst of changes is one fetch. */
@@ -426,6 +451,7 @@ export class Session {
     this.rawSettings = { ...this.rawSettings, ...values };
     if ('notifications' in values || 'ordering' in values) this.store.settings = parseSettings(this.rawSettings);
     if (values[EMOJI_KEY] && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(values[EMOJI_KEY].value);
+    if (values[CLOSED_DMS_KEY] && !this.closedSaving) this.store.closedDms = parseClosedDms(values[CLOSED_DMS_KEY].value);
   }
 
   // ---------- friends (m2b-plan.md task 2) ----------
@@ -476,13 +502,74 @@ export class Session {
     }
   }
 
-  /** The DM channel with a user, opened at Stoat if needed. Returns its ID. */
+  /** The DM channel with a user, opened at Stoat if needed, and shown again if it was closed. Returns its ID. */
   async openDm(user: Id): Promise<Id> {
     const known = [...this.store.channels.values()].find((c) => c.kind === 'dm' && c.recipients.includes(user));
-    if (known) return known.id;
-    const channel = await this.backend.openDm(user);
+    let id = known?.id;
+    if (!id) {
+      const channel = await this.backend.openDm(user);
+      if (!this.store.channels.has(channel.id)) this.store.apply({ type: 'channelCreate', channel });
+      id = channel.id;
+    }
+    if (id in this.store.closedDms) this.setClosed(id, null);
+    return id;
+  }
+
+  /** Hide a DM for this account only. It comes back with a newer message, or when opened again. */
+  closeDm(channel: Id): void {
+    const c = this.store.channels.get(channel);
+    if (c?.kind !== 'dm') return;
+    this.setClosed(channel, c.lastMessageId ?? '');
+  }
+
+  /** Whether a closed-DMs write is on its way, so its echo, or an older one, doesn't undo a newer change. */
+  private closedSaving = 0;
+
+  private setClosed(channel: Id, upTo: Id | null): void {
+    const next = { ...this.store.closedDms };
+    delete next[channel];
+    if (upTo !== null) next[channel] = upTo;
+    // Keep the most recently closed: the newest message IDs, or empty DMs, last.
+    const kept = Object.entries(next).sort((a, b) => (a[1] || '~').localeCompare(b[1] || '~')).slice(-CLOSED_KEPT);
+    this.store.closedDms = Object.fromEntries(kept);
+    this.closedSaving++;
+    void this.backend.setSettings({ [CLOSED_DMS_KEY]: JSON.stringify(this.store.closedDms) }).catch(() => {}).finally(() => {
+      // The echo arrives about when the request returns: let a moment pass before trusting events again.
+      setTimeout(() => this.closedSaving--, 1_000);
+    });
+  }
+
+  // ---------- groups (m2b-plan.md task 4) ----------
+
+  /** Create a group with friends. Returns its ID. */
+  async createGroup(name: string, users: Id[]): Promise<Id> {
+    const channel = await this.backend.createGroup(name, users);
     if (!this.store.channels.has(channel.id)) this.store.apply({ type: 'channelCreate', channel });
     return channel.id;
+  }
+
+  /** Add friends one at a time, as Stoat takes them. Stops at the first refusal and throws it. */
+  async addGroupMembers(group: Id, users: Id[]): Promise<void> {
+    for (const user of users) await this.backend.addGroupMember(group, user);
+  }
+
+  removeGroupMember(group: Id, user: Id): Promise<void> {
+    return this.backend.removeGroupMember(group, user);
+  }
+
+  /** Leave a group. It disappears here at once. */
+  async leaveGroup(group: Id): Promise<void> {
+    await this.backend.leaveGroup(group);
+    this.store.forgetChannel(group);
+  }
+
+  async editGroup(group: Id, change: GroupEdit): Promise<void> {
+    const channel = await this.backend.editGroup(group, change);
+    const old = this.store.channels.get(group);
+    // The answer is the whole group as it is now; only the newest message may be newer here.
+    if (old?.kind === 'group' && channel.kind === 'group') {
+      this.store.channels.set(group, old.lastMessageId && !newer(channel.lastMessageId, old.lastMessageId) ? { ...channel, lastMessageId: old.lastMessageId } : channel);
+    }
   }
 
   /** How many outgoing friend requests this account may have waiting. */

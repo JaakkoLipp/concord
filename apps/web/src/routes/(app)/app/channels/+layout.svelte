@@ -7,6 +7,7 @@
   import DmProfilePanel from '$lib/people/DmProfilePanel.svelte';
   import FindPanel from '$lib/conversation/FindPanel.svelte';
   import UserPopout from '$lib/people/UserPopout.svelte';
+  import GroupPanel from '$lib/people/GroupPanel.svelte';
   import { shell } from '$lib/view/shell.svelte.ts';
 
   let { children }: { children: Snippet } = $props();
@@ -27,8 +28,8 @@
 {#if session}
   {@const info = channel ? session.store.channels.get(channel) : undefined}
   {@const finding = !!shell.find && shell.find.channel === channel}
-  <Shell store={session.store} {server} {channel} panel={finding ? find : server ? members : info?.kind === 'dm' ? profile : undefined}
-    panelWidth={finding ? 'find' : server ? 'members' : 'profile'}>
+  <Shell store={session.store} {server} {channel} panel={finding ? find : server ? members : info?.kind === 'dm' ? profile : info?.kind === 'group' ? group : undefined}
+    panelWidth={finding ? 'find' : server || info?.kind === 'group' ? 'members' : 'profile'}>
     {@render children()}
   </Shell>
   <UserPopout {session} />
@@ -36,6 +37,10 @@
 
 {#snippet profile()}
   {#if session && channel}<DmProfilePanel {session} {channel} />{/if}
+{/snippet}
+
+{#snippet group()}
+  {#if session && channel}<GroupPanel {session} {channel} />{/if}
 {/snippet}
 
 {#snippet find()}
