@@ -5,6 +5,7 @@
 import type { Backend, DomainEvent, Gateway, GroupEdit, SearchQuery, SelfEdit } from './backend.ts';
 import type { Id, Message, Presence, Relationship, User } from './entities.ts';
 import { SelfQueue } from './selfqueue.ts';
+import { ACTIVE_KEY, IdleTracker } from './idle.ts';
 import { BackendError } from './errors.ts';
 import { Store, newer, type EmojiPrefs, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
 import { ulid, ulidTime } from './ulid.ts';
@@ -140,6 +141,7 @@ export class Session {
     this.profileRefetch.clear();
     this.rawSettings = {};
     this.selfQueue.clear();
+    this.idle.stop();
     this.acks.clear();
     this.gateway?.close();
     this.gateway = null;
@@ -154,7 +156,9 @@ export class Session {
   /** After Ready: settings, the open server's members, and fresh history for the open channel. */
   private async coldStart(): Promise<void> {
     const fetchedAt = Date.now();
-    const settings: Record<string, { value: string }> = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY, CLOSED_DMS_KEY, STATUS_KEY]).catch(() => ({}));
+    const settings: Record<string, { value: string }> = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY]).catch(() => ({}));
+    const active = Number(settings[ACTIVE_KEY]?.value);
+    if (active) this.idle.remote(active);
     if (!this.statusSaving) this.store.chosenStatus = parseStatus(settings[STATUS_KEY]?.value);
     if (settings[CLOSED_DMS_KEY]) this.store.closedDms = parseClosedDms(settings[CLOSED_DMS_KEY].value);
     this.rawSettings = { ...this.rawSettings, ...settings };
@@ -431,6 +435,9 @@ export class Session {
       case 'channelCreate':
         if (e.channel.kind === 'dm' || e.channel.kind === 'group') this.meet(e.channel.recipients);
         return;
+      case 'userUpdate':
+        if (e.id === this.store.selfId && ('presence' in e.data || e.clear.includes('presence'))) this.idle.presenceChanged();
+        return;
       case 'profileChanged':
         return this.profileChanged(e.id);
       case 'settings':
@@ -461,6 +468,8 @@ export class Session {
     if (values[EMOJI_KEY] && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(values[EMOJI_KEY].value);
     if (values[CLOSED_DMS_KEY] && !this.closedSaving) this.store.closedDms = parseClosedDms(values[CLOSED_DMS_KEY].value);
     if (values[STATUS_KEY] && !this.statusSaving) this.store.chosenStatus = parseStatus(values[STATUS_KEY].value);
+    // Another device was used, or this one's own write came back: either way, someone is here.
+    if (values[ACTIVE_KEY]) this.idle.remote();
   }
 
   // ---------- friends (m2b-plan.md task 2) ----------
@@ -551,6 +560,19 @@ export class Session {
   // ---------- status and profile (m2b-plan.md tasks 5 and 7) ----------
 
   readonly selfQueue = new SelfQueue((edit) => this.writeSelf(edit));
+
+  /** Automatic idle. The web layer feeds it input and starts it in the one tab that holds the idle lock. */
+  readonly idle = new IdleTracker({
+    now: () => Date.now(),
+    presence: () => {
+      const self = this.store.self;
+      // Your own Invisible shows in Stoat's data only as offline.
+      return self?.presence ?? (self && !self.online ? 'Invisible' : undefined);
+    },
+    chosen: () => this.store.chosenStatus,
+    setPresence: (presence) => void this.editSelf({ presence }).catch(() => {}),
+    writeActive: (at) => void this.backend.setSettings({ [ACTIVE_KEY]: String(at) }).catch(() => {}),
+  });
   private statusSaving = 0;
 
   /**

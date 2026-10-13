@@ -226,7 +226,16 @@ Behaviour verified on 0.15.5:
   - `GET /invites/{code}` returns the server's name, icon and banner, the channel, the member count, and the creator's username and avatar, but not the creator's ID. The icon, banner and avatar are full file objects, present only when set.
 - **Superuser flag**: `user.privileged` is a platform superuser flag set only in the database. It doesn't bypass server-creation limits, and the client ignores it.
 
-**Idle detection**: after 10 minutes without input, or when every client window has been hidden for 10 minutes, the client sets presence to Idle and restores Online on return. It never overrides a status the user chose, such as Busy or Invisible. Presence is account-wide, so the most recently active device wins. On any input after it set Idle, a device restores Online. A device never sets Idle while it has seen input in the last 10 minutes. Presence changes share the profile-edit rate limit of 2 per 10 seconds, so the client sends only the latest pending change, at most once every 5 seconds.
+**Idle detection** (m2b-plan.md task 6, `packages/domain/src/idle.ts`):
+- **Away** means no device of the account has been used for 10 minutes: no key, pointer, touch, wheel or focus input in any tab of this browser, and no `concord:active` from another device. Each device writes that synced setting at most every 4 minutes while in use, and at once when it comes back. Its arrival is timed on the receiving device's clock, so clock skew can't move the deadline.
+- **Going Idle**: when away, the device sets Idle, but only while the status chosen in the menu (`concord:status`) is Online and the live presence is Online. A status the user picked, on this client or another Stoat client, is never overridden.
+- **Coming back**: on input, if the presence is Idle and the chosen status is Online, the device restores Online, whoever set the Idle. Another device turning Idle into Online counts as activity too, since its notice may arrive after the presence change.
+- **One writer per browser**: tabs share their input through `localStorage`, and only the tab holding a Web Lock acts.
+- **Becoming visible** counts as input, so a laptop waking from sleep doesn't flash Idle.
+- Every write goes through the `PATCH /users/@me` queue (2 per 10 s).
+- **Known limits**:
+  - A phone browser freezes hidden tabs. With only a phone open, nothing sets Idle until its socket closes.
+  - A visible window that isn't used shows Idle after 10 minutes. M4 counts time in a call as activity.
 
 ## 8. Notifications
 

@@ -5,6 +5,7 @@ import { Session } from '@concord/domain';
 import { LiveTransport, StoatBackend, StoatError } from '@concord/stoat';
 import { drafts } from '$lib/composer/drafts.ts';
 import { clearToken, loadToken, saveToken } from './token.ts';
+import { watchIdle } from './idle.ts';
 
 // The (app) group has ssr = false, so this only runs in the browser; the guard keeps server builds importable.
 export const backend = new StoatBackend(new LiveTransport(typeof location === 'undefined' ? 'http://localhost' : location.origin));
@@ -33,9 +34,12 @@ class App {
     await this.start(token);
   }
 
+  private stopIdle: (() => void) | null = null;
+
   private async start(token: string): Promise<void> {
     const session = new Session(backend);
     await session.start(token, () => void this.signedOut());
+    this.stopIdle = watchIdle(session);
     this.session = session;
     this.status = 'signed-in';
   }
@@ -46,6 +50,8 @@ class App {
   }
 
   private async signedOut(): Promise<void> {
+    this.stopIdle?.();
+    this.stopIdle = null;
     await this.session?.stop();
     this.session = null;
     drafts.clear();

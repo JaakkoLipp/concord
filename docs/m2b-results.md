@@ -180,3 +180,43 @@ The check removes every relationship it made.
 | A custom status "🔥 Testaan tilaa", with the emoji from the picker, until `aino` sees it | 35 ms |
 | Invisible | `aino` sees `dev` offline. After a reload, A's menu still has Invisible checked. |
 | Console errors or failed requests | Only that one 429, retried by the REST layer |
+
+## Task 6: automatic idle, 2026-10-14
+
+**What is deployed**: the rules now in client.md section 7, "Idle detection":
+- **The tracker**: `packages/domain/src/idle.ts`, a plain class that Session wires to the store, the write queue and synced settings.
+- **The web layer**: `apps/web/src/lib/session/idle.ts` feeds it input, at most once a second. It shares that input between tabs through `localStorage` and starts the tracker only in the tab holding the `concord:idle` Web Lock.
+
+**Found by the live check, and fixed**: B's return was sometimes undone at once.
+- **What happened**:
+  - B came back and wrote both the Online presence and `concord:active`.
+  - When the presence event reached A first, A, still away, set Idle again.
+- **The fix**:
+  - The activity notice is now written first.
+  - Another device turning Idle into Online counts as activity in itself, whatever arrives first.
+  - A unit test reproduces it.
+
+**Unit tests**: `packages/domain/src/idle.test.ts`, 8 tests on fake timers:
+- Idle after 10 minutes alone, once, and Online on input,
+- another device in use keeping this one Online, then Idle 10 minutes after it stops,
+- Online restored whoever set Idle,
+- a chosen Busy, a chosen Idle, and a Focus from another client all left alone,
+- `concord:active` at most every 4 minutes,
+- a written time from the future capped,
+- the race above,
+- nothing done before the tracker starts.
+
+**Live check**: `node tools/live/src/idle.ts`, with `tuuli` and Playwright's fake clock. Each browser context has its own clock, as two devices would. It passed four runs in a row:
+
+| Check | Result |
+|---|---|
+| Device A alone for 10.5 minutes | Idle. A mouse move brings it back Online. |
+| A untouched for 12 minutes while B is used at minute 6 | Still Online |
+| 5 minutes more, with B unused | A goes Idle, and B shows Idle |
+| Input on B | Online on both |
+| Do not disturb chosen, then 15 minutes | Still Do not disturb |
+| Three tabs in one browser away together | One `PATCH` |
+| Hidden, 11 minutes, then visible | Idle, then Online on becoming visible |
+| Console errors or failed requests | One aborted request, a write cut off when the script closed device A |
+
+**For Jaakko**: the same on two real devices, per the plan's "Jaakko's tasks", item 3.
