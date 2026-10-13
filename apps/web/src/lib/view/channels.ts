@@ -19,13 +19,14 @@ export function canView(store: Store, channel: Channel): boolean {
   return has(permissionsIn(store, channel), Permission.ViewChannel);
 }
 
-export type SendBlock = 'permission' | 'blocked' | 'notFriend' | 'timeout';
+export type SendBlock = 'permission' | 'blocked' | 'blockedBy' | 'notFriend' | 'timeout';
 
 /** Why this account can't send in a channel, or null when it can. */
 export function sendBlock(store: Store, channel: Channel, now = new Date()): SendBlock | null {
   if (channel.kind === 'dm') {
     const rel = store.users.get(dmPartner(store, channel) ?? '')?.relationship;
-    if (rel === 'Blocked' || rel === 'BlockedOther') return 'blocked';
+    if (rel === 'Blocked') return 'blocked';
+    if (rel === 'BlockedOther') return 'blockedBy';
   }
   if (has(permissionsIn(store, channel), Permission.SendMessage)) return null;
   if (channel.kind === 'dm') return 'notFriend';

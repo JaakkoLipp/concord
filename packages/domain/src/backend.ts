@@ -137,6 +137,17 @@ export interface Backend {
    */
   reactionEmoji(): Promise<(emoji: string) => string | null>;
   setSettings(values: Record<string, string>): Promise<void>;
+
+  /** Send a friend request by `name#1234`. Returns the user, as this account now sees them. */
+  addFriend(tag: string): Promise<User>;
+  /** Accept someone's friend request. */
+  acceptFriend(user: Id): Promise<User>;
+  /** Deny or cancel a friend request, or remove a friend. */
+  removeFriend(user: Id): Promise<User>;
+  block(user: Id): Promise<User>;
+  unblock(user: Id): Promise<User>;
+  /** The DM with a user, created if there is none. */
+  openDm(user: Id): Promise<Channel>;
   search(channel: Id, q: SearchQuery): Promise<MessagePage>;
   /**
    * Upload a file, reporting progress as a fraction. Returns the file's ID. The tag says what it is for:

@@ -11,6 +11,7 @@
   interface Props { store: Store; active: string | null }
   let { store, active }: Props = $props();
   const dms = $derived(store.dmList());
+  const incoming = $derived(store.related('Incoming').length);
 </script>
 
 <header class="search-header">
@@ -20,6 +21,7 @@
   <a class="row friends" class:active={active === null} href={resolve('/app/channels/@me')} aria-current={active === null ? 'page' : undefined}>
     <span class="friends-icon" aria-hidden="true"><Users size={24} /></span>
     <span class="name">{m.shell.friends}</span>
+    {#if incoming}<Badge count={incoming} label={m.friends.waiting(incoming)} />{/if}
   </a>
   <h3 class="section">{m.shell.directMessages}</h3>
   {#each dms as channel (channel.id)}
@@ -71,6 +73,7 @@
   .row.unread { color: var(--text-strong); }
   .friends { min-height: var(--row-dm); font: 500 var(--text-md) var(--font-sans); }
   .friends-icon { display: grid; place-items: center; width: 32px; }
+  .friends .name { flex: 1; }
   .group-icon { width: 32px; height: 32px; border-radius: 50%; flex: none; object-fit: cover; }
   .group-icon.initials { display: grid; place-items: center; background: var(--accent); color: var(--on-accent); }
   .text { display: grid; flex: 1; min-width: 0; }

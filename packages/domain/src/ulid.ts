@@ -9,3 +9,10 @@ export function ulid(now = Date.now()): string {
   for (const b of bytes) random += ALPHABET[b % 32]!;
   return time + random;
 }
+
+/** The time a ULID was made, in milliseconds. */
+export function ulidTime(id: string): number {
+  let t = 0;
+  for (const ch of id.slice(0, 10)) t = t * 32 + ALPHABET.indexOf(ch);
+  return t;
+}

@@ -1,12 +1,12 @@
 /** The Stoat implementation of the domain's Backend interface. */
-import type { Backend, Capabilities, Gateway, GatewayHandlers, LoginResult, Message, MessagePage, MessageQuery, NodeInfo, OutgoingMessage, SearchQuery, User } from '@concord/domain';
+import type { Backend, Capabilities, Channel, Gateway, GatewayHandlers, LoginResult, Message, MessagePage, MessageQuery, NodeInfo, OutgoingMessage, SearchQuery, User } from '@concord/domain';
 import type { components } from './api/types.ts';
 import { capabilitiesFor } from './capabilities.ts';
 import { mapChannel } from './map/channel.ts';
 import { mapMember } from './map/member.ts';
 import { mapMessage, mapUnread } from './map/message.ts';
 import { mapProfile, mapUser } from './map/user.ts';
-import type { WMember, WMessage, WUnread, WUser } from './map/wire.ts';
+import type { WChannel, WMember, WMessage, WUnread, WUser } from './map/wire.ts';
 import { Rest, StoatError } from './rest.ts';
 import { StoatGateway } from './socket.ts';
 import type { Transport } from './transport.ts';
@@ -36,8 +36,9 @@ export class StoatBackend implements Backend {
     const r = await this.rest.request<Root>('GET', '/');
     this.capabilities = capabilitiesFor(r.revolt);
     const limits = r.features.limits as unknown as {
-      global?: { restrict_server_creation?: string[]; message_replies?: number; message_reactions?: number };
-      default?: { file_upload_size_limits?: Record<string, number>; message_length?: number; message_attachments?: number };
+      global?: { restrict_server_creation?: string[]; message_replies?: number; message_reactions?: number; group_size?: number; new_user_hours?: number };
+      new_user?: { outgoing_friend_requests?: number };
+      default?: { file_upload_size_limits?: Record<string, number>; message_length?: number; message_attachments?: number; outgoing_friend_requests?: number };
     };
     const livekit = (r.features as { livekit?: { enabled: boolean; nodes?: { name: string }[] } }).livekit;
     return {
@@ -51,6 +52,14 @@ export class StoatBackend implements Backend {
         reactions: limits.global?.message_reactions ?? 20,
       },
       voice: { enabled: livekit?.enabled ?? false, nodes: (livekit?.nodes ?? []).map((n) => ({ name: n.name })) },
+      social: {
+        friendRequests: {
+          newUser: limits.new_user?.outgoing_friend_requests ?? 5,
+          other: limits.default?.outgoing_friend_requests ?? 10,
+          newUserHours: limits.global?.new_user_hours ?? 72,
+        },
+        groupSize: limits.global?.group_size ?? 100,
+      },
       ...(r.vapid ? { vapid: r.vapid } : {}),
     };
   }
@@ -175,6 +184,30 @@ export class StoatBackend implements Backend {
   async setSettings(values: Record<string, string>): Promise<void> {
     // The timestamp lets other clients order writes; the last write wins.
     await this.rest.request('POST', `/sync/settings/set?timestamp=${Date.now()}`, values);
+  }
+
+  async addFriend(tag: string): Promise<User> {
+    return mapUser(await this.rest.request<WUser>('POST', '/users/friend', { username: tag }));
+  }
+
+  async acceptFriend(user: string): Promise<User> {
+    return mapUser(await this.rest.request<WUser>('PUT', `/users/${user}/friend`));
+  }
+
+  async removeFriend(user: string): Promise<User> {
+    return mapUser(await this.rest.request<WUser>('DELETE', `/users/${user}/friend`));
+  }
+
+  async block(user: string): Promise<User> {
+    return mapUser(await this.rest.request<WUser>('PUT', `/users/${user}/block`));
+  }
+
+  async unblock(user: string): Promise<User> {
+    return mapUser(await this.rest.request<WUser>('DELETE', `/users/${user}/block`));
+  }
+
+  async openDm(user: string): Promise<Channel> {
+    return mapChannel(await this.rest.request<WChannel>('GET', `/users/${user}/dm`));
   }
 
   async search(channel: string, q: SearchQuery): Promise<MessagePage> {

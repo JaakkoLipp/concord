@@ -11,7 +11,8 @@
   let { store, active }: Props = $props();
 
   const servers = $derived(orderedServers(store));
-  const dmMentions = $derived(store.dmList().reduce((n, c) => n + store.mentionCount(c.id), 0));
+  // Like Discord's home button: DM mentions plus friend requests waiting.
+  const dmMentions = $derived(store.dmList().reduce((n, c) => n + store.mentionCount(c.id), 0) + store.related('Incoming').length);
 
   function href(server: string): string {
     const channel = recalled(server) ?? firstChannel(store, server);

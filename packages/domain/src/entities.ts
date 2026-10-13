@@ -217,5 +217,10 @@ export interface NodeInfo {
   /** Message limits: length in UTF-8 bytes, then counts per message. */
   limits: { messageLength: number; attachments: number; replies: number; reactions: number };
   voice: { enabled: boolean; nodes: { name: string }[] };
+  /**
+   * Outgoing friend requests one account may have waiting: fewer for accounts younger than
+   * `newUserHours`. Group size counts every member, the owner included.
+   */
+  social: { friendRequests: { newUser: number; other: number; newUserHours: number }; groupSize: number };
   vapid?: string;
 }

@@ -10,8 +10,9 @@ import { APP, launch, watch } from './browser.ts';
 
 export async function signIn(page: Page, handle: string): Promise<void> {
   const state = loadState();
-  const p = state?.personas[handle];
-  if (!p) throw new Error(`unknown persona ${handle}`);
+  if (!state) throw new Error('no seed state');
+  // Seeded personas, or an extra account made with `pnpm seed account`, which has no TOTP.
+  const p = state.personas[handle] ?? { email: `${handle}@${state.emailDomain}`, totpSecret: undefined };
   await page.goto(APP, { waitUntil: 'networkidle' });
   await page.waitForURL(/\/app\/login/, { waitUntil: 'commit' });
   await page.getByLabel('Email').fill(p.email);

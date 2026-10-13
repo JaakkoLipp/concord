@@ -3,10 +3,10 @@
  * (architecture section 4.3). Commands the UI calls live here; M2 adds the write actions.
  */
 import type { Backend, DomainEvent, Gateway, SearchQuery } from './backend.ts';
-import type { Id, Message } from './entities.ts';
+import type { Id, Message, Relationship, User } from './entities.ts';
 import { BackendError } from './errors.ts';
 import { Store, type EmojiPrefs, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
-import { ulid } from './ulid.ts';
+import { ulid, ulidTime } from './ulid.ts';
 
 const PAGE = 100;
 const FOCUS_REFETCH_MS = 60_000;
@@ -426,6 +426,67 @@ export class Session {
     this.rawSettings = { ...this.rawSettings, ...values };
     if ('notifications' in values || 'ordering' in values) this.store.settings = parseSettings(this.rawSettings);
     if (values[EMOJI_KEY] && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(values[EMOJI_KEY].value);
+  }
+
+  // ---------- friends (m2b-plan.md task 2) ----------
+
+  /** Send a friend request by `name#1234`. Not optimistic: the user is unknown until Stoat finds them. */
+  async addFriend(tag: string): Promise<User> {
+    const user = await this.backend.addFriend(tag);
+    this.store.apply({ type: 'relationship', user, status: user.relationship });
+    return user;
+  }
+
+  acceptFriend(user: Id): Promise<void> {
+    return this.relate(user, 'Friend', () => this.backend.acceptFriend(user));
+  }
+
+  /** Ignore or cancel a request, or remove a friend. */
+  removeFriend(user: Id): Promise<void> {
+    return this.relate(user, 'None', () => this.backend.removeFriend(user));
+  }
+
+  block(user: Id): Promise<void> {
+    return this.relate(user, 'Blocked', () => this.backend.block(user));
+  }
+
+  unblock(user: Id): Promise<void> {
+    return this.relate(user, 'None', () => this.backend.unblock(user));
+  }
+
+  /**
+   * Change a relationship optimistically. Stoat's answer, or its event, settles it. On failure the old one
+   * comes back, unless something newer replaced it meanwhile, and this throws.
+   */
+  private async relate(user: Id, next: Relationship, call: () => Promise<User>): Promise<void> {
+    const before = this.store.users.get(user);
+    if (before) this.store.upsertUsers([{ ...before, relationship: next }]);
+    try {
+      const u = await call();
+      this.store.apply({ type: 'relationship', user: u, status: u.relationship });
+    } catch (e) {
+      const now = this.store.users.get(user);
+      if (before && now?.relationship === next) this.store.upsertUsers([{ ...now, relationship: before.relationship }]);
+      throw e;
+    }
+  }
+
+  /** The DM channel with a user, opened at Stoat if needed. Returns its ID. */
+  async openDm(user: Id): Promise<Id> {
+    const known = [...this.store.channels.values()].find((c) => c.kind === 'dm' && c.recipients.includes(user));
+    if (known) return known.id;
+    const channel = await this.backend.openDm(user);
+    if (!this.store.channels.has(channel.id)) this.store.apply({ type: 'channelCreate', channel });
+    return channel.id;
+  }
+
+  /** How many outgoing friend requests this account may have waiting. */
+  friendRequestLimit(): number {
+    const limits = this.store.node?.social.friendRequests;
+    const self = this.store.selfId;
+    if (!limits || !self) return 10;
+    const ageHours = (Date.now() - ulidTime(self)) / 3_600_000;
+    return ageHours < limits.newUserHours ? limits.newUser : limits.other;
   }
 
   // ---------- pins and search (m2a-plan.md task 8) ----------

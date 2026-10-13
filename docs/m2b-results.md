@@ -51,3 +51,38 @@ Results for [m2b-plan.md](m2b-plan.md), recorded against the seeded Stoat 0.15.5
 | Console errors or failed requests | None |
 
 Everything the check changes is put back. The relationships it makes with `tuuli` and `onni` are removed.
+
+## Task 2: friends screen, 2026-10-13
+
+**What is deployed**:
+- **The Friends screen** at `@me` has tabs for Online, All, Pending and Blocked, each with a search box. Pending lists incoming and outgoing separately, and its tab carries the incoming count.
+- **Rows** show the avatar, the name with `name#1234` on hover, and the status text or presence. Their actions:
+  - friends: message, plus a menu with Remove friend and Block,
+  - incoming: accept and ignore,
+  - outgoing: cancel,
+  - blocked: unblock.
+
+  Clicking a friend opens the DM.
+- **"Add friend"**:
+  - checks the `name#1234` form before sending, and puts Stoat's refusals into plain words,
+  - reads the request limit from `GET /api/`: 5 for accounts under 72 hours old, then 10,
+  - shows your own `name#1234` with a copy button.
+- **Actions**: every relationship action is optimistic, reverts if Stoat refuses, and shows a toast. Removing and blocking ask first, per decision 4, through one app-wide confirm dialog.
+- **Badges**: the Friends link and the home button count incoming requests.
+- **The DM composer** now tells apart "You've blocked this person", "This person isn't accepting messages from you" and "You can only message friends".
+- **New in `@concord/ui`**: TextField, Tabs, Menu and Dialog. Menu and Dialog came forward from task 3, because the friends rows need them.
+
+**Live check**: `node tools/live/src/friends.ts`, with `tuuli` and `onni` in two browsers on the Friends screen. Times run from the click to the other browser showing it:
+
+| Check | Result |
+|---|---|
+| `tuuli` sends a request through Add friend, until `onni`'s Pending tab lists it | 56 ms. The notice "Friend request sent to onni#8093." shows, and the Pending tab badge reads 1. |
+| `onni` accepts, until `tuuli`'s All tab lists `onni` | 45 ms |
+| `tuuli` clicks Message | The DM opens with the composer enabled |
+| `onni` removes `tuuli` through the menu and the dialog, until `tuuli`'s composer says "You can only message friends." | 57 ms |
+| `onni` blocks `tuuli` through the menu and the dialog, until the composer says "This person isn't accepting messages from you." | 89 ms |
+| `onni` unblocks from the Blocked tab, until the composer goes back to "not a friend" | 61 ms. The Blocked tab is empty again. |
+| `tuuli`, a new account with 5 requests waiting, sends a sixth | "You can have 5 friend requests waiting at once. Cancel one, or wait for an answer." |
+| Console errors or failed requests | Only the expected 400 from that refused sixth request |
+
+The check removes every relationship it made.
