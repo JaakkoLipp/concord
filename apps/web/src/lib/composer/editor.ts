@@ -216,10 +216,12 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
 
   return {
     text: () => view.state.doc.toString(),
+    // setState fires no update listener, so the query and text are reported here.
     clear: () => {
       view.setState(fresh());
       if (current !== null) drafts.delete(current);
       opts.onChange('');
+      opts.onQuery?.(null);
     },
     switchTo: (draft) => {
       if (draft === current) return;
@@ -227,6 +229,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
       current = draft;
       view.setState(saved(draft));
       opts.onChange(view.state.doc.toString());
+      opts.onQuery?.(null);
     },
     setPlaceholder: (text) => {
       placeholderText = text;
@@ -244,6 +247,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
     focus: () => view.focus(),
     destroy: () => {
       keep();
+      opts.onQuery?.(null);
       view.destroy();
     },
   };

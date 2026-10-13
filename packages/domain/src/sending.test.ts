@@ -259,3 +259,71 @@ describe('typing', () => {
     expect(frames).toHaveLength(5);
   });
 });
+
+describe('review fixes', () => {
+  afterEach(() => vi.useRealTimers());
+  const bump = (store: Session['store'], id: string) => store.channels.set(CH, { ...store.channels.get(CH)!, lastMessageId: id } as Channel);
+
+  it('a send reads only up to its own message', async () => {
+    let finish: () => void = () => {};
+    const id = '01M00000000000000000001000';
+    const { session, store } = setup((_c, _m, key) => new Promise((resolve) => (finish = () => resolve(message(id, { nonce: key })))));
+    const sending = session.send(CH, 'moi');
+    await vi.waitFor(() => expect(store.pending.size).toBe(1));
+    // While a slow send is in flight, the user moves away and someone else posts here.
+    const other = '01M0000000000000000000ZZZZ';
+    store.apply({ type: 'messageCreate', message: message(other, { author: '01OTHER000000000000000000A' }) });
+    finish();
+    await sending;
+    expect(store.unreads.get(CH)?.lastId).toBe(id);
+    expect(store.isUnread(CH)).toBe(true);
+  });
+
+  it('a trailing ack sends the read point even if a newer message arrived meanwhile', async () => {
+    vi.useFakeTimers();
+    const { session, store, calls } = setup(async () => message(OLD));
+    bump(store, '01M00000000000000000000002');
+    session.markRead(CH);
+    bump(store, '01M00000000000000000000003');
+    session.markRead(CH);
+    bump(store, '01M00000000000000000000004');
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(calls.acks).toEqual(['01M00000000000000000000002', '01M00000000000000000000003']);
+  });
+
+  it('retries a failed ack', async () => {
+    vi.useFakeTimers();
+    const { session, store, calls } = setup(async () => message(OLD));
+    let fail = true;
+    Object.assign(session.backend, { ack: async (_c: string, id: string) => { if (fail) throw new TypeError('offline'); calls.acks.push(id); } });
+    bump(store, '01M00000000000000000000002');
+    session.markRead(CH);
+    await vi.advanceTimersByTimeAsync(0);
+    fail = false;
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(calls.acks).toEqual(['01M00000000000000000000002']);
+  });
+
+  it('keeps a message that arrived while the newest page was loading', async () => {
+    const { session, store } = setup(async () => message(OLD));
+    const live = '01M0000000000000000000LIVE';
+    let release: () => void = () => {};
+    Object.assign(session.backend, {
+      messages: () => new Promise((resolve) => (release = () => resolve({ messages: [message(OLD)], users: [], members: [] }))),
+    });
+    const loading = session.loadLatest(CH);
+    store.apply({ type: 'messageCreate', message: message(live) });
+    release();
+    await loading;
+    expect(windowIds(session)).toEqual([OLD, live]);
+  });
+
+  it('keeps a 409 message as failed when the follow-up fetch fails', async () => {
+    const { session, store } = setup(async () => {
+      throw new BackendError(409, 'HTTP409', 'conflict');
+    });
+    Object.assign(session.backend, { messages: async () => { throw new TypeError('offline'); } });
+    await session.send(CH, 'moi');
+    expect(store.pendingIn(CH)[0]).toMatchObject({ state: 'failed', error: 'network' });
+  });
+});

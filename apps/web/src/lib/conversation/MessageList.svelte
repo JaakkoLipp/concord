@@ -204,22 +204,6 @@
     });
   });
 
-  // Read when the newest message is in view in a visible, focused window (m2a-plan.md decision 5).
-  let active = $state(typeof document !== 'undefined' && document.visibilityState === 'visible' && document.hasFocus());
-  $effect(() => {
-    const update = () => (active = document.visibilityState === 'visible' && document.hasFocus());
-    window.addEventListener('focus', update);
-    window.addEventListener('blur', update);
-    document.addEventListener('visibilitychange', update);
-    return () => {
-      window.removeEventListener('focus', update);
-      window.removeEventListener('blur', update);
-      document.removeEventListener('visibilitychange', update);
-    };
-  });
-  $effect(() => {
-    if (active && stuck && win?.atNewest && store.connection === 'ready' && store.isUnread(channel)) session.markRead(channel);
-  });
 
   // Opening a channel starts at the bottom; a jump starts at the target, centred and briefly highlighted.
   // Each target is scrolled to once: later messages, edits and reactions must not pull the view back.
@@ -241,6 +225,24 @@
       stuck = false;
       measureAnchor();
     });
+  });
+
+  // Declared after the jump effects, so a channel switch sets `stuck` for the new channel before this runs.
+  // Read when the newest message is in view in a visible, focused window (m2a-plan.md decision 5).
+  let active = $state(typeof document !== 'undefined' && document.visibilityState === 'visible' && document.hasFocus());
+  $effect(() => {
+    const update = () => (active = document.visibilityState === 'visible' && document.hasFocus());
+    window.addEventListener('focus', update);
+    window.addEventListener('blur', update);
+    document.addEventListener('visibilitychange', update);
+    return () => {
+      window.removeEventListener('focus', update);
+      window.removeEventListener('blur', update);
+      document.removeEventListener('visibilitychange', update);
+    };
+  });
+  $effect(() => {
+    if (active && stuck && win?.atNewest && store.connection === 'ready' && store.isUnread(channel)) session.markRead(channel);
   });
 
   // Any change in content height (new messages, images, late embeds) keeps the view where it was.

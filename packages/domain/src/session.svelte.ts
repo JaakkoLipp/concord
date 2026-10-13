@@ -15,6 +15,8 @@ export const TYPING_EVERY_MS = 2_500;
 export const TYPING_STOP_MS = 1_000;
 /** At most one ack per channel in this time (m2a-plan.md decision 5). */
 export const ACK_EVERY_MS = 2_000;
+/** A failed ack is sent again after this long. */
+const ACK_RETRY_MS = 5_000;
 const POLL_MS = 2 * 60_000;
 
 const oldestFirst = (list: Message[]) => [...list].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -68,6 +70,8 @@ export class Session {
     void this.refreshEmojiPrefs();
   };
   private emojiSave: ReturnType<typeof setTimeout> | null = null;
+  /** When this client last changed its emoji prefs: a fetch started before then is older and is ignored. */
+  private emojiChangedAt = 0;
   /** Per channel: when BeginTyping was last sent, and the timer that sends EndTyping. */
   private readonly typingState = new Map<Id, { began: number; stop: ReturnType<typeof setTimeout> | null }>();
   private emojiFetchedAt = 0;
@@ -120,9 +124,10 @@ export class Session {
 
   /** After Ready: settings, the open server's members, and fresh history for the open channel. */
   private async coldStart(): Promise<void> {
+    const fetchedAt = Date.now();
     const settings: Record<string, { value: string }> = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY]).catch(() => ({}));
     this.store.settings = parseSettings(settings);
-    if (!this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(settings[EMOJI_KEY]?.value);
+    if (this.emojiChangedAt < fetchedAt) this.store.emojiPrefs = parseEmojiPrefs(settings[EMOJI_KEY]?.value);
     this.emojiFetchedAt = Date.now();
     this.lastMemberFetch.clear();
     if (this.openServerId) {
@@ -164,7 +169,14 @@ export class Session {
   async loadLatest(channel: Id): Promise<void> {
     const page = await this.backend.messages(channel, { limit: PAGE });
     this.absorb(page);
-    this.store.setWindow(channel, oldestFirst(page.messages), { atNewest: true, atOldest: page.messages.length < PAGE });
+    const sorted = oldestFirst(page.messages);
+    const newest = sorted.at(-1)?.id;
+    // Messages that arrived over the socket while the page was in flight are newer than it: keep them.
+    const w = this.store.windows.get(channel);
+    const later = w?.atNewest
+      ? w.ids.filter((id) => !newest || id > newest).map((id) => this.store.messages.get(id)).filter((m): m is Message => !!m)
+      : [];
+    this.store.setWindow(channel, [...sorted, ...later], { atNewest: true, atOldest: page.messages.length < PAGE });
   }
 
   async loadOlder(channel: Id): Promise<void> {
@@ -229,7 +241,7 @@ export class Session {
     await this.deliver(key);
   }
 
-  /** Upload a pending message's files that have no ID yet, updating their progress. Throws on the first failure. */
+  /** Upload a pending message's files that have no ID yet, updating their progress. Throws if any failed. */
   private async uploadFiles(key: Id): Promise<void> {
     const update = (i: number, change: Partial<PendingMessage['files'][number]>) => {
       const p = this.store.pending.get(key);
@@ -237,11 +249,14 @@ export class Session {
       this.store.pending.set(key, { ...p, files: p.files.map((f, j) => (j === i ? { ...f, ...change } : f)) });
     };
     const p = this.store.pending.get(key);
-    await Promise.all((p?.files ?? []).map(async (f, i) => {
+    // Wait for every upload to finish before failing, so a quick retry never uploads a file that is still going.
+    const results = await Promise.allSettled((p?.files ?? []).map(async (f, i) => {
       if (f.id) return;
       const id = await this.backend.upload(f.file, f.name, (progress) => update(i, { progress }));
       update(i, { id, progress: 1 });
     }));
+    const failed = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+    if (failed) throw failed.reason;
   }
 
   /** Try a failed message again with the same key, so Stoat can't store it twice. */
@@ -269,13 +284,21 @@ export class Session {
       const attachments = [...p.attachments, ...p.files.map((f) => f.id!)];
       const message = await this.backend.sendMessage(p.channel, { content: p.content, replies: p.replies, attachments }, key);
       this.store.apply({ type: 'messageCreate', message });
-      this.markRead(p.channel);
+      // Read up to this message only: if the user has moved on, newer messages here stay unread.
+      this.markRead(channel, message.id);
     } catch (e) {
       if (e instanceof BackendError && e.status === 409) {
         // The key was used: an earlier attempt reached Stoat after all. The newest page holds it.
-        await this.loadLatest(channel).catch(() => {});
+        try {
+          await this.loadLatest(channel);
+        } catch {
+          const now = this.store.pending.get(key);
+          if (now) this.store.pending.set(key, { ...now, state: 'failed', error: 'network' });
+          return;
+        }
+        const real = [...this.store.messages.values()].find((m) => m.nonce === key);
         this.store.pending.delete(key);
-        this.markRead(channel);
+        if (real) this.markRead(channel, real.id);
         return;
       }
       const error = e instanceof BackendError ? e.kind : 'network';
@@ -359,6 +382,7 @@ export class Session {
   }
 
   private saveEmojiPrefs(): void {
+    this.emojiChangedAt = Date.now();
     if (this.emojiSave) clearTimeout(this.emojiSave);
     this.emojiSave = setTimeout(() => {
       this.emojiSave = null;
@@ -369,9 +393,10 @@ export class Session {
   /** Stoat sends no event when settings change, so other devices' changes arrive on focus. */
   private async refreshEmojiPrefs(): Promise<void> {
     if (this.emojiSave || Date.now() - this.emojiFetchedAt < FOCUS_REFETCH_MS / 6) return;
-    this.emojiFetchedAt = Date.now();
+    const fetchedAt = (this.emojiFetchedAt = Date.now());
     const s = await this.backend.settings([EMOJI_KEY]).catch(() => null);
-    if (s && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(s[EMOJI_KEY]?.value);
+    // Ignore a fetch that started before a local change: it may predate the change's save.
+    if (s && this.emojiChangedAt < fetchedAt) this.store.emojiPrefs = parseEmojiPrefs(s[EMOJI_KEY]?.value);
   }
 
   // ---------- pins and search (m2a-plan.md task 8) ----------
@@ -415,14 +440,14 @@ export class Session {
    * Mark a channel read up to its newest message: locally at once, and to Stoat at most once per channel
    * every ACK_EVERY_MS, with a trailing ack for the newest message when several arrive in that time.
    */
-  markRead(channel: Id): void {
+  markRead(channel: Id, upTo?: Id): void {
     const c = this.store.channels.get(channel);
-    const last = c && c.kind !== 'saved' ? c.lastMessageId : undefined;
-    if (!last) return;
-    this.store.markRead(channel, last);
+    const target = upTo ?? (c && c.kind !== 'saved' ? c.lastMessageId : undefined);
+    if (!target) return;
+    this.store.markRead(channel, target);
     const a = this.acks.get(channel) ?? { at: 0 };
     this.acks.set(channel, a);
-    if (a.sent === last || a.timer) return;
+    if (a.sent === this.store.unreads.get(channel)?.lastId || a.timer) return;
     const wait = a.at + ACK_EVERY_MS - Date.now();
     if (wait <= 0) return this.flushAck(channel);
     a.timer = setTimeout(() => this.flushAck(channel), wait);
@@ -432,15 +457,15 @@ export class Session {
     const a = this.acks.get(channel);
     if (!a) return;
     a.timer = undefined;
-    const c = this.store.channels.get(channel);
-    const last = c && c.kind !== 'saved' ? c.lastMessageId : undefined;
-    const target = last && this.store.unreads.get(channel)?.lastId === last ? last : undefined;
+    // The read point as it is now, which may be newer than when the ack was scheduled.
+    const target = this.store.unreads.get(channel)?.lastId;
     if (!target || target === a.sent) return;
     a.at = Date.now();
     a.sent = target;
     void this.backend.ack(channel, target).catch(() => {
-      // Lost ack: the next markRead tries again.
+      // The local read point already hides the marker, so nothing else would send this again: retry.
       if (a.sent === target) a.sent = undefined;
+      if (!a.timer && this.acks.get(channel) === a) a.timer = setTimeout(() => this.flushAck(channel), ACK_RETRY_MS);
     });
   }
 

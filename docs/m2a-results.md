@@ -272,6 +272,27 @@ A review of what happens after a Jump found a bug in the message list, older tha
 - a send after a jump shows the new message at the bottom,
 - the channel is read at Stoat. The client sent one ack at once, and Stoat reported it applied 4.4 s later. Stoat applies acks late, as the plan notes.
 
+## Code review fixes, 2026-10-13
+
+A Sonnet review of the M2a code found ten problems. Each was confirmed against the code and fixed. Session fixes have unit tests, 5 more in `sending.test.ts`:
+
+1. A completed send acked the channel's newest message even if the user had moved on. It now reads only up to the sent message.
+2. A trailing ack was dropped if a newer message arrived before its timer fired. It now sends the read point as it is when the timer fires.
+3. A failed ack was never retried, because the local read point hid the marker. It now retries after 5 s.
+4. After a send or a channel switch, a stale autocomplete list could stay open. Picking from it would have thrown.
+5. A draft could be written back after logout and appear for the next account in the same tab. Drafts are now keyed by account.
+6. A message arriving while the newest page loaded could vanish from the window. It is now kept.
+7. A 409 whose follow-up fetch failed removed the message without a trace. It now stays as failed, with Retry.
+8. A quick retry could upload a file a second time while the first upload was still running. Retry now waits for every upload to finish.
+9. Following a link to old history could ack the whole channel. The read check now runs after the jump has set the scroll state.
+10. A settings fetch started before a favourite change could overwrite it. Such fetches are now ignored.
+
+After the fixes, `send.ts`, `jump.ts` and `m2a.ts` were run again on the live client, and all passed:
+- delivery medians were 17 to 71 ms, and the worst single sample 789 ms,
+- a second device cleared in 147 ms.
+
+The one 429 logged was a delete hitting Stoat's shared edit, react and delete bucket of 15 per 10 s, because the script works faster than a person. The REST layer waited and retried, as designed.
+
 ## What is left for Jaakko
 
 1. **Device check**:

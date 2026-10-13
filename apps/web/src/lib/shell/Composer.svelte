@@ -164,7 +164,7 @@
     void import('$lib/composer/editor.ts').then(({ createEditor }) => {
       if (cancelled) return;
       untrack(() => {
-        ed = createEditor(el, { draft: channel?.id ?? '', placeholder, touch, label, onChange: (t) => (text = t), onSend: send, onEscape: escape, onArrowUp: editLast, onQuery, onListKey: listKey, onPasteFiles: addFiles,
+        ed = createEditor(el, { draft: `${store.selfId}:${channel?.id ?? ''}`, placeholder, touch, label, onChange: (t) => (text = t), onSend: send, onEscape: escape, onArrowUp: editLast, onQuery, onListKey: listKey, onPasteFiles: addFiles,
           onEdit: (t) => { if (!channel) return; if (outgoing(t)) session.typing(channel.id); else session.stopTyping(channel.id); } });
         text = ed.text();
         editor = ed;
@@ -182,7 +182,7 @@
     const p = placeholder;
     untrack(() => {
       if (!editor || !id) return;
-      editor.switchTo(id);
+      editor.switchTo(`${store.selfId}:${id}`);
       editor.setPlaceholder(p);
     });
   });
