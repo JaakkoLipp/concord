@@ -38,6 +38,10 @@ export type DomainEvent =
   | { type: 'memberUpdate'; server: Id; user: Id; data: Partial<Member>; clear: Cleared<Member> }
   | { type: 'userUpdate'; id: Id; data: Partial<User>; clear: Cleared<User> }
   | { type: 'relationship'; user: User; status: Relationship }
+  /** A user's bio or banner changed. Stoat doesn't send the new profile, so whoever shows it fetches it again. */
+  | { type: 'profileChanged'; id: Id }
+  /** Synced settings written by any session of this account, this one included. */
+  | { type: 'settings'; values: Record<string, { updated: number; value: string }> }
   | { type: 'emojiCreate'; emoji: Emoji }
   | { type: 'emojiDelete'; id: Id }
   | { type: 'unknown'; name: string };
@@ -45,7 +49,10 @@ export type DomainEvent =
 export type ConnectionState = 'connecting' | 'ready' | 'reconnecting' | 'offline' | 'invalid-session';
 
 export interface Gateway {
-  /** Ask for live member updates for a server, where the backend supports it. */
+  /**
+   * The server on screen. Where the backend supports it, the gateway keeps live member updates coming for
+   * every server the user is in, and this one first.
+   */
   subscribe(server: Id): void;
   /** Tell others in a channel that this account started or stopped typing. */
   typing(channel: Id, typing: boolean): void;
@@ -131,8 +138,11 @@ export interface Backend {
   reactionEmoji(): Promise<(emoji: string) => string | null>;
   setSettings(values: Record<string, string>): Promise<void>;
   search(channel: Id, q: SearchQuery): Promise<MessagePage>;
-  /** Upload a message attachment, reporting progress as a fraction. Returns the file's ID. */
-  upload(file: Blob, name: string, onProgress?: (fraction: number) => void): Promise<Id>;
+  /**
+   * Upload a file, reporting progress as a fraction. Returns the file's ID. The tag says what it is for:
+   * attachments (the default), avatars, backgrounds or icons.
+   */
+  upload(file: Blob, name: string, onProgress?: (fraction: number) => void, tag?: string): Promise<Id>;
 
   connect(handlers: GatewayHandlers): Gateway;
 }

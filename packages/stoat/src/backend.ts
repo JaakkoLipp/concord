@@ -184,12 +184,12 @@ export class StoatBackend implements Backend {
     return { messages: r.messages.map(mapMessage), users: r.users.map(mapUser), members: (r.members ?? []).map(mapMember) };
   }
 
-  async upload(file: Blob, name: string, onProgress?: (fraction: number) => void): Promise<string> {
+  async upload(file: Blob, name: string, onProgress?: (fraction: number) => void, tag = 'attachments'): Promise<string> {
     if (!this.transport.upload) throw new Error('this transport cannot upload');
     const form = new FormData();
     form.append('file', file, name);
-    const res = await this.transport.upload('/attachments', form, this.token ? { 'x-session-token': this.token } : {}, onProgress);
-    if (res.status >= 400) throw new StoatError(res.status, res.body, 'POST /autumn/attachments');
+    const res = await this.transport.upload(`/${tag}`, form, this.token ? { 'x-session-token': this.token } : {}, onProgress);
+    if (res.status >= 400) throw new StoatError(res.status, res.body, `POST /autumn/${tag}`);
     return (res.body as { id: string }).id;
   }
 

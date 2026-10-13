@@ -19,3 +19,13 @@ export function presenceOf(user: Pick<User, 'online' | 'presence'> | undefined):
     default: return 'online';
   }
 }
+
+/**
+ * Status text worth showing: none for someone offline or Invisible, whose text Stoat still returns.
+ * Your own always shows.
+ */
+export function statusTextOf(user: Pick<User, 'id' | 'online' | 'presence' | 'statusText'> | undefined, selfId?: string): string | undefined {
+  if (!user?.statusText) return undefined;
+  if (user.id !== selfId && presenceOf(user) === 'offline') return undefined;
+  return user.statusText;
+}

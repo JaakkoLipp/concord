@@ -2,7 +2,7 @@
  * One signed-in session: connects the backend to the store and runs the cold start after every connect
  * (architecture section 4.3). Commands the UI calls live here; M2 adds the write actions.
  */
-import type { Backend, Gateway, SearchQuery } from './backend.ts';
+import type { Backend, DomainEvent, Gateway, SearchQuery } from './backend.ts';
 import type { Id, Message } from './entities.ts';
 import { BackendError } from './errors.ts';
 import { Store, type EmojiPrefs, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
@@ -67,14 +67,16 @@ export class Session {
   private poll: ReturnType<typeof setInterval> | null = null;
   private readonly onFocus = () => {
     void this.refreshMembers(false);
-    void this.refreshEmojiPrefs();
   };
   private emojiSave: ReturnType<typeof setTimeout> | null = null;
   /** When this client last changed its emoji prefs: a fetch started before then is older and is ignored. */
   private emojiChangedAt = 0;
   /** Per channel: when BeginTyping was last sent, and the timer that sends EndTyping. */
   private readonly typingState = new Map<Id, { began: number; stop: ReturnType<typeof setTimeout> | null }>();
-  private emojiFetchedAt = 0;
+  /** Synced settings as last fetched or pushed, by key. */
+  private rawSettings: Record<string, { value: string }> = {};
+  /** Profiles to fetch again shortly, after Stoat said they changed. */
+  private readonly profileRefetch = new Map<Id, ReturnType<typeof setTimeout>>();
   private onSignedOut: () => void = () => {};
   /** Per channel: when the last ack was sent, what it was for, and a trailing ack waiting to go. */
   private readonly acks = new Map<Id, { at: number; sent?: Id | undefined; timer?: ReturnType<typeof setTimeout> | undefined }>();
@@ -92,7 +94,10 @@ export class Session {
     this.store.self = self;
     this.store.upsertUsers([self]);
     this.gateway = this.backend.connect({
-      onEvent: (e) => this.store.apply(e),
+      onEvent: (e) => {
+        this.store.apply(e);
+        this.follow(e);
+      },
       onState: (s) => {
         this.store.connection = s;
         if (s === 'ready') void this.coldStart();
@@ -111,6 +116,9 @@ export class Session {
     this.emojiSave = null;
     for (const t of this.typingState.values()) if (t.stop) clearTimeout(t.stop);
     this.typingState.clear();
+    for (const t of this.profileRefetch.values()) clearTimeout(t);
+    this.profileRefetch.clear();
+    this.rawSettings = {};
     this.acks.clear();
     this.gateway?.close();
     this.gateway = null;
@@ -126,9 +134,9 @@ export class Session {
   private async coldStart(): Promise<void> {
     const fetchedAt = Date.now();
     const settings: Record<string, { value: string }> = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY]).catch(() => ({}));
-    this.store.settings = parseSettings(settings);
+    this.rawSettings = { ...this.rawSettings, ...settings };
+    this.store.settings = parseSettings(this.rawSettings);
     if (this.emojiChangedAt < fetchedAt) this.store.emojiPrefs = parseEmojiPrefs(settings[EMOJI_KEY]?.value);
-    this.emojiFetchedAt = Date.now();
     this.lastMemberFetch.clear();
     if (this.openServerId) {
       this.gateway?.subscribe(this.openServerId);
@@ -390,13 +398,34 @@ export class Session {
     }, 2_000);
   }
 
-  /** Stoat sends no event when settings change, so other devices' changes arrive on focus. */
-  private async refreshEmojiPrefs(): Promise<void> {
-    if (this.emojiSave || Date.now() - this.emojiFetchedAt < FOCUS_REFETCH_MS / 6) return;
-    const fetchedAt = (this.emojiFetchedAt = Date.now());
-    const s = await this.backend.settings([EMOJI_KEY]).catch(() => null);
-    // Ignore a fetch that started before a local change: it may predate the change's save.
-    if (s && this.emojiChangedAt < fetchedAt) this.store.emojiPrefs = parseEmojiPrefs(s[EMOJI_KEY]?.value);
+  // ---------- events the store can't handle alone ----------
+
+  private follow(e: DomainEvent): void {
+    switch (e.type) {
+      case 'profileChanged':
+        return this.profileChanged(e.id);
+      case 'settings':
+        return this.settingsChanged(e.values);
+    }
+  }
+
+  /** Fetch a changed profile again, but only if this session has shown it. A burst of changes is one fetch. */
+  private profileChanged(user: Id): void {
+    if (!this.store.profiles.has(user) || this.profileRefetch.has(user)) return;
+    this.profileRefetch.set(user, setTimeout(() => {
+      this.profileRefetch.delete(user);
+      void this.loadProfile(user, true).catch(() => {});
+    }, 300));
+  }
+
+  /**
+   * Settings written by any session of this account, this one's own writes included. A local change still
+   * waiting to be saved is newer than any echo, so it is kept.
+   */
+  private settingsChanged(values: Record<string, { value: string }>): void {
+    this.rawSettings = { ...this.rawSettings, ...values };
+    if ('notifications' in values || 'ordering' in values) this.store.settings = parseSettings(this.rawSettings);
+    if (values[EMOJI_KEY] && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(values[EMOJI_KEY].value);
   }
 
   // ---------- pins and search (m2a-plan.md task 8) ----------

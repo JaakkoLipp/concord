@@ -2,7 +2,7 @@
  * Stoat WebSocket frames to domain events. Frame shapes are taken from the recorded 0.15.5 fixtures;
  * the OpenAPI schema covers REST only.
  */
-import type { DomainEvent, Relationship } from '@concord/domain';
+import type { DomainEvent, Relationship, User } from '@concord/domain';
 import { CHANNEL_FIELDS, mapChannel, mapChannelPatch } from './map/channel.ts';
 import { mapEmoji } from './map/emoji.ts';
 import { MEMBER_FIELDS, mapMember, mapMemberPatch } from './map/member.ts';
@@ -93,11 +93,24 @@ export function mapFrame(f: Frame): DomainEvent[] {
       const id = x.id as { server: string; user: string };
       return [{ type: 'memberUpdate', server: id.server, user: id.user, data: mapMemberPatch(x.data ?? {}), clear: cleared(x.clear, MEMBER_FIELDS) }];
     }
-    case 'UserUpdate':
-      return [{ type: 'userUpdate', id: x.id, data: mapUserPatch(x.data ?? {}), clear: cleared(x.clear, USER_FIELDS) }];
+    case 'UserUpdate': {
+      const raw = (x.data ?? {}) as Partial<WUser>;
+      const names: string[] = Array.isArray(x.clear) ? x.clear : [];
+      const { data, clear } = mapUserPatch(raw);
+      const out: DomainEvent[] = [{ type: 'userUpdate', id: x.id, data, clear: [...new Set([...cleared<User>(names, USER_FIELDS), ...clear])] }];
+      // Stoat leaves the profile out of UserUpdate: setting a bio or banner sends empty data, removing one
+      // sends only the clear (m2b-plan.md, checked live).
+      const profileCleared = names.includes('ProfileContent') || names.includes('ProfileBackground');
+      if (profileCleared || (!Object.keys(raw).length && !names.length)) out.push({ type: 'profileChanged', id: x.id });
+      return out;
+    }
     case 'UserRelationship': {
       const user = mapUser(x.user as WUser);
       return [{ type: 'relationship', user, status: user.relationship as Relationship }];
+    }
+    case 'UserSettingsUpdate': {
+      const update = (x.update ?? {}) as Record<string, [number, string]>;
+      return [{ type: 'settings', values: Object.fromEntries(Object.entries(update).map(([k, [updated, value]]) => [k, { updated, value }])) }];
     }
     case 'EmojiCreate':
       return [{ type: 'emojiCreate', emoji: mapEmoji(f as unknown as WEmoji) }];

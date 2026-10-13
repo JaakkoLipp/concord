@@ -211,8 +211,11 @@ Connections, profile accent colours, message requests and stickers don't exist i
 Behaviour verified on 0.15.5:
 
 - **Online and offline** changes reach every server member live.
-- **Status text, Idle, Focus and Busy** changes reach friends and DM partners only, verified in M0. Other server members see them only when the member list re-polls, as section 4.3 of the architecture describes.
-- **New friendships**: when a friendship is accepted, the socket that was already open does not receive the new friend's status changes until it reconnects. The client therefore re-fetches that user on every `UserRelationship` event that makes a friend, and accepts a slightly stale status until the next reconnect.
+- **Status text, Idle, Focus and Busy** changes reach your own devices, friends, DM and group partners, and every socket subscribed to a shared server. On 0.15.5 the client keeps every server subscribed, so all members see them live. Elsewhere, other members see them when the member list re-polls, as section 4.3 of the architecture describes.
+- **Name, avatar and pronouns** reach the same sockets. **Bio and banner** don't: setting them sends a `UserUpdate` with empty data, and removing them sends only the clear, so the client fetches the profile again if it is showing it.
+- **Invisible** reaches subscribers as `presence: "Invisible"`, with no `online: false`. Going back to Online doesn't re-send `online: true`, so any visible presence marks the user online.
+- **Stoat's relationship bug**: after any `UserRelationship` event, a socket stops receiving its own user's updates and never receives the new friend's. Re-fetching the user doesn't help, and only a fresh socket or a `Subscribe` repairs it. The client re-sends `Subscribe` for every server after each relationship event, as m2b-plan.md decision 1 describes. A new friend who shares no server shows a stale status until the next reconnect.
+- **Synced settings** change live: Stoat sends `UserSettingsUpdate` to all of the account's sessions, the writer's own included, and the last write wins.
 
 **Server and invite controls**:
 

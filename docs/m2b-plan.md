@@ -1,6 +1,6 @@
 # M2b plan: social
 
-Status: draft, waiting for Jaakko's sign-off. Implements the M2b section of [milestones.md](milestones.md) from [client.md](client.md) section 7. Results go in `docs/m2b-results.md`.
+Status: signed off by Jaakko on 2026-10-13, with all eight recommendations accepted. Jaakko can't do M2a's device check yet, so it moves to M2b's acceptance. Implements the M2b section of [milestones.md](milestones.md) from [client.md](client.md) section 7. Results go in `docs/m2b-results.md`.
 
 The working agreement from M2a still applies:
 - Every task ends deployed at `https://concord.jaalip.com/app`, with a scripted live check in `tools/live/src/`, and is reviewed there.
@@ -121,4 +121,4 @@ This replaces the idle paragraph in client.md section 7.
 
 ## Progress
 
-Not started.
+- **Task 1**, 2026-10-13: done and deployed. The live check passed, as recorded in [m2b-results.md](m2b-results.md).

@@ -355,12 +355,22 @@ export class Store {
         const u = this.users.get(e.id);
         if (!u) return;
         const next = omit({ ...u, ...e.data }, e.clear);
+        // Stoat doesn't send online again when someone leaves Invisible, but a visible presence means connected.
+        if (e.data.presence && e.data.presence !== 'Invisible' && e.data.online === undefined) next.online = true;
         this.users.set(e.id, next);
         if (e.id === this.selfId) this.self = next;
         return;
       }
-      case 'relationship':
-        this.upsertUsers([{ ...(this.users.get(e.user.id) ?? e.user), ...e.user, relationship: e.status }]);
+      case 'relationship': {
+        // The event's user is complete: a block comes without presence or status, and the old ones must go.
+        const old = this.users.get(e.user.id);
+        const kept = old ? omit(old, ['online', 'presence', 'statusText']) : {};
+        this.upsertUsers([{ ...kept, ...e.user, relationship: e.status }]);
+        return;
+      }
+      case 'profileChanged':
+      case 'settings':
+        // The session handles these: they need a fetch or settings parsing.
         return;
       case 'emojiCreate':
         this.emojis.set(e.emoji.id, e.emoji);

@@ -7,7 +7,7 @@
   import { setMarkdownContext } from '$lib/markdown/context.ts';
   import { dayLabel, ulidTime } from '$lib/markdown/time.ts';
   import { m } from '$lib/i18n/index.ts';
-  import { avatarUrl, presenceOf } from '$lib/view/users.ts';
+  import { avatarUrl, presenceOf, statusTextOf } from '$lib/view/users.ts';
 
   interface Props { store: Store; user: string; server: string | undefined; variant: 'popout' | 'panel' }
   let { store, user, server, variant }: Props = $props();
@@ -22,6 +22,7 @@
     return (member?.roles ?? []).map((id) => s?.roles[id]).filter((r) => !!r).sort((a, b) => a!.rank - b!.rank);
   });
   const presence = $derived(presenceOf(u));
+  const statusText = $derived(statusTextOf(u, store.selfId));
   const banner = $derived(profile?.background ? fileUrl(profile.background, { maxSide: 1024 }) : undefined);
 </script>
 
@@ -34,7 +35,7 @@
     <h2 class="display">{store.displayName(user, server)}</h2>
     <p class="username">{u ? `${u.username}#${u.discriminator}` : ''}{#if u?.pronouns}<span class="dot" aria-hidden="true"></span>{u.pronouns}{/if}</p>
     {#if u?.bot}<span class="tag">{m.conversation.bot}</span>{/if}
-    {#if u?.statusText}<p class="status">{u.statusText}</p>{/if}
+    {#if statusText}<p class="status">{statusText}</p>{/if}
 
     {#if mutual && user !== store.selfId && (mutual.users.length || mutual.servers.length)}
       <p class="mutual">

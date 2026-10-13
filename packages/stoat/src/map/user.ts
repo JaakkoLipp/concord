@@ -20,22 +20,28 @@ export function mapUser(u: WUser): User {
   }) as User;
 }
 
-/** A partial UserUpdate payload. `status` replaces both presence and text when present. */
-export function mapUserPatch(d: Partial<WUser>): Partial<User> {
+/**
+ * A partial UserUpdate payload. `status` arrives whole, text and presence together, so a part it lacks has
+ * been removed: those fields are returned in `clear`. An empty string is a value, not a removal.
+ */
+export function mapUserPatch(d: Partial<WUser>): { data: Partial<User>; clear: (keyof User)[] } {
   const out: Partial<User> = {};
-  if (d.username !== undefined) out.username = d.username;
-  if (d.discriminator !== undefined) out.discriminator = d.discriminator;
-  if (d.display_name) out.displayName = d.display_name;
-  if (d.pronouns) out.pronouns = d.pronouns;
+  const clear: (keyof User)[] = [];
+  if (d.username != null) out.username = d.username;
+  if (d.discriminator != null) out.discriminator = d.discriminator;
+  if (d.display_name != null) out.displayName = d.display_name;
+  if (d.pronouns != null) out.pronouns = d.pronouns;
   if (d.avatar) out.avatar = mapFile(d.avatar);
-  if (d.badges !== undefined) out.badges = d.badges;
-  if (d.flags !== undefined) out.flags = d.flags;
-  if (d.online !== undefined) out.online = d.online;
+  if (d.badges != null) out.badges = d.badges;
+  if (d.flags != null) out.flags = d.flags;
+  if (d.online != null) out.online = d.online;
   if (d.status) {
-    if (d.status.presence) out.presence = d.status.presence;
-    if (d.status.text) out.statusText = d.status.text;
+    if (d.status.presence != null) out.presence = d.status.presence;
+    else clear.push('presence');
+    if (d.status.text != null) out.statusText = d.status.text;
+    else clear.push('statusText');
   }
-  return out;
+  return { data: out, clear };
 }
 
 /** Stoat's names for cleared user fields, mapped to ours. */

@@ -6,7 +6,7 @@
   import { resolve } from '$app/paths';
   import { m } from '$lib/i18n/index.ts';
   import { channelName, dmPartner } from '$lib/view/channels.ts';
-  import { avatarUrl, presenceOf } from '$lib/view/users.ts';
+  import { avatarUrl, presenceOf, statusTextOf } from '$lib/view/users.ts';
 
   interface Props { store: Store; active: string | null }
   let { store, active }: Props = $props();
@@ -45,8 +45,8 @@
         <span class="name">{channelName(store, channel)}</span>
         {#if channel.kind === 'group'}
           <span class="sub">{m.common.members(channel.recipients.length)}</span>
-        {:else if user?.statusText}
-          <span class="sub">{user.statusText}</span>
+        {:else if statusTextOf(user)}
+          <span class="sub">{statusTextOf(user)}</span>
         {/if}
       </span>
       {#if mentions}<Badge count={mentions} label={m.shell.mentions(mentions)} />{/if}

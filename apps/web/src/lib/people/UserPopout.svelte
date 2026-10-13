@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { Popover } from '@concord/ui';
   import type { Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
@@ -7,7 +8,10 @@
 
   let { session }: { session: Session } = $props();
   $effect(() => {
-    if (popout.user) void session.loadProfile(popout.user);
+    // Shows what is cached at once and fetches it fresh, in case a change arrived where no event reaches.
+    // untrack: loadProfile reads the profile map, and this must not run again when the fetch fills it.
+    const user = popout.user;
+    if (user) untrack(() => void session.loadProfile(user, true));
   });
 </script>
 
