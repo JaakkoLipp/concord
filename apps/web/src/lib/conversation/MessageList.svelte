@@ -12,6 +12,8 @@
   import { toasts } from '$lib/view/toast.svelte.ts';
   import type { MessageActions } from './actions.ts';
   import DeleteDialog from './DeleteDialog.svelte';
+  import { reactionKey } from '$lib/emoji/data.ts';
+  import { picker } from '$lib/emoji/picker.svelte.ts';
   import { tick, untrack } from 'svelte';
   import ArrowDown from '@lucide/svelte/icons/arrow-down';
   import { setMarkdownContext } from '$lib/markdown/context.ts';
@@ -48,6 +50,16 @@
   const actions: MessageActions = $derived({
     send: has(perms, Permission.SendMessage),
     manage: has(perms, Permission.ManageMessages),
+    react: has(perms, Permission.React),
+    toggleReaction: (msg, emoji) => void session.react(channel, msg.id, emoji)
+      .catch((e: unknown) => toasts.show(e instanceof Error && e.message === 'reaction limit' ? m.emoji.reactionLimit : m.emoji.reactFailed)),
+    pickReaction: (msg, anchor) => picker.open(anchor, 'react', (e) => void session.backend.reactionEmoji().then((form) => {
+      const current = store.messages.get(msg.id);
+      const emoji = form(e.value);
+      if (!current || !emoji) return;
+      // Stoat's spelling, or the key already on the message, so ❤ and ❤️ count as one (m2a-plan.md, checked live).
+      actions.toggleReaction(current, reactionKey(Object.keys(current.reactions), emoji));
+    })),
     reply: (msg) => { compose.reply(channel, msg.id); compose.focus(); },
     edit: (msg) => { compose.editing = msg.id; },
     saveEdit: (msg, text) => {

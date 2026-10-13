@@ -8,15 +8,17 @@
   import Pin from '@lucide/svelte/icons/pin';
   import PinOff from '@lucide/svelte/icons/pin-off';
   import Reply from '@lucide/svelte/icons/reply';
+  import SmilePlus from '@lucide/svelte/icons/smile-plus';
   import Trash from '@lucide/svelte/icons/trash-2';
   import { m } from '$lib/i18n/index.ts';
 
   interface Props {
+    canReact: boolean; onreact: (anchor: HTMLElement) => void;
     canEdit: boolean; canDelete: boolean; canPin: boolean; canReply: boolean; pinned: boolean;
     onreply: () => void; onedit: () => void; ondelete: (skipConfirm: boolean) => void; onpin: () => void;
     oncopylink: () => void; oncopyid: () => void; onmenu: (open: boolean) => void;
   }
-  let { canEdit, canDelete, canPin, canReply, pinned, onreply, onedit, ondelete, onpin, oncopylink, oncopyid, onmenu }: Props = $props();
+  let { canReact, onreact, canEdit, canDelete, canPin, canReply, pinned, onreply, onedit, ondelete, onpin, oncopylink, oncopyid, onmenu }: Props = $props();
   let more = $state<HTMLElement | null>(null);
   let open = $state(false);
   const setOpen = (v: boolean) => { open = v; onmenu(v); };
@@ -24,6 +26,7 @@
 </script>
 
 <div class="bar" role="toolbar" aria-label={m.actions.label}>
+  {#if canReact}<IconButton size="sm" label={m.actions.react} onclick={(e: MouseEvent) => onreact(e.currentTarget as HTMLElement)}><SmilePlus size={18} /></IconButton>{/if}
   {#if canReply}<IconButton size="sm" label={m.actions.reply} onclick={onreply}><Reply size={18} /></IconButton>{/if}
   {#if canEdit}<IconButton size="sm" label={m.actions.edit} onclick={onedit}><Pencil size={18} /></IconButton>{/if}
   <span bind:this={more}><IconButton size="sm" label={m.actions.more} active={open} aria-haspopup="menu" aria-expanded={open} onclick={() => setOpen(!open)}><Ellipsis size={18} /></IconButton></span>

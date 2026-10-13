@@ -22,6 +22,8 @@ export interface ComposerEditor {
   /** Keep the current draft and open another channel's, or an empty one. */
   switchTo(draft: string): void;
   setPlaceholder(text: string): void;
+  /** Put text at the caret, replacing any selection, such as an emoji from the picker. */
+  insert(text: string): void;
   focus(): void;
   /** Keeps the current draft. */
   destroy(): void;
@@ -185,6 +187,11 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
     setPlaceholder: (text) => {
       placeholderText = text;
       view.dispatch({ effects: hint.reconfigure(attributes(text)) });
+    },
+    insert: (text) => {
+      const r = view.state.selection.main;
+      view.dispatch({ changes: { from: r.from, to: r.to, insert: text }, selection: { anchor: r.from + text.length }, scrollIntoView: true });
+      view.focus();
     },
     focus: () => view.focus(),
     destroy: () => {

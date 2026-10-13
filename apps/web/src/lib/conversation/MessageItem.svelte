@@ -86,12 +86,16 @@
         {/if}
         {#each message.attachments as file (file.id)}<Attachment {file} />{/each}
         {#each message.embeds as embed, i (i)}<Embed {embed} />{/each}
-        {#if Object.keys(message.reactions).length}<Reactions reactions={message.reactions} {store} {server} />{/if}
+        {#if Object.keys(message.reactions).length}
+          <Reactions reactions={message.reactions} {store} {server} canReact={!!actions?.react}
+            ontoggle={actions ? (emoji) => actions.toggleReaction(message, emoji) : undefined}
+            onadd={actions ? (anchor) => actions.pickReaction(message, anchor) : undefined} />
+        {/if}
       </div>
     </div>
     {#if actions && !pending && !editing}
       <div class="actions">
-        <ActionBar canReply={actions.send} canEdit={own && !!message.content} canDelete={own || actions.manage} canPin={actions.manage} pinned={message.pinned}
+        <ActionBar canReact={actions.react} onreact={(anchor) => actions.pickReaction(message, anchor)} canReply={actions.send} canEdit={own && !!message.content} canDelete={own || actions.manage} canPin={actions.manage} pinned={message.pinned}
           onreply={() => actions.reply(message)} onedit={() => actions.edit(message)} ondelete={(skip) => actions.delete(message, skip)}
           onpin={() => actions.pin(message)} oncopylink={() => actions.copyLink(message)} oncopyid={() => actions.copyId(message)}
           onmenu={(open) => (menuOpen = open)} />

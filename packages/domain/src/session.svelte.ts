@@ -5,7 +5,7 @@
 import type { Backend, Gateway } from './backend.ts';
 import type { Id, Message } from './entities.ts';
 import { BackendError } from './errors.ts';
-import { Store, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
+import { Store, type EmojiPrefs, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
 import { ulid } from './ulid.ts';
 
 const PAGE = 100;
@@ -35,6 +35,23 @@ export function parseSettings(raw: Record<string, { value: string }>): Settings 
   return out;
 }
 
+/** Synced-settings key for emoji favourites and use counts (m2a-plan.md decision 4). */
+export const EMOJI_KEY = 'concord:emoji';
+/** Use counts kept for at most this many emoji, the most used. */
+const USAGE_KEPT = 60;
+
+export function parseEmojiPrefs(raw: string | undefined): EmojiPrefs {
+  try {
+    const v = JSON.parse(raw ?? '{}') as Partial<EmojiPrefs>;
+    const favourites = Array.isArray(v.favourites) ? v.favourites.filter((x) => typeof x === 'string') : [];
+    const usage: Record<string, number> = {};
+    for (const [k, n] of Object.entries(v.usage ?? {})) if (typeof n === 'number' && n > 0) usage[k] = n;
+    return { favourites, usage };
+  } catch {
+    return { favourites: [], usage: {} };
+  }
+}
+
 export class Session {
   readonly store = new Store();
   readonly backend: Backend;
@@ -43,7 +60,12 @@ export class Session {
   private gateway: Gateway | null = null;
   private lastMemberFetch = new Map<Id, number>();
   private poll: ReturnType<typeof setInterval> | null = null;
-  private readonly onFocus = () => void this.refreshMembers(false);
+  private readonly onFocus = () => {
+    void this.refreshMembers(false);
+    void this.refreshEmojiPrefs();
+  };
+  private emojiSave: ReturnType<typeof setTimeout> | null = null;
+  private emojiFetchedAt = 0;
   private onSignedOut: () => void = () => {};
   /** Per channel: when the last ack was sent, what it was for, and a trailing ack waiting to go. */
   private readonly acks = new Map<Id, { at: number; sent?: Id | undefined; timer?: ReturnType<typeof setTimeout> | undefined }>();
@@ -76,6 +98,8 @@ export class Session {
     globalThis.removeEventListener?.('focus', this.onFocus);
     if (this.poll) clearInterval(this.poll);
     for (const a of this.acks.values()) clearTimeout(a.timer);
+    if (this.emojiSave) clearTimeout(this.emojiSave);
+    this.emojiSave = null;
     this.acks.clear();
     this.gateway?.close();
     this.gateway = null;
@@ -89,8 +113,10 @@ export class Session {
 
   /** After Ready: settings, the open server's members, and fresh history for the open channel. */
   private async coldStart(): Promise<void> {
-    const settings = await this.backend.settings(['notifications', 'ordering']).catch(() => ({}));
+    const settings: Record<string, { value: string }> = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY]).catch(() => ({}));
     this.store.settings = parseSettings(settings);
+    if (!this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(settings[EMOJI_KEY]?.value);
+    this.emojiFetchedAt = Date.now();
     this.lastMemberFetch.clear();
     if (this.openServerId) {
       this.gateway?.subscribe(this.openServerId);
@@ -265,6 +291,56 @@ export class Session {
   /** Pin or unpin. Stoat's echo updates the message, and its system message says who did it. */
   pinMessage(channel: Id, id: Id, pinned: boolean): Promise<void> {
     return this.backend.pinMessage(channel, id, pinned);
+  }
+
+  // ---------- reactions and emoji (m2a-plan.md task 4) ----------
+
+  /** Add or remove this account's reaction, optimistically. On failure it reverts and this throws. */
+  async react(channel: Id, id: Id, emoji: string): Promise<void> {
+    const self = this.store.selfId;
+    const m = this.store.messages.get(id);
+    if (!self || !m) return;
+    const add = !m.reactions[emoji]?.includes(self);
+    const limit = this.store.node?.limits.reactions ?? 20;
+    if (add && !m.reactions[emoji] && Object.keys(m.reactions).length >= limit) throw new Error('reaction limit');
+    const apply = (on: boolean) => this.store.apply({ type: on ? 'reactionAdd' : 'reactionRemove', id, channel, user: self, emoji });
+    apply(add);
+    try {
+      await this.backend.react(channel, id, emoji, add);
+    } catch (e) {
+      apply(!add);
+      throw e;
+    }
+  }
+
+  /** Count a use of an emoji, for "frequently used". Saved shortly after, so a burst is one write. */
+  useEmoji(key: string): void {
+    const usage = { ...this.store.emojiPrefs.usage, [key]: (this.store.emojiPrefs.usage[key] ?? 0) + 1 };
+    const kept = Object.entries(usage).sort((a, b) => b[1] - a[1]).slice(0, USAGE_KEPT);
+    this.store.emojiPrefs = { ...this.store.emojiPrefs, usage: Object.fromEntries(kept) };
+    this.saveEmojiPrefs();
+  }
+
+  toggleFavourite(key: string): void {
+    const fav = this.store.emojiPrefs.favourites;
+    this.store.emojiPrefs = { ...this.store.emojiPrefs, favourites: fav.includes(key) ? fav.filter((k) => k !== key) : [...fav, key] };
+    this.saveEmojiPrefs();
+  }
+
+  private saveEmojiPrefs(): void {
+    if (this.emojiSave) clearTimeout(this.emojiSave);
+    this.emojiSave = setTimeout(() => {
+      this.emojiSave = null;
+      void this.backend.setSettings({ [EMOJI_KEY]: JSON.stringify(this.store.emojiPrefs) }).catch(() => {});
+    }, 2_000);
+  }
+
+  /** Stoat sends no event when settings change, so other devices' changes arrive on focus. */
+  private async refreshEmojiPrefs(): Promise<void> {
+    if (this.emojiSave || Date.now() - this.emojiFetchedAt < FOCUS_REFETCH_MS / 6) return;
+    this.emojiFetchedAt = Date.now();
+    const s = await this.backend.settings([EMOJI_KEY]).catch(() => null);
+    if (s && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(s[EMOJI_KEY]?.value);
   }
 
   // ---------- acks ----------

@@ -31,6 +31,12 @@ export interface PendingMessage {
 
 export type NotificationLevel = 'all' | 'mention' | 'none' | 'muted';
 
+/** Emoji favourites and use counts, keyed by the Unicode emoji or a custom emoji's ID (client.md section 6.4). */
+export interface EmojiPrefs {
+  favourites: string[];
+  usage: Record<string, number>;
+}
+
 export interface Settings {
   servers: Record<Id, NotificationLevel>;
   channels: Record<Id, NotificationLevel>;
@@ -56,6 +62,7 @@ export class Store {
   node = $state<NodeInfo | null>(null);
   connection = $state<ConnectionState>('offline');
   settings = $state<Settings>({ servers: {}, channels: {}, serverOrder: [] });
+  emojiPrefs = $state<EmojiPrefs>({ favourites: [], usage: {} });
 
   readonly users = new SvelteMap<Id, User>();
   readonly servers = new SvelteMap<Id, Server>();
@@ -529,5 +536,6 @@ export class Store {
     this.readFloor.clear();
     this.deleted.clear();
     this.settings = { servers: {}, channels: {}, serverOrder: [] };
+    this.emojiPrefs = { favourites: [], usage: {} };
   }
 }

@@ -191,3 +191,18 @@ describe('optimistic edit and delete', () => {
     expect(store.messages.get(OLD)!.content).toBe('toisen');
   });
 });
+
+describe('reactions', () => {
+  it('reacts optimistically and reverts on failure', async () => {
+    const { session, store } = setup(async () => message(OLD));
+    let fail = false;
+    Object.assign(session.backend, { react: async () => { if (fail) throw new BackendError(403, 'MissingPermission', 'no'); } });
+    await session.react(CH, OLD, '👍');
+    expect(store.messages.get(OLD)!.reactions['👍']).toEqual([SELF.id]);
+    fail = true;
+    const removing = session.react(CH, OLD, '👍');
+    expect(store.messages.get(OLD)!.reactions['👍']).toBeUndefined();
+    await expect(removing).rejects.toThrow();
+    expect(store.messages.get(OLD)!.reactions['👍']).toEqual([SELF.id]);
+  });
+});

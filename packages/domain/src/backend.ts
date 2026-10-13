@@ -112,6 +112,13 @@ export interface Backend {
   editMessage(channel: Id, message: Id, content: string): Promise<Message>;
   deleteMessage(channel: Id, message: Id): Promise<void>;
   pinMessage(channel: Id, message: Id, pinned: boolean): Promise<void>;
+  react(channel: Id, message: Id, emoji: string, add: boolean): Promise<void>;
+  /**
+   * The form the backend stores a reaction under, or null if it refuses the emoji: a custom emoji's ID, or
+   * the allowlist's spelling of a Unicode emoji, so every client's 👍 lands on one chip. Loaded on first use.
+   */
+  reactionEmoji(): Promise<(emoji: string) => string | null>;
+  setSettings(values: Record<string, string>): Promise<void>;
 
   connect(handlers: GatewayHandlers): Gateway;
 }

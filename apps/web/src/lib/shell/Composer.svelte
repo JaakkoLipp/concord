@@ -12,9 +12,10 @@
   import { IconButton } from '@concord/ui';
   import type { Channel, Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
-  import { COUNTER_FROM, byteLength, outgoing } from '$lib/composer/text.ts';
+  import { COUNTER_FROM, byteLength, outgoing, serialise } from '$lib/composer/text.ts';
   import type { ComposerEditor } from '$lib/composer/editor.ts';
   import { labeller } from '$lib/composer/tokens.ts';
+  import { picker } from '$lib/emoji/picker.svelte.ts';
   import { sendBlock } from '$lib/view/channels.ts';
   import { compose } from '$lib/view/compose.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
@@ -90,6 +91,19 @@
     if (compose.focusRequest) untrack(() => editor?.focus());
   });
 
+  // The emoji picker inserts at the caret: Unicode as itself, custom emoji as a token (client.md section 6.4).
+  let emojiButton = $state<HTMLElement | null>(null);
+  function openPicker() {
+    if (!emojiButton || !editor) return;
+    picker.open(emojiButton, 'insert', (e) => editor?.insert(e.kind === 'custom' ? serialise.emoji(e.value) : e.value));
+  }
+  function onkeydown(e: KeyboardEvent) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e' && !e.shiftKey && !e.altKey) {
+      e.preventDefault();
+      openPicker();
+    }
+  }
+
   // The editor exists while the box can be typed in, and is created once its code has loaded.
   $effect(() => {
     const el = host;
@@ -146,7 +160,7 @@
     {#if left <= COUNTER_FROM}
       <span class="counter" class:over={left < 0} aria-label={m.composer.bytesLeftLabel(left)}>{left}</span>
     {/if}
-    <span class="side"><IconButton label={m.composer.emoji} disabled><Smile size={22} /></IconButton></span>
+    <span class="side" bind:this={emojiButton}><IconButton label={m.composer.emoji} disabled={!editor} active={!!picker.request && picker.request.anchor === emojiButton} onclick={openPicker}><Smile size={22} /></IconButton></span>
     {#if touch}
       <span class="side">
         <IconButton label={m.composer.send} disabled={!editor || left < 0 || !outgoing(text)} onmousedown={(e: MouseEvent) => e.preventDefault()} onclick={send}>
@@ -156,6 +170,8 @@
     {/if}
   </div>
 {/if}
+
+<svelte:window {onkeydown} />
 
 <style>
   .composer {

@@ -151,6 +151,32 @@ export class StoatBackend implements Backend {
     await this.rest.request(pinned ? 'POST' : 'DELETE', `/channels/${channel}/messages/${message}/pin`);
   }
 
+  async react(channel: string, message: string, emoji: string, add: boolean): Promise<void> {
+    await this.rest.request(add ? 'PUT' : 'DELETE', `/channels/${channel}/messages/${message}/reactions/${encodeURIComponent(emoji)}`);
+  }
+
+  private reactionForms: Promise<(emoji: string) => string | null> | null = null;
+
+  reactionEmoji(): Promise<(emoji: string) => string | null> {
+    this.reactionForms ??= this.loadReactionForms();
+    return this.reactionForms;
+  }
+
+  private async loadReactionForms(): Promise<(emoji: string) => string | null> {
+    // Stoat's own list (crates/core/database/src/models/emojis/unicode_emoji.txt at v0.15.5), matched as
+    // Stoat matches it, without U+FE0F on either side. Its own spelling is the one we send.
+    const text = (await import('../data/unicode_emoji-0.15.5.txt?raw')).default;
+    const strip = (s: string) => s.replaceAll('\uFE0F', '').trim();
+    const forms = new Map<string, string>();
+    for (const line of text.split('\n')) if (line.trim()) forms.set(strip(line), line.trim());
+    return (emoji) => (/^[0-9A-HJKMNP-TV-Z]{26}$/.test(emoji) ? emoji : forms.get(strip(emoji)) ?? null);
+  }
+
+  async setSettings(values: Record<string, string>): Promise<void> {
+    // The timestamp lets other clients order writes; the last write wins.
+    await this.rest.request('POST', `/sync/settings/set?timestamp=${Date.now()}`, values);
+  }
+
   async dms() {
     return (await this.rest.request<components['schemas']['Channel'][]>('GET', '/users/dms')).map(mapChannel);
   }
