@@ -5,7 +5,7 @@
  */
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { ConnectionState, DomainEvent } from '../backend.ts';
-import type { Channel, Emoji, Id, Member, Message, NodeInfo, Profile, Relationship, Server, Unread, User } from '../entities.ts';
+import type { Channel, Emoji, Id, Member, Message, NodeInfo, Presence, Profile, Relationship, Server, Unread, User } from '../entities.ts';
 
 export interface MessageWindow {
   /** Oldest first, one contiguous stretch of history. */
@@ -77,6 +77,8 @@ export class Store {
   emojiPrefs = $state<EmojiPrefs>({ favourites: [], usage: {} });
   /** DMs this account closed, with the newest message at the time (m2b-plan.md decision 3). */
   closedDms = $state<Record<Id, Id>>({});
+  /** The status this account chose in the menu, from `concord:status` (m2b-plan.md decision 2). */
+  chosenStatus = $state<Presence | null>(null);
 
   readonly users = new SvelteMap<Id, User>();
   readonly servers = new SvelteMap<Id, Server>();
@@ -577,5 +579,6 @@ export class Store {
     this.settings = { servers: {}, channels: {}, serverOrder: [] };
     this.emojiPrefs = { favourites: [], usage: {} };
     this.closedDms = {};
+    this.chosenStatus = null;
   }
 }

@@ -150,3 +150,33 @@ The check removes every relationship it made.
 | `tuuli` closes the DM with `onni` | Gone for `tuuli`, still there for `onni` after a reload |
 | `onni` writes in it | Back in `tuuli`'s list after 24 ms |
 | Console errors or failed requests | None. The first run had a 403 after leaving, which the `untrack` fix removed. |
+
+## Task 5: status menu and the write queue, 2026-10-14
+
+**What is deployed**:
+- **The status menu**: clicking yourself in the dock opens it, with Online, Idle, Do not disturb, Focus and Invisible, each with a dot and a line of help.
+  - A choice writes `concord:status` first, then the presence, so another device never mistakes it for an automatic change.
+  - The menu shows the saved choice, so Invisible stays checked after a reload, which Stoat's own data can't show.
+- **Custom status**: "Set a custom status" opens a dialog with a Unicode emoji from the picker, then up to 128 characters, counted as Stoat counts them, in code points. "Clear status" removes it.
+- **Status changes show at once** on this device and are corrected if Stoat refuses.
+- **The write queue**: every `PATCH /users/@me` goes through it.
+  - Changes merge while they wait, and the newest wins. A removal and a later value cancel each other.
+  - It writes at most once every 5 s, and after a 429 it keeps the change for the next turn.
+  - Profile saves (task 7) and automatic idle (task 6) will use it too.
+- **The emoji picker** can mount inside a dialog, because a modal dialog makes the rest of the page inert. It gained a Unicode-only mode for the status.
+
+**Unit tests**: `packages/domain/src/selfqueue.test.ts`, 4 tests:
+- merging,
+- a burst of five becoming two writes,
+- a status change joining a waiting profile save,
+- the retry after a 429, with other errors rejected.
+
+**Live check**: `node tools/live/src/status.ts`, with `dev` on two devices (A and B) and `aino`, who has a DM with `dev`:
+
+| Check | Result |
+|---|---|
+| A picks Do not disturb, until B's dock shows it | 325 ms. The REST layer waited out one 429, left from the previous run's clean-up in `dev`'s bucket. `aino`'s DM row shows it too. |
+| Five quick picks, ending on Online | 2 requests, ending Online on B and for `aino` |
+| A custom status "🔥 Testaan tilaa", with the emoji from the picker, until `aino` sees it | 35 ms |
+| Invisible | `aino` sees `dev` offline. After a reload, A's menu still has Invisible checked. |
+| Console errors or failed requests | Only that one 429, retried by the REST layer |

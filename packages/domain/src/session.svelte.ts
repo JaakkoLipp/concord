@@ -2,8 +2,9 @@
  * One signed-in session: connects the backend to the store and runs the cold start after every connect
  * (architecture section 4.3). Commands the UI calls live here; M2 adds the write actions.
  */
-import type { Backend, DomainEvent, Gateway, GroupEdit, SearchQuery } from './backend.ts';
-import type { Id, Message, Relationship, User } from './entities.ts';
+import type { Backend, DomainEvent, Gateway, GroupEdit, SearchQuery, SelfEdit } from './backend.ts';
+import type { Id, Message, Presence, Relationship, User } from './entities.ts';
+import { SelfQueue } from './selfqueue.ts';
 import { BackendError } from './errors.ts';
 import { Store, newer, type EmojiPrefs, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
 import { ulid, ulidTime } from './ulid.ts';
@@ -55,6 +56,11 @@ export function parseClosedDms(raw: string | undefined): Record<Id, Id> {
     return {};
   }
 }
+
+/** Synced-settings key for the status chosen in the menu (m2b-plan.md decision 2). */
+export const STATUS_KEY = 'concord:status';
+const PRESENCES: Presence[] = ['Online', 'Idle', 'Focus', 'Busy', 'Invisible'];
+export const parseStatus = (raw: string | undefined): Presence | null => (PRESENCES.includes(raw as Presence) ? (raw as Presence) : null);
 
 /** Use counts kept for at most this many emoji, the most used. */
 const USAGE_KEPT = 60;
@@ -133,6 +139,7 @@ export class Session {
     for (const t of this.profileRefetch.values()) clearTimeout(t);
     this.profileRefetch.clear();
     this.rawSettings = {};
+    this.selfQueue.clear();
     this.acks.clear();
     this.gateway?.close();
     this.gateway = null;
@@ -147,7 +154,8 @@ export class Session {
   /** After Ready: settings, the open server's members, and fresh history for the open channel. */
   private async coldStart(): Promise<void> {
     const fetchedAt = Date.now();
-    const settings: Record<string, { value: string }> = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY, CLOSED_DMS_KEY]).catch(() => ({}));
+    const settings: Record<string, { value: string }> = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY, CLOSED_DMS_KEY, STATUS_KEY]).catch(() => ({}));
+    if (!this.statusSaving) this.store.chosenStatus = parseStatus(settings[STATUS_KEY]?.value);
     if (settings[CLOSED_DMS_KEY]) this.store.closedDms = parseClosedDms(settings[CLOSED_DMS_KEY].value);
     this.rawSettings = { ...this.rawSettings, ...settings };
     this.store.settings = parseSettings(this.rawSettings);
@@ -452,6 +460,7 @@ export class Session {
     if ('notifications' in values || 'ordering' in values) this.store.settings = parseSettings(this.rawSettings);
     if (values[EMOJI_KEY] && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(values[EMOJI_KEY].value);
     if (values[CLOSED_DMS_KEY] && !this.closedSaving) this.store.closedDms = parseClosedDms(values[CLOSED_DMS_KEY].value);
+    if (values[STATUS_KEY] && !this.statusSaving) this.store.chosenStatus = parseStatus(values[STATUS_KEY].value);
   }
 
   // ---------- friends (m2b-plan.md task 2) ----------
@@ -537,6 +546,78 @@ export class Session {
       // The echo arrives about when the request returns: let a moment pass before trusting events again.
       setTimeout(() => this.closedSaving--, 1_000);
     });
+  }
+
+  // ---------- status and profile (m2b-plan.md tasks 5 and 7) ----------
+
+  readonly selfQueue = new SelfQueue((edit) => this.writeSelf(edit));
+  private statusSaving = 0;
+
+  /**
+   * Choose a status in the menu. The choice is saved first, so another device never takes the new presence
+   * for an automatic one, then the presence goes through the queue.
+   */
+  async setStatus(presence: Presence): Promise<void> {
+    this.store.chosenStatus = presence;
+    this.statusSaving++;
+    await this.backend.setSettings({ [STATUS_KEY]: presence }).catch(() => {});
+    setTimeout(() => this.statusSaving--, 1_000);
+    await this.editSelf({ presence });
+  }
+
+  /** Set the custom status text, or clear it with null. */
+  setStatusText(text: string | null): Promise<void> {
+    return this.editSelf(text ? { statusText: text } : { remove: ['statusText'] });
+  }
+
+  /**
+   * Change this account's user or profile: shown at once, then written through the queue. If Stoat refuses,
+   * the user is fetched again so the screen matches it, and this throws.
+   */
+  async editSelf(change: SelfEdit): Promise<void> {
+    this.applySelf(change);
+    try {
+      await this.selfQueue.push(change);
+    } catch (e) {
+      const fresh = await this.backend.self().catch(() => null);
+      if (fresh) this.store.upsertUsers([fresh]);
+      throw e;
+    }
+  }
+
+  private applySelf(change: SelfEdit): void {
+    const self = this.store.self;
+    if (!self) return;
+    const next: User = { ...self };
+    if (change.presence) {
+      next.presence = change.presence;
+      if (change.presence !== 'Invisible') next.online = true;
+    }
+    if (change.statusText !== undefined) next.statusText = change.statusText;
+    if (change.displayName !== undefined) next.displayName = change.displayName;
+    if (change.pronouns !== undefined) next.pronouns = change.pronouns;
+    const own: Partial<Record<NonNullable<SelfEdit['remove']>[number], keyof User>> = {
+      displayName: 'displayName', pronouns: 'pronouns', avatar: 'avatar', statusText: 'statusText', presence: 'presence',
+    };
+    for (const f of change.remove ?? []) if (own[f]) delete next[own[f]];
+    this.store.upsertUsers([next]);
+  }
+
+  /** One queued write. Stoat's answer brings the uploaded avatar; its status is left to events, since it hides Invisible. */
+  private async writeSelf(edit: SelfEdit): Promise<void> {
+    const u = await this.backend.editSelf(edit);
+    const self = this.store.self;
+    if (self) {
+      const next: User = { ...self };
+      for (const k of ['displayName', 'pronouns', 'avatar'] as const) {
+        if (u[k] !== undefined) (next as unknown as Record<string, unknown>)[k] = u[k];
+        else delete next[k];
+      }
+      this.store.upsertUsers([next]);
+    }
+    if (edit.bio !== undefined || edit.banner !== undefined || edit.remove?.some((f) => f === 'bio' || f === 'banner')) {
+      await this.loadProfile(self?.id ?? '', true).catch(() => {});
+    }
   }
 
   // ---------- groups (m2b-plan.md task 4) ----------

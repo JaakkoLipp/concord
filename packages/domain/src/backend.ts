@@ -3,7 +3,7 @@
  * Events are already mapped to domain shapes, so the store never sees a Stoat frame.
  */
 import type {
-  Channel, Emoji, Id, Member, Message, NodeInfo, Profile, Relationship, Role, Server, Unread, User,
+  Channel, Emoji, Id, Member, Message, NodeInfo, Presence, Profile, Relationship, Role, Server, Unread, User,
 } from './entities.ts';
 
 /** Fields that an update removes, named by the domain property they clear. */
@@ -99,6 +99,23 @@ export interface SearchQuery {
   sort: 'Latest' | 'Oldest' | 'Relevance';
 }
 
+/** Fields of this account's own user and profile that can be cleared. */
+export type SelfField = 'displayName' | 'pronouns' | 'avatar' | 'statusText' | 'presence' | 'bio' | 'banner';
+
+/** A change to this account's own user and profile, as one `PATCH /users/@me`. */
+export interface SelfEdit {
+  displayName?: string;
+  pronouns?: string;
+  /** An uploaded file's ID, from `upload(…, 'avatars')`. */
+  avatar?: Id;
+  presence?: Presence;
+  statusText?: string;
+  bio?: string;
+  /** An uploaded file's ID, from `upload(…, 'backgrounds')`. */
+  banner?: Id;
+  remove?: SelfField[];
+}
+
 export interface GroupEdit {
   name?: string;
   description?: string;
@@ -166,6 +183,8 @@ export interface Backend {
   leaveGroup(group: Id, silent?: boolean): Promise<void>;
   /** Rename, describe, set the icon, or hand over ownership (owner only). `remove` clears the description or icon. */
   editGroup(group: Id, change: GroupEdit): Promise<Channel>;
+  /** Change this account's user and profile. Stoat allows 2 a 10 s, so the session queues these. */
+  editSelf(change: SelfEdit): Promise<User>;
   search(channel: Id, q: SearchQuery): Promise<MessagePage>;
   /**
    * Upload a file, reporting progress as a fraction. Returns the file's ID. The tag says what it is for:

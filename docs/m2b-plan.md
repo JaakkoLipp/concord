@@ -125,3 +125,4 @@ This replaces the idle paragraph in client.md section 7.
 - **Task 2**, 2026-10-13: done and deployed. The live check passed. Menu and Dialog were built here rather than in task 3.
 - **Task 3**, 2026-10-13: done and deployed. The live check passed.
 - **Task 4**, 2026-10-13: done and deployed. The live check passed.
+- **Task 5**, 2026-10-14: done and deployed. The live check passed.

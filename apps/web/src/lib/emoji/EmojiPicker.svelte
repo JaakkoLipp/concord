@@ -33,7 +33,8 @@
 
   const session = $derived(app.session);
   const store = $derived(session?.store);
-  const req = $derived(picker.request);
+  let { host = 'shell' }: { host?: string } = $props();
+  const req = $derived(picker.request?.host === host ? picker.request : null);
   let all = $state<UnicodeEmoji[]>([]);
   let allowed = $state<((emoji: string) => string | null) | null>(null);
   let query = $state('');
@@ -59,7 +60,7 @@
     const u = byUnicode.get(key);
     return u ? unicodeItem(u) : null;
   };
-  const usable = (i: Item) => req?.mode !== 'react' || i.kind === 'custom' || !!allowed?.(i.key);
+  const usable = (i: Item) => (req?.mode === 'unicode' ? i.kind === 'unicode' : req?.mode !== 'react' || i.kind === 'custom' || !!allowed?.(i.key));
 
   const sections = $derived.by((): Section[] => {
     // Wait for the data, and in reaction mode for the allowlist, rather than show a partial list.
@@ -84,7 +85,7 @@
     return [
       ...(favourites.length ? [{ id: 'favourites', title: m.emoji.favourites, items: favourites, icon: Star }] : []),
       ...(frequent.length ? [{ id: 'frequent', title: m.emoji.frequent, items: frequent, icon: Clock }] : []),
-      ...customs.map((s) => ({ id: `server-${s.server.id}`, title: s.server.name, items: s.items, image: s.items[0]!.src })),
+      ...(req.mode === 'unicode' ? [] : customs.map((s) => ({ id: `server-${s.server.id}`, title: s.server.name, items: s.items, image: s.items[0]!.src }))),
       ...GROUPS.map((g) => ({ id: `group-${g}`, title: m.emoji.groups[g] ?? '', items: all.filter((e) => e.group === g).map(unicodeItem).filter(usable), icon: GROUP_ICONS[g] })),
     ].filter((s) => s.items.length);
   });

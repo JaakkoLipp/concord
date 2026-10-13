@@ -1,5 +1,5 @@
 /** The Stoat implementation of the domain's Backend interface. */
-import type { Backend, Capabilities, Channel, Gateway, GatewayHandlers, GroupEdit, LoginResult, Message, MessagePage, MessageQuery, NodeInfo, OutgoingMessage, SearchQuery, User } from '@concord/domain';
+import type { Backend, Capabilities, Channel, Gateway, GatewayHandlers, GroupEdit, LoginResult, SelfEdit, SelfField, Message, MessagePage, MessageQuery, NodeInfo, OutgoingMessage, SearchQuery, User } from '@concord/domain';
 import type { components } from './api/types.ts';
 import { capabilitiesFor } from './capabilities.ts';
 import { mapChannel } from './map/channel.ts';
@@ -236,6 +236,24 @@ export class StoatBackend implements Backend {
       ...(remove.length ? { remove } : {}),
     };
     return mapChannel(await this.rest.request<WChannel>('PATCH', `/channels/${group}`, body));
+  }
+
+  async editSelf(change: SelfEdit): Promise<User> {
+    const fields: Record<SelfField, string> = {
+      displayName: 'DisplayName', pronouns: 'Pronouns', avatar: 'Avatar', statusText: 'StatusText', presence: 'StatusPresence',
+      bio: 'ProfileContent', banner: 'ProfileBackground',
+    };
+    const status = { ...(change.presence !== undefined ? { presence: change.presence } : {}), ...(change.statusText !== undefined ? { text: change.statusText } : {}) };
+    const profile = { ...(change.bio !== undefined ? { content: change.bio } : {}), ...(change.banner !== undefined ? { background: change.banner } : {}) };
+    const body = {
+      ...(change.displayName !== undefined ? { display_name: change.displayName } : {}),
+      ...(change.pronouns !== undefined ? { pronouns: change.pronouns } : {}),
+      ...(change.avatar !== undefined ? { avatar: change.avatar } : {}),
+      ...(Object.keys(status).length ? { status } : {}),
+      ...(Object.keys(profile).length ? { profile } : {}),
+      ...(change.remove?.length ? { remove: change.remove.map((f) => fields[f]) } : {}),
+    };
+    return mapUser(await this.rest.request<WUser>('PATCH', '/users/@me', body));
   }
 
   async search(channel: string, q: SearchQuery): Promise<MessagePage> {
