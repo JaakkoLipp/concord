@@ -270,7 +270,7 @@ A review of what happens after a Jump found a bug in the message list, older tha
 `node tools/live/src/jump.ts` reproduced the first problem before the fix, when the view moved from the bottom back up by 750 px. After the fix:
 - the view stays at the bottom when `aino` posts,
 - a send after a jump shows the new message at the bottom,
-- the channel is read at Stoat.
+- the channel is read at Stoat. The client sent one ack at once, and Stoat reported it applied 4.4 s later. Stoat applies acks late, as the plan notes.
 
 ## What is left for Jaakko
 

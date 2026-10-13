@@ -28,6 +28,8 @@ await api('POST', `/channels/${st.channels.botti}/messages`, { auth: aino, body:
 await page.waitForTimeout(1500);
 const after = await scroller.evaluate((el) => [el.scrollTop, el.scrollHeight - el.clientHeight]);
 // Then jump again, scroll up a little, and send: the list should go to the bottom with the new message in view.
+const acks: string[] = [];
+page.on('request', (r) => { if (r.method() === 'PUT' && r.url().includes('/ack/')) acks.push(r.url().split('/').at(-1)!); });
 await page.goto(`${APP}/channels/${st.serverId}/${st.channels.botti}/${target}`, { waitUntil: 'networkidle' });
 await page.locator(`#message-${target}`).waitFor();
 await page.waitForTimeout(800);
@@ -39,10 +41,15 @@ await page.getByText(text).waitFor();
 await page.waitForTimeout(1500);
 const sent = await page.getByText(text).evaluate((el) => { const r = el.getBoundingClientRect(); const s = document.querySelector('.scroller')!.getBoundingClientRect(); return r.bottom <= s.bottom + 1 && r.top >= s.top; });
 const end = await scroller.evaluate((el) => el.scrollHeight - el.scrollTop - el.clientHeight);
-await page.waitForTimeout(3000);
+// Stoat applies acks a few seconds late: poll for up to 15 s.
 const dev = { session: (await login(st.personas.dev!.email, passwordFor('dev'))).token };
-const ch = await api<{ last_message_id?: string }>('GET', `/channels/${st.channels.botti}`, { auth: dev });
-const unread = await api<{ _id: { channel: string }; last_id?: string }[]>('GET', '/sync/unreads', { auth: dev });
-const readAtStoat = unread.find((u) => u._id.channel === st.channels.botti)?.last_id === ch.last_message_id;
-console.log(JSON.stringify({ stayedAtBottom: after[0] === after[1], before, after, sentVisible: sent, distanceFromBottom: end, readAtStoat }));
+const sentAt = performance.now();
+let readAtStoat = -1;
+while (performance.now() - sentAt < 15_000) {
+  const ch = await api<{ last_message_id?: string }>('GET', `/channels/${st.channels.botti}`, { auth: dev });
+  const unread = await api<{ _id: { channel: string }; last_id?: string }[]>('GET', '/sync/unreads', { auth: dev });
+  if (unread.find((u) => u._id.channel === st.channels.botti)?.last_id === ch.last_message_id) { readAtStoat = Math.round(performance.now() - sentAt); break; }
+  await page.waitForTimeout(500);
+}
+console.log(JSON.stringify({ acksSent: acks, stayedAtBottom: after[0] === after[1], before, after, sentVisible: sent, distanceFromBottom: end, readAtStoat }));
 await browser.close();
