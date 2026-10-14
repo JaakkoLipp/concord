@@ -1,46 +1,31 @@
 /**
- * The microphone chain's contract (client.md section 10.4), and a stand-in until the real chain in ./audio/
- * lands: plain getUserMedia with the browser's own processing, no gate and no push-to-talk. At that merge,
- * this file re-exports the chain from ./audio/ instead, and the call keeps the same calls.
+ * The microphone for a call (client.md section 10.4): the chain from ./audio/, built from this device's voice
+ * settings, rebuilt piece by piece when they change, and opened by the push-to-talk key in that mode.
  */
+import { createMicChain, listenPushToTalk, type MicChain } from './audio/index.ts';
+import { loadVoiceSettings, onVoiceSettings, type VoiceSettings } from './settings.ts';
 
-/** What the chain is built from. The voice settings (client.md section 10.9) fill this in at merge. */
-export interface MicSettings {
-  inputDevice?: string;
-  echoCancellation?: boolean;
-  autoGainControl?: boolean;
-}
+export type { MicChain };
 
-export interface MicChain {
-  /** The processed track to publish. */
-  track: MediaStreamTrack;
-  /** Input level, 0 to 1. */
-  level(): number;
-  /** Whether the gate lets sound through now. */
-  gateOpen(): boolean;
-  update(settings: MicSettings): Promise<void>;
-  setPushToTalk(down: boolean): void;
-  stop(): void;
-}
-
-/** The settings the next chain is built with. */
-export const micSettings = (): MicSettings => ({});
-
-export async function createMicChain(settings: MicSettings): Promise<MicChain> {
-  const constraints = (s: MicSettings): MediaTrackConstraints => ({
-    ...(s.inputDevice ? { deviceId: { ideal: s.inputDevice } } : {}),
-    echoCancellation: s.echoCancellation ?? true,
-    autoGainControl: s.autoGainControl ?? true,
-    noiseSuppression: true,
+/** A chain that follows the settings until stopped. */
+export async function openMic(): Promise<MicChain> {
+  const chain = await createMicChain(loadVoiceSettings());
+  let stopKey = () => {};
+  const keys = (s: VoiceSettings) => {
+    stopKey();
+    stopKey = s.inputMode === 'ptt' && s.pushToTalkKey ? listenPushToTalk(s.pushToTalkKey.code, (down) => chain.setPushToTalk(down)) : () => {};
+  };
+  keys(loadVoiceSettings());
+  const stopSettings = onVoiceSettings((s) => {
+    keys(s);
+    void chain.update(s).catch(() => {});
   });
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: constraints(settings) });
-  const track = stream.getAudioTracks()[0]!;
   return {
-    track,
-    level: () => 0,
-    gateOpen: () => true,
-    update: (next) => track.applyConstraints(constraints(next)),
-    setPushToTalk: () => {},
-    stop: () => track.stop(),
+    ...chain,
+    stop() {
+      stopSettings();
+      stopKey();
+      chain.stop();
+    },
   };
 }

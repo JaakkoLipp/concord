@@ -11,7 +11,7 @@ import {
   LocalAudioTrack, Room, RoomEvent, Track, type LocalTrack, type Participant, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication,
 } from 'livekit-client';
 import { setReceiving } from './controls.ts';
-import { createMicChain, micSettings, type MicChain } from './mic.ts';
+import { openMic, type MicChain } from './mic.ts';
 import { Peers } from './peers.ts';
 import { lossBetween, sample, type Sample } from './stats.ts';
 
@@ -144,7 +144,7 @@ export async function connect(url: string, token: string, options: CallOptions, 
 
   async function publishMic() {
     try {
-      const c = await createMicChain(micSettings());
+      const c = await openMic();
       if (room.state === 'disconnected') return c.stop();
       chain = c;
       const track = new LocalAudioTrack(c.track, undefined, true);

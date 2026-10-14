@@ -33,6 +33,12 @@ export class VoiceController {
   private timer: ReturnType<typeof setTimeout> | null = null;
   /** Our own voice state in Stoat when the server removed us, to tell another device from a kick. */
   private removedAs = $state.raw<{ joinedAt: number } | null>(null);
+  /**
+   * This connection's own voice state in Stoat, taken at the first stats tick that sees it, about a second after
+   * connecting. Not taken at the removal: another device's join can reach us before LiveKit's removal does, and
+   * would then look like our own.
+   */
+  private ownState: { joinedAt: number } | null = null;
   readonly webAudioMix = chromium();
 
   /** Who is speaking in this call, by user ID, ourselves included. Empty outside a call. */
@@ -148,6 +154,7 @@ export class VoiceController {
 
   private async connect(): Promise<void> {
     const gen = ++this.gen;
+    this.ownState = null;
     const channel = this.state.channel;
     if (!channel) return;
     // A rejoin, or a switch while rejoining, makes no join sound: the call was never left.
@@ -191,7 +198,7 @@ export class VoiceController {
       ended: (reason) => {
         if (!current()) return;
         const cause = endCause(reason);
-        if (cause === 'removed') this.removedAs = this.selfState();
+        if (cause === 'removed') this.removedAs = this.ownState ?? this.selfState();
         this.call = null;
         this.speaking = new Set();
         this.quality = 'unknown';
@@ -204,6 +211,7 @@ export class VoiceController {
       quality: (q) => { if (current()) this.quality = q; },
       stats: (s) => {
         if (!current()) return;
+        this.ownState ??= this.selfState();
         this.ping = s.rtt;
         if (s.loss !== undefined) this.loss = s.loss;
       },
