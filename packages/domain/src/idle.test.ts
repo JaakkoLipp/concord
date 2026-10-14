@@ -4,13 +4,14 @@ import type { Presence } from './entities.ts';
 import { ACTIVE_EVERY_MS, AWAY_MS, IdleTracker } from './idle.ts';
 
 function setup(chosen: Presence | null = 'Online', presence: Presence = 'Online') {
-  const state = { chosen, presence, sets: [] as string[], actives: [] as number[] };
+  const state = { chosen, presence, sets: [] as string[], actives: [] as number[], inCall: false };
   const t = new IdleTracker({
     now: () => Date.now(),
     presence: () => state.presence,
     chosen: () => state.chosen,
     setPresence: (p) => { state.sets.push(p); state.presence = p; t.presenceChanged(); },
     writeActive: (at) => state.actives.push(at),
+    inCall: () => state.inCall,
   });
   t.start();
   return { t, state };
@@ -103,6 +104,20 @@ describe('IdleTracker', () => {
     expect(state.sets).toEqual(['Idle']);
     minutes(1);
     expect(state.sets).toEqual(['Idle', 'Idle']);
+  });
+
+  it('counts a call as use, and starts the 10 minutes when it ends', () => {
+    const { state } = setup();
+    state.inCall = true;
+    minutes(90);
+    expect(state.sets).toEqual([]);
+    // A call writes nothing: other devices see it in Stoat's voice states.
+    expect(state.actives).toEqual([]);
+    state.inCall = false;
+    minutes(10);
+    expect(state.sets).toEqual([]);
+    minutes(1);
+    expect(state.sets).toEqual(['Idle']);
   });
 
   it('does nothing until started', () => {

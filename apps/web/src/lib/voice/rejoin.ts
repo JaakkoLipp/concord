@@ -21,17 +21,28 @@ export const REJOIN_GAP_MS = 10_000;
  */
 export const LK_REASON = {
   UNKNOWN_REASON: 0, CLIENT_INITIATED: 1, DUPLICATE_IDENTITY: 2, SERVER_SHUTDOWN: 3, PARTICIPANT_REMOVED: 4, ROOM_DELETED: 5,
-  STATE_MISMATCH: 6, JOIN_FAILURE: 7, MIGRATION: 8, SIGNAL_CLOSE: 9, ROOM_CLOSED: 10, CONNECTION_TIMEOUT: 14, MEDIA_FAILURE: 15,
+  STATE_MISMATCH: 6, JOIN_FAILURE: 7, MIGRATION: 8, SIGNAL_CLOSE: 9, ROOM_CLOSED: 10, USER_UNAVAILABLE: 11, USER_REJECTED: 12,
+  SIP_TRUNK_FAILURE: 13, CONNECTION_TIMEOUT: 14, MEDIA_FAILURE: 15, AGENT_ERROR: 16,
 } as const;
 
 /** How a call ended: by this client, by the server removing us, or by the connection. */
 export type EndCause = 'user' | 'removed' | 'connection';
 
+/**
+ * The ends that mean the connection or the server went away, and only those, are rejoined. The SDK reports a
+ * failed connect or an exhausted reconnect as UNKNOWN_REASON, and an unreachable server as JOIN_FAILURE.
+ */
+const CONNECTION_ENDS: ReadonlySet<number> = new Set([
+  LK_REASON.UNKNOWN_REASON, LK_REASON.SERVER_SHUTDOWN, LK_REASON.STATE_MISMATCH, LK_REASON.JOIN_FAILURE, LK_REASON.MIGRATION,
+  LK_REASON.SIGNAL_CLOSE, LK_REASON.CONNECTION_TIMEOUT, LK_REASON.MEDIA_FAILURE,
+]);
+
 export function endCause(reason: number | undefined): EndCause {
   if (reason === LK_REASON.CLIENT_INITIATED) return 'user';
-  if (reason === LK_REASON.PARTICIPANT_REMOVED || reason === LK_REASON.DUPLICATE_IDENTITY) return 'removed';
-  // Everything else is the connection or the room going away, a LiveKit restart included.
-  return 'connection';
+  if (reason === undefined || CONNECTION_ENDS.has(reason)) return 'connection';
+  // Everything else is a removal: another device's force_disconnect, a kick or ban, a refused token after a
+  // permission change, the room deleted with its channel, and any reason a later SDK adds.
+  return 'removed';
 }
 
 export type Phase =

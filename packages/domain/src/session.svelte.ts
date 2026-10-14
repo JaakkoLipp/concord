@@ -793,6 +793,10 @@ export class Session {
     chosen: () => this.store.chosenStatus,
     setPresence: (presence) => void this.editSelf({ presence }).catch(() => {}),
     writeActive: (at) => void this.backend.setSettings({ [ACTIVE_KEY]: String(at) }).catch(() => {}),
+    inCall: () => {
+      const self = this.store.selfId;
+      return !!self && this.store.voiceChannelOf(self) !== undefined;
+    },
   });
   private statusSaving = 0;
 

@@ -8,7 +8,7 @@
  * Never send LiveKit data: voice-ingress disconnects anyone who does. A lint rule bans the data calls.
  */
 import {
-  LocalAudioTrack, Room, RoomEvent, Track, type Participant, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication,
+  LocalAudioTrack, Room, RoomEvent, Track, type LocalTrack, type Participant, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication,
 } from 'livekit-client';
 import { setReceiving } from './controls.ts';
 import { createMicChain, micSettings, type MicChain } from './mic.ts';
@@ -152,7 +152,8 @@ export async function connect(url: string, token: string, options: CallOptions, 
       mic = track;
       // Joining muted never sends a moment of audio: the track is muted before it is published.
       if (muted) await track.mute();
-      await room.localParticipant.publishTrack(track, { source: Track.Source.Microphone, dtx: true, red: true });
+      // The cast only bridges the SDK's own types under exactOptionalPropertyTypes (`processor?`).
+      await room.localParticipant.publishTrack(track as LocalTrack, { source: Track.Source.Microphone, dtx: true, red: true });
     } catch (e) {
       if (room.state !== 'disconnected') sink.micFailed(e);
     }

@@ -12,6 +12,7 @@
   import DmSidebar from './DmSidebar.svelte';
   import ServerRail from './ServerRail.svelte';
   import UserDock from './UserDock.svelte';
+  import VoicePanel from './VoicePanel.svelte';
   import ImageViewer from '$lib/conversation/ImageViewer.svelte';
   import Toaster from './Toaster.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
@@ -26,18 +27,24 @@
 
   interface Props { store: Store; server: string | null; channel: string | null; children: Snippet; panel?: Snippet | undefined; panelWidth?: 'members' | 'profile' | 'find' }
   let { store, server, channel, children, panel, panelWidth = 'members' }: Props = $props();
+  const NO_ONE: ReadonlySet<string> = new Set();
+  /** The voice panel's height, so the slide-over sidebar ends above it on narrow screens. */
+  let voiceHeight = $state(0);
 </script>
 
-<div class="shell" class:panel={!!panel && shell.panelOpen} class:sidebar-open={shell.sidebarOpen} style:--panel-w={panelWidth === 'profile' ? 'var(--dm-panel-w)' : panelWidth === 'find' ? 'var(--popout-w)' : 'var(--members-w)'}>
+<div class="shell" style:--voice-h="{voiceHeight}px" class:panel={!!panel && shell.panelOpen} class:sidebar-open={shell.sidebarOpen} style:--panel-w={panelWidth === 'profile' ? 'var(--dm-panel-w)' : panelWidth === 'find' ? 'var(--popout-w)' : 'var(--members-w)'}>
   <div class="rail"><ServerRail {store} active={server} /></div>
   <div class="sidebar">
     {#if server}
-      <ChannelSidebar {store} {server} active={channel} />
+      <ChannelSidebar {store} {server} active={channel} speaking={app.voice?.speaking ?? NO_ONE} />
     {:else}
       <DmSidebar {store} active={channel} />
     {/if}
   </div>
-  <div class="dock"><UserDock {store} /></div>
+  <div class="dock">
+    {#if app.voice}<div bind:offsetHeight={voiceHeight}><VoicePanel {store} voice={app.voice} /></div>{/if}
+    <UserDock {store} />
+  </div>
   <main class="main">{@render children()}</main>
   {#if panel && shell.panelOpen}
     <div class="side-panel">{@render panel()}</div>
@@ -81,8 +88,8 @@
     .shell, .shell.panel { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: 'main'; }
     .rail, .sidebar, .dock { position: fixed; z-index: 50; translate: -100% 0; transition: translate var(--dur-modal) var(--ease-out); background: var(--surface-0); }
     .sidebar { translate: calc(-100% - var(--rail-w)) 0; }
-    .rail { top: 0; bottom: var(--dock-h); left: 0; width: var(--rail-w); padding-bottom: var(--space-5); }
-    .sidebar { top: 0; bottom: calc(var(--dock-h) + var(--space-5)); left: var(--rail-w); width: min(var(--sidebar-w), calc(100vw - var(--rail-w) - 3rem)); }
+    .rail { top: 0; bottom: calc(var(--dock-h) + var(--voice-h)); left: 0; width: var(--rail-w); padding-bottom: var(--space-5); }
+    .sidebar { top: 0; bottom: calc(var(--dock-h) + var(--voice-h) + var(--space-5)); left: var(--rail-w); width: min(var(--sidebar-w), calc(100vw - var(--rail-w) - 3rem)); }
     .dock { bottom: 0; left: 0; width: min(calc(var(--rail-w) + var(--sidebar-w)), calc(100vw - 3rem)); }
     .sidebar-open .rail, .sidebar-open .sidebar, .sidebar-open .dock { translate: 0 0; }
     .scrim { display: block; position: fixed; inset: 0; z-index: 45; border: 0; background: var(--scrim); }

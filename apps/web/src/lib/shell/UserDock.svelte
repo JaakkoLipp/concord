@@ -2,7 +2,9 @@
   import { Avatar, Button, IconButton, Popover, Presence } from '@concord/ui';
   import type { Presence as PresenceName, Store } from '@concord/domain';
   import Headphones from '@lucide/svelte/icons/headphones';
+  import HeadphoneOff from '@lucide/svelte/icons/headphone-off';
   import Mic from '@lucide/svelte/icons/mic';
+  import MicOff from '@lucide/svelte/icons/mic-off';
   import Settings from '@lucide/svelte/icons/settings';
   import { m } from '$lib/i18n/index.ts';
   import { app } from '$lib/session/app.svelte.ts';
@@ -40,8 +42,20 @@
         <span class="sub">{self.statusText || `${self.username}#${self.discriminator}`}</span>
       </span>
     </button>
-    <IconButton label={m.shell.voiceLater} disabled><Mic /></IconButton>
-    <IconButton label={m.shell.voiceLater} disabled><Headphones /></IconButton>
+    {#if app.voice}
+      {@const voice = app.voice}
+      <!-- Mute and deafen work outside a call too, and apply at the next join (client.md section 10.3). -->
+      <span class="toggle" class:on={voice.muted}>
+        <IconButton label={voice.muted ? m.voice.unmute : m.voice.mute} onclick={() => voice.toggleMute()}>
+          {#if voice.muted}<MicOff />{:else}<Mic />{/if}
+        </IconButton>
+      </span>
+      <span class="toggle" class:on={voice.deafened}>
+        <IconButton label={voice.deafened ? m.voice.undeafen : m.voice.deafen} onclick={() => voice.toggleDeafen()}>
+          {#if voice.deafened}<HeadphoneOff />{:else}<Headphones />{/if}
+        </IconButton>
+      </span>
+    {/if}
     <IconButton label={m.settings.open} onclick={() => void goto(resolve('/(app)/app/settings/[section]', { section: 'profile' }))}><Settings /></IconButton>
   </section>
   <Popover {anchor} {open} onclose={() => (open = false)} side="top" label={m.shell.you}>
@@ -83,6 +97,8 @@
   }
   .me:hover { background: var(--hover-overlay); }
   .text { display: grid; min-width: 0; }
+  .toggle { display: contents; }
+  .toggle.on :global(.icon-button) { color: var(--danger); }
   .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans); }
   .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
   .menu { display: grid; gap: var(--space-3); width: 17rem; padding: var(--space-4); }

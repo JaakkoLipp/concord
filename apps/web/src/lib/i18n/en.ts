@@ -2,6 +2,7 @@
  * English messages (client.md section 12). Other locales must have the same shape, which the type checks.
  * A message is a string, or a function for messages with parameters or plurals.
  */
+import type { JoinFailure } from '@concord/domain';
 import { plural } from './plural.ts';
 
 export const en = {
@@ -101,7 +102,6 @@ export const en = {
     hideMembers: 'Hide member list',
     showProfile: 'Show profile',
     hideProfile: 'Hide profile',
-    voiceLater: 'Voice arrives in a later milestone',
     openSidebar: 'Open channels',
     closeSidebar: 'Close channels',
     group: { online: 'Online', offline: 'Offline' },
@@ -252,6 +252,43 @@ export const en = {
     live: 'Live',
     inVoice: 'In voice',
     inCall: 'Call in progress',
+  },
+  voice: {
+    panel: 'Voice call',
+    connected: 'Voice connected',
+    connecting: 'Connecting…',
+    reconnecting: 'Reconnecting…',
+    disconnected: 'Disconnected',
+    elsewhere: 'Joined from another device',
+    rejoin: 'Rejoin',
+    dismiss: 'Dismiss',
+    disconnect: 'Disconnect',
+    camera: 'Camera',
+    share: 'Share your screen',
+    mute: 'Mute',
+    unmute: 'Unmute',
+    deafen: 'Deafen',
+    undeafen: 'Undeafen',
+    where: (channel: string, place: string) => `${channel} / ${place}`,
+    directCall: 'Direct messages',
+    quality: { excellent: 'Excellent connection', good: 'Good connection', poor: 'Poor connection', lost: 'Connection lost', unknown: 'Checking connection' },
+    stats: (ping: number | undefined, loss: number | undefined) =>
+      [ping === undefined ? '' : `Ping ${ping} ms`, loss === undefined ? '' : `packet loss ${loss} %`].filter(Boolean).join(', '),
+    joinFailed: {
+      'no-permission': 'You don’t have permission to join this channel.',
+      full: 'This voice channel is full.',
+      unavailable: 'Voice isn’t available right now. Try again in a moment.',
+      'not-voice': 'This channel has no voice.',
+      'already-connected': 'You’re already in a call on another device.',
+      'not-found': 'This channel no longer exists.',
+      'rate-limited': 'Too many tries. Wait a few seconds and try again.',
+      'signed-out': 'You’ve been signed out.',
+      network: 'Couldn’t reach the server. Check your connection.',
+      unknown: 'Couldn’t join voice. Try again.',
+    } satisfies Record<JoinFailure, string>,
+    micDenied: 'Microphone access was refused, so you can only listen.',
+    micMissing: 'No microphone was found, so you can only listen.',
+    micFailed: 'The microphone couldn’t start, so you can only listen.',
   },
   files: {
     size: (bytes: number) => bytes >= 1_000_000

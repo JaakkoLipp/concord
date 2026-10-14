@@ -25,9 +25,11 @@ describe('the rejoin rule', () => {
 
   it('rejoins after a connection-type end, never after the user or a removal', () => {
     expect(endCause(DisconnectReason.CLIENT_INITIATED)).toBe('user');
-    expect(endCause(DisconnectReason.PARTICIPANT_REMOVED)).toBe('removed');
-    expect(endCause(DisconnectReason.DUPLICATE_IDENTITY)).toBe('removed');
-    for (const r of [DisconnectReason.SIGNAL_CLOSE, DisconnectReason.SERVER_SHUTDOWN, DisconnectReason.ROOM_DELETED, DisconnectReason.JOIN_FAILURE,
+    for (const r of [DisconnectReason.PARTICIPANT_REMOVED, DisconnectReason.DUPLICATE_IDENTITY, DisconnectReason.ROOM_DELETED,
+      DisconnectReason.ROOM_CLOSED, DisconnectReason.USER_REJECTED, DisconnectReason.USER_UNAVAILABLE, DisconnectReason.AGENT_ERROR, 99]) {
+      expect(endCause(r)).toBe('removed');
+    }
+    for (const r of [DisconnectReason.SIGNAL_CLOSE, DisconnectReason.SERVER_SHUTDOWN, DisconnectReason.JOIN_FAILURE, DisconnectReason.MIGRATION,
       DisconnectReason.CONNECTION_TIMEOUT, DisconnectReason.MEDIA_FAILURE, DisconnectReason.STATE_MISMATCH, DisconnectReason.UNKNOWN_REASON, undefined]) {
       expect(endCause(r)).toBe('connection');
     }

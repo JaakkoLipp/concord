@@ -39,6 +39,7 @@
   }
 
   const isVoice = (c: Channel) => c.kind === 'text' && !!c.voice;
+  // Clicking a voice channel also joins its call, or does nothing more when already in it (client.md section 10.3).
   const maxUsers = (c: Channel) => (c.kind === 'text' ? c.voice?.maxUsers : undefined);
   /** A collapsed category still shows its selected and unread channels, as on Discord. */
   const visible = (id: string | null, c: Channel) => !id || !collapsed[id] || c.id === active || (store.isUnread(c.id) && !store.notificationsMuted(c.id));
@@ -87,6 +88,7 @@
           aria-current={channel.id === active ? 'page' : undefined}
           aria-label={[m.shell.channelLabel(name, isVoice(channel), unread, mentions), occupants || max ? m.voiceState.occupied(occupants, max) : ''].filter(Boolean).join(', ')}
           use:menuOn={() => (app.session ? channelMenu(app.session, channel.id) : [])}
+          onclick={isVoice(channel) ? (e) => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey) app.voice?.join(channel.id); } : undefined}
         >
           {#if unread}<span class="unread-pill" aria-hidden="true"></span>{/if}
           <span class="icon" aria-hidden="true">{#if isVoice(channel)}<Volume2 size={20} />{:else}<Hash size={20} />{/if}</span>
