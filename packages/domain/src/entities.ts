@@ -88,6 +88,11 @@ export interface SystemChannels {
   banned?: Id;
 }
 
+/** What an invite link shows before joining. Readable without signing in. */
+export type InvitePreview =
+  | { kind: 'server'; code: string; server: Id; name: string; icon?: FileRef; channel: Id; channelName: string; inviter: string; members: number }
+  | { kind: 'group'; code: string; channel: Id; name: string; inviter: string };
+
 export interface Invite {
   code: string;
   server: Id;

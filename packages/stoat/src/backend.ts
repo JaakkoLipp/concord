@@ -1,12 +1,13 @@
 /** The Stoat implementation of the domain's Backend interface. */
 import type {
-  Backend, Capabilities, Channel, ChannelEdit, Emoji, Gateway, GatewayHandlers, GroupEdit, Invite, LoginResult, Member, SelfEdit, SelfField, Message,
+  Backend, Capabilities, Channel, ChannelEdit, Emoji, Gateway, GatewayHandlers, GroupEdit, Id, Invite, InvitePreview, LoginResult, Member, SelfEdit, SelfField, Message,
   MessagePage, MessageQuery, NodeInfo, OutgoingMessage, Override, Role, RoleEdit, SearchQuery, Server, ServerEdit, User,
 } from '@concord/domain';
 import type { components } from './api/types.ts';
 import { capabilitiesFor } from './capabilities.ts';
 import { mapChannel } from './map/channel.ts';
 import { mapEmoji } from './map/emoji.ts';
+import { mapFile } from './map/file.ts';
 import { mapRole, mapServer, wireSystemChannels } from './map/server.ts';
 import { mapMember } from './map/member.ts';
 import { mapMessage, mapUnread } from './map/message.ts';
@@ -22,6 +23,8 @@ type WLogin = components['schemas']['ResponseLogin'];
 const FRIENDLY_NAME = 'Concord';
 
 type WInvite = { type: string; _id: string; server: string; channel: string; creator: string };
+type WInvitePreview = components['schemas']['InviteResponse'];
+type WInviteJoin = { type: 'Server'; server: { _id: string }; channels: { _id: string }[] } | { type: 'Group'; channel: { _id: string } };
 const mapInvite = (i: WInvite): Invite => ({ code: i._id, server: i.server, channel: i.channel, creator: i.creator });
 
 export class StoatBackend implements Backend {
@@ -377,6 +380,23 @@ export class StoatBackend implements Backend {
 
   async createInvite(channel: string): Promise<Invite> {
     return mapInvite(await this.rest.request<WInvite>('POST', `/channels/${channel}/invites`));
+  }
+
+  async invite(code: string): Promise<InvitePreview> {
+    const i = await this.rest.request<WInvitePreview>('GET', `/invites/${encodeURIComponent(code)}`);
+    if (i.type === 'Server') {
+      return {
+        kind: 'server', code: i.code, server: i.server_id, name: i.server_name, ...(i.server_icon ? { icon: mapFile(i.server_icon) } : {}),
+        channel: i.channel_id, channelName: i.channel_name, inviter: i.user_name, members: i.member_count,
+      };
+    }
+    return { kind: 'group', code: i.code, channel: i.channel_id, name: i.channel_name, inviter: i.user_name };
+  }
+
+  async joinInvite(code: string): Promise<{ server?: Id; channel: Id }> {
+    const r = await this.rest.request<WInviteJoin>('POST', `/invites/${encodeURIComponent(code)}`);
+    if (r.type === 'Server') return { server: r.server._id, channel: r.channels[0]?._id ?? '' };
+    return { channel: r.channel._id };
   }
 
   async invites(server: string): Promise<Invite[]> {

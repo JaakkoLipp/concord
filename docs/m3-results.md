@@ -50,3 +50,31 @@ Plan: [m3-plan.md](m3-plan.md). Written task by task. The decision gate verdict 
 **Waiting for**:
 - the `turn.concord` DNS record, for the certificate,
 - the Hetzner firewall, for the firewall check.
+
+## Task 7: invites, first part, 2026-10-14
+
+Built before the wipe, so it could be checked with personas on the dev stack.
+
+**Changes**:
+- **Invite page**: our client has one at `/app/invite/<code>`.
+  - Signed out, it previews the server: icon, name, who invited you, member count and channel. It offers "Log in to join" and says accounts are by invitation.
+  - Signed in, it offers Join, or Open for a member.
+  - Group invites work the same way.
+  - Bad or revoked codes say so, and a ban says so.
+- **Return after login**: any page reached signed out now goes through `/app/login?next=…` and returns there afterwards. `next` only accepts paths under `/app/`.
+- **Redirect**: Caddy sends `/invite/<code>` to `/app/invite/<code>` with a 302, so links copied from our client work as they are.
+
+**Bug found while checking**: right after Join, the page opened before our own member record had arrived, so the channel looked empty. The session fetches that record after `ServerCreate` (the M2c fix). The page now waits for it, up to five seconds, before opening the server.
+
+**Check**: `tools/live/src/invite.ts` makes a throwaway server as `dev-admin`. As `tuuli`, it walks through:
+- the link signed out,
+- the preview,
+- login and return,
+- Join,
+- the channel usable at once,
+- Open on a second visit,
+- a bad code.
+
+All pass.
+
+**Still to do, once `ref.concord` is in DNS**: `/` redirects to `/app`, Stoat's client moves to `ref.concord.jaalip.com`, and Stoat's mail links redirect there.

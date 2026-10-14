@@ -3,7 +3,7 @@
  * Events are already mapped to domain shapes, so the store never sees a Stoat frame.
  */
 import type {
-  Ban, Category, Channel, Emoji, Id, Invite, Member, Message, NodeInfo, Override, Presence, Profile, Relationship, Role, Server,
+  Ban, Category, Channel, Emoji, Id, Invite, InvitePreview, Member, Message, NodeInfo, Override, Presence, Profile, Relationship, Role, Server,
   SystemChannels, Unread, User,
 } from './entities.ts';
 
@@ -247,6 +247,10 @@ export interface Backend {
   /** A role's override in a channel, or the channel's default with `'default'`. Allow 0 and deny 0 clears it. */
   setChannelPermissions(channel: Id, role: Id | 'default', permissions: Override): Promise<void>;
   createInvite(channel: Id): Promise<Invite>;
+  /** An invite's preview; works signed out. */
+  invite(code: string): Promise<InvitePreview>;
+  /** Join a server through an invite. The server arrives over the socket as well. */
+  joinInvite(code: string): Promise<{ server?: Id; channel: Id }>;
   invites(server: Id): Promise<Invite[]>;
   deleteInvite(code: string): Promise<void>;
   /** Replace a member's roles. */

@@ -15,6 +15,22 @@ export const en = {
     members: (n: number) => plural('en', n, { one: `${n} member`, other: `${n} members` }),
     back: 'Back',
   },
+  invitePage: {
+    loading: 'Loading the invite…',
+    invitedBy: (name: string) => `${name} invited you to join`,
+    invitedToGroup: (name: string) => `${name} invited you to a group`,
+    channel: (name: string) => `Opens in #${name}`,
+    join: 'Join',
+    open: 'Open',
+    logIn: 'Log in to join',
+    noAccount: 'Concord is invitation-only for now. If you don’t have an account yet, ask the person who invited you.',
+    errors: {
+      invalid: 'This invite is invalid or has been revoked.',
+      banned: 'You’re banned from this server.',
+      network: 'Can’t reach the server. Check your connection.',
+      unknown: 'Couldn’t join. Try again.',
+    },
+  },
   login: {
     title: 'Welcome back',
     subtitle: 'Sign in to Concord',

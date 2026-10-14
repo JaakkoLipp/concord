@@ -21,6 +21,10 @@
 		reverse_proxy http://concord-web:3000
 	}
 
+	# Concord: invite links, which our client makes as /invite/<code>, open its invite page. Until M6 a
+	# temporary redirect, so the path can change without browsers having cached it.
+	redir /invite/* /app{uri} 302
+
 	# Concord: the M0 screen-share test page, a static build of spikes/m0-screenshare. Removed after M3.
 	redir /spike /spike/ 308
 	handle_path /spike/* {
