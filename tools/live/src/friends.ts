@@ -27,7 +27,7 @@ async function open(handle: string) {
   await signIn(page, handle);
   await page.goto(`${APP}/channels/@me`, { waitUntil: 'networkidle' });
   await page.getByText('Connected').waitFor({ timeout: 15_000 }).catch(() => {});
-  return { page, problems };
+  return { page, problems, context };
 }
 const timed = async (action: () => Promise<unknown>, check: () => Promise<boolean>) => {
   const start = performance.now();
@@ -92,6 +92,19 @@ await t.page.screenshot({ path: join(out, 'friends-limit.png') });
 await tab(t.page, 'Pending');
 await o.page.screenshot({ path: join(out, 'friends-onni.png') });
 await t.page.screenshot({ path: join(out, 'friends-pending.png') });
+
+// A request cancelled while tuuli is offline is gone after the reconnect: Ready ends what it doesn't list.
+for (const p of seeded) await unrelate(tuuli!, p);
+await unrelate(tuuli!, onni!);
+await onni!.call('POST', '/users/friend', { username: tuuli!.tag });
+await row(t.page, onni!.id).waitFor();
+await t.context.setOffline(true);
+await onni!.call('DELETE', `/users/${tuuli!.id}/friend`);
+// The socket notices it is gone when a Pong doesn't come: up to 30 s.
+await t.page.waitForTimeout(35_000);
+results.stillListedWhileOffline = await row(t.page, onni!.id).isVisible();
+await t.context.setOffline(false);
+results.cancelledWhileOfflineGone = await until(async () => !(await row(t.page, onni!.id).isVisible()), 30_000).then(() => true, () => false);
 
 await unrelate(tuuli!, onni!);
 for (const p of seeded) await unrelate(tuuli!, p);

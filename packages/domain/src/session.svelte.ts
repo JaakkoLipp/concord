@@ -474,11 +474,29 @@ export class Session {
 
   /** Fetch a changed profile again, but only if this session has shown it. A burst of changes is one fetch. */
   private profileChanged(user: Id): void {
-    if (!this.store.profiles.has(user) || this.profileRefetch.has(user)) return;
+    if (!this.watchedProfiles.has(user) || this.profileRefetch.has(user)) return;
     this.profileRefetch.set(user, setTimeout(() => {
       this.profileRefetch.delete(user);
-      void this.loadProfile(user, true).catch(() => {});
+      // Only the profile itself: a status change mustn't cost mutual lookups too, in the shared users bucket.
+      void this.backend.profile(user).then((p) => this.store.profiles.set(user, p)).catch(() => {});
     }, 300));
+  }
+
+  /** Profiles on screen now, with how many places show each. Only these are fetched again live. */
+  private readonly watchedProfiles = new Map<Id, number>();
+
+  /**
+   * A profile is on screen: changes to it are fetched live while it stays there. Every server is
+   * subscribed, so refetching every cached profile on every status change would cost real load at M3.
+   * Returns the call that ends it.
+   */
+  watchProfile(user: Id): () => void {
+    this.watchedProfiles.set(user, (this.watchedProfiles.get(user) ?? 0) + 1);
+    return () => {
+      const n = (this.watchedProfiles.get(user) ?? 1) - 1;
+      if (n > 0) this.watchedProfiles.set(user, n);
+      else this.watchedProfiles.delete(user);
+    };
   }
 
   /**

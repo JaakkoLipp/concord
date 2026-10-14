@@ -71,17 +71,20 @@ describe('SelfQueue after sign-out', () => {
 
   it('rejects what waits and never retries a write that was on its way', async () => {
     const sent: SelfEdit[] = [];
-    let first = true;
-    const q = new SelfQueue(async (e) => {
+    let refuse: () => void = () => {};
+    const q = new SelfQueue((e) => {
       sent.push(e);
-      if (first) { first = false; throw new BackendError(429, 'RateLimited', 'slow down'); }
+      return new Promise<void>((_, reject) => (refuse = () => reject(new BackendError(429, 'RateLimited', 'slow down'))));
     });
     const flying = q.push({ presence: 'Idle' }).catch((e: unknown) => e);
+    await vi.advanceTimersByTimeAsync(0);
+    // The first write is on its way when sign-out clears the queue, then Stoat answers 429.
     const waiting = q.push({ statusText: 'x' }).catch((e: unknown) => e);
     q.clear();
+    refuse();
     await vi.advanceTimersByTimeAsync(SELF_EVERY_MS * 3);
-    expect(sent.length).toBeLessThanOrEqual(1);
+    expect(sent).toHaveLength(1);
+    expect(await flying).toBeInstanceOf(BackendError);
     expect(await waiting).toBeInstanceOf(Error);
-    void flying;
   });
 });

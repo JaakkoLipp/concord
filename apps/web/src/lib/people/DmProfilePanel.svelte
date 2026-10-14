@@ -11,7 +11,9 @@
   $effect(() => {
     // untrack: loadProfile reads the store, and filling it must not run this again.
     const p = partner;
-    if (p) untrack(() => void session.loadProfile(p));
+    if (!p) return;
+    untrack(() => void session.loadProfile(p));
+    return session.watchProfile(p);
   });
 </script>
 

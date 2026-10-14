@@ -11,7 +11,9 @@
     // Shows what is cached at once and fetches it fresh, in case a change arrived where no event reaches.
     // untrack: loadProfile reads the profile map, and this must not run again when the fetch fills it.
     const user = popout.user;
-    if (user) untrack(() => void session.loadProfile(user, true));
+    if (!user) return;
+    untrack(() => void session.loadProfile(user, true));
+    return session.watchProfile(user);
   });
 </script>
 

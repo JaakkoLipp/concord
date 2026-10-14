@@ -287,7 +287,7 @@ A Sonnet review of the whole M2b diff found 14 issues, none high. Each was check
 
 | # | Finding | Outcome |
 |---|---|---|
-| 1 | After a reconnect, a relationship that ended while disconnected stayed: a ghost pending request, or a wrong DM composer | Fixed: `Ready` lists every relationship, so anyone it doesn't list now has none. Unit test. |
+| 1 | After a reconnect, a relationship that ended while disconnected stayed: a ghost pending request, or a wrong DM composer | Fixed: `Ready` lists every relationship, so anyone it doesn't list now has none. A probe confirmed `Ready` lists `BlockedOther` too. Unit test, plus a live step in `friends.ts`: a request cancelled while `tuuli` was offline disappears after the reconnect. |
 | 2 | Group settings and the custom-status dialog reset what was being typed when a message arrived or your own user changed | Fixed: they fill only when opened |
 | 3 | With Add friend open, no tab could be reached by keyboard | Fixed: the first tab takes focus when none is selected |
 | 4 | A partly failed Add members left already-added friends chosen but unlisted | Fixed: the choice keeps only those still offered |
@@ -295,12 +295,17 @@ A Sonnet review of the whole M2b diff found 14 issues, none high. Each was check
 | 6 | A failed settings fetch on a reconnect reset the chosen status, so idle could override a manual Idle | Fixed: a failed fetch changes nothing |
 | 7 | An account in no server has no repair for Stoat's socket bug | Documented in client.md. Everyone is in the community server. |
 | 8 | Settings opened from a link could close to the previous site | Fixed: Close goes back only when settings were opened from the app |
-| 9 | After sign-out, the write queue could retry a write after another account signed in | Fixed: clearing closes the queue and rejects what waits. Unit test. |
+| 9 | After sign-out, the write queue could retry a write after another account signed in | Fixed: clearing closes the queue and rejects what waits. The unit test signs out while a write is on its way and Stoat then answers 429. |
 | 10 | A failed status choice stayed chosen | Fixed: it reverts, here and in settings |
 | 11 | An Idle set by another client is restored to Online by the next input | As planned: the rule restores Online whoever set Idle. Busy, Focus and Invisible from other clients are left alone. |
 | 12 | The default group name could cut an emoji in half | Fixed: names are measured in code points, as Stoat counts |
 | 13 | A jump or search hit inside a collapsed blocked run showed nothing | Fixed: the run opens. Mentions from blocked users still raise badges, as before. |
 | 14 | After a long-press menu on a touch laptop, a mouse right-click on the same element did nothing | Fixed: the press is forgotten shortly after |
+
+**One more change after the review: live profile refetches cost less.**
+- Every server is subscribed, so refetching every cached profile on every status change would cost real load at M3. Each refetch was two requests in the shared 20-per-10 s users bucket, multiplied across 200 tabs.
+- Now only profiles on screen are fetched again live, and only `GET /profile`. The popout and the DM panel register the user they show.
+- `profile.ts` passed again: 427 ms for the changes and 408 ms for the clears.
 
 After the fixes, every M2b live check ran again on the deployed client and passed: `presence`, `friends`, `people-actions`, `groups`, `status`, `profile`, `idle` and `m2b` with 5 runs.
 
