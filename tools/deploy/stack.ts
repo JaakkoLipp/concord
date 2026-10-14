@@ -10,11 +10,12 @@
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SSH } from '../target.ts';
+import { SSH, sameHost } from '../target.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const run = (cmd: string, args: string[]) => execFileSync(cmd, args, { cwd: ROOT, stdio: 'inherit' });
 
+sameHost();
 console.log(`applying deploy/ on ${SSH}`);
 run('rsync', ['-a', '--inplace', '--itemize-changes', '--exclude', 'web/', '--exclude', 'spike/', 'deploy/', `${SSH}:stoat/concord/`]);
 run('ssh', [SSH, [

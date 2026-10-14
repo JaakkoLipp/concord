@@ -48,9 +48,11 @@ Each task lists what is built and its done-check. The live checks run with Playw
   - `deploy:web` runs `routes.ts` on the stack it deployed to,
   - the seed refuses a mix of hosts.
 - **The client's CSP** names the host it is built for.
+- **The test page** at the dev stack's `/spike/`, with a deploy command, since tasks 2 and 3 use it.
 - **Docs**: dev-environment.md describes the two stacks.
 
 **Done when**:
+- `GET /api/` on the dev stack shows 2560 × 1440 in both video tiers. Every seeded persona is under 72 hours old, so the checks run in the `new_user` tier.
 - `pnpm seed --reset` runs.
 - `m2c.ts`, `invite.ts`, `welcome.ts` and `routes.ts` pass against the dev stack.
 - `pnpm live:prod tools/live/src/routes.ts` still passes.
@@ -71,7 +73,11 @@ On the dev stack, in the scratchpad, with personas.
 - what `voice_quality: 16000` in `GET /api/` does,
 - RNNoise loading under our CSP,
 - `join_call`'s rate limit,
-- members left showing after a LiveKit restart.
+- members left showing after a LiveKit restart, with a third persona who doesn't come back,
+- **whether the checks can test what they claim**:
+  - whether Playwright's network throttling and offline mode reach WebRTC media. If not, the checks throttle or block the client's address on the dev server with `tc` or `iptables` instead,
+  - whether Playwright's Chromium encodes H.264,
+  - what frame rate a headless 1080p share reaches with software encoding.
 
 **Done when** each has a recorded answer in m4-results.md, and client.md section 10 is corrected where it was wrong.
 
@@ -105,7 +111,7 @@ On the dev stack, in the scratchpad, with personas.
 - a mute shows in the other's sidebar within 2 s,
 - deafen stops incoming audio bytes,
 - switching channels moves the persona,
-- a second browser for the same persona ends the first one's call with the right message.
+- a second browser for the same persona ends the first one's call with the right message, and the first one doesn't rejoin: one `join_call` each, no loop.
 
 `m2c.ts` still passes.
 
@@ -118,7 +124,8 @@ On the dev stack, in the scratchpad, with personas.
 
 **Done when**:
 - unit tests cover the gate's open, hold and close over level frames, and the automatic threshold,
-- a live check covers the settings page: the meter moves, a threshold above the tone keeps the other persona's speaking ring off, and RNNoise loads with no CSP errors,
+- a live check covers the settings page: the meter moves, and RNNoise loads with no CSP errors from the built `/app`, not `pnpm dev`,
+- in the same call, a threshold below the fake microphone's tone shows the other persona's speaking ring and one above it keeps the ring off. The first half shows the second isn't passing by accident,
 - **Jaakko** checks it on a real microphone in Windows Chrome.
 
 ### 6. Call view, participants and camera
@@ -147,8 +154,11 @@ Needs Jaakko's encoder runs 1 to 4, and run 11 if possible.
 - the stats overlay.
 
 **Done when** a new `share.ts` passes:
-- a fake 1080p60 share reaches the viewer at 1920 × 1080 and over 50 fps, read from the overlay's stats,
-- throttling the sharer's upload to 1.5 Mbps moves the viewer to a lower layer while frames keep arriving, and lifting the throttle brings 1080p back.
+- a fake 1080p share with moving content reaches the viewer at 1920 × 1080, at the frame rate task 2 found headless encoding can reach, read from the overlay's stats,
+- the overlay shows the intended codec, so a silent fall-back to VP8 fails the check,
+- throttling the sharer's upload to 1.5 Mbps, by the method task 2 found works, moves the viewer to a lower layer while frames keep arriving, and lifting the throttle brings 1080p back.
+
+The real 1080p60 is judged on Jaakko's Windows machine and on the evening.
 
 ### 8. DM and group calls
 
@@ -171,8 +181,9 @@ Needs Jaakko's encoder runs 1 to 4, and run 11 if possible.
 **Built**: the rejoin rule and the "Reconnecting" and "Disconnected" states from client.md 10.7.
 
 **Done when** `voice.ts` covers:
-- 15 s offline, after which the call comes back without the user doing anything and audio flows again,
-- a LiveKit restart on the dev stack, after which both personas are back within 30 s with no members left showing.
+- 15 s with the client's media cut, by the method task 2 found works, after which the call comes back without the user doing anything and audio flows again,
+- a LiveKit restart on the dev stack, after which both personas are back within 30 s,
+- a third persona whose browser was closed during the restart doesn't stay listed in the channel. If it does, Jaakko decides whether the restart job clears Stoat's voice state (decision gate criterion 5).
 
 **Jaakko** switches Wi-Fi networks during a call on a laptop or phone (milestone criterion 3).
 
@@ -181,7 +192,7 @@ Needs Jaakko's encoder runs 1 to 4, and run 11 if possible.
 **Built**:
 - deploy to production,
 - remove the "Voice arrives later" strings,
-- after the evening: m4-results.md, decision gate part B, and `/spike/` removed from production.
+- after the evening: m4-results.md, decision gate part B, and `/spike/` removed from production only. The dev stack keeps it, and `routes.ts` learns the difference.
 
 **Done when** milestone M4's criteria pass on the evening:
 - 1080p60 from Windows Chrome reaches a viewer at 1080p60 when bandwidth allows,
@@ -193,6 +204,8 @@ The evening also covers M3's criteria 2 to 4:
 - a forced relay with UDP 3478 closed.
 
 `dc stats` is taken under load, which decides the resize to a CX33.
+
+Each result records which client it came from. M3's voice criterion was written for Stoat's own client. If voice misbehaves in ours, the same people repeat a few minutes on `ref.`, so decision gate criterion 5 can tell Stoat's problems from ours.
 
 ### 11. Restore drill, any time after task 1
 
@@ -246,3 +259,16 @@ Each one is a recommendation. Sign-off accepts them unless you say otherwise.
 8. **One call per account**: joining from a second device moves the call there. The first device says why and doesn't rejoin. A reload doesn't rejoin either.
 9. **A DM call rings everyone else** in the DM or group, which is Stoat's default, for 30 seconds, with a browser notification when the tab is hidden.
 10. **Sounds are generated tones**, not files, so there is nothing to license. Proper sounds can come in M7's polish.
+11. **Automatic input sensitivity stays in M4**, as in the reference screenshot, but as a small separate piece on top of the manual threshold. If it proves fiddly to tune, it moves to M7 and M4 ships manual sensitivity and push-to-talk. Open: Jaakko may prefer to move it to M7 now.
+
+## Changes after sign-off, 2026-10-14
+
+A Sonnet challenger reviewed the plan while the first agents started. Its fixes are written into the tasks above and client.md section 10:
+- **Rejoins**: a removal (another device, a kick, the video limit) never rejoins, and no rejoin comes within 10 s of the last join, so two devices can't evict each other in a loop.
+- **Checks that could pass falsely**: task 2 now checks that throttling, going offline and H.264 work headless. Task 5's gate check has a control run, task 7's checks the codec, and task 9's has a third persona who doesn't come back.
+- **Dev stack**: the test page is deployed there too, and both video tiers are asserted.
+- **Tools**: the dev scripts pin the dev host, and `deploy:stack` refuses mixed hosts too. `pnpm deploy:web` stays production, as the handoff asked.
+- **Firefox sharers** publish VP8 in one layer. The VP8 backup codec stays on unless Linux Firefox decodes H.264.
+- **DM rings** are suppressed for a call this client is rejoining.
+- **Rate limit**: `join_call` shares its bucket with fetches and acks, not with sending messages.
+- **Evening**: results record which client they came from, with `ref.` as the comparison if voice misbehaves.

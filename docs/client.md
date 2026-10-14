@@ -436,13 +436,13 @@ Voice code loads only on the first join, through `import()`: `livekit-client` is
 - LiveKit unavailable,
 - microphone access refused. Joining still works without a microphone, to listen.
 
-**Rate limit**: `join_call` shares the 15-per-10-seconds bucket of `/channels/{id}/…` with sending messages, so rejoins back off (section 10.7).
+**Rate limit**: `join_call` shares the 15-per-10-seconds bucket of `/channels/{id}/…` with fetches and acks on that channel. Sending messages has its own bucket. Rejoins back off (section 10.7).
 
 **Switching channels**: join the new one. `force_disconnect` ends the old call.
 
 **Leaving**: the disconnect button, or closing the tab, through LiveKit's `disconnectOnPageLeave`. A reload doesn't rejoin.
 
-**A second device**: LiveKit identifies participants by user ID, so joining on device B ends the call on device A. A shows "Joined from another device" and doesn't rejoin.
+**A second device**: joining on device B ends the call on device A, because `force_disconnect` removes A's participant. A sees a removal, like a kick, and never rejoins after one (section 10.7). It shows "Joined from another device" when Stoat's voice states show the user in a call, and "Disconnected" otherwise.
 
 **Sounds**: join, leave, mute, unmute, deafen, undeafen, someone joining or leaving your call, and the ring.
 - They are short tones, generated with Web Audio, so there are no sound files to license.
@@ -566,10 +566,10 @@ Then `createScreenTracks` captures the screen:
 
 **Publishing**, from architecture 5.2:
 - **Codec**: H.264 unless Jaakko's encoder runs say otherwise.
-- **Backup codec**: off, unless Linux Firefox can't decode H.264 (M0 run 11).
+- **Backup codec**: VP8 stays on unless Linux Firefox is shown to decode H.264 (M0 run 11). One viewer without H.264 would otherwise drop every viewer to VP8.
 - **Simulcast layers** at 720p30 and 360p15 for H.264 and VP8, so throttled viewers step down.
 - **Priority**: high.
-- **Firefox sharers** send one layer. The share dialog says so and recommends Chrome or the desktop app.
+- **Firefox sharers** publish VP8 in one layer, because Firefox's H.264 screen share fell to 180 × 240 in M0. The share dialog says so and recommends Chrome or the desktop app.
 - **The other settings** come from the test page, `spikes/m0-screenshare`, whose runs measured them.
 
 **Camera**:
@@ -588,7 +588,9 @@ Then `createScreenTracks` captures the screen:
   - then a full restart.
   - Both use the refreshed token that Stoat's LiveKit sends right after joining and every 5 minutes, valid for 10 minutes.
 - **When LiveKit gives up**, the client rejoins through `join_call`:
-  - This applies when the call ends without the user, a second device or a kick ending it.
+  - This applies only when the connection was lost or the server shut down, judged by LiveKit's disconnect reason.
+  - A removal never rejoins. Another device's `force_disconnect`, a kick, a ban, a permission change and voice-ingress's video-limit disconnect all arrive as one.
+  - It never rejoins within 10 seconds of the last successful join, so two devices can't evict each other in a loop.
   - The rejoin backs off at 1, 2, 5, 10 and 30 seconds, for up to 5 minutes, then shows "Disconnected" with a Rejoin button.
   - Mute and deafen carry over, and a screen share doesn't.
 - **LiveKit's Monday restart at 05:00** ends every call, and the rule above brings people back.
@@ -603,8 +605,10 @@ Then `createScreenTracks` captures the screen:
   - Join or Ignore,
   - `VoiceCallUpdate {ended: true}`,
   - our own `VoiceChannelJoin` in that call from another device,
+  - nothing, if this client is rejoining that call itself: after a LiveKit restart, whoever rejoins first rings the others again,
   - 30 seconds.
 - **Declining** tells the caller nothing, because Stoat has no decline.
+- **`call_started`**: Stoat posts one on the first join of any call, server voice channels included, and again after every empty spell. It renders as the existing system line.
 
 ### 10.9 Voice and video settings
 
@@ -693,8 +697,10 @@ pnpm verify
 ```
 
 ```bash
-pnpm deploy:web
+pnpm deploy:web:dev
 ```
+
+The tools target the dev stack, `dev.concord.jaalip.com`, unless `CONCORD_HOST` names another (`tools/target.ts`). Production is reached only on purpose: `pnpm deploy:web`, `pnpm deploy:stack:prod` and `pnpm live:prod <check>`. Agents deploy to production only when a task says so.
 
 ## 15. Decisions
 
