@@ -7,10 +7,13 @@
  */
 import { ssh, q } from '../../seed/src/ssh.ts';
 import { REMOTE_DIR } from '../../seed/src/config.ts';
+import { assertDevStack } from '../../seed/src/vps.ts';
 import { launch, watch } from './browser.ts';
 import { person } from './people.ts';
 import { checkServer, sweep } from './servers.ts';
 
+// people.ts already refuses production; welcome.ts also runs account-link.sh there, so say it here too.
+await assertDevStack();
 const owner = await person('dev-admin');
 await sweep(owner);
 const server = await checkServer(owner, 'welcome', true);

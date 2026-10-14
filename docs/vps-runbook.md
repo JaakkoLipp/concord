@@ -86,9 +86,19 @@ Stoat's generator renames `Revolt.toml`, `livekit.yml`, `compose.override.yml` a
    - **Wrapped links** (self-hosted issue #274): Stoat's plain-text mail is quoted-printable, and a mail client that doesn't decode it shows a broken link.
    - **EHLO** (issue #223): the API greets the relay with its container ID, and strict relays reject that with "550 Invalid EHLO domain". Choose a relay that accepts it, or use port 465 with implicit TLS.
 
-This is the same path our website will use in M6. M0 tested the Caddy rule and the script on this VPS, with every path variant. M3 repeats the outside test and adds the real relay's spam check, for decision gate criterion 1.
+This is the same path our website will use in M6. M0 tested the Caddy rule and the script on this VPS, with every path variant. M3 repeated the outside test. **Step 4's email test didn't happen**: production runs without SMTP since M3, and the relay and its spam check move to M6 (m3-plan.md task 2).
 
-**Adding people by hand**, until Jaakko opens registration in M6: run `create-account.sh` with the person's email and a random password that nobody keeps. The person verifies through the email link, then sets their own password with "Forgot password" on the login page. Test this once with a second address of Jaakko's on the real relay. It must be a different mailbox, not a `+` or dotted variant, because Stoat treats those as the same email. Then give the person an invite link to the server.
+**Adding people by hand**, until Jaakko opens registration in M6:
+1. In our client, make an invite to the server.
+2. On the VPS, run `~/stoat/concord/account-link.sh <email> <invite-code>`. Jaakko types the email there directly, so it never reaches the chat or the repo. The script:
+   - creates the account, with a random password nobody sees,
+   - prints a one-time link to `/app/welcome/<token>`, valid for 7 days.
+3. Send the person the link. They choose a password, log in, pick a username, and land on the invite.
+4. A forgotten password: run `account-link.sh --reset <email>`, which prints the account it matched, and send the new link.
+   - A reset ends the account's sessions.
+   - A reset doesn't remove two-factor login. Someone who lost their authenticator needs their recovery codes.
+
+The address must be the person's own and distinct: Stoat treats `+` and dotted variants as the same email.
 
 ## 4. Enable TURN
 
@@ -137,7 +147,7 @@ The test page and the M0 encoder runs are specified in section 7 of [dev-environ
 ## 7. Operations checks
 
 1. Record memory and CPU per container at idle and during the voice session, using `deploy/dc stats`.
-2. Set up nightly backups with restic to the Storage Box. They cover a MongoDB dump, the object storage data, `secrets.env`, `Revolt.toml`, `livekit.yml`, the LiveKit keys file, `.env.web` and Caddy's data directory. `secrets.env` is critical, because it holds the key that decrypts every stored file. Take the dump and the object-storage copy back to back, because `crond` deletes files from storage on its own schedule.
+2. Set up nightly backups with restic, done in M3 by `deploy/backup.sh` to the VPS's own disk. The Storage Box is to be added as a second repository. They cover a MongoDB dump, the object storage data, `secrets.env`, `Revolt.toml`, `livekit.yml`, the LiveKit keys file, `.env.web` and Caddy's data directory. `secrets.env` is critical, because it holds the key that decrypts every stored file. Take the dump and the object-storage copy back to back, because `crond` deletes files from storage on its own schedule.
 3. **Restore drill**: restore last night's backup onto a fresh small VPS or a local machine and start the stack. Log in to an existing account and check that its message history is intact, an image attachment opens, and avatars render. Delete the drill machine afterwards.
 4. **Upgrade drill**, if Stoat releases a new version during M3:
    1. Take a MongoDB dump. Migrations run automatically at startup and there is no downgrade, so rolling back means restoring this dump.

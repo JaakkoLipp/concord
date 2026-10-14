@@ -5,6 +5,10 @@
 import { loadState } from '../../seed/src/config.ts';
 import { api, type Auth } from '../../seed/src/http.ts';
 import { login, passwordFor } from '../../seed/src/seed.ts';
+import { assertDevStack } from '../../seed/src/vps.ts';
+
+// Persona checks create servers, invites and accounts: never against production (m3-plan.md).
+await assertDevStack();
 
 const st = loadState()!;
 

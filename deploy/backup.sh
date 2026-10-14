@@ -34,9 +34,10 @@ fi
 cd "$STOAT"
 restic backup --quiet --tag db --stdin-filename mongodb.archive.gz \
   --stdin-from-command -- concord/dc exec -T database mongodump --quiet --archive --gzip
-restic backup --quiet --tag files \
-  data/minio data/caddy-data secrets.env Revolt.toml .env .env.web concord/host.env concord/livekit.env \
-  /etc/netplan/60-floating-ip.yaml
+files=(data/minio data/caddy-data secrets.env Revolt.toml .env .env.web concord/host.env concord/livekit.env)
+# Only a stack with a floating IP has this; a missing path would fail every night.
+[ -e /etc/netplan/60-floating-ip.yaml ] && files+=(/etc/netplan/60-floating-ip.yaml)
+restic backup --quiet --tag files "${files[@]}"
 
 restic forget --quiet --prune --keep-daily 7 --keep-weekly 4 --keep-monthly 6
 # A full check reads every pack; weekly is enough at this size.

@@ -4,16 +4,21 @@
 # For an existing account it gives a fresh link, which is how a forgotten password is reset.
 #
 # Usage on the server: ~/stoat/concord/account-link.sh email@example.com [invite-code]
+#                      ~/stoat/concord/account-link.sh --reset email@example.com
 # Prints https://<domain>/app/welcome/<token>[?invite=<code>]. The link works once, for 7 days.
+# An existing account needs --reset, so a mistyped address can't quietly become a takeover link for someone
+# else's account; the matched username is printed. A reset ends the account's sessions. It doesn't remove TOTP.
 #
 # The token goes into the account's password_reset field, which Stoat's PATCH /auth/account/reset_password
 # checks (its own upstream test sets the field the same way). A pending verification is marked verified: the
 # link reaching the person is the proof that verification would give. Production has no SMTP server, so Stoat
 # makes accounts verified anyway; the dev stack still has Mailpit.
 set -euo pipefail
-email="$1"
+reset=no
+[ "${1:-}" = --reset ] && { reset=yes; shift; }
+email="${1:-}"
 invite="${2:-}"
-[[ "$email" == *@*.* ]] || { echo "usage: account-link.sh email [invite-code]" >&2; exit 1; }
+[[ "$email" == *@*.* ]] || { echo "usage: account-link.sh [--reset] email [invite-code]" >&2; exit 1; }
 [[ -z "$invite" || "$invite" =~ ^[A-Za-z0-9]+$ ]] || { echo "not an invite code: $invite" >&2; exit 1; }
 cd "$(dirname "$0")/.."
 domain="$(sed -n 's/^STOAT_DOMAIN=//p' .env)"
@@ -23,9 +28,18 @@ mongo() { concord/dc exec -T -e EMAIL="$email" -e TOKEN="${token:-}" -e EXPIRY="
 find='db.accounts.countDocuments({ email: { $regex: "^" + process.env.EMAIL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", $options: "i" } })'
 
 if [ "$(mongo "print($find)")" = 0 ]; then
+  [ "$reset" = no ] || { echo "no account has that address; nothing to reset" >&2; exit 1; }
   out="$(concord/create-account.sh "$email")"
   grep -q 'HTTP 204' <<<"$out" || { echo "creating the account failed: $out" >&2; exit 1; }
-  echo "created the account" >&2
+  echo "created a new account" >&2
+else
+  [ "$reset" = yes ] || { echo "an account with that address exists: run with --reset to give it a new password link" >&2; exit 1; }
+  who="$(mongo '
+    const a = db.accounts.findOne({ email: { $regex: "^" + process.env.EMAIL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", $options: "i" } });
+    const u = a && db.users.findOne({ _id: a._id });
+    print(u ? u.username + "#" + u.discriminator : "(no username yet)");
+  ')"
+  echo "resetting the password of $who" >&2
 fi
 
 # 32 characters from the same alphabet as Stoat's own tokens (nanoid).

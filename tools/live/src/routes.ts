@@ -24,6 +24,14 @@ for (const [url, status, location] of cases) {
   if (!ok) failed++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${url} -> ${r.status}${where ? ` ${where}` : ''}`);
 }
+// Caddy's final route sends everything else to /app; each service prefix must still reach its service.
+for (const prefix of ['/ws', '/autumn/', '/january/', '/gifbox/', '/livekit/', '/ingress/', '/spike/']) {
+  const r = await fetch(`${origin}${prefix}`, { redirect: 'manual' });
+  const where = r.headers.get('location') ?? '';
+  const swallowed = r.status === 302 && new URL(where, origin).pathname.startsWith('/app');
+  if (swallowed) failed++;
+  console.log(`${swallowed ? 'FAIL' : 'ok  '} ${prefix} reaches its service -> ${r.status}`);
+}
 const post = await fetch(`${origin}/api/auth/account/create`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
 console.log(`${post.status === 403 ? 'ok  ' : 'FAIL'} public account create -> ${post.status}`);
 if (post.status !== 403) failed++;

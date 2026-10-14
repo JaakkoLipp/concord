@@ -81,6 +81,14 @@ Read `docs/m3-results.md`'s summary first.
 - **The test page** at `/spike/` is the M0 and M3 screen-share bench. It records codec, encoder, layers and per-second stats.
 - **LiveKit restarts** on Mondays at 05:00. After a restart, voice-ingress answered the first join's webhooks with 500, then recovered. Watch for members left showing in a channel.
 
+## Review items carried over
+
+From M3's diff review, in m3-results.md:
+- Test IPv6 before adding the AAAA record. Docker's IPv6 forwarding may make every IPv6 client one address to Stoat's rate limits, and the IPv6 firewall is untested.
+- Make the seed guard assert that `CONCORD_SSH` and `CONCORD_BACKEND` name the same host, once two stacks exist.
+- Remove `/spike/` from production after the voice evening.
+- `docs/reference/` is git-ignored: the reference screenshots exist only on Jaakko's machine.
+
 ## Open with Jaakko
 
 1. **The dev stack**: a CX23 and the `dev.concord` DNS record.

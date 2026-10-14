@@ -237,3 +237,28 @@ Caddy's data (certificates), `secrets.env`, `host.env`, `livekit.env` and the TU
 | `routes.ts` | All pass, public account creation still 403 |
 
 Voice uses Stoat's client at `ref.` until M4. Our client opens a voice channel's text chat.
+
+## Review of the session's diff, 2026-10-14
+
+A Sonnet review of `65fcb29..HEAD` found no data-destroying or injection bug. It checked the Caddy ordering, the login `next` redirect and the quoting in `account-link.sh`, all sound.
+
+**Fixed**:
+- **`account-link.sh`**: run on an existing address, it quietly made a reset link, so a typo could hand someone else's account over. An existing account now needs `--reset`, and the script prints the username it matched.
+- **The weekly LiveKit restart** ran as `jaakko` with `sudo -n` from cron. It now runs as root, like the backup.
+- **`status.sh`** missed unhealthy containers and showed an old "ok" backup as fine. It now flags `unhealthy`, `Restarting` and `Exited`, and any backup older than 36 hours.
+- **`dc`**: with `TURN=on` and no floating IP, it would have published LiveKit's 443 on every address. It now refuses that combination, and reads `host.env` values without stray whitespace.
+- **`create-account.sh`** exited 0 on a failed create. It now fails on anything but 204, and sends the password on stdin.
+- **`pnpm deploy:stack`** now validates the Caddyfile before recreating Caddy, and installs the cron, apt and sysctl files it copies.
+- **`routes.ts`** now also checks that `/ws`, `/autumn/`, `/january/`, `/gifbox/`, `/livekit/`, `/ingress/` and `/spike/` reach their services and aren't swallowed by the redirect to `/app`.
+- **Seed guard**: `people.ts`, and so every persona check, and `welcome.ts` now refuse a stack without `.allow-wipe`.
+- **`backup.sh`** listed the netplan file unconditionally, which would fail every night on a stack without a floating IP.
+- **Docs**: runbook section 3 still described email verification and "Forgot password". It now describes `account-link.sh`.
+
+**Carried to M4**:
+- **IPv6 before the AAAA record**: Docker forwards published IPv6 ports to the IPv4 bridge through docker-proxy. Every IPv6 client may then reach Caddy, and Stoat's per-IP rate limits, from one address, and the IPv6 firewall is still untested. Test both from the drill machine before adding AAAA.
+- **The seed guard checks over `CONCORD_SSH`, while API calls use `CONCORD_BACKEND`.** Once there are two stacks, assert they name the same host.
+- **`livekit-turn.yml` names the production TURN host**, so TURN can't start on another domain. That is fine while only production has a floating IP.
+- **`/spike/` is still public on production.** It is needed for the encoder runs and the voice evening. Remove it after M4's evening.
+- **A reset link doesn't remove TOTP**, so recovery codes are the only way back from a lost authenticator.
+
+**Not changed, by Jaakko's earlier choice**: commit author metadata carries Jaakko's personal address (memory, 2026-10-12). The repo is private.

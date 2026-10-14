@@ -12,6 +12,12 @@ cd "$(dirname "$0")/.."
 [ -f concord/host.env ] || { echo "concord/host.env is missing (see docs/vps-runbook.md)" >&2; exit 1; }
 files=(-f compose.yml -f concord/concord.compose.yml)
 [ -f concord/.allow-wipe ] && files+=(-f concord/dev.compose.yml)
-[ -n "$(sed -n 's/^FLOATING_IPV4=//p' concord/host.env)" ] && files+=(-f concord/floating.compose.yml)
-[ "$(sed -n 's/^TURN=//p' concord/host.env)" = on ] && files+=(-f concord/turn.compose.yml)
+setting() { sed -n "s/^$1=//p" concord/host.env | tr -d '[:space:]'; }
+floating="$(setting FLOATING_IPV4)"
+turn="$(setting TURN)"
+if [ "$turn" = on ] && [ -z "$floating" ]; then
+  echo "host.env: TURN=on needs FLOATING_IPV4, or LiveKit would take 443 on every address" >&2; exit 1
+fi
+[ -n "$floating" ] && files+=(-f concord/floating.compose.yml)
+[ "$turn" = on ] && files+=(-f concord/turn.compose.yml)
 exec docker compose --env-file .env --env-file concord/host.env "${files[@]}" "$@"
