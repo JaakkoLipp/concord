@@ -11,6 +11,9 @@ const key = (p: string) => `^/${p}(?:[/?]|$)`;
 
 export default defineConfig({
   plugins: [sveltekit()],
+  // ES modules, so the dev server prefixes the gate AudioWorklet (voice/audio/gate.worklet.ts) with an
+  // import rather than importScripts, which a worklet doesn't have.
+  worker: { format: 'es' },
   server: {
     proxy: {
       [key('api')]: rule(), [key('autumn')]: rule(), [key('january')]: rule(), [key('gifbox')]: rule(),
