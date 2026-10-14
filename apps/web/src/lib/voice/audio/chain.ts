@@ -110,8 +110,10 @@ export async function createMicChain(settings: VoiceSettings): Promise<MicChain>
   let queue = Promise.resolve();
 
   /** RNNoise in or out, between the junction and the input volume. */
-  async function setRnnoise(on: boolean): Promise<void> {
-    const next = on ? new RnnoiseWorkletNode(ctx, { maxChannels: 1, wasmBinary: await rnnoiseWasm() }) : null;
+  async function setRnnoise(want: boolean): Promise<void> {
+    // At another rate (the Firefox fallback above) RNNoise would distort the voice: bypass it.
+    const on = want && ctx.sampleRate === 48000;
+    const next = on ?new RnnoiseWorkletNode(ctx, { maxChannels: 1, wasmBinary: await rnnoiseWasm() }) : null;
     if (stopped) { next?.destroy(); return; }
     junction.disconnect();
     if (next) junction.connect(next).connect(gain);

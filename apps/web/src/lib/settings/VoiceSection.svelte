@@ -100,13 +100,24 @@
     return () => { stopKeys?.(); stopKeys = null; };
   });
 
-  /** Records the next key as the push-to-talk key. Tab moves on and Escape cancels, so focus never gets stuck. */
+  /**
+   * Records the next key as the push-to-talk key. Tab moves on and Escape cancels, so focus never gets stuck.
+   * Listened for on the window, because Safari doesn't focus a clicked button, so its own keydown never comes.
+   */
   function recordKey(e: KeyboardEvent) {
-    if (!recording || e.key === 'Tab') return;
+    if (e.key === 'Tab') { recording = false; return; }
     e.preventDefault();
+    e.stopPropagation();
     if (e.key !== 'Escape') set({ pushToTalkKey: { code: e.code, label: e.key === ' ' ? e.code : e.key.length === 1 ? e.key.toUpperCase() : e.key } });
     recording = false;
   }
+  $effect(() => {
+    if (!recording) return;
+    const stop = () => (recording = false);
+    window.addEventListener('keydown', recordKey, true);
+    window.addEventListener('blur', stop);
+    return () => { window.removeEventListener('keydown', recordKey, true); window.removeEventListener('blur', stop); };
+  });
 
   // Levels as a share of the -100 to 0 dBFS scale, for the meters and the sensitivity slider.
   const pct = (db: number) => `${Math.min(100, Math.max(0, db + 100))}%`;
@@ -203,7 +214,7 @@
       <span class="label" id="ptt-key">{t.shortcut}</span>
       <div class="key">
         <kbd class:empty={!s.pushToTalkKey}>{recording ? t.recording : (s.pushToTalkKey?.label ?? t.noShortcut)}</kbd>
-        <Button variant="secondary" size="sm" aria-describedby="ptt-key" onclick={() => (recording = !recording)} onkeydown={recordKey} onblur={() => (recording = false)}>
+        <Button variant="secondary" size="sm" aria-describedby="ptt-key" onclick={() => (recording = !recording)} onblur={() => (recording = false)}>
           {recording ? t.recordHelp : t.recordShortcut}
         </Button>
       </div>
