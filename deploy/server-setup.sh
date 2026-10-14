@@ -12,7 +12,7 @@ sudo ufw allow 7881/tcp
 sudo ufw allow 50000:50100/udp
 sudo ufw --force enable
 
-# 2. Swap: 4 GB, persistent, low swappiness.
+# 2. Swap: 4 GB, persistent, low swappiness. Binding addresses that aren't up yet (99-concord-net.conf).
 if [ ! -f /swapfile ]; then
   sudo fallocate -l 4G /swapfile
   sudo chmod 600 /swapfile
@@ -21,6 +21,7 @@ if [ ! -f /swapfile ]; then
   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 fi
 echo 'vm.swappiness=10' | sudo tee /etc/sysctl.d/99-concord-swap.conf
+sudo install -m 0644 "$(dirname "$0")/99-concord-net.conf" /etc/sysctl.d/99-concord-net.conf
 sudo sysctl --system >/dev/null
 
 # 3. Docker Engine and Compose plugin from Docker's official apt repository.

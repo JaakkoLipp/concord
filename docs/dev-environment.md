@@ -19,7 +19,12 @@ Why the VPS rather than WSL: nothing needs installing on Jaakko's machine, the r
 
 ## 2. The VPS stack
 
-- **Layout**: `~/stoat` is Stoat's self-hosted repo at commit `9af5e90`. Our files from `deploy/` are copied to `~/stoat/concord/`. Every compose command goes through `~/stoat/concord/dc`.
+- **Layout**: `~/stoat` is Stoat's self-hosted repo at commit `9af5e90`. Every compose command goes through `~/stoat/concord/dc`.
+  - **Our files**: `pnpm deploy:stack` copies those from `deploy/` to `~/stoat/concord/` and applies them.
+  - **Server-only files**, next to them and never committed:
+    - `host.env`: the main IPv4 and IPv6, the floating IPv4, and `TURN=on|off`.
+    - `livekit.env`: LiveKit's key and secret.
+  - **What `dc` adds**: `host.env` always. `dev.compose.yml`, with Mailpit, while `.allow-wipe` exists. `turn.compose.yml` when TURN is on. No address or domain is committed.
 - **Versions**: Stoat `v0.15.5` for every Stoat image, the self-hosted repo's support line, and MongoDB `7.0.43`. MongoDB 8 refuses to start on the VPS's kernel 7.0. The reasons, and the upgrade path to 8.0, are in `deploy/concord.compose.yml` and m0-results.md.
 - **Configuration changes** to `Revolt.toml` are recorded in `deploy/revolt-changes.md`. After editing it, `dc restart api` picks the change up.
 - **Every image is pinned.** Stoat's compose floats Caddy, RabbitMQ, Valkey, Silo and mc. Our compose file pins them to the versions first deployed, Silo and mc by digest.

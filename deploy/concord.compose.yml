@@ -1,6 +1,7 @@
 # Concord's additions to Stoat's self-hosted compose.yml.
 # Never name this compose.override.yml: Stoat's generate_config.sh renames that file on --overwrite.
-# Always run compose through ./concord/dc so both files are used.
+# Always run compose through ./concord/dc, which adds the server-only concord/host.env and, by marker,
+# dev.compose.yml (Mailpit) and turn.compose.yml (TURN). No address is written in this file.
 services:
   # Pin every Stoat service to 0.15.5, the self-hosted support line (commit 9af5e90 pins the same). Stoat's notes say
   # 0.15.6 dual-writes events for testing a new gateway and is not recommended for self-hosters; 0.15.7 is internal.
@@ -48,25 +49,21 @@ services:
   # Stoat's compose floats these tags. Pinned to the versions first deployed, so a pull never changes them silently.
   # Silo and mc publish only release names, so they are pinned by digest: RELEASE.2026-09-16T00-00-00Z for both.
   # Our Caddyfile replaces Stoat's. Same container path, so this mount wins.
+  # Caddy binds only the main addresses: the floating IPv4 belongs to TURN (architecture section 8).
+  # 443/udp carries HTTP/3, which Caddy advertises in Alt-Svc.
   caddy:
     image: docker.io/caddy:2.11.7
     mem_limit: 128m
+    ports: !override
+      - "${MAIN_IPV4}:80:80"
+      - "${MAIN_IPV4}:443:443"
+      - "${MAIN_IPV4}:443:443/udp"
+      - "[${MAIN_IPV6}]:80:80"
+      - "[${MAIN_IPV6}]:443:443"
+      - "[${MAIN_IPV6}]:443:443/udp"
     volumes:
       - ./concord/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./concord/spike:/srv/spike:ro
-
-  # Development mail catcher. Web UI on the server's loopback only; reach it with an SSH tunnel.
-  # Replaced by a real relay before other people register.
-  mailpit:
-    image: axllent/mailpit:v1.31.5
-    mem_limit: 128m
-    restart: always
-    environment:
-      MP_SMTP_AUTH_ACCEPT_ANY: "true"
-      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
-      MP_MAX_MESSAGES: "2000"
-    ports:
-      - "127.0.0.1:8025:8025"
 
   # Valkey holds only presence, rate limits and voice state, all rebuilt on restart: no persistence.
   # LiveKit shares it. The default noeviction policy stays: a full Valkey fails writes rather than silently
@@ -90,8 +87,18 @@ services:
   createbuckets:
     image: docker.io/pgsty/mc@sha256:cfc83108c3abb371f8fb84d99c1fdc88f8c237e022409b0081fb7c0a3be634dd
 
+  # Our config without keys (deploy/livekit.yml); the keys come from the server-only livekit.env.
+  # Media ports on the main addresses only, as for Caddy.
   livekit:
     mem_limit: 256m
+    env_file: ./concord/livekit.env
+    ports: !override
+      - "${MAIN_IPV4}:7881:7881"
+      - "${MAIN_IPV4}:50000-50100:50000-50100/udp"
+      - "[${MAIN_IPV6}]:7881:7881"
+      - "[${MAIN_IPV6}]:50000-50100:50000-50100/udp"
+    volumes:
+      - ./concord/livekit.yml:/etc/livekit.yml:ro
 
   web:
     mem_limit: 128m
@@ -107,7 +114,7 @@ services:
     command: ["node", "build/index.js"]
     environment:
       PORT: "3000"
-      ORIGIN: https://concord.jaalip.com
+      ORIGIN: https://${STOAT_DOMAIN}
       # Caddy sets X-Forwarded-For and discards any sent by clients (architecture section 3).
       ADDRESS_HEADER: X-Forwarded-For
       XFF_DEPTH: "1"

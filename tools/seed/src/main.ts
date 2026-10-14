@@ -15,7 +15,7 @@ import { api } from './http.ts';
 import { hold } from './hold.ts';
 import { makeAccount, passwordFor, seed } from './seed.ts';
 import { totp } from './totp.ts';
-import { accountCount, resetData } from './vps.ts';
+import { accountCount, assertDevStack, resetData } from './vps.ts';
 
 const [cmd, arg] = process.argv.slice(2);
 
@@ -23,6 +23,7 @@ async function main() {
   switch (cmd) {
     case undefined:
     case '--reset': {
+      await assertDevStack();
       if (cmd === '--reset') {
         console.log('wiping the development stack');
         await resetData();
@@ -34,6 +35,7 @@ async function main() {
     }
     case 'account': {
       if (!arg || !/^[a-z0-9_.-]{2,32}$/.test(arg)) throw new Error('usage: pnpm seed account <handle>');
+      await assertDevStack();
       const state = loadState();
       if (!state) throw new Error('no seed state; run pnpm seed first');
       const live = await makeAccount(arg, arg, state.emailDomain);

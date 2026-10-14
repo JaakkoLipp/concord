@@ -3,6 +3,15 @@ import { q, ssh } from './ssh.ts';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Refuse to touch anything but a dev stack. Production has no .allow-wipe (dev-environment.md section 8), so the
+ * seed can never create personas or servers next to real people, even on an empty database.
+ */
+export async function assertDevStack(): Promise<void> {
+  const out = await ssh(`test -f ${REMOTE_DIR}/.allow-wipe && echo dev || echo production`);
+  if (out.trim() !== 'dev') throw new Error(`${REMOTE_DIR}/.allow-wipe is missing: this is not a dev stack, so the seed won't run here`);
+}
+
 /** Create an account over the stack's internal network, since Caddy refuses public sign-up. */
 export async function createAccount(email: string, password: string): Promise<void> {
   for (let attempt = 0; attempt < 10; attempt++) {

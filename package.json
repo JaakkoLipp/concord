@@ -11,6 +11,7 @@
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "deploy:web": "node tools/deploy/web.ts",
+    "deploy:stack": "node tools/deploy/stack.ts",
     "dev": "pnpm --filter @concord/web dev",
     "verify": "node tools/verify.ts"
   },

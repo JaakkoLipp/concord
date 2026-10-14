@@ -1,0 +1,21 @@
+# Concord's LiveKit config: Stoat's generated livekit.yml (commit 9af5e90) without its keys section.
+# The API key and secret come from the server-only concord/livekit.env as LIVEKIT_KEYS="<key id>: <secret>",
+# the same pair Stoat's secrets.env gives the API. The key id below is not secret, but it must match that pair:
+# a stack with freshly generated keys reuses this id with its own secret.
+# TURN is off here. deploy/livekit-turn.yml is this file plus the TURN section, used when host.env says TURN=on.
+rtc:
+  use_external_ip: true
+  port_range_start: 50000
+  port_range_end: 50100
+  tcp_port: 7881
+
+redis:
+  address: redis:6379
+
+turn:
+  enabled: false
+
+webhook:
+  api_key: 2c2e5918ca20
+  urls:
+    - "http://voice-ingress:8500/worldwide"

@@ -1,6 +1,6 @@
 /**
  * `pnpm verify`: everything CI checks, run with the workspace's own binaries so it works without a
- * pnpm on the PATH. Typecheck, lint, the no-literals check, unit and contract tests, svelte-check, build.
+ * pnpm on the PATH. Typecheck, lint, the no-literals and no-personal-email checks, unit and contract tests, svelte-check, build.
  */
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
@@ -15,6 +15,7 @@ const steps: [string, string, string[], string][] = [
   ['typecheck', bin(ROOT, 'tsc'), ['-p', 'tsconfig.json', '--noEmit'], ROOT],
   ['lint', bin(ROOT, 'eslint'), ['.'], ROOT],
   ['no literals', process.execPath, ['tools/lint/no-literals.ts'], ROOT],
+  ['no personal email', process.execPath, ['tools/lint/no-personal-email.ts'], ROOT],
   ['tests', bin(ROOT, 'vitest'), ['run'], ROOT],
   ['svelte-check', bin(WEB, 'svelte-check'), ['--tsconfig', './tsconfig.json', '--fail-on-warnings'], WEB],
   ['svelte-check ui', bin(WEB, 'svelte-check'), ['--workspace', join(ROOT, 'packages', 'ui'), '--tsconfig', join(ROOT, 'packages', 'ui', 'tsconfig.json'), '--fail-on-warnings'], WEB],

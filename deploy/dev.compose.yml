@@ -1,0 +1,14 @@
+# Dev-stack additions, used by ./concord/dc only when concord/.allow-wipe exists (docs/dev-environment.md section 8).
+services:
+  # Development mail catcher. Web UI on the server's loopback only; reach it with an SSH tunnel.
+  # Revolt.toml's dev [api.smtp] block points here (deploy/revolt-changes.md section 2).
+  mailpit:
+    image: axllent/mailpit:v1.31.5
+    mem_limit: 128m
+    restart: always
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+      MP_MAX_MESSAGES: "2000"
+    ports:
+      - "127.0.0.1:8025:8025"
