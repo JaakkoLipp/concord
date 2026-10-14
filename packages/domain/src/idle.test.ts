@@ -114,7 +114,7 @@ describe('IdleTracker', () => {
     // A call writes nothing: other devices see it in Stoat's voice states.
     expect(state.actives).toEqual([]);
     state.inCall = false;
-    minutes(10);
+    minutes(9);
     expect(state.sets).toEqual([]);
     minutes(1);
     expect(state.sets).toEqual(['Idle']);
