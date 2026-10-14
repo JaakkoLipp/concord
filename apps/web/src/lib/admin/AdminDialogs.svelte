@@ -11,12 +11,14 @@
   import { assignable } from './members.ts';
   import { m } from '$lib/i18n/index.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
-  import { adminDialogs } from './dialogs.svelte.ts';
+  import { adminDialogs, type AdminDialog } from './dialogs.svelte.ts';
 
   let { session }: { session: Session } = $props();
+  /** The dialogs this component shows; the others have their own. */
+  type Own = Extract<AdminDialog, { kind: 'createChannel' | 'category' | 'moveChannel' }>;
+  const own = (x: AdminDialog | null): Own | null => (x && (x.kind === 'createChannel' || x.kind === 'category' || x.kind === 'moveChannel') ? x : null);
   const store = $derived(session.store);
-  // Member roles have their own dialog.
-  const d = $derived(adminDialogs.current?.kind === 'memberRoles' ? null : adminDialogs.current);
+  const d = $derived(own(adminDialogs.current));
   const server = $derived(d ? store.servers.get(d.server) : undefined);
 
   let name = $state('');
@@ -49,7 +51,7 @@
   async function submit(e: SubmitEvent) {
     e.preventDefault();
     // Read once: both are derived from the open dialog, and closing it clears them.
-    const d = adminDialogs.current?.kind === 'memberRoles' ? null : adminDialogs.current;
+    const d = own(adminDialogs.current);
     const server = d ? store.servers.get(d.server) : undefined;
     if (!d || !server || busy) return;
     busy = true;

@@ -5,7 +5,9 @@ export type AdminDialog =
   | { kind: 'createChannel'; server: Id; category: string | null }
   | { kind: 'category'; server: Id; id: string | null }
   | { kind: 'moveChannel'; server: Id; channel: Id }
-  | { kind: 'memberRoles'; server: Id; user: Id };
+  | { kind: 'memberRoles'; server: Id; user: Id }
+  | { kind: 'kick' | 'ban'; server: Id; user: Id }
+  | { kind: 'invite'; server: Id; channel: Id | null };
 
 class AdminDialogs {
   current = $state<AdminDialog | null>(null);

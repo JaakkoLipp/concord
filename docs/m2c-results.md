@@ -155,3 +155,33 @@ Results for [m2c-plan.md](m2c-plan.md), recorded against the seeded Stoat 0.15.5
 | `onni`, who manages channels but can't see it, moves `#säännöt` up past it | `onni` sees "säännöt, General". The server has "säännöt, General, salainen": the private channel kept its category and its place after General. |
 | Moderaattori's override removed, then the page reloaded | Not listed |
 | Console errors or failed requests | One 403 for `tuuli`: the re-check fetching the private channel after her role was taken away, as designed |
+
+## Task 6: invites, members, kicks and bans, 2026-10-14
+
+**What is deployed**:
+- **Invite people**:
+  - It is in the server menu when you may invite in any channel, and in a channel's menu when you may invite there.
+  - The dialog offers only channels where you may invite, the current one first, and makes the link on request.
+  - It shows the link with Copy, and says it never expires.
+  - Until M6 the link is `https://concord.jaalip.com/invite/<code>`, which Stoat's own client serves.
+- **Invites** in server settings, for Manage server: each invite's code, channel and creator, with Copy and Revoke.
+- **Members** in server settings, for those who can kick, ban or assign roles:
+  - every member, with a search box, their name in their role colour, `name#1234`, join date and role chips,
+  - an Owner tag,
+  - a row menu with Roles…, Kick and Ban for members ranked below you.
+- **The people menu** in a server gains Kick and Ban on the same terms.
+- **Kick** asks first. **Ban** asks with an optional reason, up to 1024 characters.
+- **Bans** in server settings, for Ban members: each banned user with their reason, a search box and Unban.
+
+**Live check**: `node tools/live/src/moderation.ts`, with `dev-admin`, `tuuli` and `dev` in browsers. Timings run from the request leaving until `tuuli`'s browser shows the notice:
+
+| Check | Result |
+|---|---|
+| Invite people from the server menu, then `tuuli` joins with that code over the API | Joined |
+| Kick from the Members section | 30 ms. She leaves the list. |
+| Ban with the reason "Testikielto" | 59 ms. The Bans section lists her with the reason. |
+| `tuuli` tries to rejoin while banned | Refused: `Banned` |
+| Unban, then rejoin | Joined |
+| The Invites section lists the invite, by Ylläpito in `#General`, and revokes it | The code then answers `NotFound` |
+| `dev`, a plain member of the seeded server | Server menu: Leave server only. Channel menu: Copy link and Copy channel ID. Person menu: no Roles, Kick or Ban. |
+| Console errors or failed requests | One 429 on the invite list, when the check opened settings in a fresh page right after the ban and unban, the known case from task 4 |

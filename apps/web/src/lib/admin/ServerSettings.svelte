@@ -12,6 +12,11 @@
   import SettingsFrame from '$lib/settings/SettingsFrame.svelte';
   import Overview from './Overview.svelte';
   import Roles from './Roles.svelte';
+  import Invites from './Invites.svelte';
+  import Members from './Members.svelte';
+  import Bans from './Bans.svelte';
+  import MemberRolesDialog from './MemberRolesDialog.svelte';
+  import ModerationDialogs from './ModerationDialogs.svelte';
   import DeleteServerDialog from './DeleteServerDialog.svelte';
 
   let { session, server, section }: { session: Session; server: string; section: string } = $props();
@@ -33,6 +38,9 @@
   <SettingsFrame title={info.name} {items} active={current ?? ''} heading={current ? m.admin.sections[current as ServerSection] : ''}>
     {#if current === 'overview'}<Overview {session} {server} />{/if}
     {#if current === 'roles'}<Roles {session} {server} />{/if}
+    {#if current === 'invites'}<Invites {session} {server} />{/if}
+    {#if current === 'members'}<Members {session} {server} />{/if}
+    {#if current === 'bans'}<Bans {session} {server} />{/if}
     {#snippet footer()}
       {#if isOwner(store, server)}
         <Button variant="ghost" size="sm" onclick={() => (deleting = true)}>{m.admin.deleteServer}</Button>
@@ -40,4 +48,6 @@
     {/snippet}
   </SettingsFrame>
   <DeleteServerDialog {session} {server} open={deleting} onclose={() => (deleting = false)} />
+  <MemberRolesDialog {session} />
+  <ModerationDialogs {session} />
 {/if}

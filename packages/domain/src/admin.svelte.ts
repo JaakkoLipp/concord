@@ -197,6 +197,13 @@ export class ServerAdmin {
   editRole(server: Id, role: Id, change: RoleEdit) { return this.run(() => this.backend.editRole(server, role, change)); }
   setRolePermissions(server: Id, role: Id, p: Override) { return this.run(() => this.backend.setRolePermissions(server, role, p)); }
   deleteRole(server: Id, role: Id) { return this.run(() => this.backend.deleteRole(server, role)); }
+  createInvite(channel: Id) { return this.run(() => this.backend.createInvite(channel)); }
+  invites(server: Id) { return this.backend.invites(server); }
+  deleteInvite(code: string) { return this.run(() => this.backend.deleteInvite(code)); }
+  kick(server: Id, user: Id) { return this.run(() => this.backend.kick(server, user)); }
+  ban(server: Id, user: Id, reason?: string) { return this.run(() => this.backend.ban(server, user, reason)); }
+  unban(server: Id, user: Id) { return this.run(() => this.backend.unban(server, user)); }
+  bans(server: Id) { return this.backend.bans(server); }
   editChannel(channel: Id, change: ChannelEdit) { return this.run(() => this.backend.editChannel(channel, change)); }
   deleteChannel(channel: Id) { return this.run(() => this.backend.deleteChannel(channel)); }
   setChannelPermissions(channel: Id, role: Id | 'default', p: Override) { return this.run(() => this.backend.setChannelPermissions(channel, role, p)); }

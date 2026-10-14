@@ -1,4 +1,4 @@
-/** Member administration for the people menu, when it opens in a server (m2c-plan.md). Task 6 adds kicks and bans. */
+/** Member administration for the people menu, when it opens in a server (m2c-plan.md): roles, kicks and bans. */
 import { Permission, canActOnMember, canActOnRole, has, memberKey, rolesByRank, type Id, type Session } from '@concord/domain';
 import type { MenuItem } from '@concord/ui';
 import { m } from '$lib/i18n/index.ts';
@@ -19,8 +19,11 @@ export function memberItems(session: Session, server: Id, user: Id): MenuItem[] 
   if (!s || !self || !store.members.has(memberKey(server, user))) return [];
   const mine = serverPerms(store, server);
   const items: MenuItem[] = [];
-  if (has(mine, Permission.AssignRoles) && assignable(session, server).length && (user === self ? s.owner === self : canActOnMember(s, self, myRank(store, server), user, store.members.get(memberKey(server, user))))) {
+  const below = canActOnMember(s, self, myRank(store, server), user, store.members.get(memberKey(server, user)));
+  if (has(mine, Permission.AssignRoles) && assignable(session, server).length && (user === self ? s.owner === self : below)) {
     items.push({ label: m.admin.roles.memberRoles, onselect: () => adminDialogs.open({ kind: 'memberRoles', server, user }) });
   }
+  if (below && has(mine, Permission.KickMembers)) items.push({ label: m.admin.kick.item, danger: true, onselect: () => adminDialogs.open({ kind: 'kick', server, user }) });
+  if (below && has(mine, Permission.BanMembers)) items.push({ label: m.admin.ban.item, danger: true, onselect: () => adminDialogs.open({ kind: 'ban', server, user }) });
   return items;
 }

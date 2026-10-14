@@ -157,3 +157,4 @@ Each script cleans up at both ends: it first deletes any server `dev-admin` owns
 - **Task 3**, 2026-10-14: done and deployed. The live check passed, after three fixes it found.
 - **Task 4**, 2026-10-14: done and deployed. The live check passed, with one check changed from the plan, as m2c-results.md explains.
 - **Task 5**, 2026-10-14: done and deployed. The live check passed, after working around a Stoat socket bug and fixing an older member-list bug it found.
+- **Task 6**, 2026-10-14: done and deployed. The live check passed.

@@ -4,7 +4,7 @@ import { resolve } from '$app/paths';
 import { Permission, deleteCategory, has, moveCategory, moveChannel, type Category, type Id, type Session } from '@concord/domain';
 import type { MenuItem } from '@concord/ui';
 import { m } from '$lib/i18n/index.ts';
-import { isOwner, serverPerms, serverSections } from '$lib/view/admin.ts';
+import { channelsWith, isOwner, serverPerms, serverSections } from '$lib/view/admin.ts';
 import { canView, permissionsIn } from '$lib/view/channels.ts';
 import { adminDialogs } from './dialogs.svelte.ts';
 import { confirm } from '$lib/view/confirm.svelte.ts';
@@ -36,6 +36,7 @@ export function serverMenu(session: Session, server: Id): MenuItem[] {
   const store = session.store;
   const items: MenuItem[] = [];
   const sections = serverSections(store, server);
+  if (channelsWith(store, server, Permission.InviteOthers).length) items.push({ label: m.admin.invite.people, onselect: () => adminDialogs.open({ kind: 'invite', server, channel: null }) });
   if (sections.length) items.push({ label: m.admin.serverSettings, onselect: () => void openServerSettings(server, sections[0]!) });
   if (canManageChannels(session, server)) {
     items.push({ label: m.admin.createChannel, onselect: () => adminDialogs.open({ kind: 'createChannel', server, category: null }) });
@@ -88,6 +89,7 @@ export function channelMenu(session: Session, channel: Id): MenuItem[] {
   const server = c.server;
   const items: MenuItem[] = [];
   const mine = permissionsIn(store, c);
+  if (has(mine, Permission.InviteOthers)) items.push({ label: m.admin.invite.people, onselect: () => adminDialogs.open({ kind: 'invite', server, channel }) });
   if (has(mine, Permission.ManageChannel) || has(mine, Permission.ManagePermissions)) {
     items.push({ label: m.admin.editChannel, onselect: () => void openChannelSettings(channel, has(mine, Permission.ManageChannel) ? 'overview' : 'permissions') });
   }
