@@ -88,7 +88,7 @@ export function mapFrame(f: Frame): DomainEvent[] {
     case 'ServerMemberJoin':
       return [{ type: 'memberJoin', server: x.id, user: x.user, member: mapMember(x.member as WMember) }];
     case 'ServerMemberLeave':
-      return [{ type: 'memberLeave', server: x.id, user: x.user }];
+      return [{ type: 'memberLeave', server: x.id, user: x.user, ...(['Kick', 'Ban', 'Leave'].includes(x.reason) ? { reason: x.reason } : {}) }];
     case 'ServerMemberUpdate': {
       const id = x.id as { server: string; user: string };
       return [{ type: 'memberUpdate', server: id.server, user: id.user, data: mapMemberPatch(x.data ?? {}), clear: cleared(x.clear, MEMBER_FIELDS) }];
@@ -114,6 +114,8 @@ export function mapFrame(f: Frame): DomainEvent[] {
     }
     case 'EmojiCreate':
       return [{ type: 'emojiCreate', emoji: mapEmoji(f as unknown as WEmoji) }];
+    case 'EmojiUpdate':
+      return typeof x.data?.name === 'string' ? [{ type: 'emojiUpdate', id: x.id, name: x.data.name }] : [];
     case 'EmojiDelete':
       return [{ type: 'emojiDelete', id: x.id }];
     case 'Authenticated':

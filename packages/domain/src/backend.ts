@@ -3,7 +3,8 @@
  * Events are already mapped to domain shapes, so the store never sees a Stoat frame.
  */
 import type {
-  Channel, Emoji, Id, Member, Message, NodeInfo, Presence, Profile, Relationship, Role, Server, Unread, User,
+  Ban, Category, Channel, Emoji, Id, Invite, Member, Message, NodeInfo, Override, Presence, Profile, Relationship, Role, Server,
+  SystemChannels, Unread, User,
 } from './entities.ts';
 
 /** Fields that an update removes, named by the domain property they clear. */
@@ -34,7 +35,8 @@ export type DomainEvent =
   | { type: 'roleDelete'; server: Id; id: Id }
   | { type: 'rolesReorder'; server: Id; order: Id[] }
   | { type: 'memberJoin'; server: Id; user: Id; member: Member }
-  | { type: 'memberLeave'; server: Id; user: Id }
+  /** `reason` is set when Stoat gives it: a kick, a ban, or leaving. */
+  | { type: 'memberLeave'; server: Id; user: Id; reason?: 'Kick' | 'Ban' | 'Leave' }
   | { type: 'memberUpdate'; server: Id; user: Id; data: Partial<Member>; clear: Cleared<Member> }
   | { type: 'userUpdate'; id: Id; data: Partial<User>; clear: Cleared<User> }
   | { type: 'relationship'; user: User; status: Relationship }
@@ -43,6 +45,7 @@ export type DomainEvent =
   /** Synced settings written by any session of this account, this one included. */
   | { type: 'settings'; values: Record<string, { updated: number; value: string }> }
   | { type: 'emojiCreate'; emoji: Emoji }
+  | { type: 'emojiUpdate'; id: Id; name: string }
   | { type: 'emojiDelete'; id: Id }
   | { type: 'unknown'; name: string };
 
@@ -125,6 +128,32 @@ export interface GroupEdit {
   remove?: ('description' | 'icon')[];
 }
 
+export interface ServerEdit {
+  name?: string;
+  description?: string;
+  /** An uploaded file's ID, from `upload(…, 'icons')`. */
+  icon?: Id;
+  /** An uploaded file's ID, from `upload(…, 'banners')`. */
+  banner?: Id;
+  categories?: Category[];
+  systemMessages?: SystemChannels;
+  remove?: ('description' | 'icon' | 'banner' | 'systemMessages')[];
+}
+
+export interface RoleEdit {
+  name?: string;
+  /** A CSS colour or gradient, as Stoat accepts it. */
+  colour?: string;
+  hoist?: boolean;
+  remove?: 'colour'[];
+}
+
+export interface ChannelEdit {
+  name?: string;
+  description?: string;
+  remove?: 'description'[];
+}
+
 export interface Capabilities {
   /** `Subscribe` brings live status changes from non-friend members (Stoat 0.15.5). */
   serverSubscribe: boolean;
@@ -191,6 +220,41 @@ export interface Backend {
    * attachments (the default), avatars, backgrounds or icons.
    */
   upload(file: Blob, name: string, onProgress?: (fraction: number) => void, tag?: string): Promise<Id>;
+
+  // ---------- server administration (m2c-plan.md) ----------
+  /** Create a server. Its one channel comes back with it. */
+  createServer(name: string): Promise<{ server: Server; channels: Channel[] }>;
+  editServer(server: Id, change: ServerEdit): Promise<void>;
+  /** Delete a server. Only its owner may; for anyone else Stoat treats this as leaving. */
+  deleteServer(server: Id): Promise<void>;
+  leaveServer(server: Id, silent?: boolean): Promise<void>;
+  /** This account's member record in a server. */
+  member(server: Id, user: Id): Promise<Member>;
+  setDefaultPermissions(server: Id, permissions: bigint): Promise<void>;
+  createRole(server: Id, name: string): Promise<Role>;
+  editRole(server: Id, role: Id, change: RoleEdit): Promise<void>;
+  setRolePermissions(server: Id, role: Id, permissions: Override): Promise<void>;
+  deleteRole(server: Id, role: Id): Promise<void>;
+  /** Every role of the server, the strongest first. */
+  setRoleRanks(server: Id, order: Id[]): Promise<void>;
+  createChannel(server: Id, kind: 'text' | 'voice', name: string, description?: string): Promise<Channel>;
+  editChannel(channel: Id, change: ChannelEdit): Promise<void>;
+  deleteChannel(channel: Id): Promise<void>;
+  /** A role's override in a channel, or the channel's default with `'default'`. Allow 0 and deny 0 clears it. */
+  setChannelPermissions(channel: Id, role: Id | 'default', permissions: Override): Promise<void>;
+  createInvite(channel: Id): Promise<Invite>;
+  invites(server: Id): Promise<Invite[]>;
+  deleteInvite(code: string): Promise<void>;
+  /** Replace a member's roles. */
+  setMemberRoles(server: Id, user: Id, roles: Id[]): Promise<void>;
+  kick(server: Id, user: Id): Promise<void>;
+  ban(server: Id, user: Id, reason?: string): Promise<void>;
+  unban(server: Id, user: Id): Promise<void>;
+  bans(server: Id): Promise<{ bans: Ban[]; users: User[] }>;
+  /** Turn an upload from `upload(…, 'emojis')` into a server emoji. */
+  createEmoji(file: Id, server: Id, name: string): Promise<Emoji>;
+  renameEmoji(emoji: Id, name: string): Promise<void>;
+  deleteEmoji(emoji: Id): Promise<void>;
 
   connect(handlers: GatewayHandlers): Gateway;
 }

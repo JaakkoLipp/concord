@@ -6,6 +6,8 @@ import { LiveTransport, StoatBackend, StoatError } from '@concord/stoat';
 import { drafts } from '$lib/composer/drafts.ts';
 import { clearToken, loadToken, saveToken } from './token.ts';
 import { watchIdle } from './idle.ts';
+import { m } from '$lib/i18n/index.ts';
+import { toasts } from '$lib/view/toast.svelte.ts';
 
 // The (app) group has ssr = false, so this only runs in the browser; the guard keeps server builds importable.
 export const backend = new StoatBackend(new LiveTransport(typeof location === 'undefined' ? 'http://localhost' : location.origin));
@@ -40,6 +42,10 @@ class App {
     const session = new Session(backend);
     await session.start(token, () => void this.signedOut());
     this.stopIdle = watchIdle(session);
+    // Leaving needs no notice; the open conversation goes to the Friends screen on its own when its channel goes.
+    session.onServerRemoved((r) => {
+      if (r.reason !== 'left') toasts.show(m.admin.removed[r.reason](r.name), 'info');
+    });
     this.session = session;
     this.status = 'signed-in';
   }

@@ -1,6 +1,6 @@
 # M2c plan: administration and notifications
 
-Status: draft for Jaakko's sign-off. Implements the M2c section of [milestones.md](milestones.md) from [client.md](client.md) sections 7 and 8, and [architecture.md](architecture.md) section 4.2. Results go in `docs/m2c-results.md`.
+Status: signed off by Jaakko on 2026-10-14, with all eight decisions accepted. Implements the M2c section of [milestones.md](milestones.md) from [client.md](client.md) sections 7 and 8, and [architecture.md](architecture.md) section 4.2. Results go in `docs/m2c-results.md`.
 
 The working agreement from M2b still applies:
 - Every task ends deployed at `https://concord.jaalip.com/app`, with a scripted live check in `tools/live/src/`, and is reviewed there.
@@ -149,3 +149,7 @@ Each script cleans up at both ends: it first deletes any server `dev-admin` owns
 2. Review each task on the live client. Log in as `dev-admin` (`pnpm seed password dev-admin`) to see the admin side.
 3. **Device checks, for later**: desktop notifications on Windows and Linux in Chrome and Firefox, and building a small server by hand. They join the list in m2b-results.md.
 4. **Still open**: M0's encoder runs, with Chrome on Windows next, before M3.
+
+## Progress
+
+- **Task 1**, 2026-10-14: done and deployed. The live check passed, as recorded in [m2c-results.md](m2c-results.md).

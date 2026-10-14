@@ -403,6 +403,13 @@ export const en = {
       cancel: 'Cancel',
     },
   },
+  admin: {
+    removed: {
+      kicked: (server: string) => `You were removed from ${server}.`,
+      banned: (server: string) => `You were banned from ${server}.`,
+      deleted: (server: string) => `${server} was deleted.`,
+    },
+  },
   session: {
     signedInAs: (name: string) => `Signed in as ${name}`,
     logout: 'Log out',

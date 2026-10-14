@@ -77,6 +77,27 @@ export interface Server {
   roles: Record<Id, Role>;
   defaultPermissions: bigint;
   memberCount?: number;
+  /** Channels that get a system message when someone joins, leaves, is kicked or is banned. */
+  systemMessages?: SystemChannels;
+}
+
+export interface SystemChannels {
+  joined?: Id;
+  left?: Id;
+  kicked?: Id;
+  banned?: Id;
+}
+
+export interface Invite {
+  code: string;
+  server: Id;
+  channel: Id;
+  creator: Id;
+}
+
+export interface Ban {
+  user: Id;
+  reason?: string;
 }
 
 export interface TextChannel {

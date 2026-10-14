@@ -1,6 +1,6 @@
 /**
- * REST wrapper (client.md section 4.4): session header, waiting out exhausted rate-limit buckets,
- * one retry on 429, and errors normalised to StoatError.
+ * REST wrapper (client.md section 4.4): session header, rate-limit buckets, retries on 429, and errors
+ * normalised to StoatError.
  */
 import { BackendError } from '@concord/domain/errors';
 import { routeOf } from './route.ts';
@@ -16,14 +16,34 @@ export class StoatError extends BackendError {
   }
 }
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** A 429 is retried after its wait until this much time has gone by in all. */
+export const RETRY_FOR_MS = 60_000;
+/**
+ * Every `/servers/{id}/…` route, and the server itself, shares one bucket per user and server: 5 requests
+ * a 10 s (m2c-plan.md, checked live). Known up front, so a burst of admin saves waits instead of failing.
+ */
+const SERVER_LIMIT = 5;
+const SERVER_PATH = /^\/servers\/([0-9A-HJKMNP-TV-Z]{26})(?:\/|$)/;
+
+interface Bucket {
+  /** Requests a window, once known. Until then the bucket lets one request through at a time. */
+  limit?: number;
+  remaining: number;
+  /** When the window resets, as Date.now() time. */
+  resetAt: number;
+  inFlight: number;
+  /** Requests waiting for room, woken when a request ends. */
+  waiters: (() => void)[];
+}
 
 export class Rest {
   private token: string | null = null;
   private readonly transport: Transport;
-  /** Route template to Stoat's bucket ID, learned from responses. */
-  private readonly routeBuckets = new Map<string, string>();
-  private readonly buckets = new Map<string, { remaining: number; resetAt: number }>();
+  /** A request's key to the bucket Stoat named for it, learned from responses. */
+  private readonly named = new Map<string, string>();
+  private readonly buckets = new Map<string, Bucket>();
 
   constructor(transport: Transport) {
     this.transport = transport;
@@ -34,37 +54,103 @@ export class Rest {
   }
 
   async request<T>(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
-    const route = routeOf(method, path);
-    for (let attempt = 0; ; attempt++) {
-      await this.waitForBucket(route);
-      const res = await this.transport.request({
-        method, path,
-        headers: { ...(this.token ? { 'x-session-token': this.token } : {}), ...headers },
-        ...(body === undefined ? {} : { body }),
-      });
-      this.learn(route, res);
-      if (res.status === 429 && attempt === 0) {
+    const key = this.keyOf(method, path);
+    const started = Date.now();
+    for (;;) {
+      const bucket = await this.room(key);
+      let res: HttpResponse;
+      try {
+        res = await this.transport.request({
+          method, path,
+          headers: { ...(this.token ? { 'x-session-token': this.token } : {}), ...headers },
+          ...(body === undefined ? {} : { body }),
+        });
+        // What Stoat says is left counts this request already, so learn it before freeing the slot.
+        this.learn(key, res);
+      } finally {
+        bucket.inFlight--;
+        this.wake(bucket);
+      }
+      if (res.status === 429) {
         const after = Number((res.body as { retry_after?: number } | null)?.retry_after ?? res.headers['x-ratelimit-reset-after'] ?? 1000);
-        await sleep(after + 50);
-        continue;
+        const b = this.bucketOf(key);
+        b.remaining = 0;
+        b.resetAt = Math.max(b.resetAt, Date.now() + after);
+        if (Date.now() + after - started <= RETRY_FOR_MS) continue;
       }
       if (res.status >= 400) throw new StoatError(res.status, res.body, `${method} ${path.split('?')[0]}`);
       return res.body as T;
     }
   }
 
-  private async waitForBucket(route: string): Promise<void> {
-    const id = this.routeBuckets.get(route);
-    const b = id ? this.buckets.get(id) : undefined;
-    if (b && b.remaining <= 0 && b.resetAt > Date.now()) await sleep(b.resetAt - Date.now() + 20);
+  /**
+   * Requests for one server share a key. Anything else keys on its route and its first ID, so one channel's
+   * bucket never holds back another's.
+   */
+  private keyOf(method: string, path: string): string {
+    const server = SERVER_PATH.exec(path.split('?')[0]!);
+    if (server) return `server:${server[1]}`;
+    const id = /[0-9A-HJKMNP-TV-Z]{26}/.exec(path)?.[0] ?? '';
+    return `${routeOf(method, path)}#${id}`;
   }
 
-  private learn(route: string, res: HttpResponse): void {
+  private bucketOf(key: string): Bucket {
+    const id = key.startsWith('server:') ? key : this.named.get(key) ?? key;
+    let b = this.buckets.get(id);
+    if (!b) {
+      b = { remaining: 0, resetAt: 0, inFlight: 0, waiters: [] };
+      if (key.startsWith('server:')) b.limit = b.remaining = SERVER_LIMIT;
+      this.buckets.set(id, b);
+    }
+    return b;
+  }
+
+  /** Reserve a slot in the same step as the check, so a burst started together can't all see room. */
+  private take(b: Bucket): Bucket {
+    b.inFlight++;
+    return b;
+  }
+
+  /** Wait until the bucket has room for one more request, counting those already on their way, and take it. */
+  private async room(key: string): Promise<Bucket> {
+    for (;;) {
+      const b = this.bucketOf(key);
+      const now = Date.now();
+      // Not learned yet: one request at a time until the first answer says what the bucket allows.
+      if (b.limit === undefined) {
+        if (b.inFlight === 0) return this.take(b);
+        await new Promise<void>((r) => b.waiters.push(r));
+        continue;
+      }
+      const left = (b.resetAt <= now ? b.limit : b.remaining) - b.inFlight;
+      if (left > 0) return this.take(b);
+      const waits: Promise<void>[] = [new Promise<void>((r) => b.waiters.push(r))];
+      if (b.resetAt > now) waits.push(sleep(b.resetAt - now + 20));
+      await Promise.race(waits);
+    }
+  }
+
+  private wake(b: Bucket): void {
+    const waiting = b.waiters.splice(0);
+    for (const w of waiting) w();
+  }
+
+  private learn(key: string, res: HttpResponse): void {
     const id = res.headers['x-ratelimit-bucket'];
+    const limit = res.headers['x-ratelimit-limit'];
     const remaining = res.headers['x-ratelimit-remaining'];
     const reset = res.headers['x-ratelimit-reset-after'];
-    if (!id || remaining === undefined || reset === undefined) return;
-    this.routeBuckets.set(route, id);
-    this.buckets.set(id, { remaining: Number(remaining), resetAt: Date.now() + Number(reset) });
+    if (remaining === undefined || reset === undefined) return;
+    if (id && !key.startsWith('server:') && this.named.get(key) !== id) {
+      // First response for this key: from now on it shares the bucket Stoat named.
+      const own = this.buckets.get(key);
+      this.named.set(key, id);
+      if (own) this.buckets.delete(key);
+    }
+    const b = this.bucketOf(key);
+    if (limit !== undefined) b.limit = Number(limit);
+    b.remaining = Number(remaining);
+    b.resetAt = Date.now() + Number(reset);
+    this.wake(b);
   }
 }

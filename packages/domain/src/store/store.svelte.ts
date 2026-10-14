@@ -383,6 +383,11 @@ export class Store {
       case 'emojiCreate':
         this.emojis.set(e.emoji.id, e.emoji);
         return;
+      case 'emojiUpdate': {
+        const em = this.emojis.get(e.id);
+        if (em) this.emojis.set(e.id, { ...em, name: e.name });
+        return;
+      }
       case 'emojiDelete':
         this.emojis.delete(e.id);
         return;

@@ -7,7 +7,7 @@ import type { Id, Message, Presence, Relationship, User } from './entities.ts';
 import { SelfQueue } from './selfqueue.ts';
 import { ACTIVE_KEY, IdleTracker } from './idle.ts';
 import { BackendError } from './errors.ts';
-import { Store, newer, type EmojiPrefs, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
+import { Store, memberKey, newer, type EmojiPrefs, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
 import { ulid, ulidTime } from './ulid.ts';
 
 const PAGE = 100;
@@ -20,6 +20,13 @@ export const ACK_EVERY_MS = 2_000;
 /** A failed ack is sent again after this long. */
 const ACK_RETRY_MS = 5_000;
 const POLL_MS = 2 * 60_000;
+
+/** This account losing a server, and why. `left` covers leaving or deleting it from this session or another. */
+export interface ServerRemoval {
+  server: Id;
+  name: string;
+  reason: 'kicked' | 'banned' | 'deleted' | 'left';
+}
 
 const oldestFirst = (list: Message[]) => [...list].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
@@ -116,8 +123,11 @@ export class Session {
     this.store.upsertUsers([self]);
     this.gateway = this.backend.connect({
       onEvent: (e) => {
+        // Read before the store forgets the server.
+        const removal = this.removalOf(e);
         this.store.apply(e);
         this.follow(e);
+        if (removal) for (const listener of this.removalListeners) listener(removal);
       },
       onState: (s) => {
         this.store.connection = s;
@@ -447,11 +457,46 @@ export class Session {
 
   // ---------- events the store can't handle alone ----------
 
+  private readonly removalListeners = new Set<(r: ServerRemoval) => void>();
+  /** Servers this session is leaving or deleting itself, so their removal isn't announced as someone else's doing. */
+  readonly ownRemovals = new Set<Id>();
+
+  /** Called whenever this account loses a server. Returns the call that stops it. */
+  onServerRemoved(listener: (r: ServerRemoval) => void): () => void {
+    this.removalListeners.add(listener);
+    return () => this.removalListeners.delete(listener);
+  }
+
+  private removalOf(e: DomainEvent): ServerRemoval | null {
+    let server: Id;
+    let reason: ServerRemoval['reason'];
+    if (e.type === 'memberLeave' && e.user === this.store.selfId) {
+      server = e.server;
+      reason = e.reason === 'Kick' ? 'kicked' : e.reason === 'Ban' ? 'banned' : 'left';
+    } else if (e.type === 'serverDelete') {
+      server = e.id;
+      reason = 'deleted';
+    } else return null;
+    const s = this.store.servers.get(server);
+    if (!s) return null;
+    if (this.ownRemovals.delete(server)) reason = 'left';
+    return { server, name: s.name, reason };
+  }
+
   private follow(e: DomainEvent): void {
     switch (e.type) {
       case 'groupJoin':
         // Stoat sends only IDs: fetch members this account hasn't met.
         return this.meet([e.user]);
+      case 'serverCreate': {
+        // Joining or creating a server brings no member record of your own, and without it every channel
+        // looks hidden (m2c-plan.md).
+        const self = this.store.selfId;
+        if (self && !this.store.members.has(memberKey(e.server.id, self))) {
+          void this.backend.member(e.server.id, self).then((m) => this.store.upsertMembers([m])).catch(() => {});
+        }
+        return;
+      }
       case 'channelCreate':
         if (e.channel.kind === 'dm' || e.channel.kind === 'group') this.meet(e.channel.recipients);
         return;

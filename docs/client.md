@@ -88,7 +88,12 @@ Derived views are `$derived` selectors: the ordered channel list per server, the
 
 ### 4.4 Rate limits
 
-Stoat exposes `X-RateLimit-Remaining` and `X-RateLimit-Reset-After`. The REST wrapper queues requests per route bucket when remaining reaches zero, retries a 429 once after the reset delay, and surfaces anything else as an error. Typing events are sent at most every 2.5 seconds, as Stoat's own client does.
+Stoat exposes `X-RateLimit-Bucket`, `-Limit`, `-Remaining` and `-Reset-After`. Its windows are a fixed 10 seconds. The REST wrapper (m2c-plan.md task 1):
+- knows up front that every `/servers/{id}/…` route shares one bucket of 5 per server, and learns every other bucket from its first answer, sending one request at a time until then,
+- reserves a slot for each request as it checks the bucket, so a burst started together waits instead of overrunning it,
+- retries a 429 after its wait, for up to 60 seconds in all, and surfaces anything else at once.
+
+Typing events are sent at most every 2.5 seconds, as Stoat's own client does.
 
 ## 5. Routes and layout
 

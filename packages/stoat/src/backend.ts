@@ -1,12 +1,17 @@
 /** The Stoat implementation of the domain's Backend interface. */
-import type { Backend, Capabilities, Channel, Gateway, GatewayHandlers, GroupEdit, LoginResult, SelfEdit, SelfField, Message, MessagePage, MessageQuery, NodeInfo, OutgoingMessage, SearchQuery, User } from '@concord/domain';
+import type {
+  Backend, Capabilities, Channel, ChannelEdit, Emoji, Gateway, GatewayHandlers, GroupEdit, Invite, LoginResult, Member, SelfEdit, SelfField, Message,
+  MessagePage, MessageQuery, NodeInfo, OutgoingMessage, Override, Role, RoleEdit, SearchQuery, Server, ServerEdit, User,
+} from '@concord/domain';
 import type { components } from './api/types.ts';
 import { capabilitiesFor } from './capabilities.ts';
 import { mapChannel } from './map/channel.ts';
+import { mapEmoji } from './map/emoji.ts';
+import { mapRole, mapServer, wireSystemChannels } from './map/server.ts';
 import { mapMember } from './map/member.ts';
 import { mapMessage, mapUnread } from './map/message.ts';
 import { mapProfile, mapUser } from './map/user.ts';
-import type { WChannel, WMember, WMessage, WUnread, WUser } from './map/wire.ts';
+import type { WChannel, WEmoji, WMember, WMessage, WRole, WServer, WUnread, WUser } from './map/wire.ts';
 import { Rest, StoatError } from './rest.ts';
 import { StoatGateway } from './socket.ts';
 import type { Transport } from './transport.ts';
@@ -15,6 +20,9 @@ type Root = components['schemas']['RevoltConfig'];
 type WLogin = components['schemas']['ResponseLogin'];
 
 const FRIENDLY_NAME = 'Concord';
+
+type WInvite = { type: string; _id: string; server: string; channel: string; creator: string };
+const mapInvite = (i: WInvite): Invite => ({ code: i._id, server: i.server, channel: i.channel, creator: i.creator });
 
 export class StoatBackend implements Backend {
   capabilities: Capabilities = { serverSubscribe: false };
@@ -270,6 +278,142 @@ export class StoatBackend implements Backend {
     const res = await this.transport.upload(`/${tag}`, form, this.token ? { 'x-session-token': this.token } : {}, onProgress);
     if (res.status >= 400) throw new StoatError(res.status, res.body, `POST /autumn/${tag}`);
     return (res.body as { id: string }).id;
+  }
+
+  // ---------- server administration (m2c-plan.md) ----------
+
+  async createServer(name: string): Promise<{ server: Server; channels: Channel[] }> {
+    const r = await this.rest.request<{ server: WServer; channels: WChannel[] }>('POST', '/servers/create', { name });
+    return { server: mapServer(r.server), channels: r.channels.map(mapChannel) };
+  }
+
+  async editServer(server: string, change: ServerEdit): Promise<void> {
+    const names = { description: 'Description', icon: 'Icon', banner: 'Banner', systemMessages: 'SystemMessages' } as const;
+    const body = {
+      ...(change.name !== undefined ? { name: change.name } : {}),
+      ...(change.description !== undefined ? { description: change.description } : {}),
+      ...(change.icon !== undefined ? { icon: change.icon } : {}),
+      ...(change.banner !== undefined ? { banner: change.banner } : {}),
+      ...(change.categories ? { categories: change.categories.map((c) => ({ id: c.id, title: c.title, channels: c.channels })) } : {}),
+      ...(change.systemMessages ? { system_messages: wireSystemChannels(change.systemMessages) } : {}),
+      ...(change.remove?.length ? { remove: change.remove.map((f) => names[f]) } : {}),
+    };
+    await this.rest.request('PATCH', `/servers/${server}`, body);
+  }
+
+  async deleteServer(server: string): Promise<void> {
+    await this.rest.request('DELETE', `/servers/${server}`);
+  }
+
+  async leaveServer(server: string, silent = false): Promise<void> {
+    await this.rest.request('DELETE', `/servers/${server}${silent ? '?leave_silently=true' : ''}`);
+  }
+
+  async member(server: string, user: string): Promise<Member> {
+    return mapMember(await this.rest.request<WMember>('GET', `/servers/${server}/members/${user}`));
+  }
+
+  async setDefaultPermissions(server: string, permissions: bigint): Promise<void> {
+    await this.rest.request('PUT', `/servers/${server}/permissions/default`, { permissions: Number(permissions) });
+  }
+
+  async createRole(server: string, name: string): Promise<Role> {
+    const r = await this.rest.request<{ id: string; role: WRole }>('POST', `/servers/${server}/roles`, { name });
+    return mapRole(r.id, r.role);
+  }
+
+  async editRole(server: string, role: string, change: RoleEdit): Promise<void> {
+    const body = {
+      ...(change.name !== undefined ? { name: change.name } : {}),
+      ...(change.colour !== undefined ? { colour: change.colour } : {}),
+      ...(change.hoist !== undefined ? { hoist: change.hoist } : {}),
+      ...(change.remove?.length ? { remove: change.remove.map(() => 'Colour') } : {}),
+    };
+    await this.rest.request('PATCH', `/servers/${server}/roles/${role}`, body);
+  }
+
+  async setRolePermissions(server: string, role: string, p: Override): Promise<void> {
+    await this.rest.request('PUT', `/servers/${server}/permissions/${role}`, { permissions: { allow: Number(p.allow), deny: Number(p.deny) } });
+  }
+
+  async deleteRole(server: string, role: string): Promise<void> {
+    await this.rest.request('DELETE', `/servers/${server}/roles/${role}`);
+  }
+
+  async setRoleRanks(server: string, order: string[]): Promise<void> {
+    await this.rest.request('PATCH', `/servers/${server}/roles/ranks`, { ranks: order });
+  }
+
+  async createChannel(server: string, kind: 'text' | 'voice', name: string, description?: string): Promise<Channel> {
+    const body = { type: kind === 'voice' ? 'Voice' : 'Text', name, ...(description ? { description } : {}) };
+    return mapChannel(await this.rest.request<WChannel>('POST', `/servers/${server}/channels`, body));
+  }
+
+  async editChannel(channel: string, change: ChannelEdit): Promise<void> {
+    const body = {
+      ...(change.name !== undefined ? { name: change.name } : {}),
+      ...(change.description !== undefined ? { description: change.description } : {}),
+      ...(change.remove?.length ? { remove: change.remove.map(() => 'Description') } : {}),
+    };
+    await this.rest.request('PATCH', `/channels/${channel}`, body);
+  }
+
+  async deleteChannel(channel: string): Promise<void> {
+    await this.rest.request('DELETE', `/channels/${channel}`);
+  }
+
+  async setChannelPermissions(channel: string, role: string, p: Override): Promise<void> {
+    await this.rest.request('PUT', `/channels/${channel}/permissions/${role}`, { permissions: { allow: Number(p.allow), deny: Number(p.deny) } });
+  }
+
+  async createInvite(channel: string): Promise<Invite> {
+    return mapInvite(await this.rest.request<WInvite>('POST', `/channels/${channel}/invites`));
+  }
+
+  async invites(server: string): Promise<Invite[]> {
+    return (await this.rest.request<WInvite[]>('GET', `/servers/${server}/invites`)).filter((i) => i.type === 'Server').map(mapInvite);
+  }
+
+  async deleteInvite(code: string): Promise<void> {
+    await this.rest.request('DELETE', `/invites/${code}`);
+  }
+
+  async setMemberRoles(server: string, user: string, roles: string[]): Promise<void> {
+    await this.rest.request('PATCH', `/servers/${server}/members/${user}`, roles.length ? { roles } : { remove: ['Roles'] });
+  }
+
+  async kick(server: string, user: string): Promise<void> {
+    await this.rest.request('DELETE', `/servers/${server}/members/${user}`);
+  }
+
+  async ban(server: string, user: string, reason?: string): Promise<void> {
+    await this.rest.request('PUT', `/servers/${server}/bans/${user}`, reason ? { reason } : {});
+  }
+
+  async unban(server: string, user: string): Promise<void> {
+    await this.rest.request('DELETE', `/servers/${server}/bans/${user}`);
+  }
+
+  async bans(server: string) {
+    type WBans = { users: Pick<WUser, '_id' | 'username' | 'discriminator' | 'avatar'>[]; bans: { _id: { user: string }; reason?: string | null }[] };
+    const r = await this.rest.request<WBans>('GET', `/servers/${server}/bans`);
+    return {
+      bans: r.bans.map((b) => ({ user: b._id.user, ...(b.reason ? { reason: b.reason } : {}) })),
+      // Only what the ban list carries: anything else about these users is unknown, not empty.
+      users: r.users.map((u) => mapUser({ ...u, relationship: 'None', online: false } as WUser)),
+    };
+  }
+
+  async createEmoji(file: string, server: string, name: string): Promise<Emoji> {
+    return mapEmoji(await this.rest.request<WEmoji>('PUT', `/custom/emoji/${file}`, { name, parent: { type: 'Server', id: server } }));
+  }
+
+  async renameEmoji(emoji: string, name: string): Promise<void> {
+    await this.rest.request('PATCH', `/custom/emoji/${emoji}`, { name });
+  }
+
+  async deleteEmoji(emoji: string): Promise<void> {
+    await this.rest.request('DELETE', `/custom/emoji/${emoji}`);
   }
 
   async dms() {
