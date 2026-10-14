@@ -186,10 +186,10 @@ Search is per channel, through Stoat's message search, from the chat header's se
 - all saved in one `PATCH /users/@me`, because profile edits allow only 2 per 10 seconds,
 - uploads limited as in section 6.3.
 
-**Server settings**, for admins: overview (name, icon, banner), channels and categories with drag ordering, roles (colour, hoist, permissions, order), per-channel permission overrides, custom emoji, invites, members with kick and ban, and bans.
-- The permission editors use the calculator in `packages/domain`. They warn when an override grants `InviteOthers` back to a non-admin role.
-- Creating a server runs the bootstrap from architecture section 4.2: remove `InviteOthers` from the default permissions, then create an Admin role that has it.
-- A full screen-by-screen spec for server settings comes with M2's milestone plan.
+**Server settings**, for admins, built in M2c to the screen-by-screen spec in m2c-plan.md: overview (name, icon, banner, description, system-message channels), roles (colour, hoist, permissions, order), custom emoji, invites, members with roles, kick and ban, and bans. Channel settings hold a channel's overview and permission overrides.
+- Channels and categories are created, renamed, deleted and ordered in the sidebar, with Move up, Move down and Move to category in their menus (m2c-plan.md decision 3). Drag ordering comes in M7.
+- The permission editors use the calculator in `packages/domain` and the rank rules in `ranks.ts`. They warn when `InviteOthers` is granted to Everyone, or to a role without Manage server.
+- Creating a server runs the bootstrap from architecture section 4.2: remove `InviteOthers` from the default permissions, then create an Admin role, first in rank, with every permission.
 
 
 **Profiles**:

@@ -94,7 +94,9 @@ Admins invite people by creating ordinary server invites, revocable as on Discor
 
 **Registration starts closed.** The website server has a registration switch in its configuration, off by default, and Jaakko decides when to turn it on. While it is off, `/register` and the invite page say registration is closed, and existing users can still log in and join through invites. Until then Jaakko creates accounts by hand over the internal network, as [vps-runbook.md](vps-runbook.md) describes. The Caddy rule in step 1 stays on either way.
 
-**Only server admins create invites.** New Stoat servers give every member the invite permission. Our server-creation flow removes it from the default role straight away, and the server settings screen warns when a channel override grants it back. The allowlist above stays even so, because group DM invites are not covered by server permissions.
+**Only server admins create invites.** New Stoat servers give every member the invite permission. Our server-creation flow removes it from the default role straight away, then creates an Admin role, first in rank, with every permission (m2c-plan.md decision 4). The permission editors warn when Everyone, or a role without Manage server, is given it back. The allowlist above stays even so, because group DM invites are not covered by server permissions.
+
+Two Stoat behaviours an owner should know (m2c-plan.md): leaving a server you own deletes it, and a new private channel's name briefly reaches every member's client while it is being made private (decision 8).
 
 **Only global admins create servers.** Stoat's `restrict_server_creation` setting takes a list of user IDs. An empty list lets everyone create servers, so bootstrap order matters: create the first admin account, add its ID to the list, restart the API, and only then let anyone else register. The client reads the list from `GET /` and hides "Create server" from everyone else. Group DMs are not affected.
 

@@ -2,7 +2,7 @@
 
 You are continuing Concord, a Discord-style chat client on a self-hosted, unmodified Stoat 0.15.5 backend, for a ~200-person community in Finland. Jaakko directs the product, reviews the experience on the live client and tests on real devices. Coding agents do most implementation. Jaakko's pronouns are not stated: use the name or they/them.
 
-**M2 is done**: M2a messaging, M2b social and M2c administration and notifications are built and deployed at `https://concord.jaalip.com/app`. Each part's acceptance check passed, and each had a Sonnet review of its whole diff. Jaakko's device checks for M2 are still open.
+**All of M2's agent work is done**: M2a messaging, M2b social and M2c administration and notifications are built and deployed at `https://concord.jaalip.com/app`. Each part's acceptance check passed, and each had a Sonnet review of its whole diff. M2 is signed off once Jaakko's device checks pass. They were deferred by agreement, so M3 can start meanwhile.
 
 **This session's job is M3: the VPS to production, and the media path validated on real networks.** It is mostly operations, following [docs/vps-runbook.md](vps-runbook.md). Start by writing `docs/m3-plan.md` from the runbook, then stop for Jaakko's sign-off. Several M3 steps need Jaakko: DNS, a Hetzner floating IP, an email relay, a Storage Box, and testers on other networks. The plan should put those first and say exactly what to buy or set up.
 
@@ -45,6 +45,7 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 
 ## Open with Jaakko
 
-1. **Device checks**, collected in m2c-results.md and m2b-results.md: M2a's, M2b's including idle across two real devices, and M2c's desktop notifications in Chrome and Firefox on Windows and Linux.
+1. **Device checks**, collected in m2c-results.md and m2b-results.md: M2a's, M2b's including idle across two real devices, and M2c's desktop notifications in Chrome and Firefox on Windows and Linux. Also M2's own device test from milestones.md: a scripted 30-minute chat session across two machines against the dev stack, which can be run now. M2 is signed off once these pass.
 2. **M0 encoder runs**: Chrome on Windows is next (m0-results section 3). They matter for decision gate part B.
 3. **Left for later from M2c**: unknown `/app` paths answer HTTP 500 instead of 404, which predates M2c, and the items in m2c-plan.md decision 7.
+4. **A product call to revisit**: private channels can only be made by the server's owner (m2c-results.md, review finding 5). Anyone else would hide the channel from themselves, because Stoat only lets them grant roles below their own.

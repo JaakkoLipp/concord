@@ -325,4 +325,5 @@ The only failed requests were the known ones:
    - M2c:
      - desktop notifications in Chrome and Firefox, on Windows and on Linux: the enable bar, a mention while the window is in the background, nothing for the open channel, Mute and Busy,
      - building a small server by hand as `dev-admin` (`pnpm seed password dev-admin`): roles, a private channel, an invite, a kick.
+   - **M2 as a whole**, from milestones.md: a scripted 30-minute chat session across two machines against the dev stack. It can be run now. M2 is signed off once these checks pass.
 2. **M0's encoder runs**, with Chrome on Windows next, before M3.
