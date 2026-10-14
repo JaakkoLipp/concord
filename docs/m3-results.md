@@ -27,7 +27,7 @@ Plan: [m3-plan.md](m3-plan.md). Written task by task. The decision gate verdict 
 
 **Observation: LiveKit restarts.** On the first join after LiveKit was recreated, voice-ingress answered `participant_joined` and `participant_left` with 500. LiveKit retried with backoff, and the next join was clean. The planned Monday 05:00 restart will cause the same thing. Task 3 checks whether a member who is in voice at restart time is left showing as in the channel.
 
-## Task 3: floating IP, firewall and TURN, in progress
+## Task 3: floating IP, firewall and TURN
 
 **Done on 2026-10-14**:
 - **Floating IP**: the floating IPv4 is in `/etc/netplan/60-floating-ip.yaml`, server-only. Caddy answers port 80 on it through `floating.compose.yml`, ready for the TURN hostname's certificate.
@@ -57,7 +57,10 @@ Plan: [m3-plan.md](m3-plan.md). Written task by task. The decision gate verdict 
 | `tools/live/src/turn.ts`, relay only, `turns:` server only | Connected through `turns:turn.concord.jaalip.com:443?transport=tcp` with `relayProtocol: tls`. 5.2 MB of video in 12 s. |
 | `restart-livekit.sh`, run by hand | Certificate found, LiveKit restarted, logged under `concord` |
 | Direct voice join after the restart | Connected over UDP, without the relay |
-| Firewall | **No Hetzner Cloud firewall yet.** A throwaway container on port 9999 answered from outside on the main and the floating IP. Docker-published ports bypass ufw, so only the cloud firewall can stop them. Waiting for Jaakko to create it. |
+| Firewall, before | **No Hetzner Cloud firewall yet.** A throwaway container on port 9999 answered from outside on the main and the floating IP. Docker-published ports bypass ufw, so only the cloud firewall can stop them. |
+| Firewall, after Jaakko created "concord" | The same container times out from outside on the main and the floating IPv4. SSH, `routes.ts`, `h3.ts`, `turn.ts` and a direct UDP voice join all still pass. IPv6 couldn't be tested from WSL and is checked from the drill machine in task 6. |
+
+Hetzner's form takes a port range as the first port in "Port" and the last in "Port range", not as `30000-30100` in one box.
 
 ## Task 7: invites, first part, 2026-10-14
 
