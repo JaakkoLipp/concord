@@ -3,6 +3,7 @@ import type {
   Backend, Capabilities, Channel, ChannelEdit, Emoji, Gateway, GatewayHandlers, GroupEdit, Id, Invite, InvitePreview, LoginResult, Member, SelfEdit, SelfField, Message,
   MessagePage, MessageQuery, NodeInfo, OutgoingMessage, Override, Role, RoleEdit, SearchQuery, Server, ServerEdit, User,
 } from '@concord/domain';
+import { JoinCallError, type JoinFailure } from '@concord/domain/errors';
 import type { components } from './api/types.ts';
 import { capabilitiesFor } from './capabilities.ts';
 import { mapChannel } from './map/channel.ts';
@@ -26,6 +27,26 @@ type WInvite = { type: string; _id: string; server: string; channel: string; cre
 type WInvitePreview = components['schemas']['InviteResponse'];
 type WInviteJoin = { type: 'Server'; server: { _id: string }; channels: { _id: string }[] } | { type: 'Group'; channel: { _id: string } };
 const mapInvite = (i: WInvite): Invite => ({ code: i._id, server: i.server, channel: i.channel, creator: i.creator });
+
+/** `join_call`'s refusals in 0.15.5 (delta/src/routes/channels/voice_join.rs). */
+export function joinFailureOf(e: StoatError): JoinFailure {
+  switch (e.kind) {
+    case 'MissingPermission': return 'no-permission';
+    case 'CannotJoinCall': return 'full';
+    case 'NotAVoiceChannel': return 'not-voice';
+    case 'AlreadyConnected': return 'already-connected';
+    // No voice node configured, or an unknown one.
+    case 'LiveKitUnavailable': case 'UnknownNode': return 'unavailable';
+    case 'NotFound': return 'not-found';
+    case 'SignedOut': return 'signed-out';
+  }
+  if (e.status === 401) return 'signed-out';
+  if (e.status === 404) return 'not-found';
+  if (e.status === 429) return 'rate-limited';
+  // A LiveKit API failure behind Stoat.
+  if (e.status >= 500) return 'unavailable';
+  return 'unknown';
+}
 
 export class StoatBackend implements Backend {
   capabilities: Capabilities = { serverSubscribe: false };
@@ -448,6 +469,19 @@ export class StoatBackend implements Backend {
 
   async deleteEmoji(emoji: string): Promise<void> {
     await this.rest.request('DELETE', `/custom/emoji/${emoji}`);
+  }
+
+  // ---------- voice (m4-plan.md task 4) ----------
+
+  async joinCall(channel: string, node: string): Promise<{ token: string }> {
+    // Stoat's answer also names a LiveKit URL, which the client never uses: it connects to its own origin.
+    try {
+      const r = await this.rest.request<{ token: string }>('POST', `/channels/${channel}/join_call`, { node, force_disconnect: true });
+      return { token: r.token };
+    } catch (e) {
+      if (e instanceof StoatError) throw new JoinCallError(e.status, e.kind, e.message, joinFailureOf(e));
+      throw e;
+    }
   }
 
   async dms() {

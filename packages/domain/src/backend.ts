@@ -273,6 +273,13 @@ export interface Backend {
   renameEmoji(emoji: Id, name: string): Promise<void>;
   deleteEmoji(emoji: Id): Promise<void>;
 
+  // ---------- voice (m4-plan.md task 4) ----------
+  /**
+   * A token for a channel's call on a voice node, ending this account's call on any other device. The token
+   * lives seconds, so connect at once. Throws JoinCallError, with the reason mapped, when refused.
+   */
+  joinCall(channel: Id, node: string): Promise<{ token: string }>;
+
   connect(handlers: GatewayHandlers): Gateway;
 }
 
