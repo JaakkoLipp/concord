@@ -94,6 +94,16 @@ Admins invite people by creating ordinary server invites, revocable as on Discor
 
 **Registration starts closed.** The website server has a registration switch in its configuration, off by default, and Jaakko decides when to turn it on. While it is off, `/register` and the invite page say registration is closed, and existing users can still log in and join through invites. Until then Jaakko creates accounts by hand over the internal network, as [vps-runbook.md](vps-runbook.md) describes. The Caddy rule in step 1 stays on either way.
 
+**Since M3, production sends no email.**
+- Production has no SMTP server, so Stoat creates accounts already verified.
+- Jaakko's `deploy/account-link.sh` writes a one-time password token into the account and prints a `/app/welcome/<token>` link. Jaakko sends that link to the person directly. It can carry an invite.
+- The same script resets a forgotten password. Stoat's own "Forgot password" fails without SMTP.
+- The email-link steps 4 and 5 above need real email, which M6 adds:
+  - Cloudflare Email Sending through a small bridge, because its SMTP uses port 465, which Hetzner blocks,
+  - or our own sender, once Hetzner unblocks port 25.
+
+  Until then, the invite page at `/app/invite/<code>` serves existing accounts (m3-results.md).
+
 **Only server admins create invites.** New Stoat servers give every member the invite permission. Our server-creation flow removes it from the default role straight away, then creates an Admin role, first in rank, with every permission (m2c-plan.md decision 4). The permission editors warn when Everyone, or a role without Manage server, is given it back. The allowlist above stays even so, because group DM invites are not covered by server permissions.
 
 Two Stoat behaviours an owner should know (m2c-plan.md): leaving a server you own deletes it, and a new private channel's name briefly reaches every member's client while it is being made private (decision 8).
@@ -216,7 +226,8 @@ The VPS milestone, M3, enables LiveKit's built-in TURN on `turn.concord.jaalip.c
 
 - **TURN over TLS on port 443.** This is the part that rescues locked-down networks. LiveKit's sample config says the TLS port must be 443 unless a load balancer terminates TLS in front of it.
 - **A second public IPv4.** Caddy already owns 443 on the main address. We attach a Hetzner floating IP, configure it persistently in the OS, point `turn.concord.jaalip.com` at it, and bind LiveKit's TURN listener to it. This costs a few euros a month and avoids running a TLS-sniffing proxy in front of Caddy.
-- **TURN over UDP on 3478**, cheap to add alongside.
+- **TURN over UDP on 3478**, cheap to add alongside. It goes on the **main** IP, with relay ports 30000 to 30100. LiveKit hands clients `turn:<node IP>:3478`, and the node IP is the main IP. Only `turns:<domain>:443` uses the floating IP (m3-plan.md, checked in M3).
+- **Outbound traffic stays on the main IP.** LiveKit learns its node IP from the address its traffic leaves from. After a reboot, Docker sent from the floating IP, which broke voice. `com.docker.network.host_ipv4` on the stack's network pins it (m3-results.md task 3).
 - **Certificate**: Caddy also listens on port 80 of the floating IP, so it can answer the certificate challenge for `turn.concord.jaalip.com`. LiveKit mounts Caddy's certificate directory read-only and restarts weekly at a quiet hour to pick up renewals. A restart drops calls in progress, which is why it runs at night.
 
 ### 5.4 Known Stoat quirks
@@ -278,12 +289,13 @@ Account management stays reachable on the website without installing anything, a
 - **Exact steps** for addresses, ports, files and backups live in [vps-runbook.md](vps-runbook.md). This section states the rules.
 - **Port bindings**:
   - Caddy binds the main IPv4 and IPv6 on 80 and 443 over TCP, and 443 over UDP for HTTP/3. It also binds port 80 on the floating IP for certificate challenges.
-  - LiveKit binds 7881 over TCP and 50000 to 50100 over UDP on the main address, and TURN on 443 over TCP and 3478 over UDP on the floating IP.
-  - The Hetzner Cloud firewall opens the union of these ports, since its inbound rules appear not to filter by destination address. Docker's per-IP bindings keep each service on its own address.
+  - LiveKit binds 7881 over TCP and 50000 to 50100 over UDP on the main address. TURN binds 443 over TCP on the floating IP, and 3478 plus relay ports 30000 to 30100 over UDP on the main address.
+  - The Hetzner Cloud firewall opens the union of these ports, since its inbound rules don't filter by destination address. Docker's per-IP bindings keep each service on its own address. The firewall matters, because ports Docker publishes bypass ufw.
+  - No address is committed: they live in the server-only `concord/host.env`, which the `dc` wrapper reads.
 - **Our deployment files never use names Stoat's generator touches.** When rerun with overwrite, Stoat's generator renames `compose.override.yml`, `livekit.yml`, `Revolt.toml` and `.env.web`. So our compose file is `deploy/concord.compose.yml`. It replaces Stoat's Caddyfile and LiveKit config with our versions from `deploy/`, adds our web app, and rebinds ports. The LiveKit API key and secret stay out of git in a server-only environment file. A wrapper script runs every compose command with both files, so nobody forgets the second `-f`. Our edits to `Revolt.toml` are kept as a documented diff in `deploy/`, without secrets, and the upgrade script reapplies it.
 - **Version pinning**: our compose file sets every Stoat image tag explicitly. MongoDB is pinned to 7.0.43, because MongoDB 8 refuses to start on the VPS's kernel 7.0. 7.0 is supported until August 2027. The reasons and the path to 8.0 are in `deploy/concord.compose.yml`. Upgrades are a reviewed pull request here, applied by a script that backs up first and reruns the adapter's contract tests.
-- **Backups**: run nightly with restic to a Hetzner Storage Box. They cover a MongoDB dump, the object storage data, `secrets.env`, `Revolt.toml`, the LiveKit keys file, `.env.web` and Caddy's data directory. `secrets.env` holds the file encryption key, and losing it makes every attachment unreadable. A restore drill is part of M3.
-- **Monitoring**: an external uptime check on the API and WebSocket, plus disk and memory alerts.
+- **Backups**: run nightly with restic. Since M3 they go to the VPS's own disk, and a Hetzner Storage Box is to be added as a second repository. They cover a MongoDB dump, the object storage data, `secrets.env`, `Revolt.toml`, the LiveKit keys file, `.env.web` and Caddy's data directory. `secrets.env` holds the file encryption key, and losing it makes every attachment unreadable. The restore drill moved from M3 to M4.
+- **Monitoring**: an external uptime check on the API and WebSocket, plus disk and memory alerts, in M8. Until then backups and the disk are logged under `concord` and shown by `deploy/status.sh`.
 
 ## 9. Gaps and upstream candidates
 

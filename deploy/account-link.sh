@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Make a one-time link that lets a person set their password (m3-plan.md task 2). There is no email in M3: Jaakko
-# sends the link himself. Creates the account first if it doesn't exist, with a random password nobody sees.
+# sends the link directly. Creates the account first if it doesn't exist, with a random password nobody sees.
 # For an existing account it gives a fresh link, which is how a forgotten password is reset.
 #
 # Usage on the server: ~/stoat/concord/account-link.sh email@example.com [invite-code]

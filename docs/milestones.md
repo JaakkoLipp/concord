@@ -109,7 +109,7 @@ Split into three parts on 2026-10-12. Each gets its own plan, signed off before 
 - A non-admin can't create a server or an invite, and sees no controls for either.
 - Notifications follow the mute and "mentions only" settings, and never fire for the focused channel.
 
-**Device tests for M2 as a whole**: a scripted 30-minute chat session across two machines against the development stack. A session with friends follows at M3.
+**Device tests for M2 as a whole**: a scripted 30-minute chat session across two machines against the development stack. A session with friends follows at M3. Since the M3 swap there's no development stack with seeded data. M2's device checks run on production with Jaakko's two accounts and a tester, and M2 is signed off when they pass (m3-plan.md decision 1).
 
 ## M3: VPS deployment and media validation
 
@@ -126,6 +126,20 @@ Detailed in [vps-runbook.md](vps-runbook.md).
 - A restore from backup onto a fresh machine brings back accounts, messages, attachments and avatars.
 - Decision gate part B is recorded in `docs/m3-results.md`.
 
+**Status, 2026-10-14**:
+
+| Criterion | Status |
+|---|---|
+| 1, account creation refused from the internet | Met |
+| 2, voice with four people | Carried into M4's voice evening |
+| 3, 1080p60 on real networks | Carried into M4's voice evening |
+| 4, relay over TLS | Met by script; the firewall version repeats on the evening |
+| 5, restore drill | Carried into M4 |
+| 6, decision gate part B | Provisional |
+
+- The plan changed with Jaakko: no email in M3, because people get one-time password links. The dev data was swapped out rather than wiped. Backups go to the VPS disk until a Storage Box is added.
+- The invite page and the move of Stoat's client to `ref.` came forward from M6.
+
 ## M4: Voice and screen share in the browser
 
 **Scope**: join and leave, voice occupancy in the channel list and DM list, DM calls with ringing, mute and deafen, speaking indicators, per-user volume, voice settings with device selection, volumes, microphone test, input sensitivity, noise suppression and echo cancellation, screen share with quality presets and our 1080p60 publishing settings, viewer layer selection, camera, connection-quality indicator, reconnect on network change.
@@ -137,6 +151,11 @@ Detailed in [vps-runbook.md](vps-runbook.md).
 - A voice call survives switching Wi-Fi networks.
 
 **Device tests**: a real voice evening with at least five people, including one screen share of a game. Include one Firefox sharer and one Firefox viewer.
+
+**Carried in from M3**:
+- **First task**: a separate dev stack, a CX23 at `dev.concord.jaalip.com` with a fresh seed (m3-plan.md decision 6).
+- **The voice evening also covers M3's criteria 2 to 4**: 30 minutes of voice with four or more people on different networks, the screen-share runs on the test page, and a forced relay with UDP 3478 closed. Its results complete decision gate part B.
+- **The restore drill** from vps-runbook.md section 7.
 
 ## M5: Desktop apps
 

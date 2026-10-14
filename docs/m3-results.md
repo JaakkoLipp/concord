@@ -1,6 +1,50 @@
 # M3 results
 
-Plan: [m3-plan.md](m3-plan.md). Written task by task. The decision gate verdict comes last, in task 9.
+Plan: [m3-plan.md](m3-plan.md). Written task by task. The summary and the decision gate come first.
+
+## Summary, 2026-10-14
+
+Production runs at `https://concord.jaalip.com` with Jaakko's two accounts and the community server. Registration is closed, and accounts get one-time password links. Backups run nightly, and TURN over TLS works.
+
+**Carried into M4**, by Jaakko's choice for time:
+- the tester voice evening, merged into M4's own voice evening,
+- the restore drill.
+
+**Versions**:
+- self-hosted repo `9af5e90`, every Stoat image `v0.15.5`, `for-web:4017c18`,
+- LiveKit image `v1.9.14`, which is Stoat's fork of LiveKit 1.13.4,
+- the test page's `livekit-client` 2.22.4,
+- MongoDB 7.0.43, Caddy 2.11.7, restic 0.18.1.
+
+**Resources at idle** with two accounts, from `dc stats` after the swap:
+- **Host**: 1.75 GB used, 2.06 GB available of 3.7 GB. The load average is about 0.6 on 2 vCPU.
+- **Largest containers**: RabbitMQ 107 MB, MongoDB 90 MB, Autumn 56 MB, Stoat's client 54 MB, MinIO 51 MB, concord-web 44 MB, LiveKit 44 MB and the API 43 MB.
+- **Under load**: no voice load was measured. That comes with M4's evening, and it decides the resize to a CX33.
+
+**Manual repairs and surprises**, for criterion 3:
+
+| What | Cause | Fixed by |
+|---|---|---|
+| Voice dead after the first reboot | Docker's outbound NAT took the floating IP, so LiveKit announced it | `com.docker.network.host_ipv4`, needing one `dc down` and `up` |
+| Four Stoat services restart about seven times at every boot | Docker restarts containers without Compose's ordering, before RabbitMQ is up | Nothing needed; they settle in about 40 s |
+| voice-ingress answered webhooks with 500 after a LiveKit restart | State from before the restart; LiveKit retried and the next join was clean | Nothing needed |
+| Backup password overwritten when the file was empty | Our script's own bug, found by the forced-failure test | Script fixed |
+| Swap stopped midway | `cp` into a root-owned folder | Finished with `sudo`; nothing lost |
+
+None of these needed a change to Stoat, and none recurred after its fix.
+
+**Time**: one long working day, 2026-10-14, plus Jaakko's console and DNS steps.
+
+## Decision gate part B, provisional
+
+| Criterion | Status |
+|---|---|
+| 1, registration with a proxy rule and the internal path (part A) | Confirmed again: public account creation gets 403, and the internal path works. Real email waits for M6, but that is a mail-provider choice, not a Stoat limit. |
+| 3, operating the stack | **Pass so far.** Every surprise above was ours or Docker's and was fixed in our files, and memory fits. It is final only after M4's evening under load. |
+| 4, 1080p60 needs no server changes | **Open.** TURN and LiveKit work unmodified, and a fake 1080p60 share relayed at about 3.5 Mbps. The real network runs are in M4's evening. |
+| 5, voice reliability | **Open.** One finding to watch: voice-ingress's 500s after a LiveKit restart. They cleared by themselves. |
+
+The go or no-go is recorded after M4's voice evening. Until then nothing points to no-go.
 
 ## Task 1: production configuration, 2026-10-14
 

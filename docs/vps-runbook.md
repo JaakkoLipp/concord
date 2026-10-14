@@ -9,13 +9,24 @@ Goal: put Stoat and our client on `concord.jaalip.com`, prove the media path on 
 - **Section 3**: the registration gate, tested on every path variant.
 - **Section 5**: step 5, the presence check.
 
-**Still open for M3**:
+**Done in M3, October 2026**, with results in [m3-results.md](m3-results.md) and the plan in [m3-plan.md](m3-plan.md):
 
-- **Section 1**: the floating IP, unattended upgrades and fail2ban, and the Hetzner Cloud firewall. Docker-published ports bypass ufw. Today every published port is meant to be public and the datastores are unpublished, so this is defence in depth.
-- **Section 2**: the Caddy port rebinding, including 443 over UDP, the `/app` route, and the real email relay.
-- **Then**: sections 4 to 8.
+- **Section 1**: the floating IP, the Hetzner Cloud firewall, automatic reboots for security updates at 05:30, and outbound traffic pinned to the main IP. fail2ban and unattended upgrades were already running.
+- **Section 2**:
+  - Caddy binds only the main addresses, with HTTP/3, and the addresses live in the server-only `concord/host.env`.
+  - The `/app` route, with the main domain redirecting to it and Stoat's own client moved to `ref.<domain>`.
+  - **No email relay.** Production runs without SMTP, and people get one-time password links from `account-link.sh` (section 3).
+- **Section 4**: TURN, with the layout corrected below.
+- **Section 7**: nightly restic backups, to the VPS's own disk for now.
+- **The swap to production**: the dev data was moved aside rather than wiped. Then Jaakko's account was bootstrapped and the community server created in our client.
 
-M3 starts with the cleanup in section 8 of dev-environment.md, then redoes step 7 of section 2 for Jaakko's real account.
+**Carried into M4**:
+- section 5's voice session and section 6's screen-share runs, merged into M4's voice evening,
+- section 7's restore drill,
+- the Storage Box as a second backup repository.
+
+**Carried into M6**: real email, with Cloudflare Email Sending through a bridge or our own sender once Hetzner unblocks port 25.
+
 Estimated effort: two to four evenings, plus one group voice session.
 
 ## Before you start
@@ -34,7 +45,7 @@ You need to decide or buy these. Nothing else in M3 can start without the first 
 
 1. Create a VPS in Helsinki, latest Ubuntu LTS, SSH key only. The current one has 2 vCPU and 3.7 GB, with base setup from `deploy/server-setup.sh`. Resize to 4 vCPU and 8 GB if the voice session in section 5 shows memory or CPU pressure.
 2. Attach a floating IPv4 for TURN. Configure it persistently in the OS network config, following Hetzner's floating IP guide. Reboot once and confirm the address is still present. Docker cannot bind a port to an address that is missing at boot, and voice would be down.
-3. Create a Hetzner Cloud firewall that opens TCP 22, 80, 443 and 7881, and UDP 443, 3478 and 50000 to 50100. Check in the console whether inbound rules can be limited per destination address. If not, the per-address split is enforced by Docker bindings alone.
+3. Create a Hetzner Cloud firewall that opens TCP 22, 80, 443 and 7881, UDP 443, 3478, 30000 to 30100 and 50000 to 50100, and ICMP. Inbound rules can't be limited per destination address, so Docker's bindings enforce the per-address split. The form takes a range's first port in "Port" and its last in "Port range".
 4. DNS records:
    - `concord.jaalip.com`: A and AAAA to the main addresses.
    - `turn.concord.jaalip.com`: A to the floating IP.
@@ -90,14 +101,16 @@ This is the same path our website will use in M6. M0 tested the Caddy rule and t
      domain: turn.concord.jaalip.com
      tls_port: 443
      udp_port: 3478
-     cert_file: /certs/turn.concord.jaalip.com/turn.concord.jaalip.com.crt
-     key_file: /certs/turn.concord.jaalip.com/turn.concord.jaalip.com.key
+     relay_range_start: 30000
+     relay_range_end: 30100
+     cert_file: /certs/turn.concord.jaalip.com.crt
+     key_file: /certs/turn.concord.jaalip.com.key
    ```
 
 3. In `deploy/concord.compose.yml`:
    - Mount `deploy/livekit.yml` over LiveKit's config, and pass the keys environment file to LiveKit.
    - Mount Caddy's certificate directory for Let's Encrypt read-only at `/certs`. Mount the directory, not single files, because renewals replace the files.
-   - Publish LiveKit's 443 over TCP and 3478 over UDP on the floating IP.
+   - Publish LiveKit's 443 over TCP on the floating IP, and 3478 over UDP plus the relay ports 30000 to 30100 over UDP on the **main** IP. LiveKit hands clients `turn:<node IP>:3478`, and its node IP is the main IP. Only `turns:<domain>:443` uses the floating IP (m3-plan.md).
 4. Add a cron job that restarts LiveKit at 05:00 every Monday to pick up renewed certificates. It drops calls in progress, hence the hour.
 5. Verify in step 6 with the test page.
 
