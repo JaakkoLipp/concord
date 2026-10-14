@@ -7,7 +7,6 @@
  * `node tools/live/src/emoji.ts [out-dir]`
  */
 import { join } from 'node:path';
-import type { Page } from 'playwright-core';
 import { APP, launch, watch } from './browser.ts';
 import { signIn } from './login.ts';
 import { person, until } from './people.ts';
