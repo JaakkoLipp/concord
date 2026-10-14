@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
-   * User settings at /app/settings/<section> (m2b-plan.md task 7): the profile editor and Log out, in the
-   * shared settings frame.
+   * User settings at /app/settings/<section> (m2b-plan.md task 7): the profile editor, notifications, voice
+   * and video, and Log out, in the shared settings frame.
    */
   import { resolve } from '$app/paths';
   import { Button } from '@concord/ui';
@@ -11,16 +11,18 @@
   import ProfileEditor from './ProfileEditor.svelte';
   import NotificationsSection from '$lib/notify/NotificationsSection.svelte';
   import SettingsFrame from './SettingsFrame.svelte';
+  import VoiceSection from './VoiceSection.svelte';
 
-  type Section = 'profile' | 'notifications';
+  type Section = 'profile' | 'notifications' | 'voice';
   let { session, section }: { session: Session; section: Section } = $props();
-  const SECTIONS: Section[] = ['profile', 'notifications'];
+  const SECTIONS: Section[] = ['profile', 'notifications', 'voice'];
   const items = $derived(SECTIONS.map((s) => ({ id: s, label: m.settings.sections[s], href: resolve('/(app)/app/settings/[section]', { section: s }) })));
 </script>
 
 <SettingsFrame title={m.settings.title} {items} active={section} heading={m.settings.sections[section]}>
   {#if section === 'profile'}<ProfileEditor {session} />{/if}
   {#if section === 'notifications'}<NotificationsSection />{/if}
+  {#if section === 'voice'}<VoiceSection />{/if}
   {#snippet footer()}
     <Button variant="ghost" size="sm" onclick={() => app.signOut()}>{m.session.logout}</Button>
   {/snippet}
