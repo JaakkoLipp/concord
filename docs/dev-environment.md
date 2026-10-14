@@ -63,7 +63,7 @@ export default defineConfig({
   - In development, it warns if one of those URLs has a different path from the constant.
   - Why: Stoat allows any origin, so a client that followed the absolute URLs would quietly work cross-origin in development and hide same-origin and CSP bugs.
 - **Still read from `GET /api/`**: the version and build, the limits including `restrict_server_creation`, the feature flags, the LiveKit node names, and the VAPID key.
-- **Reserved paths**: `/api`, `/ws`, `/autumn`, `/january`, `/gifbox`, `/livekit`, `/ingress` and `/spike` belong to Caddy in production. SvelteKit must never use them as routes. `/invite/<code>` is Caddy's redirect to `/app/invite/<code>`, our invite page.
+- **Reserved paths**: `/api`, `/ws`, `/autumn`, `/january`, `/gifbox`, `/livekit`, `/ingress` and `/spike` belong to Caddy in production. SvelteKit must never use them as routes. `/invite/<code>` is Caddy's redirect to `/app/invite/<code>`, our invite page. Every other path on the main domain redirects to `/app`; Stoat's own client is at `ref.<domain>`.
 - **WebSocket**: connect to `/ws?version=1&format=json`, never `/ws/`, because Caddy's route is an exact path. Authenticate with a first frame, `{"type":"Authenticate","token":…}`, rather than the `token` query parameter. That keeps tokens out of URLs, logs and recorded fixtures.
 - **`Ready` fields** are repeated query keys, `ready=users&ready=servers&…`, not a comma list. Requesting synced settings this way never works, because of a Stoat bug, which is why the client fetches them separately.
 - **No cookies.** The session token is the `x-session-token` header. Files from Autumn need no authentication, so a plain `<img src>` works.

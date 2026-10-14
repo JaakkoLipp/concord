@@ -61,9 +61,12 @@ services:
       - "[${MAIN_IPV6}]:80:80"
       - "[${MAIN_IPV6}]:443:443"
       - "[${MAIN_IPV6}]:443:443/udp"
+    environment:
+      REF_DOMAIN: ref.${STOAT_DOMAIN}
     volumes:
       - ./concord/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./concord/spike:/srv/spike:ro
+      - ./concord/ref.caddy:/etc/caddy/extra/ref.caddy:ro
 
   # Valkey holds only presence, rate limits and voice state, all rebuilt on restart: no persistence.
   # LiveKit shares it. The default noeviction policy stays: a full Valkey fails writes rather than silently

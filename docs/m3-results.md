@@ -85,7 +85,16 @@ Built before the wipe, so it could be checked with personas on the dev stack.
 
 All pass.
 
-**Still to do, once `ref.concord` is in DNS**: `/` redirects to `/app`, Stoat's client moves to `ref.concord.jaalip.com`, and Stoat's mail links redirect there.
+**Second part, the front door, 2026-10-14**:
+- **Stoat's client moved to `ref.concord.jaalip.com`**: a Caddy site in `ref.caddy` proxies the same `web` container. Caddy's certificate came on the second attempt, a few seconds later.
+- **The main domain leads to our client**: everything outside our routes, `/` included, redirects to `/app` with a 302. A plain `redir` would run before Caddy's routes, so it sits in a final `route` block.
+- **Cross-origin checks**:
+  - The API answers preflights with `Access-Control-Allow-Origin: https://ref.concord.jaalip.com`, and Autumn uploads allow any origin.
+  - A persona logged in to Stoat's client at `ref.`, and its socket connected to `wss://concord.jaalip.com/ws`.
+  - Voice uses websockets, which CORS doesn't cover. The tester evening uses Stoat's client there for voice.
+  - The one 404 is Stoat's own `ishere.jpg`, which is missing from its build.
+- **`tools/live/src/routes.ts`** checks every public path's answer and the 403 on public account creation. All pass.
+- **Possible leftover**: browsers that ran Stoat's client at the root may still hold its service worker. `/app` has worked alongside it throughout M1 and M2, so nothing is done about it unless it shows up.
 
 ## Task 2: accounts without email, 2026-10-14
 

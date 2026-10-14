@@ -1,0 +1,6 @@
+# Stoat's own web client, moved off the main domain (m3-plan.md task 7): concord.jaalip.com now leads to our
+# client. Kept for voice until M4, and as the reference. It talks to the API on the main domain, which allows
+# its origin. Mounted by concord.compose.yml; REF_DOMAIN is ref.<domain>.
+{$REF_DOMAIN} {
+	reverse_proxy http://web:5000
+}

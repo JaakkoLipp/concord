@@ -94,7 +94,11 @@
 		}
 	}
 
-	reverse_proxy http://web:5000
+	# Concord: everything else leads to our client. Stoat's own client moved to ref.<domain> (ref.caddy).
+	# A plain redir would run before the routes above, so it sits in a route of its own, which runs last.
+	route {
+		redir * /app 302
+	}
 }
 
 # Concord: site blocks that exist only on some stacks, such as the TURN hostname (floating.compose.yml).
