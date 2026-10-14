@@ -546,6 +546,10 @@ export class Session {
         return this.profileChanged(e.id);
       case 'settings':
         return this.settingsChanged(e.values);
+      case 'voiceJoin':
+      case 'voiceMove':
+        // Anyone who can see a channel sees who joins it, including people this session hasn't met.
+        return this.meetInVoice(e.state.user, e.state.channel);
     }
   }
 
@@ -577,6 +581,20 @@ export class Session {
 
   private meet(users: Id[]): void {
     for (const id of users) if (!this.store.users.has(id)) void this.backend.user(id).then((u) => this.store.upsertUsers([u])).catch(() => {});
+  }
+
+  private readonly voiceMemberFetches = new Set<string>();
+
+  /** A voice joiner's user, and in a server their member record, which holds a server mute or deafen. */
+  private meetInVoice(user: Id, channel: Id): void {
+    this.meet([user]);
+    const c = this.store.channels.get(channel);
+    if (c?.kind !== 'text') return;
+    const key = memberKey(c.server, user);
+    if (this.store.members.has(key) || this.voiceMemberFetches.has(key)) return;
+    this.voiceMemberFetches.add(key);
+    void this.backend.member(c.server, user).then((m) => this.store.upsertMembers([m])).catch(() => {})
+      .finally(() => this.voiceMemberFetches.delete(key));
   }
 
   /** Fetch a changed profile again, but only if this session has shown it. A burst of changes is one fetch. */

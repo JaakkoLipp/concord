@@ -15,9 +15,12 @@ export function mapMemberPatch(d: Partial<WMember>): Partial<Member> {
   if (d.avatar) out.avatar = mapFile(d.avatar);
   if (d.roles) out.roles = d.roles;
   if (d.timeout) out.timeout = d.timeout;
-  if (d.can_publish !== undefined) out.canPublish = d.can_publish;
-  if (d.can_receive !== undefined) out.canReceive = d.can_receive;
+  if (typeof d.can_publish === 'boolean') out.canPublish = d.can_publish;
+  if (typeof d.can_receive === 'boolean') out.canReceive = d.can_receive;
   return out;
 }
 
-export const MEMBER_FIELDS: Record<string, (keyof Member)[]> = { Nickname: ['nickname'], Avatar: ['avatar'], Roles: ['roles'], Timeout: ['timeout'] };
+/** `CanPublish` and `CanReceive` clear to their default, true; the event mapper turns them into data. */
+export const MEMBER_FIELDS: Record<string, (keyof Member)[]> = {
+  Nickname: ['nickname'], Avatar: ['avatar'], Roles: ['roles'], Timeout: ['timeout'], CanPublish: ['canPublish'], CanReceive: ['canReceive'],
+};

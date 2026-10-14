@@ -6,7 +6,7 @@
 import { emptyNotifications, muteActive, type NotificationLevel, type NotificationSettings } from '../notify.ts';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { ConnectionState, DomainEvent } from '../backend.ts';
-import type { Channel, Emoji, Id, Member, Message, NodeInfo, Presence, Profile, Relationship, Server, Unread, User } from '../entities.ts';
+import type { Channel, Emoji, Id, Member, Message, NodeInfo, Presence, Profile, Relationship, Server, Unread, User, VoiceState } from '../entities.ts';
 
 export interface MessageWindow {
   /** Oldest first, one contiguous stretch of history. */
@@ -93,6 +93,8 @@ export class Store {
   readonly mutuals = new SvelteMap<Id, { users: Id[]; servers: Id[]; channels: Id[] }>();
   /** Channel to user to the time their typing indicator expires. */
   readonly typing = new SvelteMap<Id, Record<Id, number>>();
+  /** Channel to user to their voice state. Only occupied channels have an entry (client.md section 10.1). */
+  readonly voice = new SvelteMap<Id, Record<Id, VoiceState>>();
   /** Servers whose full member list has been fetched. */
   readonly memberListLoaded = new SvelteMap<Id, number>();
   /** Messages sent from this client and not yet confirmed, by key. Window reloads and Ready leave them alone. */
@@ -233,6 +235,8 @@ export class Store {
         this.emojis.clear();
         for (const em of e.emojis) this.emojis.set(em.id, em);
         if (e.unreads) this.setUnreads(e.unreads);
+        this.voice.clear();
+        for (const v of e.voice) this.joinVoice(v);
         this.typing.clear();
         this.memberListLoaded.clear();
         return;
@@ -319,6 +323,7 @@ export class Store {
         this.servers.set(e.server.id, e.server);
         for (const c of e.channels) this.channels.set(c.id, c);
         for (const em of e.emojis) this.emojis.set(em.id, em);
+        for (const v of e.voice ?? []) this.joinVoice(v);
         return;
       case 'serverUpdate': {
         const s = this.servers.get(e.id);
@@ -392,6 +397,19 @@ export class Store {
       case 'emojiDelete':
         this.emojis.delete(e.id);
         return;
+      case 'voiceJoin':
+        return this.joinVoice(e.state);
+      case 'voiceMove':
+        this.leaveVoice(e.from, e.state.user);
+        return this.joinVoice(e.state);
+      case 'voiceLeave':
+        return this.leaveVoice(e.channel, e.user);
+      case 'voiceUpdate': {
+        // Without a join there is no joining time to build a state from, so an update for someone absent waits for one.
+        const v = this.voice.get(e.channel)?.[e.user];
+        if (v) this.voice.set(e.channel, { ...this.voice.get(e.channel), [e.user]: { ...v, ...e.data } });
+        return;
+      }
       case 'unknown':
         return;
     }
@@ -445,6 +463,7 @@ export class Store {
     this.channels.delete(id);
     this.dropWindowMessages(id);
     this.unreads.delete(id);
+    this.voice.delete(id);
   }
 
   private removeServer(id: Id): void {
@@ -454,10 +473,26 @@ export class Store {
       this.channels.delete(c);
       this.dropWindowMessages(c);
       this.unreads.delete(c);
+      this.voice.delete(c);
     }
     for (const [k, m] of this.members) if (m.server === id) this.members.delete(k);
     for (const [k, e] of this.emojis) if (e.parent.type === 'server' && e.parent.id === id) this.emojis.delete(k);
     this.memberListLoaded.delete(id);
+  }
+
+  /** A user is in one voice channel at most, so joining one leaves any other: that covers a missed leave. */
+  private joinVoice(v: VoiceState): void {
+    for (const [channel, users] of [...this.voice]) if (channel !== v.channel && v.user in users) this.leaveVoice(channel, v.user);
+    this.voice.set(v.channel, { ...this.voice.get(v.channel), [v.user]: v });
+  }
+
+  /** Leaves only the channel named, so a late leave can't undo a join elsewhere. */
+  private leaveVoice(channel: Id, user: Id): void {
+    const users = this.voice.get(channel);
+    if (!users || !(user in users)) return;
+    const rest = omit(users, [user]);
+    if (Object.keys(rest).length) this.voice.set(channel, rest);
+    else this.voice.delete(channel);
   }
 
   private clearTyping(channel: Id, user: Id): void {
@@ -592,6 +627,23 @@ export class Store {
     return [...this.users.values()].filter((u) => kinds.includes(u.relationship)).sort((a, b) => name(a).localeCompare(name(b)));
   }
 
+  /** Who is in a voice channel, in the order they joined. */
+  voiceParticipants(channel: Id): VoiceState[] {
+    return Object.values(this.voice.get(channel) ?? {}).sort((a, b) => a.joinedAt - b.joinedAt || a.user.localeCompare(b.user));
+  }
+
+  /** When the earliest of the people now in a voice channel joined, for its timer; undefined when it's empty. */
+  voiceSince(channel: Id): number | undefined {
+    const states = Object.values(this.voice.get(channel) ?? {});
+    return states.length ? Math.min(...states.map((v) => v.joinedAt)) : undefined;
+  }
+
+  /** The voice channel a user is in, if any this account can see. */
+  voiceChannelOf(user: Id): Id | undefined {
+    for (const [channel, users] of this.voice) if (user in users) return channel;
+    return undefined;
+  }
+
   /** Display name in a server: nickname, then display name, then username. */
   displayName(user: Id, server?: Id): string {
     const m = server ? this.members.get(memberKey(server, user)) : undefined;
@@ -609,7 +661,7 @@ export class Store {
 
   clear(): void {
     this.self = null;
-    for (const map of [this.users, this.servers, this.channels, this.members, this.emojis, this.unreads, this.messages, this.windows, this.profiles, this.mutuals, this.typing, this.memberListLoaded, this.pending]) {
+    for (const map of [this.users, this.servers, this.channels, this.members, this.emojis, this.unreads, this.messages, this.windows, this.profiles, this.mutuals, this.typing, this.voice, this.memberListLoaded, this.pending]) {
       (map as SvelteMap<unknown, unknown>).clear();
     }
     this.ownNonces.clear();

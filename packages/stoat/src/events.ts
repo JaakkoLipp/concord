@@ -9,6 +9,7 @@ import { MEMBER_FIELDS, mapMember, mapMemberPatch } from './map/member.ts';
 import { MESSAGE_FIELDS, mapEmbeds, mapMessage, mapMessagePatch, mapUnread } from './map/message.ts';
 import { ROLE_FIELDS, SERVER_FIELDS, mapRolePatch, mapServer, mapServerPatch } from './map/server.ts';
 import { USER_FIELDS, mapUser, mapUserPatch } from './map/user.ts';
+import { mapChannelVoiceStates, mapVoiceFlags, mapVoiceState, type WChannelVoiceState, type WVoiceState } from './map/voice.ts';
 import type { WChannel, WEmoji, WMember, WMessage, WServer, WUnread, WUser } from './map/wire.ts';
 
 type Frame = { type: string } & Record<string, unknown>;
@@ -29,6 +30,7 @@ export function mapFrame(f: Frame): DomainEvent[] {
         members: ((x.members ?? []) as WMember[]).map(mapMember),
         emojis: ((x.emojis ?? []) as WEmoji[]).map(mapEmoji),
         ...(x.channel_unreads ? { unreads: (x.channel_unreads as WUnread[]).map(mapUnread) } : {}),
+        voice: mapChannelVoiceStates(x.voice_states as WChannelVoiceState[] | undefined),
       }];
     case 'Message': {
       const m = f as unknown as WMessage;
@@ -74,6 +76,7 @@ export function mapFrame(f: Frame): DomainEvent[] {
       return [{
         type: 'serverCreate', server: mapServer(x.server as WServer),
         channels: ((x.channels ?? []) as WChannel[]).map(mapChannel), emojis: ((x.emojis ?? []) as WEmoji[]).map(mapEmoji),
+        voice: mapChannelVoiceStates(x.voice_states as WChannelVoiceState[] | undefined),
       }];
     case 'ServerUpdate':
       return [{ type: 'serverUpdate', id: x.id, data: mapServerPatch(x.data ?? {}), clear: cleared(x.clear, SERVER_FIELDS) }];
@@ -95,7 +98,11 @@ export function mapFrame(f: Frame): DomainEvent[] {
       const clear = cleared(x.clear, MEMBER_FIELDS);
       // Clearing roles leaves none: a member always has a list, so it becomes empty rather than missing.
       if (clear.includes('roles')) data.roles = [];
-      return [{ type: 'memberUpdate', server: id.server, user: id.user, data, clear: clear.filter((f) => f !== 'roles') }];
+      // Clearing a server mute or deafen restores the default, which is allowed.
+      if (clear.includes('canPublish')) data.canPublish = true;
+      if (clear.includes('canReceive')) data.canReceive = true;
+      const kept = clear.filter((f) => f !== 'roles' && f !== 'canPublish' && f !== 'canReceive');
+      return [{ type: 'memberUpdate', server: id.server, user: id.user, data, clear: kept }];
     }
     case 'UserUpdate': {
       const raw = (x.data ?? {}) as Partial<WUser>;
@@ -122,6 +129,14 @@ export function mapFrame(f: Frame): DomainEvent[] {
       return typeof x.data?.name === 'string' ? [{ type: 'emojiUpdate', id: x.id, name: x.data.name }] : [];
     case 'EmojiDelete':
       return [{ type: 'emojiDelete', id: x.id }];
+    case 'VoiceChannelJoin':
+      return [{ type: 'voiceJoin', state: mapVoiceState(x.id, x.state as WVoiceState) }];
+    case 'VoiceChannelLeave':
+      return [{ type: 'voiceLeave', channel: x.id, user: x.user }];
+    case 'VoiceChannelMove':
+      return [{ type: 'voiceMove', from: x.from, state: mapVoiceState(x.to, x.state as WVoiceState) }];
+    case 'UserVoiceStateUpdate':
+      return [{ type: 'voiceUpdate', channel: x.channel_id, user: x.id, data: mapVoiceFlags(x.data ?? {}) }];
     case 'Authenticated':
     case 'Pong':
     case 'Logout':

@@ -160,6 +160,25 @@ export interface Member {
   canReceive: boolean;
 }
 
+/**
+ * Someone in a voice channel, DM or group call, as the backend reports it to everyone who can see the
+ * channel (client.md section 10.1). Inside this account's own call LiveKit is the truth; this is the rest.
+ */
+export interface VoiceState {
+  user: Id;
+  channel: Id;
+  /** Epoch milliseconds. */
+  joinedAt: number;
+  /** Microphone published and not muted. A deafen doesn't show here: Stoat never changes `receiving`. */
+  publishing: boolean;
+  receiving: boolean;
+  /** Screen video and screen audio together. */
+  screensharing: boolean;
+  camera: boolean;
+}
+
+export type VoiceFlags = Pick<VoiceState, 'publishing' | 'receiving' | 'screensharing' | 'camera'>;
+
 export interface Emoji {
   id: Id;
   parent: { type: 'server'; id: Id } | { type: 'detached' };

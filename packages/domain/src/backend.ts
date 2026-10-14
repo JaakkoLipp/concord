@@ -4,14 +4,14 @@
  */
 import type {
   Ban, Category, Channel, Emoji, Id, Invite, InvitePreview, Member, Message, NodeInfo, Override, Presence, Profile, Relationship, Role, Server,
-  SystemChannels, Unread, User,
+  SystemChannels, Unread, User, VoiceFlags, VoiceState,
 } from './entities.ts';
 
 /** Fields that an update removes, named by the domain property they clear. */
 export type Cleared<T> = (keyof T)[];
 
 export type DomainEvent =
-  | { type: 'ready'; users: User[]; servers: Server[]; channels: Channel[]; members: Member[]; emojis: Emoji[]; unreads?: Unread[] }
+  | { type: 'ready'; users: User[]; servers: Server[]; channels: Channel[]; members: Member[]; emojis: Emoji[]; unreads?: Unread[]; voice: VoiceState[] }
   | { type: 'messageCreate'; message: Message; user?: User; member?: Member }
   | { type: 'messageUpdate'; id: Id; channel: Id; data: Partial<Message>; clear: Cleared<Message> }
   | { type: 'messageAppend'; id: Id; channel: Id; embeds: Message['embeds'] }
@@ -28,7 +28,7 @@ export type DomainEvent =
   | { type: 'typingStart'; channel: Id; user: Id }
   | { type: 'typingStop'; channel: Id; user: Id }
   | { type: 'ack'; channel: Id; user: Id; message: Id }
-  | { type: 'serverCreate'; server: Server; channels: Channel[]; emojis: Emoji[] }
+  | { type: 'serverCreate'; server: Server; channels: Channel[]; emojis: Emoji[]; voice?: VoiceState[] }
   | { type: 'serverUpdate'; id: Id; data: Partial<Server>; clear: Cleared<Server> }
   | { type: 'serverDelete'; id: Id }
   | { type: 'roleUpdate'; server: Id; id: Id; data: Partial<Role>; clear: Cleared<Role> }
@@ -47,6 +47,13 @@ export type DomainEvent =
   | { type: 'emojiCreate'; emoji: Emoji }
   | { type: 'emojiUpdate'; id: Id; name: string }
   | { type: 'emojiDelete'; id: Id }
+  /** Someone joined a voice channel. They leave any other one: a user is in one at most. */
+  | { type: 'voiceJoin'; state: VoiceState }
+  | { type: 'voiceLeave'; channel: Id; user: Id }
+  /** Moved by a moderator, sent instead of a leave and a join. */
+  | { type: 'voiceMove'; from: Id; state: VoiceState }
+  /** Only the flags that changed. */
+  | { type: 'voiceUpdate'; channel: Id; user: Id; data: Partial<VoiceFlags> }
   | { type: 'unknown'; name: string };
 
 export type ConnectionState = 'connecting' | 'ready' | 'reconnecting' | 'offline' | 'invalid-session';
