@@ -4,6 +4,7 @@
  * - sanna calls lauri in their DM and sees "Calling…"; lauri's ringing card shows within 2 s of sanna connecting,
  * - Ignore stops it, and it stays stopped,
  * - a second call rings again, and sanna leaving clears lauri's card,
+ * - an unanswered call notifies lauri's hidden tab, and stops ringing after 30 s, closing the notification,
  * - a third call that lauri joins from the card connects both: both see "Voice connected",
  * - in a group of the three, a call rings both others; lauri joins from the card, and maija ignores it and then
  *   joins from the call_started line's Join.
@@ -42,20 +43,43 @@ const group = dms.find((c) => c.channel_type === 'Group' && c.name === GROUP && 
 
 // ---------- browsers ----------
 
+// No audio output: WSLg's one audio server is shared by every browser on the machine, and with output on it
+// sometimes stalled a join for 20 s, with "The AudioContext encountered an error from the audio device".
 const browser: Browser = await chromium.launch({
   headless: true,
-  args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required'],
+  args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--autoplay-policy=no-user-gesture-required', '--disable-audio-output'],
 });
 let t0 = performance.now();
 const since = () => Math.round(performance.now() - t0);
-/** Stoat's call frames as each page received them, in ms since the step began. */
+/** Stoat's call frames as each page received them, and what the browsers did, in ms since the run began. */
 const frames: string[] = [];
+const start = performance.now();
+const clock = () => String(Math.round(performance.now() - start)).padStart(6);
+const mark = (what: string) => frames.push(`${clock()} ms  -- ${what}`);
 
 interface Seat { handle: string; page: Page; problems: PageProblems }
 async function seat(handle: string): Promise<Seat> {
   const context = await browser.newContext({ viewport: { width: 1400, height: 900 }, permissions: ['microphone'] });
+  // Notifications on, through a stand-in that records them: a headless browser shows none.
+  await context.addInitScript(() => {
+    localStorage.setItem('concord:notifications', 'on');
+    const shown: { title: string; body: string; tag: string; closed: boolean }[] = [];
+    (window as unknown as { shownNotifications: typeof shown }).shownNotifications = shown;
+    class Recorder {
+      static permission = 'granted';
+      static requestPermission = async () => 'granted';
+      onclick: (() => void) | null = null;
+      private readonly entry: (typeof shown)[number];
+      constructor(title: string, o: { body?: string; tag?: string } = {}) { this.entry = { title, body: o.body ?? '', tag: o.tag ?? '', closed: false }; shown.push(this.entry); }
+      close() { this.entry.closed = true; }
+    }
+    Object.defineProperty(window, 'Notification', { value: Recorder });
+  });
   const page = await context.newPage();
   const problems = watch(page);
+  if (process.env.VOICE_LOG) page.on('console', (m) => console.error(`[${handle}] ${m.type()} ${m.text().slice(0, 300)}`));
+  if (process.env.VOICE_LOG) page.on('response', (r) => { if (r.url().includes('join_call')) console.error(`[${handle}] ${r.status()} ${r.url()}`); });
+  if (process.env.VOICE_LOG) page.on('websocket', (ws) => { console.error(`[${handle}] websocket ${ws.url().slice(0, 80)}`); ws.on('close', () => console.error(`[${handle}] closed ${ws.url().slice(0, 60)}`)); });
   page.on('websocket', (ws) => {
     if (!ws.url().includes('/ws?')) return;
     ws.on('framereceived', ({ payload }) => {
@@ -64,7 +88,7 @@ async function seat(handle: string): Promise<Seat> {
         if (typeof f.type !== 'string' || !/^Voice(CallUpdate|ChannelJoin|ChannelLeave)$/.test(f.type)) return;
         const { type, ...rest } = f;
         const who = (rest.state as { id?: string } | undefined)?.id ?? rest.user ?? rest.initiator_id;
-        frames.push(`${String(since()).padStart(6)} ms  ${handle.padEnd(6)} ${String(type).padEnd(17)} ${JSON.stringify({ ...rest, state: undefined, who: name(String(who)) })}`);
+        frames.push(`${clock()} ms  ${handle.padEnd(6)} ${String(type).padEnd(17)} ${JSON.stringify({ ...rest, state: undefined, who: name(String(who)) })}`);
       };
       try { log(JSON.parse(String(payload)) as Record<string, unknown>); } catch { /* not JSON */ }
     });
@@ -77,19 +101,26 @@ async function seat(handle: string): Promise<Seat> {
 const name = (id: string) => ({ [sanna.id]: 'sanna', [lauri.id]: 'lauri', [maija.id]: 'maija' })[id] ?? id;
 const card = (s: Seat) => s.page.getByRole('region', { name: /^Incoming call from / });
 const panelText = (s: Seat, text: string) => s.page.getByRole('region', { name: 'Voice call' }).getByText(text, { exact: true });
-const openChannel = (s: Seat, id: string) => s.page.goto(`${APP}/channels/@me/${id}`);
+/** Open a DM or group from the sidebar, without reloading the app. */
+async function openChannel(s: Seat, id: string) {
+  if (s.page.url().endsWith(`/channels/@me/${id}`)) return;
+  await s.page.locator(`nav[aria-label="Direct messages"] a[href$="/${id}"]`).click();
+  await s.page.waitForURL(`**/channels/@me/${id}`);
+}
 const shot = async (s: Seat, label: string) => { if (out) await s.page.screenshot({ path: `${out}/dm-call-${label}-${s.handle}.png` }); };
-const timed = async (what: Promise<unknown>) => { const start = performance.now(); await what; return Math.round(performance.now() - start); };
 
 /** sanna starts the call from the header and waits for "Calling…". Returns the ms from the click. */
 async function call(a: Seat, channel: string): Promise<number> {
   await openChannel(a, channel);
   t0 = performance.now();
+  mark('sanna clicks the call button');
   await a.page.getByRole('button', { name: 'Start a voice call' }).click();
   await panelText(a, 'Calling…').waitFor({ timeout: 20_000 });
+  mark('sanna sees "Calling…"');
   return since();
 }
 async function hangUp(s: Seat) {
+  mark(`${s.handle} disconnects`);
   await s.page.getByRole('region', { name: 'Voice call' }).getByRole('button', { name: 'Disconnect' }).click();
   await s.page.getByRole('region', { name: 'Voice call' }).waitFor({ state: 'detached', timeout: 5_000 });
 }
@@ -105,10 +136,11 @@ try {
   seats.push(a, b, c);
 
   // 1. A call that lauri ignores.
-  frames.push('-- DM call 1: lauri ignores');
+  mark('DM call 1: lauri ignores');
   const connected1 = await call(a, dm);
   const ring1 = await passes(card(b).waitFor({ timeout: 10_000 }));
   const shown1 = since();
+  mark("lauri's card shows");
   check(ring1 && shown1 - connected1 <= 2_000, `lauri's ringing card shows within 2 s of sanna connecting (${shown1 - connected1} ms; ${shown1} ms from the click)`);
   await shot(b, 'ringing');
   await shot(a, 'calling');
@@ -120,7 +152,7 @@ try {
   await emptied(b, dm).catch(() => {});
 
   // 2. A call that ends before lauri answers.
-  frames.push('-- DM call 2: sanna leaves');
+  mark('DM call 2: sanna leaves');
   const connected2 = await call(a, dm);
   const ring2 = await passes(card(b).waitFor({ timeout: 10_000 }));
   check(ring2, `a second call rings again (${since() - connected2} ms after sanna connected)`);
@@ -130,11 +162,31 @@ try {
   check(cleared, `sanna leaving clears lauri's card (${since()} ms after the click)`);
   await emptied(b, dm).catch(() => {});
 
-  // 3. A call that lauri joins from the card.
-  frames.push('-- DM call 3: lauri joins');
+  // 3. A call nobody answers, while lauri's tab is hidden: it notifies, and stops after 30 s.
+  mark('DM call 3: no answer, lauri hidden');
+  await b.page.evaluate(() => Object.defineProperty(document, 'visibilityState', { get: () => 'hidden', configurable: true }));
+  await call(a, dm);
+  await card(b).waitFor({ timeout: 10_000 });
+  const heard = since();
+  const notes = () => b.page.evaluate(() => (window as unknown as { shownNotifications: { title: string; body: string; tag: string; closed: boolean }[] }).shownNotifications);
+  const note = (await notes()).at(-1);
+  check(!!note && note.body === 'Calling you…' && note.tag === `call:${dm}` && !note.closed, `the hidden tab notifies (${note ? `${note.title}: ${note.body}` : 'none'})`);
+  await b.page.waitForTimeout(Math.max(0, 28_500 - (since() - heard)));
+  check(await card(b).isVisible(), 'it still rings at 28.5 s');
+  const rungOut = await passes(card(b).waitFor({ state: 'detached', timeout: 4_000 }));
+  check(rungOut, `it stops by itself after 30 s (${since() - heard} ms after it showed)`);
+  check(!!(await notes()).at(-1)?.closed, 'and its notification closes');
+  mark('lauri rings out');
+  await b.page.evaluate(() => Object.defineProperty(document, 'visibilityState', { get: () => 'visible', configurable: true }));
+  await hangUp(a);
+  await emptied(b, dm).catch(() => {});
+
+  // 4. A call that lauri joins from the card.
+  mark('DM call 4: lauri joins');
   const connected3 = await call(a, dm);
   await card(b).waitFor({ timeout: 10_000 });
   check(true, `the third call rings (${since() - connected3} ms after sanna connected)`);
+  mark('lauri clicks Join');
   await card(b).getByRole('button', { name: 'Join' }).click();
   const both = await passes(Promise.all([panelText(a, 'Voice connected').waitFor({ timeout: 20_000 }), panelText(b, 'Voice connected').waitFor({ timeout: 20_000 })]));
   check(both, `lauri joining connects both: both see "Voice connected" (${since()} ms from sanna's click)`);
@@ -145,8 +197,8 @@ try {
   await hangUp(a);
   await emptied(c, group).catch(() => {});
 
-  // 4. The group: both others ring; lauri joins from the card, maija ignores and joins from call_started.
-  frames.push('-- group call');
+  // 5. The group: both others ring; lauri joins from the card, maija ignores and joins from call_started.
+  mark('group call');
   await openChannel(c, group);
   const connected4 = await call(a, group);
   const rings4 = await passes(Promise.all([card(b).waitFor({ timeout: 10_000 }), card(c).waitFor({ timeout: 10_000 })]));
@@ -154,6 +206,7 @@ try {
   check(rings4 && shown4 - connected4 <= 2_000, `in the group, both lauri and maija ring within 2 s (${shown4 - connected4} ms)`);
   const where = await card(c).textContent();
   check(!!where?.includes(GROUP), `maija's card names the group (${where?.trim() ?? ''})`);
+  mark('lauri clicks Join');
   await card(b).getByRole('button', { name: 'Join' }).click();
   const two = await passes(Promise.all([panelText(a, 'Voice connected').waitFor({ timeout: 20_000 }), panelText(b, 'Voice connected').waitFor({ timeout: 20_000 })]));
   check(two, 'lauri joins the group call from the card: both see "Voice connected"');
@@ -162,6 +215,7 @@ try {
   const join = c.page.locator('.system', { hasText: 'started a call' }).last().getByRole('button', { name: 'Join call' });
   const offered = await passes(join.waitFor({ timeout: 5_000 }));
   check(offered, "the group's call_started line offers Join while the call runs");
+  mark('maija clicks Join on the call_started line');
   if (offered) await join.click();
   const three = await passes(panelText(c, 'Voice connected').waitFor({ timeout: 20_000 }));
   check(three, 'maija joins from the call_started line and sees "Voice connected"');
@@ -185,7 +239,7 @@ try {
   for (const s of seats) await hangUp(s).catch(() => {});
   await browser.close();
 }
-console.log('\nStoat frames, ms since each step began:');
+console.log('\nStoat frames and what the browsers did, ms since the run began:');
 for (const f of frames) console.log(f);
 console.log(failures.length ? `dm-call: ${failures.length} failed` : 'dm-call: all passed');
 process.exit(failures.length ? 1 : 0);
