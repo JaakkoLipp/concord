@@ -112,3 +112,32 @@ Jaakko can't use an outside mail provider, so M3 sends no email.
 **Check**: `tools/live/src/welcome.ts` makes a brand-new account with a link to a throwaway server. In the browser it then sets the password, catches a mismatch first, logs in, picks a username, lands on the invite, joins and sees the channel. A used link is refused. All pass. `invite.ts` still passes.
 
 **Effect on the decision gate**: criterion 1, registration with real email, can't be confirmed in M3 and moves to M6. The Caddy rule and the internal account-create path are confirmed again here.
+
+## Task 4: backups, 2026-10-14
+
+**Setup**:
+- **Where**: restic 0.18.1 from Ubuntu's packages, with the repository on the VPS's own disk at `/var/backups/concord/restic`, owned by root. A Storage Box becomes a second repository later. Until then, a backup doesn't survive losing the VPS.
+- **When**: `backup.sh` runs nightly at 03:30 from `/etc/cron.d/concord`.
+- **What**, two snapshots taken back to back:
+  - `db`: restic runs `mongodump` itself, so a failed dump is never saved.
+  - `files`: object storage, Caddy's data, `secrets.env`, `Revolt.toml`, `.env`, `.env.web`, `host.env`, `livekit.env` and the netplan file.
+- **Retention**: 7 daily, 4 weekly and 6 monthly snapshots, with `restic check` on Sundays.
+- **Outcome**: written to the system log under `concord`. `sudo ~/stoat/concord/status.sh` shows the last backup, disk, memory, TURN and any container that isn't up.
+
+**Checks**:
+
+| Check | Result |
+|---|---|
+| First run | Two snapshots, 171 KiB dump and 1.6 MiB of files. The repository is 3 MB and the run took 6 s. `restic check`: no errors. |
+| Dump read back | `mongorestore --archive --gzip --dryRun` from `restic dump` completes |
+| Forced failure: unreadable or empty password file | Exit 1, "FAILED" in the log, `status.sh` shows "failed" |
+
+**Bug found by the forced failure**: the first version made a new password whenever the password file was empty. That would replace the real one and hide that it was gone. Now only a brand-new repository gets a password, and an existing one without its password stops the backup.
+
+**For Jaakko**: keep the repository password in your password manager. Print it with:
+
+```bash
+ssh -t jaakko@concord.jaalip.com 'sudo cat /root/.config/concord/restic-password'
+```
+
+**At the wipe**: the snapshots of dev data are forgotten, so production's backups start clean.

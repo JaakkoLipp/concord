@@ -38,5 +38,6 @@ sudo systemctl enable --now docker
 # 4. Reboot for security updates that need it, at 05:30 (docs/m3-plan.md decision 8).
 sudo install -m 0644 "$(dirname "$0")/52concord-auto-reboot" /etc/apt/apt.conf.d/52concord-auto-reboot
 
-# 5. Scheduled jobs: the weekly LiveKit restart.
+# 5. Scheduled jobs: the nightly backup with restic and the weekly LiveKit restart.
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq restic
 sudo install -m 0644 "$(dirname "$0")/concord-cron" /etc/cron.d/concord
