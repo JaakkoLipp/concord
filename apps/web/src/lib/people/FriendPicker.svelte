@@ -52,6 +52,9 @@
       onclose();
     } catch {
       error = m.groups.failed;
+      // Some may have been added before the failure: they leave the list, so they leave the choice too.
+      const offered = new Set(friends.map((u) => u.id));
+      chosen = chosen.filter((id) => offered.has(id));
     } finally {
       busy = false;
     }

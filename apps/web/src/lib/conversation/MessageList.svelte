@@ -102,9 +102,11 @@
   });
 
   /** A run of consecutive messages from blocked users, collapsed until shown (m2b-plan.md decision 5). */
-  interface BlockedRun { first: string; count: number }
+  interface BlockedRun { first: string; count: number; ids: string[] }
   interface Row { key: string; message: Message; pending?: PendingMessage; continuation: boolean; day: Date | null; unread: boolean; blocked?: BlockedRun }
   const shownBlocked = new SvelteSet<string>();
+  /** Shown when opened, or when a jump or a search hit lands on one of its messages. */
+  const runOpen = (run: BlockedRun) => shownBlocked.has(run.first) || (!!target && run.ids.includes(target)) || (!!highlighted && run.ids.includes(highlighted));
   const isBlocked = (msg: Message) => !msg.system && store.users.get(msg.author)?.relationship === 'Blocked';
   const rows = $derived.by(() => {
     const out: Row[] = [];
@@ -129,8 +131,9 @@
     let run: BlockedRun | null = null;
     for (const row of out) {
       if (!isBlocked(row.message)) { run = null; continue; }
-      if (!run || row.day || row.unread) run = { first: row.message.id, count: 0 };
+      if (!run || row.day || row.unread) run = { first: row.message.id, count: 0, ids: [] };
       run.count++;
+      run.ids.push(row.message.id);
       row.blocked = run;
     }
     return out;
@@ -289,14 +292,14 @@
         <div class="divider new" role="separator"><span>{m.conversation.newMessages}</span></div>
       {/if}
       {#if row.blocked?.first === row.message.id}
-        {@const open = shownBlocked.has(row.blocked.first)}
+        {@const open = runOpen(row.blocked)}
         {@const first = row.blocked.first}
         <div class="blocked-run" data-id={first}>
           <span>{m.conversation.blockedRun(row.blocked.count)}</span>
           <button onclick={() => (open ? shownBlocked.delete(first) : shownBlocked.add(first))} aria-expanded={open}>{open ? m.conversation.hideBlocked : m.conversation.showBlocked}</button>
         </div>
       {/if}
-      {#if !row.blocked || shownBlocked.has(row.blocked.first)}
+      {#if !row.blocked || runOpen(row.blocked)}
         <MessageItem message={row.message} pending={row.pending} {store} {server} continuation={row.continuation && row.blocked?.first !== row.message.id} highlighted={highlighted === row.message.id} {onjump}
           onretry={(key) => void session.retry(key)} ondiscard={(key) => session.discard(key)}
           actions={row.pending || row.message.system ? undefined : actions} editing={compose.editing === row.message.id} selected={selected === row.message.id} />

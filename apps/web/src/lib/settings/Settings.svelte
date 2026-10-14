@@ -3,7 +3,7 @@
    * The settings overlay at /app/settings/<section> (m2b-plan.md task 7): sections on the left, the section
    * on the right, closed with Escape or the close button. Server settings join it in M2c.
    */
-  import { goto } from '$app/navigation';
+  import { afterNavigate, goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { Button, IconButton } from '@concord/ui';
   import type { Session } from '@concord/domain';
@@ -18,9 +18,15 @@
   let { session, section }: { session: Session; section: Section } = $props();
   const SECTIONS: Section[] = ['profile'];
 
+  // Opened from inside the app, history can go back to it. Opened from a link or a reload, it can't.
+  let fromApp = false;
+  afterNavigate((nav) => {
+    if (nav.from?.url.pathname.startsWith('/app') && !nav.from.url.pathname.startsWith('/app/settings')) fromApp = true;
+  });
+
   /** Back to where settings were opened from, or the app. */
   function close() {
-    if (history.length > 1) history.back();
+    if (fromApp) history.back();
     else void goto(resolve('/app'));
   }
   function key(e: KeyboardEvent) {

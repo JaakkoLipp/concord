@@ -1,5 +1,6 @@
 <script lang="ts">
   /** The custom status: an optional leading emoji from the picker, then up to 128 characters (m2b-plan.md task 5). */
+  import { untrack } from 'svelte';
   import { Button, Dialog, IconButton, TextField } from '@concord/ui';
   import type { Session } from '@concord/domain';
   import Smile from '@lucide/svelte/icons/smile-plus';
@@ -21,9 +22,10 @@
     return /\p{Extended_Pictographic}/u.test(first) ? [first, status.slice(first.length).trimStart()] : ['', status];
   }
 
+  // Filled when the dialog opens, and only then, so an update to your own user doesn't wipe the typing.
   $effect(() => {
     if (!open) return;
-    [emoji, text] = split(session.store.self?.statusText ?? '');
+    untrack(() => ([emoji, text] = split(session.store.self?.statusText ?? '')));
   });
 
   // Stoat counts characters as code points, so an emoji is one.

@@ -33,6 +33,7 @@ export class SelfQueue {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private last = 0;
   private busy = false;
+  private closed = false;
   private readonly send: (edit: SelfEdit) => Promise<void>;
 
   constructor(send: (edit: SelfEdit) => Promise<void>) {
@@ -41,6 +42,7 @@ export class SelfQueue {
 
   /** Resolves when a write carrying this change succeeds, and rejects with the error if it is refused. */
   push(change: SelfEdit): Promise<void> {
+    if (this.closed) return Promise.reject(new Error('signed out'));
     this.pending = this.pending ? mergeEdit(this.pending, change) : change;
     const done = new Promise<void>((resolve, reject) => this.waiters.push({ resolve, reject }));
     this.schedule();
@@ -52,15 +54,19 @@ export class SelfQueue {
     return !!this.pending || this.busy;
   }
 
+  /** At sign-out: nothing more is sent, not even a retry of a write on its way, and every waiter hears so. */
   clear(): void {
+    this.closed = true;
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     this.pending = null;
+    const waiters = this.waiters;
     this.waiters = [];
+    for (const w of waiters) w.reject(new Error('signed out'));
   }
 
   private schedule(): void {
-    if (this.timer || this.busy || !this.pending) return;
+    if (this.closed || this.timer || this.busy || !this.pending) return;
     this.timer = setTimeout(() => void this.flush(), Math.max(0, this.last + SELF_EVERY_MS - Date.now()));
   }
 
@@ -77,7 +83,7 @@ export class SelfQueue {
       await this.send(edit);
       for (const w of waiters) w.resolve();
     } catch (e) {
-      if (e instanceof BackendError && e.status === 429) {
+      if (e instanceof BackendError && e.status === 429 && !this.closed) {
         // Still too soon: keep it, under anything newer, for the next turn.
         this.pending = this.pending ? mergeEdit(edit, this.pending) : edit;
         this.waiters = [...waiters, ...this.waiters];

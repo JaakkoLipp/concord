@@ -128,3 +128,6 @@ This replaces the idle paragraph in client.md section 7.
 - **Task 5**, 2026-10-14: done and deployed. The live check passed.
 - **Task 6**, 2026-10-14: done and deployed. The live check passed four runs in a row, after fixing a race it found. Jaakko's device check is next for this task.
 - **Task 7**, 2026-10-14: done and deployed. The live check passed, after two fixes it found.
+- **Task 8**, 2026-10-14: done. The acceptance check passed five runs after one fix, and the Sonnet review's 14 findings are fixed or answered.
+
+**M2b status**: all eight agent tasks are done and deployed. Jaakko's device checks for M2a and M2b are next, whenever there is time.

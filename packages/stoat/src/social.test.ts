@@ -130,3 +130,30 @@ describe('DMs and groups', () => {
     expect(s.unreads.has('G')).toBe(false);
   });
 });
+
+describe('message authors', () => {
+  it('keep their relationship: Stoat\'s bug can send a new friend as User', () => {
+    const s = store();
+    apply(s, {
+      type: 'Message', _id: '01M4VF0000000000000000000D', channel: 'DM', author: 'LOTTA', content: 'moi',
+      user: { _id: 'LOTTA', username: 'lotta', discriminator: '1234', display_name: 'Lotta S', relationship: 'User', online: false, status: { presence: 'Online' } },
+    });
+    expect(s.users.get('LOTTA')).toMatchObject({ relationship: 'Friend', displayName: 'Lotta S' });
+  });
+
+  it('an unknown author marked User who isn\'t this account counts as no relationship', () => {
+    const s = store();
+    apply(s, { type: 'Message', _id: '01M4VF0000000000000000000E', channel: 'C', author: 'NEW', content: 'hei', user: { _id: 'NEW', username: 'uusi', discriminator: '0002', relationship: 'User', online: true } });
+    expect(s.users.get('NEW')!.relationship).toBe('None');
+  });
+});
+
+describe('Ready after a reconnect', () => {
+  it('ends relationships that it no longer lists', () => {
+    const s = store();
+    s.upsertUsers([{ ...lotta, id: 'GONE', relationship: 'Incoming' }]);
+    apply(s, { type: 'Ready', users: [{ _id: 'ME', username: 'me', discriminator: '0001', relationship: 'User', online: true }, { _id: 'LOTTA', username: 'lotta', discriminator: '1234', relationship: 'Friend', online: true }], servers: [], channels: [], members: [], emojis: [] });
+    expect(s.users.get('GONE')!.relationship).toBe('None');
+    expect(s.users.get('LOTTA')!.relationship).toBe('Friend');
+  });
+});

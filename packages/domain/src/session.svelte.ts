@@ -156,7 +156,10 @@ export class Session {
   /** After Ready: settings, the open server's members, and fresh history for the open channel. */
   private async coldStart(): Promise<void> {
     const fetchedAt = Date.now();
-    const settings: Record<string, { value: string }> = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY]).catch(() => ({}));
+    const fetched = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY]).catch(() => null);
+    // A failed fetch keeps what this session has, rather than resetting the chosen status or favourites.
+    if (!fetched) return this.coldStartRest();
+    const settings: Record<string, { value: string }> = fetched;
     const active = Number(settings[ACTIVE_KEY]?.value);
     if (active) this.idle.remote(active);
     if (!this.statusSaving) this.store.chosenStatus = parseStatus(settings[STATUS_KEY]?.value);
@@ -164,6 +167,11 @@ export class Session {
     this.rawSettings = { ...this.rawSettings, ...settings };
     this.store.settings = parseSettings(this.rawSettings);
     if (this.emojiChangedAt < fetchedAt) this.store.emojiPrefs = parseEmojiPrefs(settings[EMOJI_KEY]?.value);
+    await this.coldStartRest();
+  }
+
+  /** The open server's members and fresh history for the open channel. */
+  private async coldStartRest(): Promise<void> {
     this.lastMemberFetch.clear();
     if (this.openServerId) {
       this.gateway?.subscribe(this.openServerId);
@@ -260,12 +268,13 @@ export class Session {
 
   private async fetchProfile(user: Id): Promise<void> {
     const [profile, mutual, fresh] = await Promise.all([
-      this.backend.profile(user).catch(() => ({})),
+      this.backend.profile(user).catch(() => null),
       user === this.store.selfId ? Promise.resolve({ users: [], servers: [], channels: [] }) : this.backend.mutual(user).catch(() => ({ users: [], servers: [], channels: [] })),
       this.store.users.has(user) ? Promise.resolve(null) : this.backend.user(user).catch(() => null),
     ]);
     if (fresh) this.store.upsertUsers([fresh]);
-    this.store.profiles.set(user, profile);
+    // A failed fetch keeps what is cached rather than blanking a bio and banner that were there.
+    if (profile || !this.store.profiles.has(user)) this.store.profiles.set(user, profile ?? {});
     this.store.mutuals.set(user, mutual);
   }
 
@@ -594,11 +603,22 @@ export class Session {
    * for an automatic one, then the presence goes through the queue.
    */
   async setStatus(presence: Presence): Promise<void> {
+    const before = this.store.chosenStatus;
     this.store.chosenStatus = presence;
     this.statusSaving++;
-    await this.backend.setSettings({ [STATUS_KEY]: presence }).catch(() => {});
-    setTimeout(() => this.statusSaving--, 1_000);
-    await this.editSelf({ presence });
+    try {
+      await this.backend.setSettings({ [STATUS_KEY]: presence });
+      await this.editSelf({ presence });
+    } catch (e) {
+      // Not applied: the choice goes back, here and for other devices.
+      if (this.store.chosenStatus === presence) {
+        this.store.chosenStatus = before;
+        void this.backend.setSettings({ [STATUS_KEY]: before ?? 'Online' }).catch(() => {});
+      }
+      throw e;
+    } finally {
+      setTimeout(() => this.statusSaving--, 1_000);
+    }
   }
 
   /** Set the custom status text, or clear it with null. */
@@ -755,6 +775,8 @@ export class Session {
   private flushAck(channel: Id): void {
     const a = this.acks.get(channel);
     if (!a) return;
+    // Left or deleted meanwhile, such as a group: nothing to read.
+    if (!this.store.channels.has(channel)) return void this.acks.delete(channel);
     a.timer = undefined;
     // The read point as it is now, which may be newer than when the ack was scheduled.
     const target = this.store.unreads.get(channel)?.lastId;

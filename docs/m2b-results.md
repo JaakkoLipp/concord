@@ -253,3 +253,64 @@ The check removes every relationship it made.
 | Console errors or failed requests | None |
 
 `dev`'s seeded profile is put back at the start and the end.
+
+## Task 8: acceptance and review, 2026-10-14
+
+### Acceptance
+
+The milestone's three criteria:
+
+1. **Friend requests, DMs and groups end to end between two accounts**: `node tools/live/src/m2b.ts 5`. `tuuli` and `onni` are in two browsers, and `aino` is a third group member over the API. Five runs, with times from the action until the other browser shows it:
+
+   | Step | Median | Worst of 5 |
+   |---|---|---|
+   | Friend request through Add friend, until onni's Pending tab lists it | 56 ms | 57 ms |
+   | Accept, until tuuli's All tab lists onni | 44 ms | 62 ms |
+   | tuuli clicks Message, until the DM appears in onni's list | 40 ms | 40 ms |
+   | A DM message, tuuli to onni | 79 ms | 91 ms |
+   | The reply, onni to tuuli | 84 ms | 98 ms |
+   | A group created through the picker, until onni's list shows it | 58 ms | 59 ms |
+   | A group message | 81 ms | 83 ms |
+
+   After the first run, `onni` reloads: the friend, the DM, the group and its history are all still there. The only failed request in all five runs was a 403 ack. The script had left the group over the API while `tuuli`'s page still read it, and the client no longer retries acks for a channel it has left.
+2. **Automatic idle across two devices**: `node tools/live/src/idle.ts`, as recorded under task 6. It passed again after the review fixes. Jaakko's check on two real devices is still to do.
+3. **A profile edit shows in the other account's popout without a reload**: `node tools/live/src/profile.ts`, as recorded under task 7. Changes took 477 ms and clears 440 ms, both for a friend and for a server member who isn't a friend.
+
+**Found by the acceptance check, and fixed**: after a friendship formed on an open socket, the new friend's DM composer said "You can only message friends".
+- **The cause**: the user a `Message` event carries comes from Stoat's socket cache, which the relationship bug corrupts. A probe confirmed that the friend arrives marked `User`, the value meant for oneself, and the store took that relationship.
+- **The fix**: the store now keeps a known user's relationship. An unknown author marked `User` who isn't this account counts as having none.
+- Two unit tests cover it, and client.md section 7 notes it.
+
+### Code review
+
+A Sonnet review of the whole M2b diff found 14 issues, none high. Each was checked against the code.
+
+| # | Finding | Outcome |
+|---|---|---|
+| 1 | After a reconnect, a relationship that ended while disconnected stayed: a ghost pending request, or a wrong DM composer | Fixed: `Ready` lists every relationship, so anyone it doesn't list now has none. Unit test. |
+| 2 | Group settings and the custom-status dialog reset what was being typed when a message arrived or your own user changed | Fixed: they fill only when opened |
+| 3 | With Add friend open, no tab could be reached by keyboard | Fixed: the first tab takes focus when none is selected |
+| 4 | A partly failed Add members left already-added friends chosen but unlisted | Fixed: the choice keeps only those still offered |
+| 5 | A failed profile refresh blanked a cached bio and banner | Fixed: the cached profile is kept |
+| 6 | A failed settings fetch on a reconnect reset the chosen status, so idle could override a manual Idle | Fixed: a failed fetch changes nothing |
+| 7 | An account in no server has no repair for Stoat's socket bug | Documented in client.md. Everyone is in the community server. |
+| 8 | Settings opened from a link could close to the previous site | Fixed: Close goes back only when settings were opened from the app |
+| 9 | After sign-out, the write queue could retry a write after another account signed in | Fixed: clearing closes the queue and rejects what waits. Unit test. |
+| 10 | A failed status choice stayed chosen | Fixed: it reverts, here and in settings |
+| 11 | An Idle set by another client is restored to Online by the next input | As planned: the rule restores Online whoever set Idle. Busy, Focus and Invisible from other clients are left alone. |
+| 12 | The default group name could cut an emoji in half | Fixed: names are measured in code points, as Stoat counts |
+| 13 | A jump or search hit inside a collapsed blocked run showed nothing | Fixed: the run opens. Mentions from blocked users still raise badges, as before. |
+| 14 | After a long-press menu on a touch laptop, a mouse right-click on the same element did nothing | Fixed: the press is forgotten shortly after |
+
+After the fixes, every M2b live check ran again on the deployed client and passed: `presence`, `friends`, `people-actions`, `groups`, `status`, `profile`, `idle` and `m2b` with 5 runs.
+
+### What is left for Jaakko
+
+1. **The device checks**, from M2a and M2b:
+   - M2a: messages, edits, deletes, reactions and typing both ways, and unread markers with one account on two devices. On the phone: a photo, a reply, a reaction and an emoji favourite.
+   - M2b:
+     - idle across two real devices: use the phone while the computer sits untouched, then leave both,
+     - a friend request, a DM and a group with a second person,
+     - a profile edit seen in their popout.
+   - An Android phone with Gboard is still untested.
+2. **M0's encoder runs**, with Chrome on Windows next, before M3.

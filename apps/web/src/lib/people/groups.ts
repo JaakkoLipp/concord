@@ -14,11 +14,12 @@ const open = (channel: Id) => goto(resolve('/(app)/app/channels/@me/[channel]/[[
 
 /** Stoat needs a name: without one, the group is named after its members, as many as fit in 32 characters. */
 export function defaultGroupName(session: Session, users: Id[]): string {
+  // Stoat counts code points, so an emoji is one and is never cut in half.
   const names = users.map((u) => session.store.displayName(u));
   let out = '';
   for (const n of names) {
     const next = out ? `${out}, ${n}` : n;
-    if (next.length > 32) return out ? out : n.slice(0, 32);
+    if ([...next].length > 32) return out ? out : [...n].slice(0, 32).join('');
     out = next;
   }
   return out;

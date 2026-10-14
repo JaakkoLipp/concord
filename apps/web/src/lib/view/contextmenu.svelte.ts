@@ -46,6 +46,9 @@ export function menuOn(node: HTMLElement, items: (node: HTMLElement) => MenuItem
     cancel();
     // The press opened the menu: don't let the lift also click the element.
     if (opened) e.preventDefault();
+    // Android's own contextmenu event for the same press comes just after: ignore it, then forget the
+    // press, so a mouse right-click on a touch laptop still works.
+    setTimeout(() => (opened = false), 700);
   };
   node.addEventListener('contextmenu', onContext);
   node.addEventListener('touchstart', onTouchStart, { passive: true });

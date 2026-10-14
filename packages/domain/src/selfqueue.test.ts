@@ -64,3 +64,24 @@ describe('SelfQueue', () => {
     expect(await caught).toBeInstanceOf(BackendError);
   });
 });
+
+describe('SelfQueue after sign-out', () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] }));
+  afterEach(() => vi.useRealTimers());
+
+  it('rejects what waits and never retries a write that was on its way', async () => {
+    const sent: SelfEdit[] = [];
+    let first = true;
+    const q = new SelfQueue(async (e) => {
+      sent.push(e);
+      if (first) { first = false; throw new BackendError(429, 'RateLimited', 'slow down'); }
+    });
+    const flying = q.push({ presence: 'Idle' }).catch((e: unknown) => e);
+    const waiting = q.push({ statusText: 'x' }).catch((e: unknown) => e);
+    q.clear();
+    await vi.advanceTimersByTimeAsync(SELF_EVERY_MS * 3);
+    expect(sent.length).toBeLessThanOrEqual(1);
+    expect(await waiting).toBeInstanceOf(Error);
+    void flying;
+  });
+});

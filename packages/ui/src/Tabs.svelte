@@ -22,7 +22,7 @@
 
 <div class="tabs" role="tablist" aria-label={label} bind:this={list} tabindex="-1" onkeydown={key}>
   {#each tabs as tab (tab.id)}
-    <button role="tab" id="tab-{tab.id}" class:selected={tab.id === selected} aria-selected={tab.id === selected} tabindex={tab.id === selected ? 0 : -1} onclick={() => onselect(tab.id)}>
+    <button role="tab" id="tab-{tab.id}" class:selected={tab.id === selected} aria-selected={tab.id === selected} tabindex={tab.id === selected || (!tabs.some((t) => t.id === selected) && tab === tabs[0]) ? 0 : -1} onclick={() => onselect(tab.id)}>
       {tab.label}
       {#if tab.badge}<Badge count={tab.badge} label={tab.badgeLabel} />{/if}
     </button>

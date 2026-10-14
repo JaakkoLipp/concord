@@ -1,5 +1,6 @@
 <script lang="ts">
   /** Rename a group, describe it and set its icon (m2b-plan.md task 4). Any member may, as on Stoat. */
+  import { untrack } from 'svelte';
   import { Button, Dialog, TextField } from '@concord/ui';
   import Users from '@lucide/svelte/icons/users';
   import { fileUrl } from '@concord/stoat';
@@ -17,14 +18,19 @@
   let busy = $state(false);
   let picker = $state<HTMLInputElement | null>(null);
 
+  // Filled when the dialog opens, and only then: a new message replaces the group object, which must not
+  // wipe what is being typed.
   $effect(() => {
     if (!open) return;
-    name = group.name;
-    description = group.description ?? '';
-    icon = null;
-    iconRemoved = false;
-    preview = null;
-    error = undefined;
+    untrack(() => {
+      name = group.name;
+      description = group.description ?? '';
+      icon = null;
+      iconRemoved = false;
+      if (preview) URL.revokeObjectURL(preview);
+      preview = null;
+      error = undefined;
+    });
   });
   $effect(() => () => { if (preview) URL.revokeObjectURL(preview); });
 

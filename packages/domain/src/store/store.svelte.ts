@@ -218,6 +218,11 @@ export class Store {
       case 'ready': {
         // Ready replaces what it covers (architecture section 4.3): no merging with stale state.
         this.upsertUsers(e.users);
+        // Ready lists everyone this account has a relationship with. Anyone else's ended while disconnected.
+        const listed = new Set(e.users.map((u) => u.id));
+        for (const u of this.users.values()) {
+          if (!listed.has(u.id) && u.id !== this.selfId && u.relationship !== 'None') this.users.set(u.id, { ...u, relationship: 'None' });
+        }
         this.servers.clear();
         for (const s of e.servers) this.servers.set(s.id, s);
         this.channels.clear();
@@ -232,7 +237,7 @@ export class Store {
         return;
       }
       case 'messageCreate': {
-        if (e.user) this.upsertUsers([e.user]);
+        if (e.user) this.absorbAuthor(e.user);
         if (e.member) this.upsertMembers([e.member]);
         const m = e.message;
         this.messages.set(m.id, m);
@@ -416,6 +421,17 @@ export class Store {
     if (w && w.ids.some((id) => gone.has(id))) this.windows.set(channel, { ...w, ids: w.ids.filter((id) => !gone.has(id)) });
     const u = this.unreads.get(channel);
     if (u && u.mentions.some((id) => gone.has(id))) this.unreads.set(channel, { ...u, mentions: u.mentions.filter((id) => !gone.has(id)) });
+  }
+
+  /**
+   * The author a message event carries. Its relationship comes from the socket's own cache, which Stoat's
+   * relationship bug corrupts: a new friend can arrive as `User`, the value meant for oneself. So a known
+   * user keeps the relationship it has, which only Ready and relationship events set.
+   */
+  private absorbAuthor(u: User): void {
+    const old = this.users.get(u.id);
+    const relationship = old ? old.relationship : u.relationship === 'User' && u.id !== this.selfId ? 'None' : u.relationship;
+    this.upsertUsers([{ ...u, relationship }]);
   }
 
   /** A channel this account can no longer see: deleted, or a group it left or was removed from. */
