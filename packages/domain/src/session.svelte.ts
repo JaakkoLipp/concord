@@ -5,6 +5,7 @@
 import type { Backend, DomainEvent, Gateway, GroupEdit, SearchQuery, SelfEdit } from './backend.ts';
 import type { Id, Message, Presence, Relationship, User } from './entities.ts';
 import { SelfQueue } from './selfqueue.ts';
+import { ServerAdmin } from './admin.svelte.ts';
 import { ACTIVE_KEY, IdleTracker } from './idle.ts';
 import { BackendError } from './errors.ts';
 import { Store, memberKey, newer, type EmojiPrefs, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
@@ -88,6 +89,7 @@ export function parseEmojiPrefs(raw: string | undefined): EmojiPrefs {
 export class Session {
   readonly store = new Store();
   readonly backend: Backend;
+  readonly admin: ServerAdmin = new ServerAdmin(this);
   openServerId = $state<Id | null>(null);
   openChannelId = $state<Id | null>(null);
   private gateway: Gateway | null = null;

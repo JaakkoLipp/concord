@@ -31,3 +31,30 @@ Results for [m2c-plan.md](m2c-plan.md), recorded against the seeded Stoat 0.15.5
 | Console errors or failed requests | None |
 
 **Not yet**: the question before closing the tab while admin writes wait comes with task 2, where the first admin writes are.
+
+## Task 2: create a server, the server menu and Overview, 2026-10-14
+
+**What is deployed**:
+- **"+" on the rail**, only for accounts in `restrict_server_creation`: a dialog with the name and an optional icon. Creating runs the bootstrap and opens the server.
+- **The bootstrap** (`packages/domain/src/admin.svelte.ts`): Everyone loses `InviteOthers`, then an Admin role with every permission is made, first in rank. A server with no roles whose Everyone can still invite shows its owner "Setup didn't finish" with Retry, which skips the steps already done.
+- **The server menu**, from the server name atop the sidebar and by right-clicking the server's icon: Server settings, if any section is open to you, and Leave server, not for the owner, asking first. Later tasks add to it.
+- **Server settings** at `/app/server-settings/<server>/<section>`, in the frame now shared with user settings. Overview has the icon, banner, name, description and the four system-message channels, with the save bar and the question before leaving unsaved changes. A system channel that no longer exists shows as Off. The owner gets Delete server, confirmed by typing the name.
+- **The server's banner** now shows atop its channel sidebar, as on Discord. Members never saw it before.
+- **Admin writes** are counted while they wait for the rate limit, and closing the tab meanwhile asks first.
+
+**Live check**: `node tools/live/src/admin.ts`, with `dev-admin` and `tuuli` in browsers, `onni` over the API, and `dev` in a third browser:
+
+| Check | Result |
+|---|---|
+| Create a server with an icon through "+" | Everyone can't invite. One role, Admin, rank 0, with every permission. The icon is set. No setup banner. |
+| A server made over the API without the bootstrap | Shows "Setup didn't finish"; Retry removes `InviteOthers` from Everyone and makes Admin |
+| Overview: new name, description, icon, banner and a join channel, until `tuuli` sees the name, icon and banner | 1594 ms, including the two image uploads. All five saved. |
+| `onni` joins, until the join line shows in `tuuli`'s `#General` | 29 ms |
+| `tuuli` leaves through the server menu | Back on the Friends screen, with no notice |
+| Delete server through settings, until `tuuli` reads "… was deleted." | 58 ms |
+| `dev`, a plain member | No "+", and the seeded server's menu offers only Leave server |
+| Console errors or failed requests | None |
+
+**Found by the live check**:
+- **The setup banner hid while Retry was still running**, as soon as Everyone lost `InviteOthers`. It now stays until Retry ends.
+- **The check itself drained `dev-admin`'s rate limit.** It polled `GET /servers/{id}` every 25 ms, and that shares the server's 5-per-10-s bucket with the browser's saves, so the first Overview save took 11.6 s. The check now polls every 2.5 s. This will matter in task 9, where the whole build shares one bucket.

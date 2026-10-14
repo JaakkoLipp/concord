@@ -3,6 +3,12 @@
   import { fileUrl } from '@concord/stoat';
   import type { Store } from '@concord/domain';
   import MessageCircle from '@lucide/svelte/icons/message-circle';
+  import Plus from '@lucide/svelte/icons/plus';
+  import CreateServerDialog from '$lib/admin/CreateServerDialog.svelte';
+  import { serverMenu } from '$lib/admin/menu.ts';
+  import { app } from '$lib/session/app.svelte.ts';
+  import { canCreateServers } from '$lib/view/admin.ts';
+  import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import { resolve } from '$app/paths';
   import { m } from '$lib/i18n/index.ts';
   import { canView, firstChannel, initials, orderedServers, recalled } from '$lib/view/channels.ts';
@@ -11,6 +17,7 @@
   let { store, active }: Props = $props();
 
   const servers = $derived(orderedServers(store));
+  let creating = $state(false);
   // Like Discord's home button: DM mentions plus friend requests waiting.
   const dmMentions = $derived(store.dmList().reduce((n, c) => n + store.mentionCount(c.id), 0) + store.related('Incoming').length);
 
@@ -33,6 +40,7 @@
       class="item" class:active={active === server.id} class:unread={badge.unread}
       href={href(server.id)} aria-current={active === server.id ? 'page' : undefined}
       use:tooltip={server.name} aria-label={m.shell.serverLabel(server.name, badge.mentions)}
+      use:menuOn={() => (app.session ? serverMenu(app.session, server.id) : [])}
     >
       <span class="pill" aria-hidden="true"></span>
       {#if server.icon}
@@ -43,7 +51,14 @@
       {#if badge.mentions}<span class="badge"><Badge count={badge.mentions} /></span>{/if}
     </a>
   {/each}
+  {#if canCreateServers(store) && app.session}
+    <button class="item" onclick={() => (creating = true)} use:tooltip={m.admin.createServer} aria-label={m.admin.createServer}>
+      <span class="pill" aria-hidden="true"></span>
+      <span class="tile add"><Plus /></span>
+    </button>
+  {/if}
 </nav>
+{#if app.session}<CreateServerDialog session={app.session} open={creating} onclose={() => (creating = false)} />{/if}
 
 <style>
   .rail {
@@ -60,6 +75,9 @@
   .item:hover .home, .active .home { background: var(--accent); color: var(--on-accent); }
   .initials { color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans); }
   .item:hover .initials { background: var(--surface-5); }
+  button.item { padding: 0; border: 0; background: none; cursor: pointer; }
+  .add { color: var(--status-online); }
+  .item:hover .add { background: var(--status-online); color: var(--on-accent); }
   /* The pill on the left edge: a dot for unread, taller on hover, full height when selected. */
   .pill {
     position: absolute; left: 0; top: 50%; width: 4px; height: 0; translate: 0 -50%;

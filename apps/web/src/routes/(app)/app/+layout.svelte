@@ -22,6 +22,9 @@
   });
 </script>
 
+<!-- Admin saves can wait a while for Stoat's rate limit: closing the tab meanwhile would lose them. -->
+<svelte:window onbeforeunload={(e) => { if (app.session?.admin.pending) e.preventDefault(); }} />
+
 {#if onLogin || app.status === 'signed-in'}
   {@render children()}
 {:else}

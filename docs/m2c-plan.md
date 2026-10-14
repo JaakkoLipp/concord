@@ -153,3 +153,4 @@ Each script cleans up at both ends: it first deletes any server `dev-admin` owns
 ## Progress
 
 - **Task 1**, 2026-10-14: done and deployed. The live check passed, as recorded in [m2c-results.md](m2c-results.md).
+- **Task 2**, 2026-10-14: done and deployed. The live check passed.

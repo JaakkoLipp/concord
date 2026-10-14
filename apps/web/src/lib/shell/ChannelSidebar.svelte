@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Badge } from '@concord/ui';
+  import { Badge, Button, Menu } from '@concord/ui';
   import type { Channel, Store } from '@concord/domain';
   import BellOff from '@lucide/svelte/icons/bell-off';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
@@ -8,6 +8,10 @@
   import { resolve } from '$app/paths';
   import { m } from '$lib/i18n/index.ts';
   import { canView } from '$lib/view/channels.ts';
+  import { serverMenu } from '$lib/admin/menu.ts';
+  import { fileUrl } from '@concord/stoat';
+  import { app } from '$lib/session/app.svelte.ts';
+  import { toasts } from '$lib/view/toast.svelte.ts';
 
   interface Props { store: Store; server: string; active: string | null }
   let { store, server, active }: Props = $props();
@@ -15,16 +19,36 @@
   const info = $derived(store.servers.get(server));
   const tree = $derived(store.channelTree(server).map((g) => ({ ...g, channels: g.channels.filter((c) => canView(store, c)) })).filter((g) => g.channels.length));
   let collapsed = $state<Record<string, boolean>>({});
+  let menuOpen = $state(false);
+  let menuButton = $state<HTMLButtonElement | null>(null);
+  const menuItems = $derived(menuOpen && app.session ? serverMenu(app.session, server) : []);
+  const unfinished = $derived(!!app.session?.admin.setupUnfinished(server));
+  let retrying = $state(false);
+  async function retry() {
+    retrying = true;
+    await app.session?.admin.bootstrap(server).catch(() => toasts.show(m.admin.retryFailed));
+    retrying = false;
+  }
 
   const isVoice = (c: Channel) => c.kind === 'text' && !!c.voice;
   /** A collapsed category still shows its selected and unread channels, as on Discord. */
   const visible = (id: string | null, c: Channel) => !id || !collapsed[id] || c.id === active || (store.isUnread(c.id) && !store.isMuted(c.id));
 </script>
 
-<header class="server-header">
-  <h2>{info?.name}</h2>
-  <ChevronDown size={18} aria-hidden="true" />
+<header class="server-header" class:with-banner={!!info?.banner}>
+  {#if info?.banner}<img class="banner" src={fileUrl(info.banner, { maxSide: 640 })} alt="" />{/if}
+  <button class="header-button" bind:this={menuButton} aria-haspopup="menu" aria-expanded={menuOpen} aria-label={m.admin.menuLabel(info?.name ?? '')} onclick={() => (menuOpen = !menuOpen)}>
+    <h2>{info?.name}</h2>
+    <ChevronDown size={18} aria-hidden="true" />
+  </button>
 </header>
+<Menu open={menuOpen && menuItems.length > 0} onclose={() => (menuOpen = false)} items={menuItems} label={m.admin.menuLabel(info?.name ?? '')} anchor={menuButton} />
+{#if unfinished || retrying}
+  <div class="setup" role="status">
+    <p>{m.admin.setupUnfinished}</p>
+    <Button size="sm" busy={retrying} onclick={retry}>{m.admin.retry}</Button>
+  </div>
+{/if}
 <nav class="channels" aria-label={m.shell.channels}>
   {#each tree as group (group.id ?? 'loose')}
     <div class="group" role="group" aria-label={group.title || m.shell.channels}>
@@ -57,10 +81,18 @@
 </nav>
 
 <style>
-  .server-header {
-    display: flex; align-items: center; gap: var(--space-3); min-height: var(--header-h); padding: 0 var(--space-5);
-    border-bottom: 1px solid var(--border-subtle); color: var(--text-strong);
+  .server-header { position: relative; display: flex; min-height: var(--header-h); border-bottom: 1px solid var(--border-subtle); }
+  .with-banner { min-height: 8.5rem; align-items: flex-start; border-bottom: 0; }
+  .banner { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+  .with-banner .header-button { position: relative; min-height: var(--header-h); background: linear-gradient(var(--scrim), transparent); text-shadow: 0 1px 2px var(--scrim); }
+  .header-button {
+    flex: 1; display: flex; align-items: center; gap: var(--space-3); min-width: 0; padding: 0 var(--space-5);
+    background: none; border: 0; color: var(--text-strong); text-align: left; cursor: pointer;
   }
+  .header-button:hover, .header-button[aria-expanded='true'] { background: var(--hover-overlay); }
+  .header-button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .setup { display: grid; gap: var(--space-3); margin: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--surface-3); border-left: 3px solid var(--status-idle); }
+  .setup p { margin: 0; color: var(--text-normal); font: var(--text-sm) var(--font-sans); }
   h2 { flex: 1; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 var(--text-md) var(--font-sans); }
   .channels { flex: 1; overflow-y: auto; padding: var(--space-3) var(--space-3) var(--space-5); }
   .group + .group { margin-top: var(--space-6); }
