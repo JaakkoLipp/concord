@@ -220,3 +220,36 @@ The check removes every relationship it made.
 | Console errors or failed requests | One aborted request, a write cut off when the script closed device A |
 
 **For Jaakko**: the same on two real devices, per the plan's "Jaakko's tasks", item 3.
+
+## Task 7: settings and the profile editor, 2026-10-14
+
+**What is deployed**:
+- **Settings** open at `/app/settings/profile` from the dock's gear, or from "Edit profile" on your own popout. They cover the whole window, with the sections on the left, Profile for now and Log out, and close with Escape or the × button. Server settings join them in M2c.
+- **The profile editor** covers display name, pronouns, avatar, banner, custom status and About me, with a live preview of the popout.
+  - Limits are checked as you type, in characters as Stoat counts them: name 2–32 on one line, pronouns 24, status 128, About me 2000. Images must be images within Stoat's limits, 4 MB for avatars and 6 MB for banners.
+  - Saving uploads the images, to `avatars` and `backgrounds`, then sends one `PATCH /users/@me` through the write queue, with `remove` for cleared fields.
+  - A bar offers Reset and Save while there are changes.
+  - Leaving with unsaved changes asks first, and closing the tab gets the browser's own question.
+- **Profile changes reach other people live**: an open popout or panel fetches the profile again after any update to that user but a bare online flag.
+
+**Found by the live check, and fixed**:
+1. **Bio and banner didn't update** for the others when the same save changed other fields. The task 1 rule was wrong for that case:
+   - Stoat's `UserUpdate` then carries the other fields and says nothing about the profile, so "empty data" isn't a reliable signal.
+   - The new rule is above, and client.md is corrected.
+2. **A burst of profile fetches hit the rate limit**:
+   - The editor's load effect re-ran whenever the profile or your own user changed, the same tracking mistake task 1 fixed in the popout.
+   - Fixed with `untrack`, in the DM panel too.
+   - `loadProfile` now shares one request per user while one is in flight, so no caller can start a burst again.
+
+**Also changed**: the seed's per-persona profile became `seededProfile`. A live check uses it to put `dev` back exactly as seeded, even after a failed run.
+
+**Live check**: `node tools/live/src/profile.ts`, with `dev` editing, `aino` (a friend, `dev`'s profile panel open in their DM) and `lotta` (a server member, not a friend, `dev`'s popout open):
+
+| Check | Result |
+|---|---|
+| All six fields changed and saved, until both see every change without a reload | 477 ms |
+| All cleared and saved, until both see them gone, with the default avatar and no banner | 440 ms |
+| Close with an unsaved change | "Leave without saving?" Cancel keeps the editor open. |
+| Console errors or failed requests | None |
+
+`dev`'s seeded profile is put back at the start and the end.

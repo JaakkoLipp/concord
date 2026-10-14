@@ -96,15 +96,7 @@ export async function seed(): Promise<SeedState> {
   log('profiles');
   await pool(PERSONAS, 4, async (p) => {
     const l = live(p.handle);
-    const r = new Rng(hash(p.handle));
-    const edit: Record<string, unknown> = {};
-    if (p.displayName) edit.display_name = p.displayName;
-    if (p.avatar) edit.avatar = await upload(l.auth, 'avatars', `${p.handle}.png`, identicon(r), 'image/png');
-    const profile: Record<string, string> = {};
-    if (p.bio) profile.content = p.bio;
-    if (p.banner) profile.background = await upload(l.auth, 'backgrounds', `${p.handle}-banner.png`, gradient(r, 960, 384), 'image/png');
-    if (Object.keys(profile).length) edit.profile = profile;
-    if (p.status || p.presence) edit.status = { ...(p.status ? { text: p.status } : {}), ...(p.presence ? { presence: p.presence } : {}) };
+    const edit = await seededProfile(p, l.auth);
     if (Object.keys(edit).length) await api('PATCH', '/users/@me', { auth: l.auth, body: edit });
   });
 
@@ -394,6 +386,23 @@ function weighted(r: Rng, people: Persona[]): string {
   let x = r.next() * total;
   for (const p of people) if ((x -= p.weight) < 0) return p.handle;
   return people[people.length - 1]!.handle;
+}
+
+/**
+ * A persona's seeded profile as one `PATCH /users/@me` body, with its images uploaded again. They come out
+ * the same every time, so live checks use this to put a persona back as seeded.
+ */
+export async function seededProfile(p: Persona, auth: Auth): Promise<Record<string, unknown>> {
+  const r = new Rng(hash(p.handle));
+  const edit: Record<string, unknown> = {};
+  if (p.displayName) edit.display_name = p.displayName;
+  if (p.avatar) edit.avatar = await upload(auth, 'avatars', `${p.handle}.png`, identicon(r), 'image/png');
+  const profile: Record<string, string> = {};
+  if (p.bio) profile.content = p.bio;
+  if (p.banner) profile.background = await upload(auth, 'backgrounds', `${p.handle}-banner.png`, gradient(r, 960, 384), 'image/png');
+  if (Object.keys(profile).length) edit.profile = profile;
+  if (p.status || p.presence) edit.status = { ...(p.status ? { text: p.status } : {}), ...(p.presence ? { presence: p.presence } : {}) };
+  return edit;
 }
 
 function hash(s: string): number {

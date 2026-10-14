@@ -5,6 +5,8 @@
   import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
   import { m } from '$lib/i18n/index.ts';
   import * as act from './actions.ts';
+  import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
 
   interface Props { session: Session; user: string; inDm?: boolean }
   let { session, user, inDm = false }: Props = $props();
@@ -14,7 +16,11 @@
   let open = $state(false);
 </script>
 
-{#if u && user !== session.store.selfId}
+{#if u && user === session.store.selfId}
+  <div class="person-actions">
+    <Button size="sm" variant="secondary" onclick={() => void goto(resolve('/(app)/app/settings/[section]', { section: 'profile' }))}>{m.settings.editProfile}</Button>
+  </div>
+{:else if u}
   <div class="person-actions">
     {#if !u.bot}
       {#if rel === 'Friend' && !inDm}

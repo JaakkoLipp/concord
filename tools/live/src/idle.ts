@@ -46,7 +46,6 @@ const away = (page: Page, minutes: string) => page.clock.fastForward(minutes);
 
 // One device alone.
 log('alone');
-// eslint-disable-next-line prefer-const
 let b: { context: BrowserContext; page: Page } | null = null;
 const a = await device('A');
 await away(a.page, '10:30');

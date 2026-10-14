@@ -9,6 +9,8 @@
   import { toasts } from '$lib/view/toast.svelte.ts';
   import { avatarUrl, presenceOf } from '$lib/view/users.ts';
   import CustomStatus from './CustomStatus.svelte';
+  import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
 
   let { store }: { store: Store } = $props();
   const self = $derived(store.self);
@@ -40,7 +42,7 @@
     </button>
     <IconButton label={m.shell.voiceLater} disabled><Mic /></IconButton>
     <IconButton label={m.shell.voiceLater} disabled><Headphones /></IconButton>
-    <IconButton label={m.shell.settingsLater} disabled><Settings /></IconButton>
+    <IconButton label={m.settings.open} onclick={() => void goto(resolve('/(app)/app/settings/[section]', { section: 'profile' }))}><Settings /></IconButton>
   </section>
   <Popover {anchor} {open} onclose={() => (open = false)} side="top" label={m.shell.you}>
     <div class="menu">

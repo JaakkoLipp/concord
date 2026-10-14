@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
   import { dmPartner } from '$lib/view/channels.ts';
@@ -8,7 +9,9 @@
   const info = $derived(session.store.channels.get(channel));
   const partner = $derived(info ? dmPartner(session.store, info) : undefined);
   $effect(() => {
-    if (partner) void session.loadProfile(partner);
+    // untrack: loadProfile reads the store, and filling it must not run this again.
+    const p = partner;
+    if (p) untrack(() => void session.loadProfile(p));
   });
 </script>
 

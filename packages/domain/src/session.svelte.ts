@@ -245,9 +245,20 @@ export class Session {
     });
   }
 
+  /** Profile fetches on their way, so callers asking at once share one request. */
+  private readonly profileLoads = new Map<Id, Promise<void>>();
+
   /** A user's profile and mutual connections, fetched once per session and refreshed on request. */
-  async loadProfile(user: Id, refresh = false): Promise<void> {
-    if (this.store.profiles.has(user) && !refresh) return;
+  loadProfile(user: Id, refresh = false): Promise<void> {
+    if (this.store.profiles.has(user) && !refresh) return Promise.resolve();
+    const going = this.profileLoads.get(user);
+    if (going) return going;
+    const load = this.fetchProfile(user).finally(() => this.profileLoads.delete(user));
+    this.profileLoads.set(user, load);
+    return load;
+  }
+
+  private async fetchProfile(user: Id): Promise<void> {
     const [profile, mutual, fresh] = await Promise.all([
       this.backend.profile(user).catch(() => ({})),
       user === this.store.selfId ? Promise.resolve({ users: [], servers: [], channels: [] }) : this.backend.mutual(user).catch(() => ({ users: [], servers: [], channels: [] })),
@@ -437,6 +448,9 @@ export class Session {
         return;
       case 'userUpdate':
         if (e.id === this.store.selfId && ('presence' in e.data || e.clear.includes('presence'))) this.idle.presenceChanged();
+        // Stoat never says whether the bio or banner changed: an edit that also changes the name or status
+        // carries only those. So anything but a bare online flag may have changed the profile.
+        if (Object.keys(e.data).some((k) => k !== 'online') || e.clear.length) this.profileChanged(e.id);
         return;
       case 'profileChanged':
         return this.profileChanged(e.id);

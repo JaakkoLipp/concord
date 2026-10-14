@@ -127,3 +127,4 @@ This replaces the idle paragraph in client.md section 7.
 - **Task 4**, 2026-10-13: done and deployed. The live check passed.
 - **Task 5**, 2026-10-14: done and deployed. The live check passed.
 - **Task 6**, 2026-10-14: done and deployed. The live check passed four runs in a row, after fixing a race it found. Jaakko's device check is next for this task.
+- **Task 7**, 2026-10-14: done and deployed. The live check passed, after two fixes it found.

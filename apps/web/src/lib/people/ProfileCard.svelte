@@ -4,14 +4,15 @@
   import { fileUrl } from '@concord/stoat';
   import { memberKey, type Session, type Store } from '@concord/domain';
   import PersonActions from './PersonActions.svelte';
+  import type { ProfilePreview } from './preview.ts';
   import Markdown from '$lib/markdown/Markdown.svelte';
   import { setMarkdownContext } from '$lib/markdown/context.ts';
   import { dayLabel, ulidTime } from '$lib/markdown/time.ts';
   import { m } from '$lib/i18n/index.ts';
   import { avatarUrl, presenceOf, statusTextOf } from '$lib/view/users.ts';
 
-  interface Props { store: Store; user: string; server: string | undefined; variant: 'popout' | 'panel'; session?: Session | undefined; inDm?: boolean }
-  let { store, user, server, variant, session, inDm = false }: Props = $props();
+  interface Props { store: Store; user: string; server: string | undefined; variant: 'popout' | 'panel'; session?: Session | undefined; inDm?: boolean; preview?: ProfilePreview | undefined }
+  let { store, user, server, variant, session, inDm = false, preview }: Props = $props();
   setMarkdownContext(() => ({ store, server }));
 
   const u = $derived(store.users.get(user));
@@ -23,19 +24,22 @@
     return (member?.roles ?? []).map((id) => s?.roles[id]).filter((r) => !!r).sort((a, b) => a!.rank - b!.rank);
   });
   const presence = $derived(presenceOf(u));
-  const statusText = $derived(statusTextOf(u, store.selfId));
-  const banner = $derived(profile?.background ? fileUrl(profile.background, { maxSide: 1024 }) : undefined);
+  const statusText = $derived(preview ? preview.statusText : statusTextOf(u, store.selfId));
+  const name = $derived(preview ? preview.displayName || u?.username || '' : store.displayName(user, server));
+  const pronouns = $derived(preview ? preview.pronouns : u?.pronouns);
+  const bio = $derived(preview ? preview.bio : profile?.content);
+  const banner = $derived(preview ? preview.banner ?? undefined : profile?.background ? fileUrl(profile.background, { maxSide: 1024 }) : undefined);
 </script>
 
 <div class="card {variant}">
   <div class="banner" style:background-image={banner ? `url(${banner})` : undefined}></div>
   {#if session}<div class="actions"><PersonActions {session} {user} {inDm} /></div>{/if}
   <div class="avatar-wrap">
-    <span class="avatar-ring"><Avatar src={avatarUrl(u ?? { id: user }, member?.avatar)} size={variant === 'popout' ? 80 : 80} {presence} presenceLabel={m.presence[presence]} /></span>
+    <span class="avatar-ring"><Avatar src={preview?.avatar ?? avatarUrl(u ?? { id: user }, member?.avatar)} size={variant === 'popout' ? 80 : 80} {presence} presenceLabel={m.presence[presence]} /></span>
   </div>
   <div class="details">
-    <h2 class="display">{store.displayName(user, server)}</h2>
-    <p class="username">{u ? `${u.username}#${u.discriminator}` : ''}{#if u?.pronouns}<span class="dot" aria-hidden="true"></span>{u.pronouns}{/if}</p>
+    <h2 class="display">{name}</h2>
+    <p class="username">{u ? `${u.username}#${u.discriminator}` : ''}{#if pronouns}<span class="dot" aria-hidden="true"></span>{pronouns}{/if}</p>
     {#if u?.bot}<span class="tag">{m.conversation.bot}</span>{/if}
     {#if statusText}<p class="status">{statusText}</p>{/if}
 
@@ -47,8 +51,8 @@
       </p>
     {/if}
 
-    {#if profile?.content}
-      <section><h3>{m.people.about}</h3><div class="bio"><Markdown source={profile.content} /></div></section>
+    {#if bio}
+      <section><h3>{m.people.about}</h3><div class="bio"><Markdown source={bio} /></div></section>
     {/if}
 
     <section class="since">
