@@ -3,7 +3,23 @@
  * Usage: node tools/live/src/routes.ts (dev stack), pnpm live:prod tools/live/src/routes.ts (production).
  * pnpm deploy:web and deploy:web:dev run it after deploying.
  */
+import { request } from 'node:http';
 import { APP } from './browser.ts';
+
+/** Status and Location of a GET. Node can't resolve ref.localhost, so a *.localhost host goes to 127.0.0.1 by name. */
+async function get(url: string): Promise<{ status: number; location: string }> {
+  const u = new URL(url);
+  if (!u.hostname.endsWith('.localhost')) {
+    const r = await fetch(url, { redirect: 'manual' });
+    return { status: r.status, location: r.headers.get('location') ?? '' };
+  }
+  return new Promise((resolve, reject) => {
+    request({ host: '127.0.0.1', port: u.port || 80, path: u.pathname + u.search, headers: { host: u.host } }, (res) => {
+      res.resume();
+      resolve({ status: res.statusCode ?? 0, location: res.headers.location ?? '' });
+    }).on('error', reject).end();
+  });
+}
 
 const origin = new URL(APP).origin;
 const ref = origin.replace('://', '://ref.');
@@ -20,8 +36,8 @@ const cases: [string, number, string?][] = [
 ];
 let failed = 0;
 for (const [url, status, location] of cases) {
-  const r = await fetch(url, { redirect: 'manual' });
-  const where = r.headers.get('location') ?? '';
+  const r = await get(url);
+  const where = r.location;
   const ok = r.status === status && (!location || new URL(where, url).pathname === location);
   if (!ok) failed++;
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${url} -> ${r.status}${where ? ` ${where}` : ''}`);

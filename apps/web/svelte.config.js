@@ -1,7 +1,7 @@
 import adapter from '@sveltejs/adapter-node';
 
-// The stack this build runs on, for its CSP: the dev stack unless CONCORD_HOST names another (tools/target.ts).
-const host = process.env.CONCORD_HOST ?? 'dev.concord.jaalip.com';
+// The stack this build runs on, for its CSP: the local stack unless CONCORD_HOST names another (tools/target.ts).
+const host = process.env.CONCORD_HOST ?? 'localhost';
 
 /** @type {import('@sveltejs/kit').Config} */
 export default {

@@ -1,0 +1,26 @@
+# The local stack in Docker Desktop at http://localhost (m4-plan.md task 1), added by ./concord/dc when host.env says
+# LOCAL=on. Docker Desktop publishes ports on the Windows host, so every one is bound to 127.0.0.1: nothing on the
+# LAN can reach this stack. Plain HTTP: browsers treat localhost as a secure context, so voice works without TLS.
+services:
+  caddy:
+    ports: !override
+      - "127.0.0.1:80:80"
+    environment:
+      REF_DOMAIN: http://ref.localhost
+
+  # Clients reach LiveKit on this machine's loopback, so it announces 127.0.0.1 instead of discovering a public IP.
+  livekit:
+    ports: !override
+      - "127.0.0.1:7881:7881"
+      - "127.0.0.1:50000-50100:50000-50100/udp"
+    volumes: !override
+      - ./concord/livekit-local.yml:/etc/livekit.yml:ro
+
+  concord-web:
+    environment:
+      ORIGIN: http://localhost
+
+# Outbound traffic needs no pinning here; a host address of 127.0.0.1 would break it.
+networks:
+  default:
+    driver_opts: !reset {}

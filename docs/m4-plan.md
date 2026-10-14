@@ -5,8 +5,8 @@ Status: signed off by Jaakko on 2026-10-14. Implements the M4 section of [milest
 Working agreement, as in M3:
 - Each finished task is committed and pushed, with `pnpm verify` run right before the commit.
 - Probes run in the scratchpad first, and their side effects are listed.
-- Agents work on the dev stack. On production they only deploy `/app` and run `pnpm live:prod tools/live/src/routes.ts` afterwards.
-- Every task ends deployed to the dev stack's `/app`, and from task 4 on, also to production's for Jaakko's review.
+- Agents work on the local dev stack. On production they only deploy `/app` and run `pnpm live:prod tools/live/src/routes.ts` afterwards.
+- Every task ends deployed to the local stack's `/app`, and from task 4 on, also to production's for Jaakko's review.
 - Device checks are collected, not waited for. The exception is the voice evening.
 
 ## Checked while planning
@@ -34,28 +34,40 @@ Two Sonnet research agents read Stoat 0.15.5's source (backend `v0.15.5`, self-h
 
 Each task lists what is built and its done-check. The live checks run with Playwright's fake microphone and camera, which play a tone and a test pattern.
 
-### 1. The dev stack
+### 1. The dev stack, on this machine
+
+Changed on 2026-10-14 at Jaakko's request: the dev stack runs locally in Docker Desktop at `http://localhost` instead of on a CX23, so nothing new is paid for or exposed. Browsers treat `localhost` as secure, so voice works without TLS.
 
 **Built**:
-- A CX23 at `dev.concord.jaalip.com`, with the same layout as production. It runs `server-setup.sh`, Stoat's repo at `9af5e90`, `generate_config.sh` for the dev host, and our `deploy/` files with `.allow-wipe`.
+- `~/stoat` in WSL, laid out like production's: `compose.yml` from Stoat's repo at `9af5e90`, used as data only, and our `deploy/` files with `.allow-wipe`. Nothing is installed on the machine. Docker Desktop's WSL integration is the only requirement.
+- **`deploy/local.compose.yml`**, added by `dc` when `host.env` says `LOCAL=on`:
+  - every port bound to `127.0.0.1`, so nothing on the LAN reaches it,
+  - plain HTTP, with Stoat's client at `http://ref.localhost`,
+  - LiveKit announcing `127.0.0.1` (`deploy/livekit-local.yml`).
 - Settings:
   - **Mail**: Mailpit, so the seed's email verification works.
   - **Video**: the same limits as production.
   - **LiveKit**: the key id `2c2e5918ca20` with its own secret.
-  - **`host.env`**: no floating IP, and `TURN=off`.
-- **Tool defaults** point at the dev stack (`tools/target.ts`):
+- **Tool defaults** point at the local stack (`tools/target.ts`). Commands run on this machine instead of over SSH:
   - production only through `pnpm deploy:web`, `pnpm deploy:stack:prod` and `pnpm live:prod <check>`,
   - `deploy:web` runs `routes.ts` on the stack it deployed to,
   - the seed refuses a mix of hosts.
+- **Scripts that assumed the VPS**:
+  - `deploy:stack` installs nothing in `/etc` locally,
+  - `reset-data.sh` deletes the data through a container where `sudo` would ask for a password,
+  - `account-link.sh` takes its link's address from `Revolt.toml`,
+  - `create-account.sh` mounts the request body instead of piping it, because Docker Desktop never closes a container's stdin.
 - **The client's CSP** names the host it is built for.
-- **The test page** at the dev stack's `/spike/`, with a deploy command, since tasks 2 and 3 use it.
-- **Docs**: dev-environment.md describes the two stacks.
+- **The test page** at `/spike/`, deployed with `pnpm deploy:spike:dev`, since tasks 2 and 3 use it.
+- **Docs**: dev-environment.md describes the local stack.
 
 **Done when**:
-- `GET /api/` on the dev stack shows 2560 × 1440 in both video tiers. Every seeded persona is under 72 hours old, so the checks run in the `new_user` tier.
+- `GET /api/` shows 2560 × 1440 in both video tiers. Every seeded persona is under 72 hours old, so the checks run in the `new_user` tier.
 - `pnpm seed --reset` runs.
-- `m2c.ts`, `invite.ts`, `welcome.ts` and `routes.ts` pass against the dev stack.
+- `m2c.ts`, `invite.ts`, `welcome.ts` and `routes.ts` pass against the local stack.
 - `pnpm live:prod tools/live/src/routes.ts` still passes.
+
+**Limits**: the local stack can't show real networks, TURN, phones or other people. Production and the voice evening cover those.
 
 ### 2. Probes
 
@@ -75,7 +87,7 @@ On the dev stack, in the scratchpad, with personas.
 - `join_call`'s rate limit,
 - members left showing after a LiveKit restart, with a third persona who doesn't come back,
 - **whether the checks can test what they claim**:
-  - whether Playwright's network throttling and offline mode reach WebRTC media. If not, the checks throttle or block the client's address on the dev server with `tc` or `iptables` instead,
+  - whether Playwright's network throttling and offline mode reach WebRTC media. If not, the checks throttle or block media inside the LiveKit container with `tc` instead, if Docker Desktop's kernel has `netem`,
   - whether Playwright's Chromium encodes H.264,
   - what frame rate a headless 1080p share reaches with software encoding.
 
@@ -219,7 +231,7 @@ The machine is deleted afterwards.
 
 ## Jaakko's part, in order
 
-1. **Now**: the dev stack's CX23 and DNS, as in the session's first message. €5.49 a month.
+1. Dropped: the dev stack's CX23 and DNS. The dev stack runs on this machine (task 1).
 2. **Before task 7**: encoder runs 1 to 4 on the test page, Windows Chrome, with your two production accounts (m0-results.md section 3). Run 11 too if a Linux Firefox is at hand.
 3. **After task 5**: a real-microphone check in Windows Chrome: RNNoise on and off, both sensitivity modes and push-to-talk.
 4. **After task 9**: device tests:

@@ -11,7 +11,10 @@ for id in "${ids[@]}"; do
 done
 list="$(printf '"%s", ' "${ids[@]}")"; list="[${list%, }]"
 grep -q '^restrict_server_creation = ' Revolt.toml || { echo "restrict_server_creation missing from Revolt.toml" >&2; exit 1; }
-sed -i "s/^restrict_server_creation = .*/restrict_server_creation = $list/" Revolt.toml
+# Edit Revolt.toml in place, keeping the file: the containers bind-mount it, and sed -i's new file would leave them
+# reading the old one. Docker Desktop, which runs the local stack, can't even restart them after it.
+edit_toml() { local t; t="$(sed "$1" Revolt.toml)"; printf '%s\n' "$t" > Revolt.toml; }
+edit_toml "s/^restrict_server_creation = .*/restrict_server_creation = $list/"
 concord/dc restart api >/dev/null
 for _ in $(seq 60); do
   concord/dc exec -T caddy wget -qO /dev/null http://api:14702/ 2>/dev/null && break

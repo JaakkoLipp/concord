@@ -5,7 +5,7 @@
 #
 # Usage on the server: ~/stoat/concord/account-link.sh email@example.com [invite-code]
 #                      ~/stoat/concord/account-link.sh --reset email@example.com
-# Prints https://<domain>/app/welcome/<token>[?invite=<code>]. The link works once, for 7 days.
+# Prints <app>/app/welcome/<token>[?invite=<code>], with <app> from Revolt.toml's [hosts] app. The link works once, for 7 days.
 # An existing account needs --reset, so a mistyped address can't quietly become a takeover link for someone
 # else's account; the matched username is printed. A reset ends the account's sessions. It doesn't remove TOTP.
 #
@@ -21,7 +21,9 @@ invite="${2:-}"
 [[ "$email" == *@*.* ]] || { echo "usage: account-link.sh [--reset] email [invite-code]" >&2; exit 1; }
 [[ -z "$invite" || "$invite" =~ ^[A-Za-z0-9]+$ ]] || { echo "not an invite code: $invite" >&2; exit 1; }
 cd "$(dirname "$0")/.."
-domain="$(sed -n 's/^STOAT_DOMAIN=//p' .env)"
+# The stack's own address, so the local stack's link is http://localhost/….
+app="$(sed -n 's/^app = "\(.*\)"$/\1/p' Revolt.toml | head -n 1)"
+[ -n "$app" ] || { echo "no [hosts] app in Revolt.toml" >&2; exit 1; }
 
 mongo() { concord/dc exec -T -e EMAIL="$email" -e TOKEN="${token:-}" -e EXPIRY="${expiry:-}" database mongosh --quiet revolt --eval "$1"; }
 # Stoat stores the address as typed; match it without regard to case.
@@ -54,4 +56,4 @@ updated="$(mongo '
 ')"
 [ "$updated" = 1 ] || { echo "could not set the link on the account (matched: $updated)" >&2; exit 1; }
 
-echo "https://$domain/app/welcome/$token${invite:+?invite=$invite}"
+echo "$app/app/welcome/$token${invite:+?invite=$invite}"

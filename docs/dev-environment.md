@@ -1,21 +1,25 @@
 # Concord: development environment
 
-Status: signed off 2026-10-12, layer 3. Covers M0. Read [architecture.md](architecture.md) and [milestones.md](milestones.md) first. Results go in [m0-results.md](m0-results.md).
+Status: signed off 2026-10-12, layer 3. Covers M0. Sections 1, 9 and the appendix describe the local dev stack from M4. Read [architecture.md](architecture.md) and [milestones.md](milestones.md) first. Results go in [m0-results.md](m0-results.md).
 
 ## 1. Shape
 
-**The Stoat stack on the VPS is the development backend.** The client's dev server runs on Jaakko's machine and proxies to it.
+**Since M4, the dev stack runs on Jaakko's machine** (m4-plan.md task 1). Production on the VPS holds real people, so agents never seed or test there.
 
 ```
-Jaakko's machine (WSL)                        VPS, concord.jaalip.com
-  pnpm dev  (Vite, http://localhost:5173)  ──►  Caddy ──► api, events, autumn, january, gifbox, livekit
-  tools/seed, recorder  ────────────────────►   (same public routes)
-  ssh -L 8025 ──────────────────────────────►   Mailpit on 127.0.0.1:8025
+Jaakko's machine (WSL, Docker Desktop)
+  pnpm dev  (Vite, http://localhost:5173)  ──►  http://localhost: Caddy ──► api, events, autumn, january, gifbox, livekit
+  tools/seed, tools/live  ─────────────────►   (same routes as production, plain HTTP)
+  Mailpit on http://127.0.0.1:8025, Stoat's own client on http://ref.localhost
 ```
 
-Scripts and the commands below reach the VPS as `jaakko@concord.jaalip.com`, through the public hostname, so no address is written down. `CONCORD_SSH` overrides it.
+- **Where**: `~/stoat` in WSL, laid out like production's `~/stoat`, so `concord/dc` and every script in `deploy/` work the same. Commands that the tools sent over SSH run on this machine instead.
+- **The tools' target** comes from `tools/target.ts`: the local stack unless `CONCORD_HOST` names another. Production is reached only through `pnpm deploy:web`, `pnpm deploy:stack:prod` and `pnpm live:prod <check>`.
+- **Plain HTTP** is enough, because browsers treat `localhost` and `*.localhost` as secure contexts, so microphones, cameras and screen capture work.
+- **Ports** are bound to `127.0.0.1` only. Docker Desktop publishes on the Windows host, so a wider binding would be reachable from the LAN.
+- **What it can't show**: real networks, TURN, phones and other people. Production and the voice evening cover those.
 
-Why the VPS rather than WSL: nothing needs installing on Jaakko's machine, the routes and TLS are the ones production will use, and phones and other people can reach the stack. The cost is that development data lives on the machine that becomes production, which section 8 handles. A WSL fallback is in the appendix.
+From M0 to M3 the dev stack ran on the VPS that became production. Sections 2 and 8 describe that layout, which production still uses.
 
 ## 2. The VPS stack
 
@@ -260,27 +264,39 @@ Results go in m0-results.md, per run: resolution and framerate achieved, bitrate
 
 ## 9. Daily commands
 
+On the local stack, from the repo root in WSL:
+
 | Task | Command |
 |---|---|
-| Start the stack | `ssh jaakko@concord.jaalip.com '~/stoat/concord/dc up -d'` |
-| Check the version | `curl -s https://concord.jaalip.com/api/ \| jq -r .revolt` |
-| Stop, keeping data | `ssh jaakko@concord.jaalip.com '~/stoat/concord/dc stop'` |
-| Mailpit | `ssh -N -L 8025:127.0.0.1:8025 jaakko@concord.jaalip.com` |
+| Start the stack | `~/stoat/concord/dc up -d` |
+| Check the version | `curl -s http://localhost/api/ \| jq -r .revolt` |
+| Stop, keeping data | `~/stoat/concord/dc stop` |
+| Mailpit | `http://127.0.0.1:8025` |
+| Apply `deploy/` | `pnpm deploy:stack` |
+| Deploy the client and the test page | `pnpm deploy:web:dev`, `pnpm deploy:spike:dev` |
 | One test account | `pnpm seed account <handle>` |
 | A persona's login | `pnpm seed password <handle>` |
 | M0 verifications | `pnpm seed check` |
 | Reseed from scratch | `pnpm seed --reset` |
 | Client | `pnpm dev` |
 | Record fixtures, then test | `pnpm --filter @concord/stoat record && pnpm test` |
-| Memory | `ssh jaakko@concord.jaalip.com '~/stoat/concord/dc stats --no-stream'` |
+| Memory | `~/stoat/concord/dc stats --no-stream` |
 
-## Appendix: running the stack in WSL instead
+## Appendix: setting up the local stack
 
-This is only for when the VPS is unavailable. None of it has been tested.
+Done once on 2026-10-14. Nothing is installed in WSL itself: Docker Desktop's WSL integration, which Jaakko turned on, is the only requirement.
 
-- **Docker**: Jaakko installs it themselves. We never install system software on that machine.
-- **TLS**: `generate_config.sh` always writes `https://` URLs. With `localhost`, Caddy uses its own certificate authority, which browsers don't trust. Answer "behind another proxy" to get plain HTTP on port 80. Our client ignores the absolute URLs, so it still works.
-- **Client**: set `CONCORD_BACKEND=http://localhost`.
-- **Embeds**: the API fetches embeds through `hosts.january` from inside its container. Point it at `http://january:14705`.
-- **Voice**: LiveKit's UDP ports through WSL2 networking probably need mirrored mode in `.wslconfig`, and `use_external_ip` turned off.
-- **MongoDB**: WSL's kernel 6.6 is unaffected by the MongoDB issue. Keep the 7.0.43 pin anyway, so both stacks match.
+1. **Stoat's files**: clone `stoatchat/self-hosted` at `9af5e90` into a scratch folder and copy `compose.yml` and `Caddyfile` to `~/stoat`. Nothing in the clone is run, including `generate_config.sh`.
+2. **Config**, written by hand as `generate_config.sh` would for `localhost`, with `http://` and `ws://`:
+   - `.env` with `STOAT_DOMAIN=localhost`, `.env.web` with `HOSTNAME=http://localhost`, and `stoat.json`,
+   - `secrets.env` with fresh VAPID, file and LiveKit secrets, the LiveKit key id being `2c2e5918ca20` as in `deploy/livekit.yml`,
+   - `Revolt.toml` with the hosts, both video tiers at 2560 × 1440, Mailpit as SMTP, and the `restrict_server_creation` placeholder.
+3. **Our files**: `deploy/` copied to `~/stoat/concord/`, with:
+   - `host.env` holding `MAIN_IPV4=127.0.0.1`, `MAIN_IPV6=::1`, `TURN=off` and `LOCAL=on`,
+   - `livekit.env` holding the same key pair,
+   - an empty `.allow-wipe`.
+4. **Start**: `~/stoat/concord/dc up -d`, then `pnpm deploy:web:dev`, `pnpm deploy:spike:dev` and `pnpm seed --reset`.
+
+**Docker Desktop quirks**, both handled in `deploy/`:
+- It never passes on the end of a container's stdin, so `create-account.sh` mounts its request body as a file.
+- A single-file bind mount follows the file it first saw. A file replaced by `sed -i` leaves containers unable to restart, so scripts edit `Revolt.toml` in place.

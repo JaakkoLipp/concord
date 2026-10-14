@@ -1,0 +1,19 @@
+# deploy/livekit.yml for the local stack (deploy/local.compose.yml): LiveKit announces 127.0.0.1, where Docker Desktop
+# publishes its media ports, instead of discovering a public IP over STUN. Keys come from livekit.env as on the VPS.
+rtc:
+  use_external_ip: false
+  node_ip: 127.0.0.1
+  port_range_start: 50000
+  port_range_end: 50100
+  tcp_port: 7881
+
+redis:
+  address: redis:6379
+
+turn:
+  enabled: false
+
+webhook:
+  api_key: 2c2e5918ca20
+  urls:
+    - "http://voice-ingress:8500/worldwide"

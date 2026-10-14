@@ -7,6 +7,7 @@
 #   concord/.allow-wipe exists  -> a dev stack: dev.compose.yml adds Mailpit
 #   FLOATING_IPV4 set           -> floating.compose.yml: Caddy gets the TURN hostname's certificate
 #   TURN=on in host.env         -> turn.compose.yml adds LiveKit's TURN listeners
+#   LOCAL=on in host.env        -> local.compose.yml: the local stack in Docker Desktop, on 127.0.0.1 over HTTP
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f concord/host.env ] || { echo "concord/host.env is missing (see docs/vps-runbook.md)" >&2; exit 1; }
@@ -20,4 +21,5 @@ if [ "$turn" = on ] && [ -z "$floating" ]; then
 fi
 [ -n "$floating" ] && files+=(-f concord/floating.compose.yml)
 [ "$turn" = on ] && files+=(-f concord/turn.compose.yml)
+[ "$(setting LOCAL)" = on ] && files+=(-f concord/local.compose.yml)
 exec docker compose --env-file .env --env-file concord/host.env "${files[@]}" "$@"
