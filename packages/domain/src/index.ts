@@ -6,4 +6,5 @@ export { ulid } from './ulid.ts';
 export { Store, memberKey, newer, WINDOW_MAX, type EmojiPrefs, type MessageWindow, type NotificationLevel, type PendingFile, type PendingMessage, type Settings } from './store/store.svelte.ts';
 export { Session, parseSettings, type ServerRemoval } from './session.svelte.ts';
 export * from './ranks.ts';
+export * from './layout.ts';
 export { ServerAdmin, ALL_PERMISSIONS, ADMIN_ROLE } from './admin.svelte.ts';

@@ -38,11 +38,28 @@ export async function sweep(owner: Person, others: Person[] = []): Promise<numbe
   return n;
 }
 
-/** A fresh check server with an invite to its one channel. */
-export async function checkServer(owner: Person, label: string): Promise<{ id: string; general: string; invite: string; name: string }> {
+/**
+ * A fresh check server with an invite to its one channel. With `bootstrap`, set up as the client sets up a
+ * new server: Everyone can't invite, and an Admin role is first.
+ */
+export async function checkServer(owner: Person, label: string, bootstrap = false): Promise<{ id: string; general: string; invite: string; name: string; admin?: string }> {
   const name = `${PREFIX} ${label}`.slice(0, 32);
-  const r = await owner.call<{ server: { _id: string }; channels: { _id: string }[] }>('POST', '/servers/create', { name });
+  const r = await owner.call<{ server: { _id: string; default_permissions: number }; channels: { _id: string }[] }>('POST', '/servers/create', { name });
+  let admin: string | undefined;
+  if (bootstrap) {
+    await owner.call('PUT', `/servers/${r.server._id}/permissions/default`, { permissions: Number(BigInt(r.server.default_permissions) & ~(1n << 25n)) });
+    admin = (await owner.call<{ id: string }>('POST', `/servers/${r.server._id}/roles`, { name: 'Admin' })).id;
+  }
   const general = r.channels[0]!._id;
   const invite = await owner.call<{ _id: string }>('POST', `/channels/${general}/invites`);
-  return { id: r.server._id, general, invite: invite._id, name };
+  return { id: r.server._id, general, invite: invite._id, name, ...(admin ? { admin } : {}) };
+}
+
+/** The sidebar as shown: each category's title, or '' for channels in none, with its channel names. */
+export function sidebar(page: import('playwright-core').Page): Promise<string[]> {
+  return page.evaluate(() => [...document.querySelectorAll('nav[aria-label="Channels"] .group')].map((g) => {
+    const title = g.querySelector('.category span')?.textContent ?? '';
+    const names = [...g.querySelectorAll('a.channel .name')].map((n) => n.textContent);
+    return `${title}: ${names.join(', ')}`;
+  }));
 }

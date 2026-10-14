@@ -309,6 +309,10 @@ export class StoatBackend implements Backend {
     await this.rest.request('DELETE', `/servers/${server}${silent ? '?leave_silently=true' : ''}`);
   }
 
+  async server(server: string): Promise<Server> {
+    return mapServer(await this.rest.request<WServer>('GET', `/servers/${server}`));
+  }
+
   async member(server: string, user: string): Promise<Member> {
     return mapMember(await this.rest.request<WMember>('GET', `/servers/${server}/members/${user}`));
   }

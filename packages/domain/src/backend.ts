@@ -228,6 +228,8 @@ export interface Backend {
   /** Delete a server. Only its owner may; for anyone else Stoat treats this as leaving. */
   deleteServer(server: Id): Promise<void>;
   leaveServer(server: Id, silent?: boolean): Promise<void>;
+  /** A server as it is now. */
+  server(server: Id): Promise<Server>;
   /** This account's member record in a server. */
   member(server: Id, user: Id): Promise<Member>;
   setDefaultPermissions(server: Id, permissions: bigint): Promise<void>;

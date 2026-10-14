@@ -124,7 +124,13 @@ export class Session {
     this.store.self = self;
     this.store.upsertUsers([self]);
     this.gateway = this.backend.connect({
-      onEvent: (e) => {
+      onEvent: (event) => {
+        let e = event;
+        // A categories echo older than the order this session is writing would move the sidebar back.
+        if (e.type === 'serverUpdate' && e.data.categories && this.admin.holdsCategories(e.id)) {
+          const { categories: _, ...data } = e.data;
+          e = { ...e, data };
+        }
         // Read before the store forgets the server.
         const removal = this.removalOf(e);
         this.store.apply(e);

@@ -5,10 +5,13 @@
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import Hash from '@lucide/svelte/icons/hash';
   import Volume2 from '@lucide/svelte/icons/volume-2';
+  import Plus from '@lucide/svelte/icons/plus';
+  import { menuOn } from '$lib/view/contextmenu.svelte.ts';
+  import { adminDialogs } from '$lib/admin/dialogs.svelte.ts';
   import { resolve } from '$app/paths';
   import { m } from '$lib/i18n/index.ts';
   import { canView } from '$lib/view/channels.ts';
-  import { serverMenu } from '$lib/admin/menu.ts';
+  import { canManageChannels, categoryMenu, channelMenu, serverMenu } from '$lib/admin/menu.ts';
   import { fileUrl } from '@concord/stoat';
   import { app } from '$lib/session/app.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
@@ -17,7 +20,9 @@
   let { store, server, active }: Props = $props();
 
   const info = $derived(store.servers.get(server));
-  const tree = $derived(store.channelTree(server).map((g) => ({ ...g, channels: g.channels.filter((c) => canView(store, c)) })).filter((g) => g.channels.length));
+  const manager = $derived(!!app.session && canManageChannels(app.session, server));
+  // Managers see empty categories, so a new one can be filled.
+  const tree = $derived(store.channelTree(server).map((g) => ({ ...g, channels: g.channels.filter((c) => canView(store, c)) })).filter((g) => g.channels.length || (manager && g.id)));
   let collapsed = $state<Record<string, boolean>>({});
   let menuOpen = $state(false);
   let menuButton = $state<HTMLButtonElement | null>(null);
@@ -54,10 +59,15 @@
     <div class="group" role="group" aria-label={group.title || m.shell.channels}>
       {#if group.id}
         {@const id = group.id}
-        <button class="category" class:collapsed={collapsed[id]} aria-expanded={!collapsed[id]} onclick={() => (collapsed = { ...collapsed, [id]: !collapsed[id] })}>
-          <span>{group.title}</span>
-          <ChevronDown size={12} aria-hidden="true" />
-        </button>
+        <div class="category-row" use:menuOn={() => (app.session ? categoryMenu(app.session, server, id) : [])}>
+          <button class="category" class:collapsed={collapsed[id]} aria-expanded={!collapsed[id]} onclick={() => (collapsed = { ...collapsed, [id]: !collapsed[id] })}>
+            <span>{group.title}</span>
+            <ChevronDown size={12} aria-hidden="true" />
+          </button>
+          {#if manager}
+            <button class="add" aria-label={m.admin.createChannelIn(group.title)} title={m.admin.createChannelIn(group.title)} onclick={() => adminDialogs.open({ kind: 'createChannel', server, category: id })}><Plus size={16} /></button>
+          {/if}
+        </div>
       {/if}
       {#each group.channels.filter((c) => visible(group.id, c)) as channel (channel.id)}
         {@const unread = store.isUnread(channel.id) && !store.isMuted(channel.id)}
@@ -68,6 +78,7 @@
           href={resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server, channel: channel.id })}
           aria-current={channel.id === active ? 'page' : undefined}
           aria-label={m.shell.channelLabel(channel.kind === 'text' ? channel.name : '', isVoice(channel), unread, mentions)}
+          use:menuOn={() => (app.session ? channelMenu(app.session, channel.id) : [])}
         >
           {#if unread}<span class="unread-pill" aria-hidden="true"></span>{/if}
           <span class="icon" aria-hidden="true">{#if isVoice(channel)}<Volume2 size={20} />{:else}<Hash size={20} />{/if}</span>
@@ -96,7 +107,12 @@
   h2 { flex: 1; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 var(--text-md) var(--font-sans); }
   .channels { flex: 1; overflow-y: auto; padding: var(--space-3) var(--space-3) var(--space-5); }
   .group + .group { margin-top: var(--space-6); }
+  .category-row { display: flex; align-items: center; }
+  .add { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; margin-right: var(--space-1); padding: 0; border: 0; border-radius: var(--radius-xs); background: none; color: var(--text-secondary); cursor: pointer; }
+  .add:hover { color: var(--text-strong); }
+  .add:focus-visible { outline: 2px solid var(--accent); }
   .category {
+    flex: 1; min-width: 0;
     display: flex; align-items: center; gap: var(--space-2); width: 100%; padding: var(--space-2) var(--space-3);
     background: none; border: 0; color: var(--text-secondary); font: 500 var(--text-sm) var(--font-sans); text-align: left;
   }

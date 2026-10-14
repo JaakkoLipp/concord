@@ -4,7 +4,9 @@
  * way and the web layer asks before the tab closes.
  */
 import type { ChannelEdit, RoleEdit, ServerEdit } from './backend.ts';
-import type { Id, Override, Role } from './entities.ts';
+import type { Category, Channel, Id, Override, Role } from './entities.ts';
+import { moveChannelTo } from './layout.ts';
+import { Latest } from './latest.ts';
 import { Permission, has } from './permissions.ts';
 import type { Session } from './session.svelte.ts';
 
@@ -23,6 +25,42 @@ export class ServerAdmin {
 
   private get backend() { return this.session.backend; }
   private get store() { return this.session.store; }
+
+  private readonly categoryWrites = new Map<Id, Latest<Category[]>>();
+
+  /** Whether a categories echo for this server must be ignored, since a newer local order waits or just went. */
+  holdsCategories(server: Id): boolean {
+    return !!this.categoryWrites.get(server)?.holding;
+  }
+
+  /**
+   * Show a new category list at once and write it, merging with any write still waiting. If Stoat refuses,
+   * the server is fetched again so the sidebar matches it, and this throws.
+   */
+  async setCategories(server: Id, categories: Category[]): Promise<void> {
+    const s = this.store.servers.get(server);
+    if (s) this.store.servers.set(server, { ...s, categories });
+    let w = this.categoryWrites.get(server);
+    if (!w) this.categoryWrites.set(server, (w = new Latest((c) => this.run(() => this.backend.editServer(server, { categories: c })))));
+    try {
+      await w.set(categories);
+    } catch (e) {
+      const fresh = await this.backend.server(server).catch(() => null);
+      const now = this.store.servers.get(server);
+      if (fresh && now) this.store.servers.set(server, { ...now, categories: fresh.categories });
+      throw e;
+    }
+  }
+
+  /** Create a channel, in a category if one is given. Returns it. */
+  async createChannel(server: Id, kind: 'text' | 'voice', name: string, category: string | null, description?: string): Promise<Channel> {
+    const channel = await this.run(() => this.backend.createChannel(server, kind, name, description));
+    if (!this.store.channels.has(channel.id)) this.store.apply({ type: 'channelCreate', channel });
+    const s = this.store.servers.get(server);
+    if (s && !s.channels.includes(channel.id)) this.store.servers.set(server, { ...s, channels: [...s.channels, channel.id] });
+    if (category && s) await this.setCategories(server, moveChannelTo(this.store.servers.get(server)!.categories, channel.id, category));
+    return channel;
+  }
 
   private async run<T>(fn: () => Promise<T>): Promise<T> {
     this.pending++;

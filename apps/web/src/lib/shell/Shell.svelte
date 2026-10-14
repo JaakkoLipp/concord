@@ -17,6 +17,8 @@
   import ConfirmDialog from './ConfirmDialog.svelte';
   import ContextMenuHost from './ContextMenuHost.svelte';
   import EmojiPicker from '$lib/emoji/EmojiPicker.svelte';
+  import AdminDialogs from '$lib/admin/AdminDialogs.svelte';
+  import { app } from '$lib/session/app.svelte.ts';
 
   interface Props { store: Store; server: string | null; channel: string | null; children: Snippet; panel?: Snippet | undefined; panelWidth?: 'members' | 'profile' | 'find' }
   let { store, server, channel, children, panel, panelWidth = 'members' }: Props = $props();
@@ -41,6 +43,7 @@
   <EmojiPicker />
   <ConfirmDialog />
   <ContextMenuHost />
+  {#if app.session}<AdminDialogs session={app.session} />{/if}
   {#if shell.sidebarOpen}
     <button class="scrim" aria-label={m.shell.closeSidebar} onclick={() => (shell.sidebarOpen = false)}></button>
   {/if}

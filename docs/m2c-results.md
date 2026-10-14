@@ -58,3 +58,35 @@ Results for [m2c-plan.md](m2c-plan.md), recorded against the seeded Stoat 0.15.5
 **Found by the live check**:
 - **The setup banner hid while Retry was still running**, as soon as Everyone lost `InviteOthers`. It now stays until Retry ends.
 - **The check itself drained `dev-admin`'s rate limit.** It polled `GET /servers/{id}` every 25 ms, and that shares the server's 5-per-10-s bucket with the browser's saves, so the first Overview save took 11.6 s. The check now polls every 2.5 s. This will matter in task 9, where the whole build shares one bucket.
+
+## Task 3: channels and categories, 2026-10-14
+
+**What is deployed**:
+- **The server menu** gains Create channel and Create category, for those with `ManageChannel`.
+- **Categories**: a "+" beside each title creates a channel in it. Right-clicking a title offers Create channel, Rename, Move up, Move down and Delete. Deleting leaves its channels at the top, in no category. Managers see empty categories.
+- **Channels**: right-click, or the context-menu key, offers Edit channel, Move up, Move down, Move to category…, Delete channel, Copy link and Copy channel ID, each as permissions allow. A move past the edge of a category joins the next one, and steps over channels this account can't see, keeping them where they are.
+- **Create channel** asks for Text or Voice, the name and the category. Text channel names are written as Discord writes them, lower case with dashes, and the dialog shows the result.
+- **Channel settings** at `/app/channel-settings/<channel>/<section>`: Overview with the name and description, and Delete channel.
+- **Order writes merge** (`packages/domain/src/latest.ts`): while one is on its way, newer orders replace each other and the newest goes next. A categories echo is ignored until 1.5 s after the last write, so the sidebar never jumps back.
+- **A deleted or hidden channel that was open** now leads to the server's first channel, not the Friends screen. A server that is gone still leads to Friends.
+
+**Unit tests**:
+- `packages/domain/src/layout.test.ts`, 5 tests: stepping over hidden channels, crossing categories, moving to a category, category moves and deletion, and inputs left unchanged.
+- `packages/domain/src/latest.test.ts`, 2 tests: five changes become two writes ending on the last, with the echo hold, and a failed write rejects only its own callers.
+
+**Found by the live check, and fixed**:
+1. **Stoat's window ends later than it says.** Writes waiting for the bucket went out exactly when `x-ratelimit-reset-after` said it reset, and got two 429s each time. A trace showed the window really ends about 0.8 s later. The REST layer now waits a second longer, and a trace of twelve paced writes had no 429.
+2. **Every category dialog failed.** It closed itself before writing, and the server it wrote to was derived from the open dialog, so it was gone. It now reads both first.
+3. **Deleting the open channel led to the Friends screen**, now the server's first channel, as above.
+
+**Live check**: `node tools/live/src/channels.ts`, with `dev-admin` building and `tuuli` watching on a fresh check server:
+
+| Check | Result |
+|---|---|
+| Four categories and ten channels in the seeded order, General moved and renamed to `yleinen`, `#tekniikka` described | 50 s in all, mostly waiting for the server bucket. `tuuli`'s sidebar matches. |
+| Five quick Move up clicks on `#botti`, then five Move down | It travels into Yleinen and back. No jump back on either side, settled 7.7 s after the last click, both sidebars in the seeded order. |
+| A move by keyboard alone: focus, Shift+F10, arrows, Enter | `tuuli` sees it |
+| A channel created and deleted | No gap or stale entry on either side. The admin, who had it open, is on the server's first channel. |
+| Console errors or failed requests | None |
+
+`removal.ts` passed again after the redirect change.

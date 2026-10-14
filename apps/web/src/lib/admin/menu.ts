@@ -1,10 +1,12 @@
 /** The server menu (m2c-plan.md, "Entry points"), from the sidebar header and a right-click on the rail icon. */
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import type { Id, Session } from '@concord/domain';
+import { Permission, deleteCategory, has, moveCategory, moveChannel, type Category, type Id, type Session } from '@concord/domain';
 import type { MenuItem } from '@concord/ui';
 import { m } from '$lib/i18n/index.ts';
-import { isOwner, serverSections } from '$lib/view/admin.ts';
+import { isOwner, serverPerms, serverSections } from '$lib/view/admin.ts';
+import { canView, permissionsIn } from '$lib/view/channels.ts';
+import { adminDialogs } from './dialogs.svelte.ts';
 import { confirm } from '$lib/view/confirm.svelte.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 
@@ -23,14 +25,92 @@ export async function leaveServer(session: Session, server: Id): Promise<void> {
   }
 }
 
+/** Write a category list, telling the user if Stoat refused it. The sidebar is put back by the session. */
+function writeCategories(session: Session, server: Id, next: Category[] | null): void {
+  if (next) void session.admin.setCategories(server, next).catch(() => toasts.show(m.admin.channelFailed));
+}
+
+export const canManageChannels = (session: Session, server: Id) => has(serverPerms(session.store, server), Permission.ManageChannel);
+
 export function serverMenu(session: Session, server: Id): MenuItem[] {
   const store = session.store;
   const items: MenuItem[] = [];
   const sections = serverSections(store, server);
   if (sections.length) items.push({ label: m.admin.serverSettings, onselect: () => void openServerSettings(server, sections[0]!) });
+  if (canManageChannels(session, server)) {
+    items.push({ label: m.admin.createChannel, onselect: () => adminDialogs.open({ kind: 'createChannel', server, category: null }) });
+    items.push({ label: m.admin.createCategory, onselect: () => adminDialogs.open({ kind: 'category', server, id: null }) });
+  }
   if (!isOwner(store, server)) {
     if (items.length) items.push('separator');
     items.push({ label: m.admin.leaveServer, danger: true, onselect: () => void leaveServer(session, server) });
   }
+  return items;
+}
+
+export function categoryMenu(session: Session, server: Id, category: string): MenuItem[] {
+  if (!canManageChannels(session, server)) return [];
+  const s = session.store.servers.get(server);
+  if (!s) return [];
+  const i = s.categories.findIndex((c) => c.id === category);
+  const title = s.categories[i]?.title ?? '';
+  return [
+    { label: m.admin.createChannel, onselect: () => adminDialogs.open({ kind: 'createChannel', server, category }) },
+    { label: m.admin.renameCategory, onselect: () => adminDialogs.open({ kind: 'category', server, id: category }) },
+    { label: m.admin.moveUp, disabled: i <= 0, onselect: () => writeCategories(session, server, moveCategory(s.categories, category, -1)) },
+    { label: m.admin.moveDown, disabled: i < 0 || i >= s.categories.length - 1, onselect: () => writeCategories(session, server, moveCategory(s.categories, category, 1)) },
+    'separator',
+    {
+      label: m.admin.deleteCategory, danger: true,
+      onselect: () => void confirm.ask({ title: m.admin.deleteCategoryTitle(title), body: m.admin.deleteCategoryBody, confirm: m.admin.deleteCategory, danger: true })
+        .then((ok) => { if (ok) writeCategories(session, server, deleteCategory(session.store.servers.get(server)?.categories ?? [], category)); }),
+    },
+  ];
+}
+
+export function openChannelSettings(channel: Id, section: string): Promise<void> {
+  return goto(resolve('/(app)/app/channel-settings/[channel]/[section]', { channel, section }));
+}
+
+async function copy(text: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(text);
+    toasts.show(m.admin.copied, 'info');
+  } catch {
+    // Clipboard blocked: nothing to do.
+  }
+}
+
+export function channelMenu(session: Session, channel: Id): MenuItem[] {
+  const store = session.store;
+  const c = store.channels.get(channel);
+  if (c?.kind !== 'text') return [];
+  const server = c.server;
+  const items: MenuItem[] = [];
+  const mine = permissionsIn(store, c);
+  if (has(mine, Permission.ManageChannel)) items.push({ label: m.admin.editChannel, onselect: () => void openChannelSettings(channel, 'overview') });
+  if (canManageChannels(session, server)) {
+    const s = store.servers.get(server)!;
+    const shown = (id: Id) => { const x = store.channels.get(id); return !!x && canView(store, x); };
+    const up = moveChannel(s.categories, channel, -1, shown);
+    const down = moveChannel(s.categories, channel, 1, shown);
+    items.push(
+      { label: m.admin.moveUp, disabled: !up, onselect: () => writeCategories(session, server, up) },
+      { label: m.admin.moveDown, disabled: !down, onselect: () => writeCategories(session, server, down) },
+      { label: m.admin.moveToCategory, onselect: () => adminDialogs.open({ kind: 'moveChannel', server, channel }) },
+    );
+  }
+  if (has(mine, Permission.ManageChannel)) {
+    items.push({
+      label: m.admin.deleteChannel, danger: true,
+      onselect: () => void confirm.ask({ title: m.admin.deleteChannelTitle(c.name), body: m.admin.deleteChannelBody, confirm: m.admin.deleteChannel, danger: true })
+        .then((ok) => { if (ok) void session.admin.deleteChannel(channel).catch(() => toasts.show(m.admin.channelFailed)); }),
+    });
+  }
+  if (items.length) items.push('separator');
+  items.push(
+    { label: m.admin.copyLink, onselect: () => void copy(`${location.origin}${resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server, channel })}`) },
+    { label: m.admin.copyId, onselect: () => void copy(channel) },
+  );
   return items;
 }

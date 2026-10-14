@@ -26,6 +26,11 @@ export const RETRY_FOR_MS = 60_000;
  */
 const SERVER_LIMIT = 5;
 const SERVER_PATH = /^\/servers\/([0-9A-HJKMNP-TV-Z]{26})(?:\/|$)/;
+/**
+ * Stoat's window ends up to a second after its `x-ratelimit-reset-after` says (m2c-results.md task 3,
+ * measured live), so a bucket is taken as reset only this much later.
+ */
+const RESET_SLACK_MS = 1_000;
 
 interface Bucket {
   /** Requests a window, once known. Until then the bucket lets one request through at a time. */
@@ -150,7 +155,7 @@ export class Rest {
     const b = this.bucketOf(key);
     if (limit !== undefined) b.limit = Number(limit);
     b.remaining = Number(remaining);
-    b.resetAt = Date.now() + Number(reset);
+    b.resetAt = Date.now() + Number(reset) + RESET_SLACK_MS;
     this.wake(b);
   }
 }

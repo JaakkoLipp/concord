@@ -6,7 +6,7 @@
   import ChatHeader from '$lib/shell/ChatHeader.svelte';
   import Composer from '$lib/shell/Composer.svelte';
   import { m } from '$lib/i18n/index.ts';
-  import { channelName, rememberChannel } from '$lib/view/channels.ts';
+  import { channelName, firstChannel, rememberChannel } from '$lib/view/channels.ts';
   import MessageList from './MessageList.svelte';
   import Upload from '@lucide/svelte/icons/upload';
   import { attachFiles } from '$lib/composer/files.ts';
@@ -27,11 +27,16 @@
       else void session.openChannel(c).catch(() => {});
     });
   });
-  // Left, removed or deleted while open: go to the friends screen.
-  let seen = $state<string | null>(null);
+  // Left, removed, deleted or hidden while open: to the server's first channel if the server is still
+  // there, else the friends screen.
+  let seen = $state<{ id: string; server: string | null } | null>(null);
   $effect(() => {
-    if (info) seen = channel;
-    else if (seen === channel && store.connection === 'ready') void goto(resolve('/app/channels/@me'));
+    if (info) seen = { id: channel, server: info.kind === 'text' ? info.server : null };
+    else if (seen?.id === channel && store.connection === 'ready') {
+      const server = seen.server;
+      const next = server && store.servers.has(server) ? untrack(() => firstChannel(store, server)) : undefined;
+      void goto(server && next ? resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server, channel: next }) : resolve('/app/channels/@me'), { replaceState: true });
+    }
   });
   $effect(() => {
     if (info) rememberChannel(info.kind === 'text' ? info.server : '@me', channel);
