@@ -58,7 +58,10 @@ export const memberKey = (server: Id, user: Id) => `${server}:${user}`;
 /** ULIDs sort by time as strings. */
 export const newer = (a: Id | undefined, b: Id | undefined) => !!a && (!b || a > b);
 
-/** One call in one channel: Stoat's start time tells a call from the next one in the same DM. */
+/**
+ * One call in one channel. Stoat's start time has whole seconds only, so two calls can share one; the stopped
+ * ring a channel remembers is forgotten when its call ends, which tells them apart.
+ */
 const ringKey = (r: Ring) => `${r.channel}:${r.startedAt}`;
 
 /** Messages kept in one window at most (client.md section 6.1). */
@@ -100,8 +103,8 @@ export class Store {
   readonly voice = new SvelteMap<Id, Record<Id, VoiceState>>();
   /** DM and group calls ringing this account, by channel (client.md section 10.8). */
   readonly rings = new SvelteMap<Id, Ring>();
-  /** Rings already stopped, by `ringKey`, so a repeat of Stoat's event doesn't ring again. */
-  private readonly stoppedRings = new Set<string>();
+  /** Per channel, the `ringKey` of a ring stopped while its call runs, so a repeat of Stoat's event doesn't ring again. */
+  private readonly stoppedRings = new Map<Id, string>();
   /** Servers whose full member list has been fetched. */
   readonly memberListLoaded = new SvelteMap<Id, number>();
   /** Messages sent from this client and not yet confirmed, by key. Window reloads and Ready leave them alone. */
@@ -245,7 +248,7 @@ export class Store {
         this.voice.clear();
         for (const v of e.voice) this.joinVoice(v);
         // A call that emptied while this session was away rang out unheard.
-        for (const c of [...this.rings.keys()]) if (!this.voice.has(c)) this.rings.delete(c);
+        for (const c of new Set([...this.rings.keys(), ...this.stoppedRings.keys()])) if (!this.voice.has(c)) this.callEnded(c);
         this.typing.clear();
         this.memberListLoaded.clear();
         return;
@@ -420,11 +423,11 @@ export class Store {
         return;
       }
       case 'callUpdate': {
-        if (e.ended) return void this.rings.delete(e.channel);
+        if (e.ended) return this.callEnded(e.channel);
         const ring: Ring = { channel: e.channel, initiator: e.initiator, startedAt: e.startedAt ?? 0 };
         // Our own call, a call this account is already in, or one it already answered or ignored.
         if (ring.initiator === this.selfId || (this.selfId && this.selfId in (this.voice.get(ring.channel) ?? {}))) return;
-        if (this.stoppedRings.has(ringKey(ring))) return;
+        if (this.stoppedRings.get(ring.channel) === ringKey(ring)) return;
         const old = this.rings.get(ring.channel);
         if (!old || ringKey(old) !== ringKey(ring)) this.rings.set(ring.channel, ring);
         return;
@@ -517,15 +520,20 @@ export class Store {
     else {
       this.voice.delete(channel);
       // The call is over, even if Stoat's end of the ring goes missing.
-      this.rings.delete(channel);
+      this.callEnded(channel);
     }
+  }
+
+  private callEnded(channel: Id): void {
+    this.rings.delete(channel);
+    this.stoppedRings.delete(channel);
   }
 
   /** Stop a ring: answered, ignored or rung out. The same call doesn't ring again. */
   stopRing(channel: Id): void {
     const r = this.rings.get(channel);
     if (!r) return;
-    this.stoppedRings.add(ringKey(r));
+    this.stoppedRings.set(channel, ringKey(r));
     this.rings.delete(channel);
   }
 

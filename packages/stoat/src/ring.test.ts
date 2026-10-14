@@ -86,6 +86,16 @@ describe('VoiceCallUpdate', () => {
     expect(s.rings.get('D1')?.startedAt).toBe(Date.parse('2026-10-14T18:05:00Z'));
   });
 
+  it('rings for a new call that starts in the same second as an ignored one', () => {
+    // Stoat's start times have whole seconds only: seen live when a call ended and the next began at once.
+    const s = store();
+    apply(s, ring('D1'));
+    s.stopRing('D1');
+    apply(s, ended('D1'));
+    apply(s, ring('D1'));
+    expect(s.rings.has('D1')).toBe(true);
+  });
+
   it('rings even when the caller\'s join arrives after the ring', () => {
     const s = store();
     apply(s, ring('D1'));
