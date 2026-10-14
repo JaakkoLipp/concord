@@ -13,6 +13,7 @@
   import ServerRail from './ServerRail.svelte';
   import UserDock from './UserDock.svelte';
   import VoicePanel from './VoicePanel.svelte';
+  import IncomingCalls from './IncomingCalls.svelte';
   import ImageViewer from '$lib/conversation/ImageViewer.svelte';
   import Toaster from './Toaster.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
@@ -42,7 +43,7 @@
     {/if}
   </div>
   <div class="dock">
-    {#if app.voice}<div bind:offsetHeight={voiceHeight}><VoicePanel {store} voice={app.voice} /></div>{/if}
+    {#if app.voice}<div bind:offsetHeight={voiceHeight}><VoicePanel {store} voice={app.voice} calling={app.rings?.calling ?? false} /></div>{/if}
     <UserDock {store} />
   </div>
   <main class="main">{@render children()}</main>
@@ -56,6 +57,7 @@
   <ContextMenuHost />
   {#if app.session}<AdminDialogs session={app.session} /><MemberRolesDialog session={app.session} /><ModerationDialogs session={app.session} /><NotifySettingsDialog session={app.session} />{/if}
   <NotifyBar />
+  {#if app.rings}<IncomingCalls {store} rings={app.rings} />{/if}
   {#if shell.sidebarOpen}
     <button class="scrim" aria-label={m.shell.closeSidebar} onclick={() => (shell.sidebarOpen = false)}></button>
   {/if}

@@ -18,7 +18,8 @@
   import { channelName } from '$lib/view/channels.ts';
   import type { VoiceController } from '$lib/voice/controller.svelte.ts';
 
-  let { store, voice }: { store: Store; voice: VoiceController } = $props();
+  /** `calling`: alone in a DM or group call this account started (client.md section 10.8). */
+  let { store, voice, calling = false }: { store: Store; voice: VoiceController; calling?: boolean } = $props();
 
   const channel = $derived(voice.channel ? store.channels.get(voice.channel) : undefined);
   const place = $derived(channel?.kind === 'text' ? (store.servers.get(channel.server)?.name ?? '') : m.voice.directCall);
@@ -28,7 +29,7 @@
     : resolve('/(app)/app/channels/@me/[channel]/[[message]]', { channel: channel.id }),
   );
   const title = $derived(
-    voice.status === 'connected' ? m.voice.connected
+    voice.status === 'connected' ? (calling ? m.voice.calling : m.voice.connected)
     : voice.status === 'connecting' ? m.voice.connecting
     : voice.status === 'reconnecting' ? m.voice.reconnecting
     : voice.ended === 'elsewhere' ? m.voice.elsewhere : m.voice.disconnected,

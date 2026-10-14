@@ -10,6 +10,7 @@ import { watchNotifications } from '$lib/notify/watch.ts';
 import { m } from '$lib/i18n/index.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 import { VoiceController } from '$lib/voice/controller.svelte.ts';
+import { Rings } from '$lib/voice/rings.svelte.ts';
 
 // The (app) group has ssr = false, so this only runs in the browser; the guard keeps server builds importable.
 export const backend = new StoatBackend(new LiveTransport(typeof location === 'undefined' ? 'http://localhost' : location.origin));
@@ -18,6 +19,8 @@ class App {
   session = $state<Session | null>(null);
   /** The session's voice controller (client.md section 10). */
   voice = $state<VoiceController | null>(null);
+  /** DM and group calls ringing this account (client.md section 10.8). */
+  rings = $state<Rings | null>(null);
   /** 'checking' until the stored token has been tried. */
   status = $state<'checking' | 'signed-out' | 'signed-in'>('checking');
 
@@ -53,6 +56,7 @@ class App {
       if (r.reason !== 'left') toasts.show(m.admin.removed[r.reason](r.name), 'info');
     });
     this.voice = new VoiceController(session);
+    this.rings = new Rings(session, this.voice);
     this.session = session;
     this.status = 'signed-in';
   }
@@ -63,6 +67,8 @@ class App {
   }
 
   private async signedOut(): Promise<void> {
+    this.rings?.destroy();
+    this.rings = null;
     this.voice?.destroy();
     this.voice = null;
     this.stopIdle?.();

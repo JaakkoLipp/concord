@@ -4,6 +4,7 @@
   import AtSign from '@lucide/svelte/icons/at-sign';
   import Hash from '@lucide/svelte/icons/hash';
   import Menu from '@lucide/svelte/icons/menu';
+  import Phone from '@lucide/svelte/icons/phone';
   import Pin from '@lucide/svelte/icons/pin';
   import UserRound from '@lucide/svelte/icons/user-round';
   import Users from '@lucide/svelte/icons/users';
@@ -11,6 +12,7 @@
   import { m } from '$lib/i18n/index.ts';
   import { channelName } from '$lib/view/channels.ts';
   import { shell } from '$lib/view/shell.svelte.ts';
+  import { app } from '$lib/session/app.svelte.ts';
 
   let { store, channel }: { store: Store; channel: Channel | undefined } = $props();
   let searchText = $state('');
@@ -35,6 +37,12 @@
       <p class="topic">{channel.description}</p>
     {/if}
     <span class="spacer"></span>
+    {#if (channel.kind === 'dm' || channel.kind === 'group') && app.voice}
+      <!-- Joining the DM's call starts it, and Stoat rings everyone else (client.md section 10.8). -->
+      {@const voice = app.voice}
+      {@const inCall = voice.channel === channel.id && voice.status !== 'none' && voice.status !== 'disconnected'}
+      <IconButton label={inCall ? m.voice.inCall : store.voice.has(channel.id) ? m.voice.joinCall : m.voice.startCall} disabled={inCall} onclick={() => voice.join(channel.id)}><Phone /></IconButton>
+    {/if}
     {@const pinsOpen = shell.find?.channel === channel.id && shell.find.mode === 'pins'}
     <IconButton label={m.find.pins} active={pinsOpen} aria-pressed={pinsOpen} onclick={() => (pinsOpen ? (shell.find = null) : shell.openFind(channel.id, 'pins'))}><Pin /></IconButton>
     <IconButton label={panelLabel} active={shell.panelOpen} aria-pressed={shell.panelOpen} onclick={() => (shell.panelOpen = !shell.panelOpen)}>

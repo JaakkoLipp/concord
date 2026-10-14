@@ -23,9 +23,13 @@ function shownChannel(): string | null {
   return parts[2] === 'channels' && parts[4] ? parts[4] : null;
 }
 
+/** This tab holds the lock, so it is the one in this browser that notifies. DM calls ask too. */
+let leader = false;
+export const leadsNotifications = () => leader;
+
 export function watchNotifications(session: Session): () => void {
   const tab = Math.random().toString(36).slice(2);
-  let leader = !navigator.locks;
+  leader = !navigator.locks;
   let release: (() => void) | null = null;
   let stopped = false;
 
@@ -115,6 +119,7 @@ export function watchNotifications(session: Session): () => void {
 
   return () => {
     stopped = true;
+    leader = false;
     clearInterval(timer);
     clearInterval(route);
     for (const e of events) window.removeEventListener(e, share);

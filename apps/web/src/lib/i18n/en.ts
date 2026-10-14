@@ -146,6 +146,7 @@ export const en = {
     unpinned: (by: string) => `${by} unpinned a message.`,
     seeMessage: 'See message',
     call: (by: string) => `${by} started a call.`,
+    joinCall: 'Join call',
   },
   people: {
     profile: 'Profile',
@@ -289,6 +290,19 @@ export const en = {
     micDenied: 'Microphone access was refused, so you can only listen.',
     micMissing: 'No microphone was found, so you can only listen.',
     micFailed: 'The microphone couldn’t start, so you can only listen.',
+    /** DM and group calls (client.md section 10.8). */
+    calling: 'Calling…',
+    startCall: 'Start a voice call',
+    joinCall: 'Join the call',
+    inCall: 'You’re in this call',
+    ring: {
+      label: (caller: string) => `Incoming call from ${caller}`,
+      direct: 'Incoming call',
+      join: 'Join',
+      ignore: 'Ignore',
+      callingYou: 'Calling you…',
+      callingGroup: (group: string) => `Calling ${group}…`,
+    },
   },
   files: {
     size: (bytes: number) => bytes >= 1_000_000
