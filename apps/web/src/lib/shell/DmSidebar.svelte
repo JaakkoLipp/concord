@@ -3,6 +3,7 @@
   import { fileUrl } from '@concord/stoat';
   import type { Store } from '@concord/domain';
   import Users from '@lucide/svelte/icons/users';
+  import Volume2 from '@lucide/svelte/icons/volume-2';
   import { resolve } from '$app/paths';
   import { m } from '$lib/i18n/index.ts';
   import { channelName, dmPartner } from '$lib/view/channels.ts';
@@ -74,6 +75,7 @@
           <span class="sub">{statusTextOf(user)}</span>
         {/if}
       </span>
+      {#if store.voice.has(channel.id)}<span class="call" role="img" aria-label={m.voiceState.inCall}><Volume2 size={16} /></span>{/if}
       {#if mentions}<Badge count={mentions} label={m.shell.mentions(mentions)} />{/if}
     </a>
     {#if channel.kind === 'dm' && app.session}
@@ -100,7 +102,7 @@
   .row-wrap { position: relative; }
   .close { position: absolute; top: 50%; right: var(--space-3); translate: 0 -50%; display: none; }
   .row-wrap:hover .close, .row-wrap:focus-within .close { display: block; }
-  .row-wrap:hover .row :global(.badge) { visibility: hidden; }
+  .row-wrap:hover .row :global(.badge), .row-wrap:hover .call { visibility: hidden; }
   @media (pointer: coarse) { .close { display: none !important; } }
   .row {
     display: flex; align-items: center; gap: var(--space-4); min-height: var(--row-dm); margin-top: 2px; padding: var(--space-1) var(--space-3);
@@ -116,5 +118,6 @@
   .group-icon.initials { display: grid; place-items: center; background: var(--accent); color: var(--on-accent); }
   .text { display: grid; flex: 1; min-width: 0; }
   .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--text-md) var(--font-sans); }
+  .call { display: grid; flex: none; color: var(--status-online); }
   .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
 </style>

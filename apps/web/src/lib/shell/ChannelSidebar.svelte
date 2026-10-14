@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Badge, Button, Menu } from '@concord/ui';
-  import type { Channel, Store } from '@concord/domain';
+  import type { Channel, Id, Store } from '@concord/domain';
   import BellOff from '@lucide/svelte/icons/bell-off';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import Hash from '@lucide/svelte/icons/hash';
@@ -15,9 +15,12 @@
   import { fileUrl } from '@concord/stoat';
   import { app } from '$lib/session/app.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
+  import VoiceParticipants from './VoiceParticipants.svelte';
+  import VoiceTimer from './VoiceTimer.svelte';
 
-  interface Props { store: Store; server: string; active: string | null }
-  let { store, server, active }: Props = $props();
+  /** `speaking` holds who is talking in the user's own call, from LiveKit; empty when not in one. */
+  interface Props { store: Store; server: string; active: string | null; speaking?: ReadonlySet<Id> }
+  let { store, server, active, speaking = new Set() }: Props = $props();
 
   const info = $derived(store.servers.get(server));
   const manager = $derived(!!app.session && canManageChannels(app.session, server));
@@ -36,6 +39,7 @@
   }
 
   const isVoice = (c: Channel) => c.kind === 'text' && !!c.voice;
+  const maxUsers = (c: Channel) => (c.kind === 'text' ? c.voice?.maxUsers : undefined);
   /** A collapsed category still shows its selected and unread channels, as on Discord. */
   const visible = (id: string | null, c: Channel) => !id || !collapsed[id] || c.id === active || (store.isUnread(c.id) && !store.notificationsMuted(c.id));
 </script>
@@ -73,19 +77,26 @@
         {@const unread = store.isUnread(channel.id) && !store.notificationsMuted(channel.id)}
         {@const muted = store.notificationsMuted(channel.id)}
         {@const mentions = store.mentionCount(channel.id)}
+        {@const name = channel.kind === 'text' ? channel.name : ''}
+        {@const since = isVoice(channel) ? store.voiceSince(channel.id) : undefined}
+        {@const occupants = since === undefined ? 0 : store.voiceParticipants(channel.id).length}
+        {@const max = maxUsers(channel)}
         <a
-          class="channel" class:active={channel.id === active} class:unread class:muted
+          class="channel" class:active={channel.id === active} class:unread class:muted class:occupied={since !== undefined}
           href={resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server, channel: channel.id })}
           aria-current={channel.id === active ? 'page' : undefined}
-          aria-label={m.shell.channelLabel(channel.kind === 'text' ? channel.name : '', isVoice(channel), unread, mentions)}
+          aria-label={[m.shell.channelLabel(name, isVoice(channel), unread, mentions), occupants || max ? m.voiceState.occupied(occupants, max) : ''].filter(Boolean).join(', ')}
           use:menuOn={() => (app.session ? channelMenu(app.session, channel.id) : [])}
         >
           {#if unread}<span class="unread-pill" aria-hidden="true"></span>{/if}
           <span class="icon" aria-hidden="true">{#if isVoice(channel)}<Volume2 size={20} />{:else}<Hash size={20} />{/if}</span>
-          <span class="name">{channel.kind === 'text' ? channel.name : ''}</span>
+          <span class="name">{name}</span>
           {#if muted}<span class="muted-icon" aria-hidden="true"><BellOff size={16} /></span>{/if}
           {#if mentions}<Badge count={mentions} />{/if}
+          {#if since !== undefined}<VoiceTimer {since} />{/if}
+          {#if max}<span class="limit" aria-hidden="true">{m.voiceState.limit(occupants, max)}</span>{/if}
         </a>
+        {#if occupants}<VoiceParticipants {store} {server} {name} {speaking} channel={channel.id} />{/if}
       {/each}
     </div>
   {/each}
@@ -132,6 +143,11 @@
   .channel.muted:hover, .channel.muted.active { color: var(--text-secondary); }
   .icon { display: grid; place-items: center; color: var(--text-muted); flex: none; }
   .channel.active .icon, .channel:hover .icon { color: var(--text-secondary); }
+  .channel.occupied .icon { color: var(--status-online); }
+  .limit {
+    flex: none; padding: 0 var(--space-2); border-radius: var(--radius-xs); background: var(--surface-4); color: var(--text-secondary);
+    font: 500 var(--text-xs) var(--font-sans); font-variant-numeric: tabular-nums;
+  }
   .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .muted-icon { display: grid; color: var(--text-secondary); }
   .unread-pill { position: absolute; left: calc(-1 * var(--space-3)); width: 4px; height: 8px; border-radius: 0 var(--radius-xs) var(--radius-xs) 0; background: var(--text-strong); }

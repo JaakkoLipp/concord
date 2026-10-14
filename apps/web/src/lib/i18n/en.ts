@@ -237,6 +237,22 @@ export const en = {
     three: (a: string, b: string, c: string) => `${a}, ${b} and ${c} are typing…`,
     several: 'Several people are typing…',
   },
+  /** Who is in voice, as the sidebars and friends list show it (client.md section 10.3). */
+  voiceState: {
+    participants: (channel: string) => `In ${channel}`,
+    participant: (name: string, states: string[]) => [name, ...states].join(', '),
+    occupied: (n: number, max?: number) => (max ? `${n} of ${max} in voice` : plural('en', n, { one: '1 person in voice', other: `${n} people in voice` })),
+    limit: (n: number, max: number) => `${n}/${max}`,
+    muted: 'muted',
+    serverMuted: 'server muted',
+    serverDeafened: 'server deafened',
+    camera: 'camera on',
+    sharing: 'sharing their screen',
+    speaking: 'speaking',
+    live: 'Live',
+    inVoice: 'In voice',
+    inCall: 'Call in progress',
+  },
   files: {
     size: (bytes: number) => bytes >= 1_000_000
       ? new Intl.NumberFormat('en', { style: 'unit', unit: 'megabyte', maximumFractionDigits: 1 }).format(bytes / 1_000_000)

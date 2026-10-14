@@ -89,7 +89,8 @@
       case 'Incoming': return m.friends.incoming;
       case 'Outgoing': return m.friends.outgoing;
       case 'Blocked': return m.friends.blocked;
-      default: return statusTextOf(u) || m.presence[presenceOf(u)];
+      // Voice states cover only channels this account can see (client.md section 7).
+      default: return store.voiceChannelOf(u.id) ? m.voiceState.inVoice : statusTextOf(u) || m.presence[presenceOf(u)];
     }
   }
 </script>
