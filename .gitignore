@@ -11,3 +11,5 @@ dist/
 build/
 .svelte-kit/
 apps/web/static/app/emoji/
+# Claude Code worktrees of parallel sessions.
+.claude/worktrees/

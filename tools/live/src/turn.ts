@@ -5,7 +5,7 @@
  * Chrome may report the candidate as prflx rather than relay (m3-plan.md), so the check doesn't look at the type.
  *
  * Usage: node tools/live/src/turn.ts <persona>          a seeded persona on a dev stack
- *        TURN_EMAIL=… TURN_PASSWORD=… node tools/live/src/turn.ts   any account, typed by whoever runs it
+ *        TURN_EMAIL=… TURN_PASSWORD=… pnpm live:prod tools/live/src/turn.ts   production, an account typed by whoever runs it
  */
 import { chromium } from 'playwright-core';
 import { loadState } from '../../seed/src/config.ts';

@@ -4,9 +4,9 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const SEED_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
-export const BACKEND = process.env.CONCORD_BACKEND ?? 'https://concord.jaalip.com';
-/** SSH destination for the VPS: Jaakko's login through the public hostname, so no address is written down. */
-export const SSH_TARGET = process.env.CONCORD_SSH ?? 'jaakko@concord.jaalip.com';
+/** The stack the seed talks to: the dev stack unless CONCORD_HOST says otherwise (tools/target.ts). */
+import { BACKEND } from '../../target.ts';
+export { BACKEND, SSH as SSH_TARGET } from '../../target.ts';
 /** Where the stack lives on the VPS. */
 export const REMOTE_DIR = '~/stoat/concord';
 
@@ -49,7 +49,11 @@ export interface SeedState {
 }
 
 export function loadState(): SeedState | null {
-  return existsSync(STATE_FILE) ? (JSON.parse(readFileSync(STATE_FILE, 'utf8')) as SeedState) : null;
+  if (!existsSync(STATE_FILE)) return null;
+  const state = JSON.parse(readFileSync(STATE_FILE, 'utf8')) as SeedState;
+  // Persona IDs from another stack would send the checks to the wrong accounts, or to none.
+  if (state.backend !== BACKEND) throw new Error(`${STATE_FILE} was seeded on ${state.backend}, not ${BACKEND}. Run pnpm seed --reset first.`);
+  return state;
 }
 
 export function saveState(state: SeedState): void {

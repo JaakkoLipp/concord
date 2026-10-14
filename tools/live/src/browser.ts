@@ -4,7 +4,7 @@
  */
 import { chromium, type Browser, type ConsoleMessage, type Page } from 'playwright-core';
 
-export const APP = process.env.CONCORD_APP ?? 'https://concord.jaalip.com/app';
+export { APP } from '../../target.ts';
 
 export interface PageProblems { failed: string[]; console: string[] }
 

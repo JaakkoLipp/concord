@@ -2,7 +2,7 @@
  * HTTP/3 check: Caddy serves /app over QUIC on UDP 443 and advertises it in Alt-Svc.
  * Chromium is told to use QUIC from the first request, because a normal browser keeps reusing its open HTTP/2
  * connection and switches only on a later connection, which a short check can't wait for.
- * Usage: node tools/live/src/h3.ts
+ * Usage: node tools/live/src/h3.ts (dev stack), pnpm live:prod tools/live/src/h3.ts (production)
  */
 import { chromium } from 'playwright-core';
 import { APP } from './browser.ts';

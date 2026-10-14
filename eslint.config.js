@@ -3,7 +3,7 @@ import globals from 'globals';
 import ts from 'typescript-eslint';
 
 export default ts.config(
-  { ignores: ['**/node_modules/', '**/build/', '**/dist/', '**/.svelte-kit/', 'packages/stoat/fixtures/', 'spikes/'] },
+  { ignores: ['**/node_modules/', '**/build/', '**/dist/', '**/.svelte-kit/', 'packages/stoat/fixtures/', 'spikes/', '.claude/'] },
   ...ts.configs.recommended,
   ...svelte.configs.recommended,
   {

@@ -1,5 +1,5 @@
 /**
- * `pnpm deploy:stack`: copy deploy/ to ~/stoat/concord on the VPS and apply it.
+ * `pnpm deploy:stack` (dev) or `pnpm deploy:stack:prod`: copy deploy/ to ~/stoat/concord on that stack and apply it.
  *
  * Server-only files there (host.env, livekit.env, .allow-wipe, web/, spike/) are never touched: no --delete.
  * Don't run it around 03:30: it rewrites backup.sh in place, which a running backup may still be reading.
@@ -10,11 +10,12 @@
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { SSH } from '../target.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const SSH = process.env.CONCORD_SSH ?? 'jaakko@concord.jaalip.com';
 const run = (cmd: string, args: string[]) => execFileSync(cmd, args, { cwd: ROOT, stdio: 'inherit' });
 
+console.log(`applying deploy/ on ${SSH}`);
 run('rsync', ['-a', '--inplace', '--itemize-changes', '--exclude', 'web/', '--exclude', 'spike/', 'deploy/', `${SSH}:stoat/concord/`]);
 run('ssh', [SSH, [
   'set -e; cd ~/stoat',

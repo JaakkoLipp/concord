@@ -1,6 +1,6 @@
 # Concord: client specification
 
-Status: signed off 2026-10-12, layer 3. Covers M1 and M2 in detail, and M4 voice at outline level.
+Status: signed off 2026-10-12, layer 3. Covers M1 and M2 in detail. Section 10, voice for M4, signed off with m4-plan.md on 2026-10-14.
 Read [architecture.md](architecture.md) first. This document says how the client is built. The architecture says why.
 
 ## 1. Scope
@@ -29,7 +29,7 @@ Every runtime dependency must earn its place. The list below is the whole budget
 | Composer editor | CodeMirror 6: `@codemirror/state`, `view` and `commands`. MIT. Chosen over our own editor on 2026-10-12 (m2a-plan.md decision 1). About 87 KB gzipped. | Lazily, when the composer first mounts |
 | Code highlighting | highlight.js core with a short language list | Lazily, on first code block |
 | Math | KaTeX | Lazily, on first `$$` block |
-| Voice | `livekit-client` and the RNNoise processor | Lazily, on first voice join |
+| Voice | `livekit-client`, about 144 KB gzipped, and `@sapphi-red/web-noise-suppressor` for RNNoise, MIT, about 220 KB of wasm and worklet | Lazily, on first voice join |
 
 Not used: a component library, a state library, a date library, a virtual-list library, a markdown library, Storybook. The platform covers dates and plurals through `Intl`. The rest is ours, because it is small and central to the feel.
 
@@ -391,21 +391,247 @@ Each is built to the measured sizes above.
 
 These follow the same tokens. Agents propose them in the live client for Jaakko's review.
 
-## 10. Voice, outline for M4
+## 10. Voice and screen share
 
-Voice code loads only when the user first joins a channel. A detailed voice spec precedes M4. The outline:
+Written for M4 with [m4-plan.md](m4-plan.md), signed off 2026-10-14. The Stoat facts come from reading 0.15.5's source. M4's task 2 checks each on the dev stack, and this section is corrected where they differ. Architecture sections 5.1 to 5.4 say why. This section says how.
 
-- **Controller**: one voice session at a time. It joins through Stoat, connects LiveKit, and maps LiveKit participants to domain users.
-- **Settings**, matching the reference screenshot:
-  - input and output device, with input and output volume,
-  - a microphone test with a level meter,
-  - an input sensitivity threshold, either automatic or manual,
-  - noise suppression: RNNoise, or off,
-  - echo cancellation,
-  - push-to-talk or voice activity.
-  Krisp is not available outside LiveKit's cloud, so RNNoise replaces it.
-- **Input sensitivity** is ours to build. A level meter on the microphone track gates transmission with a short hold time, so word endings aren't clipped.
-- **Screen share** follows section 5.2 of the architecture document, with a quality picker and a stats overlay.
+Voice code loads only on the first join, through `import()`: `livekit-client` is about 144 KB gzipped and can't be tree-shaken.
+
+### 10.1 Who is in voice
+
+**From Stoat**, for every channel the user can see:
+- **At start**: `Ready.voice_states`, a list of `{id: channel, participants}`. It holds only channels with someone in them.
+- **Events**:
+  - `VoiceChannelJoin {id, state}`,
+  - `VoiceChannelLeave {id, user}`,
+  - `VoiceChannelMove {user, from, to, state}`,
+  - `UserVoiceStateUpdate {id, channel_id, data}`, where `data` holds only the flags that changed.
+- **A participant** is `{id, joined_at, is_receiving, is_publishing, screensharing, camera}`.
+  - `is_publishing` means "microphone published and not muted".
+  - `screensharing` covers screen video and screen audio together.
+  - `is_receiving` never changes, so others can't see a deafen.
+- **Server mute and deafen** are the member's `can_publish` and `can_receive`, false when set. The client shows them in red.
+- **Timing**: joins and leaves arrive only after LiveKit's webhooks reach voice-ingress, about a second late.
+
+**The store** keeps voice states by channel, applied as idempotent upserts. A user is in one channel at most, so a join elsewhere removes them from the previous one. That covers a missed leave.
+
+**Inside the call the user is in**, LiveKit is the truth for tracks, speaking and quality (architecture 5.4). Stoat's list still decides who shows under the channel. LiveKit adds the speaking rings, because Stoat doesn't send speaking to anyone outside the call.
+
+### 10.2 Joining and leaving
+
+1. **Node**: the first LiveKit node from `GET /api/`, `worldwide` on our stacks.
+2. **Token**: `POST /channels/{id}/join_call` with `{node, force_disconnect: true}`. The token is valid for 10 seconds.
+   - `force_disconnect` ends this account's call on any other device or stale session. Without it Stoat answers `AlreadyConnected`.
+3. **Connect at once** to `wss://<our origin>/livekit`, never to the URL Stoat returns.
+   - **Room options**:
+     - `adaptiveStream` with `pixelDensity: 'screen'`,
+     - `dynacast` on,
+     - `webAudioMix` on in Chromium only, for volumes above 100 % (section 10.5).
+   - **Never send LiveKit data.** voice-ingress disconnects anyone who does. Nothing in the SDK sends data unless called, so the voice module never imports `publishData`, chat, RPC, text streams or data tracks. A lint rule enforces it.
+4. **Publish** our own processed microphone track (section 10.4) with `publishTrack`, as source `microphone`, with DTX and RED on.
+
+**Errors**: a toast for each of these:
+- no Connect permission,
+- the channel full, `CannotJoinCall`,
+- LiveKit unavailable,
+- microphone access refused. Joining still works without a microphone, to listen.
+
+**Rate limit**: `join_call` shares the 15-per-10-seconds bucket of `/channels/{id}/…` with sending messages, so rejoins back off (section 10.7).
+
+**Switching channels**: join the new one. `force_disconnect` ends the old call.
+
+**Leaving**: the disconnect button, or closing the tab, through LiveKit's `disconnectOnPageLeave`. A reload doesn't rejoin.
+
+**A second device**: LiveKit identifies participants by user ID, so joining on device B ends the call on device A. A shows "Joined from another device" and doesn't rejoin.
+
+**Sounds**: join, leave, mute, unmute, deafen, undeafen, someone joining or leaving your call, and the ring.
+- They are short tones, generated with Web Audio, so there are no sound files to license.
+- The join and leave sounds are held back while the call is reconnecting, because a full restart re-announces every participant.
+
+**Idle**: being in a call counts as activity (section 7).
+
+### 10.3 Screens and controls
+
+**Channel sidebar**, after `docs/reference/discord-voice-channel.png`. A voice channel with people in it:
+- **The icon turns green** (`--status-online`), and an elapsed timer shows at the row's right edge. The timer counts from the earliest `joined_at` among the people now in it, and resets when the channel empties.
+- **Participants are listed under it**:
+  - each has a 24 px avatar and display name,
+  - then icons for muted, server-muted or server-deafened, camera, and a "LIVE" badge while screen sharing,
+  - a green ring around the avatar while speaking, in the user's own call only.
+- **A user limit** shows as "2/5".
+- **Clicking a voice channel** joins it and opens the call view. When already in it, the click only opens the call view.
+
+**Voice panel** above the user dock while connected:
+- "Voice connected" in green, or "Reconnecting…" in `--status-idle`,
+- a connection-quality icon whose tooltip gives ping and packet loss,
+- the channel and server name, a link back to the call view,
+- buttons for disconnect, camera and share screen.
+
+**User dock**: the microphone and headphones buttons turn into mute and deafen.
+- Deafen also mutes.
+- Both show a red slash when on.
+- Both work outside a call too, and apply at the next join.
+
+**Call view**, in the conversation column of a voice channel, or at the top of a DM:
+- **Tiles**:
+  - a grid with one tile per participant, plus one per camera or screen share,
+  - an audio tile shows the avatar, name, speaking ring and mute icon,
+  - clicking a tile focuses it, and double-clicking makes it fullscreen.
+- **Bottom bar**: microphone, camera, share screen and disconnect.
+- **The channel's text chat** opens as a side panel from the header's chat button, where the member list would be.
+- **Not yet in the call**: the view shows who is in it, with a Join button.
+
+**Participant menu**, by right-click or long press on a tile or sidebar row:
+- a volume slider, 0 to 200 % in Chromium and 0 to 100 % elsewhere,
+- "Mute for me",
+- "Profile".
+
+Volumes are saved on the device by user ID.
+
+**Screen tile menu**:
+- **Quality**: Auto, 1080p, 720p or 360p. Auto lets adaptive streaming choose by tile size.
+- **Stats overlay**:
+  - for a viewer: resolution, frames per second, bitrate, codec, layer, packet loss, jitter and round-trip time,
+  - for the sharer: the encoder, the quality-limitation reason and whether the CPU is limiting.
+
+**DMs and groups**:
+- A call button in the header.
+- The DM list marks a DM with a call in progress.
+- The `call_started` system message, which is already rendered, gets a Join button while the call runs.
+
+**Friends**: "In voice" from the voice states, as section 7 says.
+
+### 10.4 Microphone
+
+**The chain**: built in our own 48 kHz `AudioContext`, because RNNoise needs 48 kHz. It is published as one track:
+
+1. `getUserMedia`:
+   - the chosen device,
+   - echo cancellation from settings,
+   - automatic gain control on,
+   - the browser's own noise suppression and voice isolation off while RNNoise is on, otherwise on.
+2. RNNoise, or a bypass when it is off. It runs `@sapphi-red/web-noise-suppressor` (MIT) in an AudioWorklet, with about 220 KB of wasm and worklet code served from our origin.
+3. Input volume, a gain node.
+4. **The gate**, our own AudioWorklet.
+5. A `MediaStreamDestination`, published with `publishTrack`.
+
+**The gate decides when the microphone transmits**:
+- **Voice activity**:
+  - It opens when the level crosses the threshold.
+  - It closes 300 ms after the level falls back, so word endings aren't clipped.
+  - **Automatic sensitivity** tracks the noise floor and sets the threshold a margin above it.
+  - **Manual sensitivity** is a threshold in dBFS from the settings slider.
+- **Push-to-talk**: it opens while the key is held, and closes 200 ms after release.
+  - A browser only sees keys while the tab has focus, so the gate closes on blur.
+  - Push-to-talk while another window has focus comes with the desktop app in M5.
+- **Why a gain node, not muting**: muting the track signals the server, and every client gets a state event for each word. The gate is silent to the server. LiveKit's speaking detection then simply sees silence.
+
+**Mute** is the track's own `mute()`. Others see it, as `is_publishing` turns false.
+
+**Changing a setting mid-call** rebuilds only the affected node. A device change replaces the source without republishing.
+
+**CSP**: `script-src` gains `'wasm-unsafe-eval'` for RNNoise (section 13). The worklet and wasm load from our origin under `/app`.
+
+### 10.5 Output
+
+- **Output device**: `switchActiveDevice('audiooutput')`. It works in Chromium, and in Firefox without `webAudioMix`. Safari can't choose one, so the setting is hidden there.
+- **Volume**: output volume times each user's volume.
+  - Above 100 % needs `webAudioMix`, so it is Chromium only.
+  - Elsewhere the slider stops at 100 %.
+- **Deafen**:
+  - `setEnabled(false)` on every remote audio publication. The server stops sending audio, and speaking indicators keep working.
+  - It is reapplied on `TrackSubscribed` and `Reconnected`, because a full restart forgets it.
+  - The microphone is muted too.
+
+### 10.6 Screen share and camera
+
+**Before capture**, a small dialog offers:
+- the quality preset,
+- "Share audio", in Chromium only.
+
+Then `createScreenTracks` captures the screen:
+- **Clamping**: resolution up to the preset, clamped so width × height and the aspect ratio stay within the user's tier in `GET /api/`, `limits.new_user` or `limits.default`. voice-ingress disconnects a track over the limit, and new accounts may have a lower one.
+- **Content hint**: `motion`, or `detail` for the Text preset.
+- **Capture options**: `selfBrowserSurface: 'exclude'` and `surfaceSwitching: 'include'`.
+- **Audio**: all processing off, `suppressLocalAudioPlayback` inside the audio options, and `restrictOwnAudio` where supported. It is published with DTX and RED off, in stereo.
+
+**Presets**:
+
+| Preset | Resolution | fps | Max bitrate | Degradation |
+|---|---|---|---|---|
+| 1080p60, the default | 1920 × 1080 | 60 | 8 Mbps | keep framerate |
+| 1080p30 | 1920 × 1080 | 30 | 5 Mbps | keep framerate |
+| 720p30 | 1280 × 720 | 30 | 3 Mbps | keep framerate |
+| Text | source, within the limit | 5 | 3 Mbps | keep resolution |
+
+**Publishing**, from architecture 5.2:
+- **Codec**: H.264 unless Jaakko's encoder runs say otherwise.
+- **Backup codec**: off, unless Linux Firefox can't decode H.264 (M0 run 11).
+- **Simulcast layers** at 720p30 and 360p15 for H.264 and VP8, so throttled viewers step down.
+- **Priority**: high.
+- **Firefox sharers** send one layer. The share dialog says so and recommends Chrome or the desktop app.
+- **The other settings** come from the test page, `spikes/m0-screenshare`, whose runs measured them.
+
+**Camera**:
+- 1280 × 720 at 30 fps, clamped the same way, with LiveKit's default simulcast.
+- The device is chosen in settings, with a preview.
+
+**Viewing**:
+- **Layers**: adaptive streaming picks a layer by tile size, and the tile's quality menu overrides it with `setVideoQuality`.
+- **Tracks**: what is shared comes from LiveKit's tracks. Stoat's `screensharing` flag is used only for the sidebar badge.
+
+### 10.7 Connection quality and reconnects
+
+- **Indicator**: `ConnectionQualityChanged` drives the voice panel's icon. The tooltip reads round-trip time and packet loss from the stats.
+- **Network changes**: LiveKit handles them:
+  - first a resume with an ICE restart,
+  - then a full restart.
+  - Both use the refreshed token that Stoat's LiveKit sends right after joining and every 5 minutes, valid for 10 minutes.
+- **When LiveKit gives up**, the client rejoins through `join_call`:
+  - This applies when the call ends without the user, a second device or a kick ending it.
+  - The rejoin backs off at 1, 2, 5, 10 and 30 seconds, for up to 5 minutes, then shows "Disconnected" with a Rejoin button.
+  - Mute and deafen carry over, and a screen share doesn't.
+- **LiveKit's Monday restart at 05:00** ends every call, and the rule above brings people back.
+
+### 10.8 DM and group calls
+
+- **Starting**: the call button joins the DM's call. Stoat rings everyone else in it and posts the `call_started` message. While the caller is alone, the call area says "Calling…".
+- **Ringing**: `VoiceCallUpdate {ended: false}` from someone else shows a ringing card with the caller's avatar, Join and Ignore.
+  - **Sound**: a ringtone loops.
+  - **Hidden tab**: a browser notification, following the notification settings in section 8.
+- **The ring stops** on the first of:
+  - Join or Ignore,
+  - `VoiceCallUpdate {ended: true}`,
+  - our own `VoiceChannelJoin` in that call from another device,
+  - 30 seconds.
+- **Declining** tells the caller nothing, because Stoat has no decline.
+
+### 10.9 Voice and video settings
+
+A settings section after `docs/reference/discord-voice-settings.png`. It is stored per device in `localStorage` under `concord:voice`, and not synced, because devices differ.
+
+- **Devices**: microphone and speaker, with input and output volume.
+- **Mic test**: a button that runs the chain from section 10.4 and plays it back, with a level meter. It works without joining a call.
+- **Input mode**: voice activity, or push-to-talk with its key.
+- **Input sensitivity**:
+  - "Automatic" on or off,
+  - when off, a slider over the live level, yellow below the threshold and green above.
+- **Noise suppression**: RNNoise, the default, or off.
+- **Echo cancellation**: on by default.
+- **Automatic gain control**: on by default, under "Advanced".
+- **Camera**: the device, with a preview.
+- **Screen share**: the default preset, and the stats overlay on or off.
+
+Discord's input profiles, Krisp, attenuation and its QoS switch are left out.
+
+### 10.10 Not in M4
+
+- **Voice moderation**: server mute, deafen, move and disconnect.
+  - Stoat 0.15.5 applies them to the moderator's own account instead of the target's. This is from reading the source and goes to the upstream list.
+  - The client still shows server mute and deafen set elsewhere.
+- **Screen-share audio from the desktop app, and on Linux**: M5.
+- **Push-to-talk while another window has focus**: M5.
+- **Not planned**: picture-in-picture, soundboard, activities and voice channel status text.
 
 ## 11. Accessibility and keyboard
 
@@ -427,6 +653,7 @@ A typed message catalogue of our own: one TypeScript module per locale, keys che
   - Fonts from our origin and `data:`, because Vite inlines KaTeX's smallest fonts.
   - Images and media from our origin and `data:` and `blob:`. External images come through Stoat's January proxy on our origin.
   - WebSocket connections to our origin.
+  - WebAssembly compilation (`'wasm-unsafe-eval'`) for RNNoise in voice, from M4 (section 10.4).
   - `frame-ancestors 'none'` and `form-action 'self'`.
 - No `innerHTML` with user content anywhere. A lint rule enforces it.
 - Session token in IndexedDB. Logout clears it and every cached store.

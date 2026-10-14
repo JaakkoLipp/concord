@@ -10,8 +10,11 @@
     "seed": "node tools/seed/src/main.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "deploy:web": "node tools/deploy/web.ts",
+    "deploy:web": "CONCORD_HOST=concord.jaalip.com node tools/deploy/web.ts",
+    "deploy:web:dev": "node tools/deploy/web.ts",
     "deploy:stack": "node tools/deploy/stack.ts",
+    "deploy:stack:prod": "CONCORD_HOST=concord.jaalip.com node tools/deploy/stack.ts",
+    "live:prod": "CONCORD_HOST=concord.jaalip.com node",
     "dev": "pnpm --filter @concord/web dev",
     "verify": "node tools/verify.ts"
   },

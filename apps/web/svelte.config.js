@@ -1,5 +1,8 @@
 import adapter from '@sveltejs/adapter-node';
 
+// The stack this build runs on, for its CSP: the dev stack unless CONCORD_HOST names another (tools/target.ts).
+const host = process.env.CONCORD_HOST ?? 'dev.concord.jaalip.com';
+
 /** @type {import('@sveltejs/kit').Config} */
 export default {
   kit: {
@@ -16,7 +19,7 @@ export default {
         'img-src': ['self', 'data:', 'blob:'],
         'media-src': ['self', 'blob:'],
         'font-src': ['self', 'data:'],
-        'connect-src': ['self', 'wss://concord.jaalip.com'],
+        'connect-src': ['self', `wss://${host}`],
         'frame-ancestors': ['none'],
         'base-uri': ['self'],
         'form-action': ['self'],

@@ -1,11 +1,13 @@
 /**
  * The front door (m3-plan.md task 7): what each public path on the main domain and on ref.<domain> answers.
- * Usage: node tools/live/src/routes.ts
+ * Usage: node tools/live/src/routes.ts (dev stack), pnpm live:prod tools/live/src/routes.ts (production).
+ * pnpm deploy:web and deploy:web:dev run it after deploying.
  */
 import { APP } from './browser.ts';
 
 const origin = new URL(APP).origin;
 const ref = origin.replace('://', '://ref.');
+console.log(`checking ${origin}`);
 const cases: [string, number, string?][] = [
   [`${origin}/`, 302, '/app'],
   [`${origin}/login`, 302, '/app'],

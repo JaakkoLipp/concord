@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 
 // Served by Caddy at https://concord.jaalip.com/spike/ (docs/dev-environment.md section 7).
-const backend = process.env.CONCORD_BACKEND ?? 'https://concord.jaalip.com';
+const backend = process.env.CONCORD_BACKEND ?? `https://${process.env.CONCORD_HOST ?? 'dev.concord.jaalip.com'}`;
 const rule = (ws = false) => ({ target: backend, changeOrigin: true, ws });
 
 export default defineConfig({

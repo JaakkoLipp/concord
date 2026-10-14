@@ -1,3 +1,4 @@
+import { sameHost } from '../../target.ts';
 import { REMOTE_DIR } from './config.ts';
 import { q, ssh } from './ssh.ts';
 
@@ -8,6 +9,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * seed can never create personas or servers next to real people, even on an empty database.
  */
 export async function assertDevStack(): Promise<void> {
+  // The check runs over SSH, while the seed and the live checks use the API and the app: all must be one stack.
+  sameHost();
   const out = await ssh(`test -f ${REMOTE_DIR}/.allow-wipe && echo dev || echo production`);
   if (out.trim() !== 'dev') throw new Error(`${REMOTE_DIR}/.allow-wipe is missing: this is not a dev stack, so the seed won't run here`);
 }
