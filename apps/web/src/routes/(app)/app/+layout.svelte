@@ -13,6 +13,8 @@
   const onLogin = $derived(page.url.pathname.startsWith('/app/login'));
   // An invite shows its preview signed out, so a new member sees where it leads before logging in.
   const onInvite = $derived(page.url.pathname.startsWith('/app/invite/'));
+  // A welcome link sets a password before there is any session (m3-plan.md task 2).
+  const onWelcome = $derived(page.url.pathname.startsWith('/app/welcome/'));
 
   /** Where login returns to: only a path inside the app, never the login page or another origin. */
   function next(url: URL): string | null {
@@ -25,7 +27,7 @@
   });
 
   $effect(() => {
-    if (app.status === 'signed-out' && !onLogin && !onInvite) {
+    if (app.status === 'signed-out' && !onLogin && !onInvite && !onWelcome) {
       const here = page.url.pathname + page.url.search;
       // eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve() plus a query string
       void goto(`${resolve('/app/login')}${here === '/app' ? '' : `?next=${encodeURIComponent(here)}`}`, { replaceState: true });
@@ -38,7 +40,7 @@
 <!-- Admin saves can wait a while for Stoat's rate limit: closing the tab meanwhile would lose them. -->
 <svelte:window onbeforeunload={(e) => { if (app.session?.admin.pending) e.preventDefault(); }} />
 
-{#if onLogin || onInvite || app.status === 'signed-in'}
+{#if onLogin || onInvite || onWelcome || app.status === 'signed-in'}
   {@render children()}
 {:else}
   <div class="splash" aria-live="polite">{m.app.loading}</div>

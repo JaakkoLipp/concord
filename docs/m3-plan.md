@@ -37,36 +37,28 @@ Read-only checks of the VPS and DNS, one reversible TURN probe on the VPS, and f
 
 A Sonnet challenger reviewed the first draft, and this version includes its fixes.
 
+**Changed after sign-off, 2026-10-14**: Jaakko can't use Scaleway or another outside mail provider, and the Storage Box waits until later.
+- **No email in M3.** Production runs without an SMTP server, so Stoat creates accounts already verified. `account-link.sh` writes a one-time password link into the account, and Jaakko sends that link to the person. The new task 2 has the details. Real email moves to M6: Cloudflare Email Sending through a small bridge, or our own sender once Hetzner unblocks port 25.
+- **Backups go to the VPS's own disk.** The Storage Box comes later as a second copy.
+
 ## Jaakko's part, in order
 
-Items 1 to 4 can be done now, in any order. Items 5 to 8 come when a task asks. Added monthly costs come to about €7: €3 for the floating IP, about €3.20 for the Storage Box, and under €1 for Scaleway.
+Items 2 and 3 can be done now, in any order. Items 5 to 8 come when a task asks. Added monthly cost: €3 for the floating IP.
 
-1. **Scaleway Transactional Email**:
-   1. Create an account, a personal one is fine, and add a card. They place a €1 hold.
-   2. In the default project, open Transactional Email and add the domain `concord.jaalip.com`.
-   3. Add the records the console shows in Cloudflare, all "DNS only": SPF and DKIM as TXT records, an MX record, and DMARC at `_dmarc.concord`. If the console offers no DMARC value, use `v=DMARC1; p=quarantine`.
-   4. Click Verify. Verification can take up to 48 hours.
-   5. Create an IAM API key limited to Transactional Email on that project. Keep the project ID and the secret key in your password manager.
-   6. In task 2 you run one command on the VPS that asks for both values, so they never pass through the chat or the repo.
+1. Dropped: Scaleway. There is no email in M3, as described above.
 2. **Hetzner console**:
    1. **Floating IP**: done on 2026-10-14. The address lives only in `host.env` on the server.
-   2. **DNS**: in Cloudflare, add these A records, "DNS only":
-      - `turn.concord` → the floating IP,
-      - `ref.concord` → the main IP, for task 7.
+   2. **DNS**: done on 2026-10-14. `turn.concord` points at the floating IP and `ref.concord` at the main IP.
    3. **Firewall**: Firewalls → Create "concord":
       - Inbound TCP 22, 80, 443 and 7881.
       - Inbound UDP 443, 3478, 30000-30100 and 50000-50100.
       - Inbound ICMP.
       - Apply it to the server.
-   4. **Storage Box**: BX11 in Helsinki, about €3.20 a month.
-      - Turn on SSH support.
-      - Turn on weekly automatic snapshots. They protect the backups even from someone who controls the VPS.
-      - In task 4 you run one command on the VPS that installs its key, typing the box's password once.
-3. **A second mailbox**: Jaakko's other Outlook address, so the spam check covers Gmail and Outlook. A `+` or dotted variant won't work, because Stoat treats those as the same address. It serves as your second account for the device checks and the hand-made account test.
+   4. **Storage Box**: later, as a second copy of the backups.
+3. **A second address**: Jaakko's other Outlook address, for a second account. A `+` or dotted variant won't work, because Stoat treats those as the same address. No mail is sent to it in M3.
 4. Dropped: healthchecks.io. Decision 9 explains.
 5. **Your accounts after the wipe**, in task 5:
-   - Create your own account and your second-mailbox account with one command each.
-   - Verify both through the mail.
+   - Make a link for your own account and one for your second address, with one command each, and set both passwords through them.
    - Turn on TOTP on your main account.
    - Create the community server in our client.
    - Post a few messages and an image, and set an avatar. The restore drill checks these.
@@ -78,7 +70,7 @@ Items 1 to 4 can be done now, in any order. Items 5 to 8 come when a task asks. 
 8. **Testers**: at least three people besides you, on different networks, for task 8.
    - At least one joins from a phone on mobile data.
    - Ideally one is on a restrictive network, such as a workplace or a school.
-   - Create each person's account with one command, so their addresses never reach the chat or the repo. Book an evening of about two hours.
+   - Make each person's link with one command, so their addresses never reach the chat or the repo, and send it to them yourself. Book an evening of about two hours.
 
 ## Decisions
 
@@ -88,7 +80,7 @@ Items 1 to 4 can be done now, in any order. Items 5 to 8 come when a task asks. 
    - A tester joins in for the friend request, DM and group checks, by text, on any day after task 7.
    - M2 is signed off when these pass, and milestones.md says so.
    - Recommended, because nothing else needs the dev data. The cost: a bug found after the wipe is reproduced on production or on M4's dev stack, not with seeded data.
-2. **Relay: Scaleway Transactional Email**, as above. Fallback: Lettermint.
+2. **No email in M3; accounts get password links instead.** This replaces the Scaleway relay. Real email waits for M6.
 3. **TURN layout**:
    - TLS on 443 on the floating IP.
    - UDP 3478 and the relay ports 30000–30100 on the main IP.
@@ -108,7 +100,7 @@ Items 1 to 4 can be done now, in any order. Items 5 to 8 come when a task asks. 
    - Task 3's reboot test proves the floating IP and the whole stack come back on their own.
    - The cost: a reboot of about two minutes, roughly monthly.
    - Recommended.
-9. **Monitoring in M3 is only a failure mail**: the backup script emails Jaakko through the relay when a backup fails or the disk is over 85% full. The recipient is in `host.env`. Jaakko dropped healthchecks.io, so a timer that never fires goes unnoticed. External uptime checks wait for M8, as milestones.md plans.
+9. **No alerting in M3.** With no email, a failed backup or a disk over 85% full is written to the system log under the `concord` tag, and `deploy/status.sh` shows the last backup and the disk use. External monitoring waits for M8, as milestones.md plans.
 10. **Backups keep 7 daily, 4 weekly and 6 monthly snapshots.** The restic password lives on the VPS and in your password manager. Without it, the backups can't be read, and it can't usefully live inside them.
 11. **Fix the `/app` 404 in M3**, because testers will hit it. Small.
 
@@ -135,17 +127,22 @@ The default order is below. Task 1 needs nothing from Jaakko, and the others sta
   - The probe's direct voice join still connects.
   - A direct account-create call from WSL gets 403.
 
-### 2. The email relay (needs items 1 and 3)
+### 2. Accounts without email
 
-- **`deploy/set-smtp.sh`**: asks for the project ID and secret key. It writes `[api.smtp]` for `smtp.tem.scaleway.com` on 587 with STARTTLS from `noreply@concord.jaalip.com`, then restarts `api`.
-- **Test on the dev stack**:
-  1. Jaakko creates an account for the second mailbox.
-  2. The mail must reach the inbox, not spam, with SPF, DKIM and DMARC passing.
-  3. Jaakko clicks the link in the received mail.
-  4. Jaakko runs "Forgot password" once.
-- **Records**: results record pass or fail, never headers or addresses.
-- **From here on**, the seed can't create accounts on this stack, since mail no longer reaches Mailpit. Nothing needs it before the wipe.
-- **Done when** both mails reach the inbox and both links work.
+- **Production has no SMTP server.** `[api.smtp]` keeps `host = ""`, so Stoat creates accounts already verified and sends nothing. Stoat's own "Forgot password" then fails, and deleting an account in Stoat's client happens at once, with no confirmation mail.
+- **`deploy/account-link.sh <email>`**:
+  - Creates the account with a random, unseen password if it doesn't exist yet.
+  - Writes a one-time password-reset token into the account, valid for 7 days. Stoat's own reset endpoint accepts it, and its upstream test does the same thing.
+  - Prints `https://<domain>/app/welcome/<token>`, optionally with `?invite=<code>`.
+  - Run for an existing account, it gives a fresh link, so it is also Jaakko's "forgot password" for someone.
+- **`/app/welcome/<token>` in our client**:
+  - The person chooses a password, which goes through `PATCH /auth/account/reset_password`.
+  - Then they log in, pick a username, and continue to the invite if the link had one.
+  - An expired or used token says to ask for a new link.
+- **New check**: `tools/live/src/welcome.ts` walks through a link for a throwaway account on the dev stack.
+- **Done when**:
+  - A link sets the password, and the person ends in the invited server.
+  - A used link is refused.
 
 ### 3. Floating IP, firewall and TURN (needs item 2)
 
@@ -168,7 +165,7 @@ The default order is below. Task 1 needs nothing from Jaakko, and the others sta
   - The reboot and firewall checks pass.
   - `turn.ts` shows a selected candidate with `relayProtocol: "tls"` from the `turns:` URL, and video bytes flowing.
 
-### 4. Backups (needs item 2.4 and task 2)
+### 4. Backups
 
 - **Install**: restic, from Ubuntu's packages on the VPS.
 - **`deploy/backup.sh`** runs nightly at 03:30:
@@ -178,24 +175,20 @@ The default order is below. Task 1 needs nothing from Jaakko, and the others sta
     - the netplan file and Caddy's data.
   - The committed files in `deploy/` are not backed up, because git has them.
   - Retention per decision 10, and a weekly `restic check`.
-  - The failure mail and the disk check, per decision 9.
-- **Access**: a Storage Box sub-account limited to one directory. Root on the VPS uses its own SSH key. Jaakko installs the key with:
-
-  ```bash
-  ssh -t jaakko@concord.jaalip.com 'sudo ~/stoat/concord/install-storagebox-key.sh'
-  ```
+  - The disk check and the log entries, per decision 9.
+- **Where**: a restic repository on the VPS's own disk, under `/var/backups/concord`, owned by root. The Storage Box is added later as a second repository. Until then, a backup doesn't survive losing the VPS.
 
 - **Done when**:
   - The first snapshot is listed and `restic check` passes.
-  - A forced failure emails Jaakko.
+  - A forced failure shows in the system log and in `status.sh`.
 
 ### 5. Wipe and bootstrap (needs Jaakko's go and task 2)
 
 1. Run `reset-data.sh` without seeding. It also resets `restrict_server_creation` to the placeholder that matches nobody.
 2. Delete `.allow-wipe`, and run `dc up -d --remove-orphans` so Mailpit is removed.
-3. Jaakko creates their own account, verifies it, sets a password with "Forgot password", picks a username and turns on TOTP.
+3. Jaakko makes a link for their own account, sets the password through it, picks a username and turns on TOTP.
 4. Set `restrict_server_creation` to Jaakko's ID and record the change.
-5. Jaakko creates the second-mailbox account the same way. That is the hand-made flow, end to end. Then confirm it gets an error creating a server and sees no create or invite controls.
+5. Jaakko makes the second account the same way. That is the hand-made flow, end to end. Then confirm it gets an error creating a server and sees no create or invite controls.
 6. Jaakko creates the community server in our client at `/app`. Then check that Everyone lacks `InviteOthers` and Admin is first with every permission.
 7. Jaakko invites the second account, then posts a few messages and an image and sets an avatar.
 - **Done when**:
@@ -207,11 +200,9 @@ The default order is below. Task 1 needs nothing from Jaakko, and the others sta
 
 1. **Prepare the drill machine**:
    - Set it up with `server-setup.sh` and the self-hosted repo at `9af5e90`.
-   - Give it the restic password and a read-only Storage Box sub-account for the same directory, both deleted with the machine.
-   - restic runs with `--no-lock`, because read-only access can't write lock files.
+   - Copy last night's restic repository and its password from the VPS. Both are deleted with the machine.
 2. **Restore last night's snapshot.**
 3. **Change these before the first start**:
-   - `[api.smtp]` blanked, so it can't mail anyone.
    - `pushd` stopped, so it can't push to real browsers.
    - `host.env` with its own addresses and `TURN=off`.
    - The hostname `drill.concord.jaalip.com`.
@@ -238,12 +229,10 @@ Jaakko wants invites working before testers join. This pulls part of M6 forward,
   - `/invite/*` redirects to `/app/invite/*`, so links made in our client work as they are.
   - `/` redirects to `/app`.
 - **Stoat's client moves to `ref.concord.jaalip.com`**, served by the same `web` container.
-  - The verification and reset links in Stoat's mails, `/login/verify/*` and `/login/reset/*`, redirect there until M6 builds our own pages.
   - A probe first checks that Stoat's client works from the other origin: logging in, the socket, an upload and a voice join.
 - **New check**: `tools/live/src/invite.ts` runs the invite flow as the second account, logged out and logged in.
 - **Done when**:
   - An invite link opened on a phone, by an account that isn't a member yet, ends in the server.
-  - The mail links still verify and reset.
   - Stoat's client works at `ref.`.
 
 ### 8. The tester evening (needs items 7 and 8, and tasks 3, 5 and 7)

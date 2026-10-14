@@ -247,6 +247,8 @@ export interface Backend {
   /** A role's override in a channel, or the channel's default with `'default'`. Allow 0 and deny 0 clears it. */
   setChannelPermissions(channel: Id, role: Id | 'default', permissions: Override): Promise<void>;
   createInvite(channel: Id): Promise<Invite>;
+  /** Set a password with a one-time token from a welcome link (m3-plan.md task 2); works signed out. */
+  setPasswordWithToken(token: string, password: string): Promise<void>;
   /** An invite's preview; works signed out. */
   invite(code: string): Promise<InvitePreview>;
   /** Join a server through an invite. The server arrives over the socket as well. */

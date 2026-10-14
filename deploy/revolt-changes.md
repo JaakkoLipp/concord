@@ -19,17 +19,17 @@ video_resolution = [2560, 1440]
 
 Stoat sends mail itself with lettre (m3-plan.md). `use_starttls = true` gives required STARTTLS. Never set `use_tls = false`: it turns encryption off altogether, STARTTLS included.
 
-**Production**: Scaleway Transactional Email, written by `concord/set-smtp.sh`, which asks for the project ID and secret key. The values below are placeholders.
+**Production, from M3**: no email (m3-plan.md task 2). An empty `host` makes Stoat create accounts already verified and send nothing. People get one-time password links from `concord/account-link.sh` instead. Stoat's own "Forgot password" fails with `OperationFailed`, and account deletion in Stoat's client happens at once, without a confirmation mail.
 
 ```toml
 [api.smtp]
-host = "smtp.tem.scaleway.com"
-port = 587
-username = "<Scaleway project ID>"
-password = "<Scaleway secret key>"
+host = ""
+username = ""
+password = ""
 from_address = "noreply@concord.jaalip.com"
-use_starttls = true
 ```
+
+Real email waits for M6: Cloudflare Email Sending through a small bridge, because its SMTP uses port 465 and Hetzner blocks it, or our own sender once Hetzner unblocks port 25. In that case use `use_starttls = true` on 587, as Stoat's lettre setup requires.
 
 **Dev stack**: Mailpit, which `dev.compose.yml` adds when `.allow-wipe` exists. Stoat always sends credentials, so Mailpit accepts any login without TLS.
 

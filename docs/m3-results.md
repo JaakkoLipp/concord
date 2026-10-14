@@ -47,9 +47,17 @@ Plan: [m3-plan.md](m3-plan.md). Written task by task. The decision gate verdict 
 
 **Seen at every boot**: `api`, `crond`, `pushd` and `voice-ingress` panic about seven times with "Failed to connect to RabbitMQ" and restart. Docker brings containers back without Compose's startup order. They settle by themselves in about 40 seconds. No repair is needed, but it is noted for decision gate criterion 3.
 
-**Waiting for**:
-- the `turn.concord` DNS record, for the certificate,
-- the Hetzner firewall, for the firewall check.
+**TURN on, 2026-10-14**, once `turn.concord` was in DNS:
+- Caddy obtained the certificate from Let's Encrypt over HTTP-01 on the floating IP, at the expected path.
+- With `TURN=on`, LiveKit started TURN over TLS on 443 of the floating IP, and over UDP on 3478 of the main IP.
+
+| Check | Result |
+|---|---|
+| Certificate on `<floating IP>:443` | `CN = turn.concord.jaalip.com`, Let's Encrypt, valid to January 2027 |
+| `tools/live/src/turn.ts`, relay only, `turns:` server only | Connected through `turns:turn.concord.jaalip.com:443?transport=tcp` with `relayProtocol: tls`. 5.2 MB of video in 12 s. |
+| `restart-livekit.sh`, run by hand | Certificate found, LiveKit restarted, logged under `concord` |
+| Direct voice join after the restart | Connected over UDP, without the relay |
+| Firewall | **No Hetzner Cloud firewall yet.** A throwaway container on port 9999 answered from outside on the main and the floating IP. Docker-published ports bypass ufw, so only the cloud firewall can stop them. Waiting for Jaakko to create it. |
 
 ## Task 7: invites, first part, 2026-10-14
 
@@ -78,3 +86,29 @@ Built before the wipe, so it could be checked with personas on the dev stack.
 All pass.
 
 **Still to do, once `ref.concord` is in DNS**: `/` redirects to `/app`, Stoat's client moves to `ref.concord.jaalip.com`, and Stoat's mail links redirect there.
+
+## Task 2: accounts without email, 2026-10-14
+
+Jaakko can't use an outside mail provider, so M3 sends no email.
+
+**What we found first**:
+- **Outbound mail ports**: from the VPS, ports 25 and 465 are blocked, as Hetzner Cloud does by default. 587 and 443 are open.
+- **Stoat with no mail server**: when `[api.smtp] host` is empty, Stoat creates accounts already verified and sends no mail. Its "Forgot password" fails with `OperationFailed`, because it stores the reset token only after sending.
+- **Reset tokens**: `PATCH /auth/account/reset_password` looks up the token in the account's `password_reset` field. Stoat's own upstream test writes that field directly, and so does our script.
+  - **Probed on the dev stack**: a written token set the password (204), and using it again got 401.
+  - The expiry is stored as an ISO-8601 string, compared as text.
+- **Cloudflare**: researched as an alternative. Email Sending is in public beta since April 2026 and needs Workers Paid, about $5 a month. Its SMTP is on port 465 only, which Hetzner blocks, so it would need a bridge to Cloudflare's HTTPS API. Left for M6.
+
+**Built**:
+- **`deploy/account-link.sh <email> [invite]`** on the server:
+  - creates the account if needed, with a random password nobody sees,
+  - writes a one-time token valid for 7 days,
+  - marks a pending verification as verified, which matters only on the dev stack, where Mailpit is still configured,
+  - prints `https://<domain>/app/welcome/<token>?invite=<code>`.
+
+  It matches the email without regard to case. A new link cancels the previous one.
+- **`/app/welcome/<token>`** in our client: choose a password, then log in, pick a username and continue to the invite.
+
+**Check**: `tools/live/src/welcome.ts` makes a brand-new account with a link to a throwaway server. In the browser it then sets the password, catches a mismatch first, logs in, picks a username, lands on the invite, joins and sees the channel. A used link is refused. All pass. `invite.ts` still passes.
+
+**Effect on the decision gate**: criterion 1, registration with real email, can't be confirmed in M3 and moves to M6. The Caddy rule and the internal account-create path are confirmed again here.

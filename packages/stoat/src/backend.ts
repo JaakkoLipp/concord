@@ -382,6 +382,11 @@ export class StoatBackend implements Backend {
     return mapInvite(await this.rest.request<WInvite>('POST', `/channels/${channel}/invites`));
   }
 
+  async setPasswordWithToken(token: string, password: string): Promise<void> {
+    // remove_sessions: a link is also how a lost password is reset, so any old session should end.
+    await this.rest.request('PATCH', '/auth/account/reset_password', { token, password, remove_sessions: true });
+  }
+
   async invite(code: string): Promise<InvitePreview> {
     const i = await this.rest.request<WInvitePreview>('GET', `/invites/${encodeURIComponent(code)}`);
     if (i.type === 'Server') {
