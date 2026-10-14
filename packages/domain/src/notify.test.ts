@@ -65,6 +65,9 @@ describe('notifications settings', () => {
     next.channel.c1 = 'all';
     const written = JSON.parse(writeNotifications(raw, next)) as Record<string, unknown>;
     expect(written).toEqual({ extra: { keep: true }, server: {}, channel: { c1: 'all' }, server_mutes: { s2: {} }, channel_mutes: {} });
+    // A level some other client invented survives our write.
+    const odd = JSON.parse(writeNotifications(JSON.stringify({ channel: { c9: 'custom' } }), parseNotifications('{}'))) as { channel: Record<string, string> };
+    expect(odd.channel).toEqual({ c9: 'custom' });
   });
 
   it('ends timed mutes on time', () => {

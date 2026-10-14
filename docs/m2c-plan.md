@@ -160,3 +160,6 @@ Each script cleans up at both ends: it first deletes any server `dev-admin` owns
 - **Task 6**, 2026-10-14: done and deployed. The live check passed.
 - **Task 7**, 2026-10-14: done and deployed. The live check passed.
 - **Task 8**, 2026-10-14: done and deployed. The live check passed every case.
+- **Task 9**, 2026-10-14: done. The acceptance check passed, and the Sonnet review's 17 findings are fixed or answered.
+
+**M2c status**: all nine agent tasks are done and deployed, and M2 is complete. Jaakko's device checks for M2 are next, whenever there is time.

@@ -24,6 +24,15 @@ await tuuli!.call('POST', `/invites/${s.invite}`);
 const browser = await launch();
 async function open(handle: string) {
   const context = await browser.newContext({ viewport: { width: 1400, height: 1000 } });
+  await context.addInitScript(() => {
+    const w = window as unknown as { __closes: string[] };
+    w.__closes = [];
+    const orig = HTMLDialogElement.prototype.close;
+    HTMLDialogElement.prototype.close = function (this: HTMLDialogElement, ...args: [string?]) {
+      w.__closes.push(`${this.querySelector('h2')?.textContent} ${new Error().stack?.split('\n').slice(1, 7).join(' <- ')}`);
+      return orig.apply(this, args);
+    };
+  });
   const page = await context.newPage();
   const problems = watch(page);
   await signIn(page, handle);
@@ -50,7 +59,13 @@ async function createChannel(category: string, name: string, voice = false) {
   await a.page.getByRole('button', { name: `Create channel in ${category}` }).click();
   if (voice) await dialog(a.page).getByText('Voice', { exact: true }).click();
   await dialog(a.page).getByLabel('Channel name').fill(name);
-  await dialog(a.page).getByRole('button', { name: 'Create channel' }).click();
+  await dialog(a.page).getByRole('button', { name: 'Create channel' }).click({ timeout: 10_000 }).catch(async (e: unknown) => {
+    await a.page.screenshot({ path: join(out, 'channels-fail.png') });
+    console.log('DIALOGS', await a.page.locator('dialog').evaluateAll((ds) => ds.map((d) => `${(d as HTMLDialogElement).open}:${d.querySelector('h2')?.textContent}`)));
+    console.log('MENUS', await a.page.locator('[role=menu]').count(), await a.page.evaluate(() => document.activeElement?.outerHTML.slice(0, 200)));
+    console.log('CLOSES', JSON.stringify((await a.page.evaluate(() => (window as unknown as { __closes: string[] }).__closes)).slice(-3), null, 1));
+    throw e;
+  });
   await channel(a.page, name).waitFor({ timeout: 30_000 });
 }
 async function contextMenu(name: string, item: string) {

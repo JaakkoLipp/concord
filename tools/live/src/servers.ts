@@ -4,6 +4,7 @@
  */
 import { loadState } from '../../seed/src/config.ts';
 import type { Person } from './people.ts';
+import { Permission } from '../../../packages/domain/src/permissions.ts';
 
 const st = loadState()!;
 export const PREFIX = 'm2c-check';
@@ -49,6 +50,8 @@ export async function checkServer(owner: Person, label: string, bootstrap = fals
   if (bootstrap) {
     await owner.call('PUT', `/servers/${r.server._id}/permissions/default`, { permissions: Number(BigInt(r.server.default_permissions) & ~(1n << 25n)) });
     admin = (await owner.call<{ id: string }>('POST', `/servers/${r.server._id}/roles`, { name: 'Admin' })).id;
+    const all = Object.values(Permission).reduce((x, y) => x | y, 0n);
+    await owner.call('PUT', `/servers/${r.server._id}/permissions/${admin}`, { permissions: { allow: Number(all), deny: 0 } });
   }
   const general = r.channels[0]!._id;
   const invite = await owner.call<{ _id: string }>('POST', `/channels/${general}/invites`);

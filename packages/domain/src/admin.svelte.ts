@@ -97,8 +97,14 @@ export class ServerAdmin {
     const channel = await this.run(() => this.backend.createChannel(server, kind, name, opts.description));
     if (!this.store.channels.has(channel.id)) this.store.apply({ type: 'channelCreate', channel });
     if (opts.privateTo) {
-      await this.setChannelPermissions(channel.id, 'default', { allow: 0n, deny: Permission.ViewChannel });
-      for (const role of opts.privateTo) await this.setChannelPermissions(channel.id, role, { allow: Permission.ViewChannel, deny: 0n });
+      try {
+        // The roles first, then hide it from Everyone, so a failure part-way leaves no channel half private.
+        for (const role of opts.privateTo) await this.setChannelPermissions(channel.id, role, { allow: Permission.ViewChannel, deny: 0n });
+        await this.setChannelPermissions(channel.id, 'default', { allow: 0n, deny: Permission.ViewChannel });
+      } catch (e) {
+        await this.deleteChannel(channel.id).catch(() => {});
+        throw e;
+      }
     }
     const s = this.store.servers.get(server);
     if (s && !s.channels.includes(channel.id)) this.store.servers.set(server, { ...s, channels: [...s.channels, channel.id] });
@@ -116,16 +122,25 @@ export class ServerAdmin {
   }
 
   /**
-   * A server whose setup didn't finish: no roles yet, and Everyone can still invite. Read from the server
-   * itself, so any device of the owner sees it.
+   * A server whose setup didn't finish, read from the server itself so any device of the owner sees it:
+   * - no roles yet: stopped before the Admin role was made, or
+   * - Everyone can't invite, but there is one role and it isn't an Admin with every permission: stopped
+   *   while setting the Admin role's permissions.
    */
   setupUnfinished(server: Id): boolean {
     const s = this.store.servers.get(server);
-    return !!s && s.owner === this.store.selfId && !Object.keys(s.roles).length && has(s.defaultPermissions, Permission.InviteOthers);
+    if (!s || s.owner !== this.store.selfId) return false;
+    const roles = Object.values(s.roles);
+    if (!roles.length) return true;
+    const admin = roles.some((r) => r.name === ADMIN_ROLE && r.permissions.allow === ALL_PERMISSIONS);
+    return roles.length === 1 && !admin && !has(s.defaultPermissions, Permission.InviteOthers);
   }
 
-  /** Create a server, set its icon, and run the bootstrap. Returns its ID even if the bootstrap fails. */
-  async createServer(name: string, icon?: File): Promise<Id> {
+  /**
+   * Create a server, set its icon, and run the bootstrap. Returns its ID and whether the bootstrap finished;
+   * if it didn't, the server shows its owner a banner with Retry.
+   */
+  async createServer(name: string, icon?: File): Promise<{ id: Id; setUp: boolean }> {
     const { server, channels } = await this.run(() => this.backend.createServer(name));
     if (!this.store.servers.has(server.id)) this.store.apply({ type: 'serverCreate', server, channels, emojis: [] });
     if (icon) {
@@ -134,8 +149,8 @@ export class ServerAdmin {
         await this.backend.editServer(server.id, { icon: id });
       }).catch(() => {});
     }
-    await this.bootstrap(server.id).catch(() => {});
-    return server.id;
+    const setUp = await this.bootstrap(server.id).then(() => true, () => false);
+    return { id: server.id, setUp };
   }
 
   /**

@@ -250,3 +250,79 @@ Results for [m2c-plan.md](m2c-plan.md), recorded against the seeded Stoat 0.15.5
 | A click on the last one | Opens that message |
 | Stoat's server mute, an old `muted` level and an unknown key, then a level changed here | The server mute and the unknown key kept. The old level became a mute. The new level written. |
 | Console errors or failed requests | None |
+
+## Task 9: acceptance and review, 2026-10-14
+
+### Acceptance
+
+The milestone's three criteria:
+
+1. **An admin builds a server like the seeded one from scratch in the client**: `node tools/live/src/m2c.ts`. As `dev-admin`, entirely in the UI:
+   - create through "+", with an icon,
+   - four categories and ten channels, `#yleinen` renamed from General and `#tekniikka` described,
+   - the banner, the description and system messages to `#botti`,
+   - five roles with colours, hoisting and Moderaattori's permissions,
+   - `#säännöt` and `#ilmoitukset` read-only with Moderaattori allowed to send,
+   - three emoji,
+   - an invite, which `tuuli` and `onni` join with, and their roles from the Members section.
+
+   The build took 106 s, mostly waiting for the server bucket: 59 s for the channels and 34 s for the roles. The script then compared the built server with the seeded one over the API. These all match:
+   - categories by title and order,
+   - each channel's name, type, description, Everyone override and role overrides,
+   - the five roles by name, colour, hoisting, order and permissions,
+   - Admin first with `InviteOthers`,
+   - Everyone's permissions,
+   - the four system-message channels.
+
+   The three emoji are there, and `tuuli` has Pelaajat and `onni` Moderaattori. The server was then deleted through settings.
+2. **A non-admin can't create a server or an invite, and sees no controls for either**: in the same script, `dev`:
+   - over the API, gets `CantCreateServers` and `MissingPermission`,
+   - in the client, has no "+" on the rail,
+   - in the seeded server, gets a menu offering only Notification settings, Mute server and Leave server, and a channel menu without Invite people.
+3. **Notifications follow the mute and "mentions only" settings, and never fire for the focused channel**: `node tools/live/src/notify.ts`, as recorded under task 8. Every case passed.
+
+**Found, and left for later**: any unknown `/app/…` path answers HTTP 500 instead of a 404 page. SvelteKit fails to render its error page ("Missing +page.svelte component for route null"). This predates M2c, and the check had visited such a URL by mistake. It goes with M7's error states.
+
+### Code review
+
+A Sonnet review of the whole M2c diff found 17 issues, none high and seven medium. Each was checked against the code.
+
+| # | Finding | Outcome |
+|---|---|---|
+| 1 | A write still queued for the rate limit could go out under the next account's token after signing out and in | Fixed: each request keeps the token it started with, a token change rejects what is still queued, and buckets reset. Unit test. |
+| 2 | The 60 s retry budget counted time spent queueing, so a long build could give up on its first 429 | Fixed: the budget starts when the request first goes out. Unit test. |
+| 3 | A bootstrap stopped after its first step showed no banner, and creating a server never said it failed | Fixed: no roles, or one role that isn't an Admin with every permission, counts as unfinished, and the create dialog says so. Unit test in `packages/domain/src/admin.test.ts`. |
+| 4 | Move up, Move down and Delete for roles showed to those with Manage permissions but not Manage roles | Fixed: the row menu needs Manage roles |
+| 5 | A private channel made by anyone but the owner hid itself from its maker, who can only let in roles below their own, and a failure part-way left it public | Fixed: Private is offered to the owner only. The roles are let in before Everyone is shut out, and a failure deletes the channel. |
+| 6 | Closing settings went back one section at a time | Fixed: sections replace each other in history |
+| 7 | A notification setting Stoat refused stayed shown | Fixed: it goes back to what is stored |
+| 8 | A muted server's channels still showed unread markers | Fixed: the sidebar counts the server's mute too |
+| 9 | A 429 without rate-limit headers, on a route not yet learned, was retried without waiting | Fixed |
+| 10 | Routes that answer without rate-limit headers were sent one at a time for good | Fixed: they are treated as unlimited after their first answer |
+| 11 | A browser refusing `new Notification` would stop the other message listeners | Fixed: it is caught, and each listener is isolated |
+| 12 | A mention replacing an earlier notification of the same channel didn't alert | Fixed: `renotify` for mentions |
+| 13 | A notification level another client invented was lost on our next write | Fixed: unknown levels are kept. Unit test. |
+| 14 | A change from another device arriving within 1.5 s of our own write was ignored until the next one | Fixed: it is applied once the hold ends |
+| 15 | Leaving or losing a server left its unread state, emoji and member-list timestamps behind | Fixed |
+| 16 | Deleted channels stayed in the server's channel list, so permission changes fetched them again and again | Fixed: a channel that answers 404 is dropped from the list |
+| 17 | Smaller points | Fixed: deleting a channel from its settings leads to the server's first channel, and an invalid emoji name says why. Left as they are: the banner on a roleless server made in Stoat's own client, where Retry applies our policy, which is wanted; Deny staying disabled for permissions you don't hold, which is cautious; and the unsaved-changes question adding a history entry. |
+
+**Found while re-running every check after the fixes**: the Create channel dialog sometimes closed the moment it opened, when the previous channel's save finished late. The browser sends a dialog's `close` event a moment after it closes, and by then the same dialog had opened again for the next channel, so the late event closed it. This was in the shared Dialog since M2b, and quick admin work makes it likely. Fixed in `packages/ui/src/Dialog.svelte`. A dialog's late save now also closes only itself. A stack trace recorded at the failure showed the cause, and the check then passed four runs in a row.
+
+After the fixes, every M2c live check ran again on the deployed client and passed:
+- `removal`, `admin`, `channels`, `roles`, `overrides`, `moderation`, `emoji`, `notify` and `m2c`,
+- M2b's `m2b.ts`, once.
+
+The only failed requests were the known ones:
+- a 429 when a check opens a page right after a burst of saves,
+- `overrides.ts`'s expected 403 re-check,
+- `m2b.ts`'s 403 ack, recorded in M2b.
+
+### What is left for Jaakko
+
+1. **The device checks**, from M2a, M2b and now M2c:
+   - M2a's and M2b's, listed in m2b-results.md.
+   - M2c:
+     - desktop notifications in Chrome and Firefox, on Windows and on Linux: the enable bar, a mention while the window is in the background, nothing for the open channel, Mute and Busy,
+     - building a small server by hand as `dev-admin` (`pnpm seed password dev-admin`): roles, a private channel, an invite, a kick.
+2. **M0's encoder runs**, with Chrome on Windows next, before M3.

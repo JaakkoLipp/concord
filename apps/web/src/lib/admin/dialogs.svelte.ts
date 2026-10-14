@@ -13,6 +13,8 @@ class AdminDialogs {
   current = $state<AdminDialog | null>(null);
   open(d: AdminDialog): void { this.current = d; }
   close(): void { this.current = null; }
+  /** Close this dialog if it is still the one showing: a save that finishes late mustn't close the next one. */
+  done(d: AdminDialog): void { if (this.current === d) this.current = null; }
 }
 
 export const adminDialogs = new AdminDialogs();

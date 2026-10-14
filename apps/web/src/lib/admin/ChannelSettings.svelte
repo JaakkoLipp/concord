@@ -8,7 +8,8 @@
   import { Button } from '@concord/ui';
   import { Permission, has, type Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
-  import { permissionsIn } from '$lib/view/channels.ts';
+  import { firstChannel, permissionsIn } from '$lib/view/channels.ts';
+  import { untrack } from 'svelte';
   import { confirm } from '$lib/view/confirm.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
   import SettingsFrame from '$lib/settings/SettingsFrame.svelte';
@@ -26,10 +27,15 @@
   const items = $derived(sections.map((s) => ({ id: s, label: m.admin.channelSections[s], href: resolve('/(app)/app/channel-settings/[channel]/[section]', { channel, section: s }) })));
   const name = $derived(info?.kind === 'text' ? info.name : '');
 
-  // Gone, or nothing here for this account: back to the app, once connected so a reload can load it first.
+  // Gone, or nothing here for this account: back to its server's first channel, else the app, once connected
+  // so a reload can load it first.
+  let server = $state<string | null>(null);
+  $effect(() => { if (info?.kind === 'text') server = info.server; });
   $effect(() => {
     if (store.connection !== 'ready') return;
-    if (info?.kind !== 'text' || !sections.length) void goto(resolve('/app/channels/@me'), { replaceState: true });
+    if (info?.kind === 'text' && sections.length) return;
+    const first = server && store.servers.has(server) ? untrack(() => firstChannel(store, server!)) : undefined;
+    void goto(server && first ? resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server, channel: first }) : resolve('/app/channels/@me'), { replaceState: true });
   });
 
   async function remove() {

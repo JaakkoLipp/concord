@@ -62,7 +62,8 @@
     if (next === undefined) return;
     const { [id]: _, ...rest } = editing;
     editing = rest;
-    if (next === before || !NAME.test(next)) return;
+    if (next === before) return;
+    if (!NAME.test(next)) return toasts.show(m.admin.emoji.nameError);
     try {
       await session.admin.renameEmoji(id, next);
     } catch {

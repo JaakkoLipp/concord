@@ -40,7 +40,7 @@
     try {
       if (x.kind === 'kick') await session.admin.kick(x.server, x.user);
       else await session.admin.ban(x.server, x.user, reason.trim() || undefined);
-      close();
+      adminDialogs.done(x);
     } catch {
       toasts.show(x.kind === 'kick' ? m.admin.kick.failed : m.admin.ban.failed);
     } finally {

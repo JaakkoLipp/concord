@@ -37,7 +37,7 @@
 
   const isVoice = (c: Channel) => c.kind === 'text' && !!c.voice;
   /** A collapsed category still shows its selected and unread channels, as on Discord. */
-  const visible = (id: string | null, c: Channel) => !id || !collapsed[id] || c.id === active || (store.isUnread(c.id) && !store.isMuted(c.id));
+  const visible = (id: string | null, c: Channel) => !id || !collapsed[id] || c.id === active || (store.isUnread(c.id) && !store.notificationsMuted(c.id));
 </script>
 
 <header class="server-header" class:with-banner={!!info?.banner}>
@@ -70,8 +70,8 @@
         </div>
       {/if}
       {#each group.channels.filter((c) => visible(group.id, c)) as channel (channel.id)}
-        {@const unread = store.isUnread(channel.id) && !store.isMuted(channel.id)}
-        {@const muted = store.isMuted(channel.id)}
+        {@const unread = store.isUnread(channel.id) && !store.notificationsMuted(channel.id)}
+        {@const muted = store.notificationsMuted(channel.id)}
         {@const mentions = store.mentionCount(channel.id)}
         <a
           class="channel" class:active={channel.id === active} class:unread class:muted

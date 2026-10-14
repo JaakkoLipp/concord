@@ -10,7 +10,7 @@ import { ACTIVE_KEY, IdleTracker } from './idle.ts';
 import { BackendError } from './errors.ts';
 import { Store, memberKey, newer, type EmojiPrefs, type PendingMessage, type Settings } from './store/store.svelte.ts';
 import { parseNotifications, writeNotifications, type NotificationLevel, type NotificationSettings } from './notify.ts';
-import { Latest } from './latest.ts';
+import { HOLD_MS, Latest } from './latest.ts';
 import { ulid, ulidTime } from './ulid.ts';
 
 const PAGE = 100;
@@ -123,7 +123,17 @@ export class Session {
     this.store.upsertUsers([self]);
     this.gateway = this.backend.connect({
       onEvent: (event) => {
-        if (event.type === 'messageCreate') queueMicrotask(() => { for (const l of this.messageListeners) l(event.message); });
+        if (event.type === 'messageCreate') {
+          queueMicrotask(() => {
+            for (const l of this.messageListeners) {
+              try {
+                l(event.message);
+              } catch {
+                // One listener failing, such as a browser refusing a notification, mustn't stop the others.
+              }
+            }
+          });
+        }
         let e = event;
         // A categories echo older than the order this session is writing would move the sidebar back.
         if (e.type === 'serverUpdate' && e.data.categories && this.admin.holdsCategories(e.id)) {
@@ -136,7 +146,10 @@ export class Session {
         const removal = this.removalOf(e);
         this.store.apply(e);
         this.follow(e);
-        if (removal) for (const listener of this.removalListeners) listener(removal);
+        if (removal) {
+          this.lastMemberFetch.delete(removal.server);
+          for (const listener of this.removalListeners) listener(removal);
+        }
       },
       onState: (s) => {
         this.store.connection = s;
@@ -553,7 +566,11 @@ export class Session {
         if (this.store.channels.has(id)) continue;
         void this.backend.channel(id).then((channel) => {
           if (!this.store.channels.has(id)) this.store.apply({ type: 'channelCreate', channel });
-        }).catch(() => {});
+        }).catch((e: unknown) => {
+          // Gone for everyone: Stoat sends no server update when a channel is deleted, so forget its ID here.
+          const s = this.store.servers.get(server);
+          if (e instanceof BackendError && e.status === 404 && s) this.store.servers.set(server, { ...s, channels: s.channels.filter((c) => c !== id) });
+        });
       }
     }, 500));
   }
@@ -597,8 +614,14 @@ export class Session {
     this.rawSettings = { ...this.rawSettings, ...values };
     if ('notifications' in values || 'ordering' in values) {
       const next = parseSettings(this.rawSettings);
-      // A change of ours still on its way, or just written, is newer than this echo.
-      if (this.notificationWrites.holding) next.notifications = this.store.settings.notifications;
+      // A change of ours still on its way, or just written, is newer than this echo. Look again once the
+      // hold ends, in case a change from another device came in meanwhile.
+      if (this.notificationWrites.holding) {
+        next.notifications = this.store.settings.notifications;
+        setTimeout(() => {
+          if (!this.notificationWrites.holding) this.store.settings = { ...this.store.settings, notifications: parseSettings(this.rawSettings).notifications };
+        }, HOLD_MS + 100);
+      }
       this.store.settings = next;
     }
     if (values[EMOJI_KEY] && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(values[EMOJI_KEY].value);
@@ -627,7 +650,11 @@ export class Session {
     const next = structuredClone($state.snapshot(this.store.settings.notifications)) as NotificationSettings;
     change(next);
     this.store.settings = { ...this.store.settings, notifications: next };
-    return this.notificationWrites.set(next);
+    return this.notificationWrites.set(next).catch((e: unknown) => {
+      // Not saved: show what is stored, unless a newer change of ours is already on its way.
+      if (!this.notificationWrites.holding) this.store.settings = { ...this.store.settings, notifications: parseSettings(this.rawSettings).notifications };
+      throw e;
+    });
   }
 
   /** A server's or channel's level, or null to go back to the default. */

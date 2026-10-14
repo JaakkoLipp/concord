@@ -93,6 +93,28 @@ describe('Rest buckets', () => {
     expect((e as StoatError).status).toBe(429);
   });
 
+  it('never sends a queued request under the next account', async () => {
+    const { transport, seen } = fakeStoat();
+    const rest = new Rest(transport);
+    rest.setToken('first');
+    const all = Array.from({ length: 7 }, () => rest.request('PATCH', `/servers/${S1}`).then(() => 'sent', (e: StoatError) => e.kind));
+    await vi.advanceTimersByTimeAsync(200);
+    rest.setToken('second');
+    await vi.advanceTimersByTimeAsync(25_000);
+    expect(await Promise.all(all)).toEqual(['sent', 'sent', 'sent', 'sent', 'sent', 'SignedOut', 'SignedOut']);
+    expect(seen.every((x) => x.req.headers?.['x-session-token'] === 'first')).toBe(true);
+  });
+
+  it('counts the retry budget from the first send, not from queueing', async () => {
+    let calls = 0;
+    // The sixth request waits about 11 s for the bucket, then meets two 429s before it goes through.
+    const { transport } = fakeStoat({ fail: (req) => (req.path.endsWith('/late') && ++calls <= 2 ? { status: 429, headers: {}, body: { retry_after: 25_000 } } : null) });
+    const rest = new Rest(transport);
+    const done = Promise.all([...Array.from({ length: 5 }, () => rest.request('PATCH', `/servers/${S1}`)), rest.request('PATCH', `/servers/${S1}/late`)]);
+    await vi.advanceTimersByTimeAsync(80_000);
+    await expect(done).resolves.toHaveLength(6);
+  });
+
   it('surfaces any other error at once', async () => {
     const { transport, seen } = fakeStoat({ fail: () => ({ status: 403, headers: {}, body: { type: 'NotElevated' } }) });
     const rest = new Rest(transport);

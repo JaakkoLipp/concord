@@ -26,7 +26,8 @@
   let category = $state('');
   let isPrivate = $state(false);
   let privateTo = $state<string[]>([]);
-  const canPrivate = $derived(!!d && has(serverPerms(store, d.server), Permission.ManagePermissions));
+  // Only the owner: anyone else would hide the channel from themselves, since they can only let in roles below their own.
+  const canPrivate = $derived(!!d && store.servers.get(d.server)?.owner === store.selfId && has(serverPerms(store, d.server), Permission.ManagePermissions));
   const privateRoles = $derived(d ? assignable(session, d.server) : []);
   let busy = $state(false);
   let filledFor: unknown = null;
@@ -59,8 +60,8 @@
       if (d.kind === 'createChannel') {
         if (!length(channelName) || nameError) return;
         const channel = await session.admin.createChannel(server.id, kind, channelName.trim(), category || null, isPrivate ? { privateTo } : {});
-        adminDialogs.close();
-        if (kind === 'text') await goto(resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server: server.id, channel: channel.id }));
+        adminDialogs.done(d);
+        if (kind === 'text' && !adminDialogs.current) await goto(resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server: server.id, channel: channel.id }));
       } else if (d.kind === 'category') {
         const title = name.trim();
         if (!title || length(title) > 32) return;

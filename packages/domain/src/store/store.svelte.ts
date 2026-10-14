@@ -453,8 +453,11 @@ export class Store {
     for (const c of s?.channels ?? []) {
       this.channels.delete(c);
       this.dropWindowMessages(c);
+      this.unreads.delete(c);
     }
     for (const [k, m] of this.members) if (m.server === id) this.members.delete(k);
+    for (const [k, e] of this.emojis) if (e.parent.type === 'server' && e.parent.id === id) this.emojis.delete(k);
+    this.memberListLoaded.delete(id);
   }
 
   private clearTyping(channel: Id, user: Id): void {

@@ -6,7 +6,7 @@
  */
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import { memberKey, shouldNotify, type Message, type Session } from '@concord/domain';
+import { memberKey, mentionsYou, shouldNotify, type Message, type Session } from '@concord/domain';
 import { avatarUrl } from '$lib/view/users.ts';
 import { notificationBody, notificationTitle } from './text.ts';
 import { notifyPrefs } from './prefs.svelte.ts';
@@ -58,9 +58,10 @@ export function watchNotifications(session: Session): () => void {
     const c = store.channels.get(message.channel);
     if (!c || c.kind === 'saved') return;
     const server = c.kind === 'text' ? c.server : undefined;
+    const roles = server ? store.members.get(memberKey(server, self.id))?.roles ?? [] : [];
     const ok = shouldNotify(message, {
       self: self.id,
-      roles: server ? store.members.get(memberKey(server, self.id))?.roles ?? [] : [],
+      roles,
       presence: self.presence ?? (self.online ? 'Online' : 'Invisible'),
       level: store.channelLevel(message.channel),
       muted: store.notificationsMuted(message.channel),
@@ -69,12 +70,20 @@ export function watchNotifications(session: Session): () => void {
     });
     if (!ok) return;
     const author = store.users.get(message.author);
-    const n = new Notification(notificationTitle(store, message), {
-      body: notificationBody(store, message),
-      icon: new URL(avatarUrl(author ?? { id: message.author }), location.origin).href,
-      tag: message.channel,
-      data: { channel: message.channel, message: message.id },
-    });
+    let n: Notification;
+    try {
+      n = new Notification(notificationTitle(store, message), {
+        body: notificationBody(store, message),
+        icon: new URL(avatarUrl(author ?? { id: message.author }), location.origin).href,
+        // One per channel, so a burst shows as one; a mention still alerts when it replaces another.
+        tag: message.channel,
+        renotify: mentionsYou(message, self.id, roles),
+        data: { channel: message.channel, message: message.id },
+      } as NotificationOptions);
+    } catch {
+      // Some browsers, such as Chrome on Android, only show notifications from a service worker (M7).
+      return;
+    }
     n.onclick = () => {
       window.focus();
       n.close();

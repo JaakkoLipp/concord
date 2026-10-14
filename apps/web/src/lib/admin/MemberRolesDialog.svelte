@@ -35,7 +35,7 @@
     busy = true;
     try {
       await session.admin.setMemberRoles(dd.server, dd.user, nextRoles(server, myRank(store, dd.server), member.roles, chosen));
-      adminDialogs.close();
+      adminDialogs.done(dd);
     } catch {
       toasts.show(m.admin.roles.failed);
     } finally {

@@ -49,7 +49,8 @@
       <h2>{title}</h2>
       {#each items as item (item.id)}
         <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- callers pass resolved hrefs -->
-        <a class="item" class:active={item.id === active} href={item.href} aria-current={item.id === active ? 'page' : undefined}>{item.label}</a>
+        <!-- Sections replace each other in history, so Close and Back leave settings in one step. -->
+        <a class="item" class:active={item.id === active} href={item.href} data-sveltekit-replacestate aria-current={item.id === active ? 'page' : undefined}>{item.label}</a>
       {/each}
       {#if footer}
         <div class="separator" role="separator"></div>

@@ -27,8 +27,9 @@
     if (busy || !length || error) return;
     busy = true;
     try {
-      const id = await session.admin.createServer(name.trim(), icon && icon !== 'remove' ? icon.file : undefined);
+      const { id, setUp } = await session.admin.createServer(name.trim(), icon && icon !== 'remove' ? icon.file : undefined);
       close();
+      if (!setUp) toasts.show(m.admin.setupUnfinished);
       const channel = firstChannel(session.store, id);
       await goto(channel ? resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server: id, channel }) : resolve('/app/channels/@me'));
     } catch {

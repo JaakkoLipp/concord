@@ -50,7 +50,10 @@ export function parseNotifications(raw: string | undefined): NotificationSetting
   return out;
 }
 
-/** Write the key back, keeping anything else another client stored in it. */
+/**
+ * Write the key back, keeping anything else another client stored in it, levels we don't know included.
+ * The old `muted` level isn't kept: it reads as a mute, which is written in the mute maps.
+ */
 export function writeNotifications(raw: string | undefined, s: NotificationSettings): string {
   let v: Record<string, unknown> = {};
   try {
@@ -59,7 +62,15 @@ export function writeNotifications(raw: string | undefined, s: NotificationSetti
   } catch {
     // Unreadable: start afresh.
   }
-  return JSON.stringify({ ...v, server: s.server, channel: s.channel, server_mutes: s.serverMutes, channel_mutes: s.channelMutes });
+  const others = (src: unknown) => Object.fromEntries(Object.entries((src ?? {}) as Record<string, unknown>)
+    .filter(([, level]) => typeof level !== 'string' || (!LEVELS.has(level) && level !== 'muted')));
+  return JSON.stringify({
+    ...v,
+    server: { ...others(v.server), ...s.server },
+    channel: { ...others(v.channel), ...s.channel },
+    server_mutes: s.serverMutes,
+    channel_mutes: s.channelMutes,
+  });
 }
 
 export const muteActive = (m: Mute | undefined, now: number) => !!m && (m.until === undefined || m.until > now);

@@ -17,7 +17,8 @@
   });
 </script>
 
-<dialog bind:this={dialog} aria-labelledby="dialog-{uid}" style:--dialog-w={width} onclose={() => { if (open) onclose(); }}>
+<!-- The close event comes a moment after closing: if the dialog has opened again for something else by then, it isn't a close. -->
+<dialog bind:this={dialog} aria-labelledby="dialog-{uid}" style:--dialog-w={width} onclose={() => { if (open && !dialog?.open) onclose(); }}>
   {#if open}
     <h2 id="dialog-{uid}">{title}</h2>
     {#if children}<div class="body">{@render children()}</div>{/if}

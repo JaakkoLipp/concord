@@ -54,20 +54,37 @@ export class Rest {
     this.transport = transport;
   }
 
+  /** Bumped on every token change, so a request queued for one account never goes out as another. */
+  private generation = 0;
+
   setToken(token: string | null): void {
+    if (token === this.token) return;
     this.token = token;
+    this.generation++;
+    // Buckets are per account.
+    this.buckets.clear();
+    this.named.clear();
   }
 
   async request<T>(method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
     const key = this.keyOf(method, path);
-    const started = Date.now();
+    const token = this.token;
+    const generation = this.generation;
+    /** When the first attempt went out: the retry budget doesn't count time spent queueing. */
+    let started = 0;
     for (;;) {
       const bucket = await this.room(key);
+      if (generation !== this.generation) {
+        bucket.inFlight--;
+        this.wake(bucket);
+        throw new StoatError(401, { type: 'SignedOut' }, `${method} ${path.split('?')[0]}`);
+      }
+      started ||= Date.now();
       let res: HttpResponse;
       try {
         res = await this.transport.request({
           method, path,
-          headers: { ...(this.token ? { 'x-session-token': this.token } : {}), ...headers },
+          headers: { ...(token ? { 'x-session-token': token } : {}), ...headers },
           ...(body === undefined ? {} : { body }),
         });
         // What Stoat says is left counts this request already, so learn it before freeing the slot.
@@ -121,8 +138,13 @@ export class Rest {
     for (;;) {
       const b = this.bucketOf(key);
       const now = Date.now();
-      // Not learned yet: one request at a time until the first answer says what the bucket allows.
+      // Not learned yet: one request at a time until the first answer says what the bucket allows, and
+      // after a 429 without limits, not before it said to retry.
       if (b.limit === undefined) {
+        if (b.resetAt > now) {
+          await sleep(b.resetAt - now);
+          continue;
+        }
         if (b.inFlight === 0) return this.take(b);
         await new Promise<void>((r) => b.waiters.push(r));
         continue;
@@ -145,7 +167,12 @@ export class Rest {
     const limit = res.headers['x-ratelimit-limit'];
     const remaining = res.headers['x-ratelimit-remaining'];
     const reset = res.headers['x-ratelimit-reset-after'];
-    if (remaining === undefined || reset === undefined) return;
+    if (remaining === undefined || reset === undefined) {
+      // A route Stoat doesn't limit: nothing to hold back once it has answered.
+      const b = this.bucketOf(key);
+      if (b.limit === undefined && res.status !== 429) b.limit = b.remaining = Number.POSITIVE_INFINITY;
+      return;
+    }
     if (id && !key.startsWith('server:') && this.named.get(key) !== id) {
       // First response for this key: from now on it shares the bucket Stoat named.
       const own = this.buckets.get(key);

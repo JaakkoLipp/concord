@@ -74,12 +74,15 @@
   }
 
   function openMenu(role: Id, anchor: HTMLElement) {
+    // Ordering and deleting need Manage roles; Manage permissions alone only edits what roles allow.
+    if (!has(mine, Permission.ManageRole)) return;
     const order = roles.map((r) => r.id);
     const items: MenuItem[] = [
       { label: m.admin.moveUp, disabled: !moveRole(order, info.roles, rank, role, -1), onselect: () => move(role, -1) },
       { label: m.admin.moveDown, disabled: !moveRole(order, info.roles, rank, role, 1), onselect: () => move(role, 1) },
+      'separator',
+      { label: m.admin.roles.delete, danger: true, onselect: () => void remove(role) },
     ];
-    if (has(mine, Permission.ManageRole)) items.push('separator', { label: m.admin.roles.delete, danger: true, onselect: () => void remove(role) });
     menu = { items, anchor };
   }
 
@@ -103,7 +106,7 @@
           {#if locked}<span class="locked" title={m.admin.roles.locked}><Lock size={14} aria-hidden="true" />{m.admin.roles.lockedShort}</span>{/if}
           <ChevronRight size={16} aria-hidden="true" />
         </button>
-        {#if !locked}
+        {#if !locked && canCreate}
           <button class="more" aria-label={m.admin.roles.menu(role.name)} onclick={(e) => openMenu(role.id, e.currentTarget)}><Ellipsis size={18} /></button>
         {/if}
       </li>
