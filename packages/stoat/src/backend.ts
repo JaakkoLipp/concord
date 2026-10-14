@@ -44,7 +44,7 @@ export class StoatBackend implements Backend {
     const r = await this.rest.request<Root>('GET', '/');
     this.capabilities = capabilitiesFor(r.revolt);
     const limits = r.features.limits as unknown as {
-      global?: { restrict_server_creation?: string[]; message_replies?: number; message_reactions?: number; group_size?: number; new_user_hours?: number };
+      global?: { restrict_server_creation?: string[]; message_replies?: number; message_reactions?: number; group_size?: number; new_user_hours?: number; server_emoji?: number; server_roles?: number; server_channels?: number };
       new_user?: { outgoing_friend_requests?: number };
       default?: { file_upload_size_limits?: Record<string, number>; message_length?: number; message_attachments?: number; outgoing_friend_requests?: number };
     };
@@ -59,6 +59,7 @@ export class StoatBackend implements Backend {
         replies: limits.global?.message_replies ?? 5,
         reactions: limits.global?.message_reactions ?? 20,
       },
+      serverLimits: { emoji: limits.global?.server_emoji ?? 100, roles: limits.global?.server_roles ?? 200, channels: limits.global?.server_channels ?? 200 },
       voice: { enabled: livekit?.enabled ?? false, nodes: (livekit?.nodes ?? []).map((n) => ({ name: n.name })) },
       social: {
         friendRequests: {

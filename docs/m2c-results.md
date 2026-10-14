@@ -185,3 +185,25 @@ Results for [m2c-plan.md](m2c-plan.md), recorded against the seeded Stoat 0.15.5
 | The Invites section lists the invite, by Ylläpito in `#General`, and revokes it | The code then answers `NotFound` |
 | `dev`, a plain member of the seeded server | Server menu: Leave server only. Channel menu: Copy link and Copy channel ID. Person menu: no Roles, Kick or Ban. |
 | Console errors or failed requests | One 429 on the invite list, when the check opened settings in a fresh page right after the ban and unban, the known case from task 4 |
+
+## Task 7: custom emoji, 2026-10-14
+
+**What is deployed**:
+- **Emoji** in server settings, for Manage emoji:
+  - Upload: an image within Stoat's limit, 500 KB, checked before uploading, with the name filled from the file name in the allowed form. "Kahvi Kuppi.png" becomes `kahvi_kuppi`.
+  - The slots left out of the server's limit, 100, read from `GET /api/`.
+  - The list, newest first: each emoji, its `:name:` editable in place (Enter saves, Escape cancels), who uploaded it, and Delete, which asks first.
+- **New and renamed emoji show at once** for the uploader, and arrive live for everyone else.
+
+**Live check**: `node tools/live/src/emoji.ts`, with `dev-admin` in the Emoji section and `tuuli` using her composer's autocomplete:
+
+| Check | Result |
+|---|---|
+| Three uploads, from the request leaving until `tuuli`'s autocomplete offers each | 64, 58 and 52 ms. The first was named `kahvi_kuppi` from its file. |
+| Slots | "97 of 100 slots left" |
+| `tuuli` sends `:kahvi_kuppi:` through autocomplete | Shown in the message |
+| A rename to `sauna_uusi`, and a delete | Both reach her autocomplete |
+| An 843 KB image | Refused with "The image must be 0.5 MB or smaller." |
+| The name "Bad Name" | Refused, and Upload disabled |
+| Uploads sent while refusing | None |
+| Console errors or failed requests | None |

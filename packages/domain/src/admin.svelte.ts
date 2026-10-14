@@ -204,6 +204,20 @@ export class ServerAdmin {
   ban(server: Id, user: Id, reason?: string) { return this.run(() => this.backend.ban(server, user, reason)); }
   unban(server: Id, user: Id) { return this.run(() => this.backend.unban(server, user)); }
   bans(server: Id) { return this.backend.bans(server); }
+  /** Upload an image and make it a server emoji, shown at once. */
+  async createEmoji(server: Id, file: File, name: string) {
+    const emoji = await this.run(async () => this.backend.createEmoji(await this.backend.upload(file, file.name, undefined, 'emojis'), server, name));
+    this.store.apply({ type: 'emojiCreate', emoji });
+    return emoji;
+  }
+  async renameEmoji(emoji: Id, name: string) {
+    await this.run(() => this.backend.renameEmoji(emoji, name));
+    this.store.apply({ type: 'emojiUpdate', id: emoji, name });
+  }
+  async deleteEmoji(emoji: Id) {
+    await this.run(() => this.backend.deleteEmoji(emoji));
+    this.store.apply({ type: 'emojiDelete', id: emoji });
+  }
   editChannel(channel: Id, change: ChannelEdit) { return this.run(() => this.backend.editChannel(channel, change)); }
   deleteChannel(channel: Id) { return this.run(() => this.backend.deleteChannel(channel)); }
   setChannelPermissions(channel: Id, role: Id | 'default', p: Override) { return this.run(() => this.backend.setChannelPermissions(channel, role, p)); }

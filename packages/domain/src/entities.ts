@@ -237,6 +237,8 @@ export interface NodeInfo {
   uploadLimits: Record<string, number>;
   /** Message limits: length in UTF-8 bytes, then counts per message. */
   limits: { messageLength: number; attachments: number; replies: number; reactions: number };
+  /** Per server. */
+  serverLimits: { emoji: number; roles: number; channels: number };
   voice: { enabled: boolean; nodes: { name: string }[] };
   /**
    * Outgoing friend requests one account may have waiting: fewer for accounts younger than

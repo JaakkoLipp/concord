@@ -20,10 +20,11 @@ export function myRank(store: Store, server: Id): number {
 
 export const isOwner = (store: Store, server: Id) => store.servers.get(server)?.owner === store.selfId;
 
-export type ServerSection = 'overview' | 'roles' | 'invites' | 'members' | 'bans';
+export type ServerSection = 'overview' | 'roles' | 'emoji' | 'invites' | 'members' | 'bans';
 const NEEDS: Record<ServerSection, bigint[]> = {
   overview: [Permission.ManageServer],
   roles: [Permission.ManageRole, Permission.ManagePermissions],
+  emoji: [Permission.ManageCustomisation],
   invites: [Permission.ManageServer],
   members: [Permission.KickMembers, Permission.BanMembers, Permission.AssignRoles],
   bans: [Permission.BanMembers],
