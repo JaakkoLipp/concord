@@ -48,7 +48,12 @@ On the local stack with `dev`, `aino` and a third persona. The probe script is k
 | Media cut for 15 or 40 s, signalling kept | No reconnect. The panel says "Voice connected", the quality icon turns "Poor" after about 15 s, and audio resumes by itself when media returns. |
 | Signalling and media cut for 25 s | Both clients show "Reconnecting…" after 15 to 30 s. The server drops the participants, and LiveKit does a full restart into a new room session when the network returns. They are back 12 to 40 s later, without a new `join_call`. |
 
-**Bug, open: dead audio after a full restart.** In two of three runs of the 25 s cut, both clients said "Voice connected" afterwards, but no audio flowed either way for at least 20 s. In the third, audio flowed 12 s after the network returned. The SDK logs "failed to remove track" while republishing the microphone on the new connection. The failing runs took 30 to 40 s to come back, the good one 12 s. This is the Wi-Fi-switch case from milestone criterion 3, so task 9 fixes it.
+**Dead audio after a full restart: most likely the local stack, not the client.** In 3 of 6 runs of the 25 s cut, both clients said "Voice connected" afterwards, but no audio flowed either way for at least 20 s. In the others, audio flowed 12 s after the network returned.
+- **In every failing run**, the selected ICE pair led to a peer-reflexive remote on a port outside LiveKit's 50000 to 50100, such as `:50433`. Every good run went straight to `127.0.0.1:500xx`.
+- So after the cut, Docker Desktop's UDP forwarding rewrote LiveKit's source port, and the browser settled on a path that goes nowhere.
+- The microphone was republished on the new connection in every run: a live audio sender, 7 receivers.
+- Production's Docker on Linux does plain NAT on fixed ports, so this is not expected there. It is still the Wi-Fi-switch case from milestone criterion 3, so Jaakko's Wi-Fi switch on production and the voice evening decide it.
+- Task 9's check uses the media-only cut, which recovers reliably here.
 
 **UI bugs, open**: during total loss the quality tooltip says "Ping 0 ms, packet loss 0 %". Missing figures should be left out, and the loss should come from received packets.
 
