@@ -9,7 +9,7 @@ import { MEMBER_FIELDS, mapMember, mapMemberPatch } from './map/member.ts';
 import { MESSAGE_FIELDS, mapEmbeds, mapMessage, mapMessagePatch, mapUnread } from './map/message.ts';
 import { ROLE_FIELDS, SERVER_FIELDS, mapRolePatch, mapServer, mapServerPatch } from './map/server.ts';
 import { USER_FIELDS, mapUser, mapUserPatch } from './map/user.ts';
-import { mapChannelVoiceStates, mapVoiceFlags, mapVoiceState, type WChannelVoiceState, type WVoiceState } from './map/voice.ts';
+import { mapChannelVoiceStates, mapVoiceFlags, mapVoiceState, time, type WChannelVoiceState, type WVoiceState } from './map/voice.ts';
 import type { WChannel, WEmoji, WMember, WMessage, WServer, WUnread, WUser } from './map/wire.ts';
 
 type Frame = { type: string } & Record<string, unknown>;
@@ -137,6 +137,12 @@ export function mapFrame(f: Frame): DomainEvent[] {
       return [{ type: 'voiceMove', from: x.from, state: mapVoiceState(x.to, x.state as WVoiceState) }];
     case 'UserVoiceStateUpdate':
       return [{ type: 'voiceUpdate', channel: x.channel_id, user: x.id, data: mapVoiceFlags(x.data ?? {}) }];
+    case 'VoiceCallUpdate': {
+      // A ring carries the caller's joining time; an end carries none.
+      const ended = x.ended === true;
+      const startedAt = ended || x.started_at == null ? undefined : time(x.started_at);
+      return [{ type: 'callUpdate', channel: x.channel_id, initiator: x.initiator_id, ...(startedAt ? { startedAt } : {}), ended }];
+    }
     case 'Authenticated':
     case 'Pong':
     case 'Logout':

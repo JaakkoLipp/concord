@@ -57,6 +57,8 @@ export function mapMessagePatch(d: Partial<WMessage>): Partial<Message> {
   if (d.pinned !== undefined && d.pinned !== null) out.pinned = d.pinned;
   if (d.reactions) out.reactions = d.reactions;
   if (d.attachments) out.attachments = d.attachments.map((f) => mapFile(f));
+  // Stoat sets a call_started line's `finished_at` this way when the call empties.
+  if (d.system) out.system = mapSystem(d.system);
   return out;
 }
 

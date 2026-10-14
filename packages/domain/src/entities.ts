@@ -179,6 +179,15 @@ export interface VoiceState {
 
 export type VoiceFlags = Pick<VoiceState, 'publishing' | 'receiving' | 'screensharing' | 'camera'>;
 
+/** A DM or group call ringing this account (client.md section 10.8). */
+export interface Ring {
+  channel: Id;
+  /** The first person to join the call. */
+  initiator: Id;
+  /** When they joined, epoch milliseconds, which tells one call in a channel from the next. */
+  startedAt: number;
+}
+
 export interface Emoji {
   id: Id;
   parent: { type: 'server'; id: Id } | { type: 'detached' };

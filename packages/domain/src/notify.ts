@@ -120,3 +120,16 @@ export function shouldNotify(m: Message, c: NotifyContext): boolean {
   if (c.presence === 'Focus' && !mention) return false;
   return true;
 }
+
+export interface RingContext {
+  presence: Presence | undefined;
+  level: NotificationLevel;
+  /** The DM or group is muted now. */
+  muted: boolean;
+}
+
+/**
+ * Whether a DM call ringing this account plays the ringtone and, in a hidden tab, notifies (client.md section
+ * 10.8). A muted conversation, its level set to nothing, or Busy keeps it quiet. The ringing card shows either way.
+ */
+export const ringAlerts = (c: RingContext) => c.presence !== 'Busy' && !c.muted && c.level !== 'none';

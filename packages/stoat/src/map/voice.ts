@@ -20,7 +20,7 @@ export interface WChannelVoiceState {
 }
 
 /** Epoch milliseconds. A number below 10^12 is taken as seconds. */
-function time(t: string | number | undefined): number {
+export function time(t: string | number | undefined | null): number {
   if (typeof t === 'number') return t < 1e12 ? t * 1000 : t;
   const ms = Date.parse(t ?? '');
   return Number.isNaN(ms) ? 0 : ms;

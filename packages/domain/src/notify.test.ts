@@ -1,7 +1,7 @@
 /** The notification rule and the settings round trip (m2c-plan.md task 8). */
 import { describe, expect, it } from 'vitest';
 import type { Message } from './entities.ts';
-import { Flags, muteActive, nextMuteEnd, parseNotifications, shouldNotify, writeNotifications, type NotifyContext } from './notify.ts';
+import { Flags, muteActive, nextMuteEnd, parseNotifications, ringAlerts, shouldNotify, writeNotifications, type NotifyContext } from './notify.ts';
 
 const msg = (over: Partial<Message> = {}): Message => ({
   id: 'm', channel: 'c', author: 'tuuli', content: 'moi', attachments: [], embeds: [], mentions: [], roleMentions: [], replies: [], reactions: {}, pinned: false, ...over,
@@ -76,5 +76,15 @@ describe('notifications settings', () => {
     expect(muteActive({ until: 20 }, 20)).toBe(false);
     expect(muteActive(undefined, 10)).toBe(false);
     expect(nextMuteEnd({ server: {}, channel: {}, serverMutes: { a: { until: 50 } }, channelMutes: { b: { until: 30 }, c: {} } }, 10)).toBe(30);
+  });
+});
+
+describe('ringAlerts', () => {
+  it('rings in a DM at the default level, and stays quiet when muted, set to nothing, or Busy', () => {
+    expect(ringAlerts({ presence: 'Online', level: 'all', muted: false })).toBe(true);
+    expect(ringAlerts({ presence: 'Focus', level: 'mention', muted: false })).toBe(true);
+    expect(ringAlerts({ presence: 'Online', level: 'all', muted: true })).toBe(false);
+    expect(ringAlerts({ presence: 'Online', level: 'none', muted: false })).toBe(false);
+    expect(ringAlerts({ presence: 'Busy', level: 'all', muted: false })).toBe(false);
   });
 });

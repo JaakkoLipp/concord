@@ -3,7 +3,7 @@
  * (architecture section 4.3). Commands the UI calls live here; M2 adds the write actions.
  */
 import type { Backend, DomainEvent, Gateway, GroupEdit, SearchQuery, SelfEdit } from './backend.ts';
-import type { Id, Message, Presence, Relationship, User } from './entities.ts';
+import type { Id, Message, Presence, Relationship, Ring, User } from './entities.ts';
 import { SelfQueue } from './selfqueue.ts';
 import { ServerAdmin } from './admin.svelte.ts';
 import { ACTIVE_KEY, IdleTracker } from './idle.ts';
@@ -25,6 +25,8 @@ const ACK_RETRY_MS = 5_000;
 const POLL_MS = 2 * 60_000;
 /** How often timed mutes are checked for ending. */
 const CLOCK_MS = 15_000;
+/** A DM call rings for this long at most, counted from when this session heard it (m4-plan.md decision 9). */
+export const RING_MS = 30_000;
 
 /** This account losing a server, and why. `left` covers leaving or deleting it from this session or another. */
 export interface ServerRemoval {
@@ -108,6 +110,8 @@ export class Session {
   private onSignedOut: () => void = () => {};
   /** Per channel: when the last ack was sent, what it was for, and a trailing ack waiting to go. */
   private readonly acks = new Map<Id, { at: number; sent?: Id | undefined; timer?: ReturnType<typeof setTimeout> | undefined }>();
+  /** Per channel: the ring being timed, and the timer that stops it. */
+  private readonly ringTimers = new Map<Id, { ring: Ring; timer: ReturnType<typeof setTimeout> }>();
 
   constructor(backend: Backend) {
     this.backend = backend;
@@ -176,6 +180,8 @@ export class Session {
     this.profileRefetch.clear();
     for (const t of this.hiddenChecks.values()) clearTimeout(t);
     this.hiddenChecks.clear();
+    for (const t of this.ringTimers.values()) clearTimeout(t.timer);
+    this.ringTimers.clear();
     this.rawSettings = {};
     this.selfQueue.clear();
     this.idle.stop();
@@ -550,7 +556,27 @@ export class Session {
       case 'voiceMove':
         // Anyone who can see a channel sees who joins it, including people this session hasn't met.
         return this.meetInVoice(e.state.user, e.state.channel);
+      case 'callUpdate':
+        return this.timeRing(e.channel);
     }
+  }
+
+  /** Start timing a new ring. A repeat of the same one keeps its timer. */
+  private timeRing(channel: Id): void {
+    const ring = this.store.rings.get(channel);
+    const timed = this.ringTimers.get(channel);
+    if (!ring || timed?.ring === ring) return;
+    if (timed) clearTimeout(timed.timer);
+    const timer = setTimeout(() => {
+      this.ringTimers.delete(channel);
+      if (this.store.rings.get(channel) === ring) this.store.stopRing(channel);
+    }, RING_MS);
+    this.ringTimers.set(channel, { ring, timer });
+  }
+
+  /** Stop a call ringing this account: Join or Ignore (client.md section 10.8). Stoat has no decline to send. */
+  stopRing(channel: Id): void {
+    this.store.stopRing(channel);
   }
 
   private readonly hiddenChecks = new Map<Id, ReturnType<typeof setTimeout>>();

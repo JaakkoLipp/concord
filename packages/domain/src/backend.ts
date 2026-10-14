@@ -54,6 +54,11 @@ export type DomainEvent =
   | { type: 'voiceMove'; from: Id; state: VoiceState }
   /** Only the flags that changed. */
   | { type: 'voiceUpdate'; channel: Id; user: Id; data: Partial<VoiceFlags> }
+  /**
+   * A DM or group call rings this account, from the first person to join it (client.md section 10.8), or
+   * `ended`: the call emptied. An end names whoever left last, not the caller, and has no start time.
+   */
+  | { type: 'callUpdate'; channel: Id; initiator: Id; startedAt?: number; ended: boolean }
   | { type: 'unknown'; name: string };
 
 export type ConnectionState = 'connecting' | 'ready' | 'reconnecting' | 'offline' | 'invalid-session';

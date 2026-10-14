@@ -6,7 +6,7 @@
 import { emptyNotifications, muteActive, type NotificationLevel, type NotificationSettings } from '../notify.ts';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { ConnectionState, DomainEvent } from '../backend.ts';
-import type { Channel, Emoji, Id, Member, Message, NodeInfo, Presence, Profile, Relationship, Server, Unread, User, VoiceState } from '../entities.ts';
+import type { Channel, Emoji, Id, Member, Message, NodeInfo, Presence, Profile, Relationship, Ring, Server, Unread, User, VoiceState } from '../entities.ts';
 
 export interface MessageWindow {
   /** Oldest first, one contiguous stretch of history. */
@@ -58,6 +58,9 @@ export const memberKey = (server: Id, user: Id) => `${server}:${user}`;
 /** ULIDs sort by time as strings. */
 export const newer = (a: Id | undefined, b: Id | undefined) => !!a && (!b || a > b);
 
+/** One call in one channel: Stoat's start time tells a call from the next one in the same DM. */
+const ringKey = (r: Ring) => `${r.channel}:${r.startedAt}`;
+
 /** Messages kept in one window at most (client.md section 6.1). */
 export const WINDOW_MAX = 200;
 
@@ -95,6 +98,10 @@ export class Store {
   readonly typing = new SvelteMap<Id, Record<Id, number>>();
   /** Channel to user to their voice state. Only occupied channels have an entry (client.md section 10.1). */
   readonly voice = new SvelteMap<Id, Record<Id, VoiceState>>();
+  /** DM and group calls ringing this account, by channel (client.md section 10.8). */
+  readonly rings = new SvelteMap<Id, Ring>();
+  /** Rings already stopped, by `ringKey`, so a repeat of Stoat's event doesn't ring again. */
+  private readonly stoppedRings = new Set<string>();
   /** Servers whose full member list has been fetched. */
   readonly memberListLoaded = new SvelteMap<Id, number>();
   /** Messages sent from this client and not yet confirmed, by key. Window reloads and Ready leave them alone. */
@@ -237,6 +244,8 @@ export class Store {
         if (e.unreads) this.setUnreads(e.unreads);
         this.voice.clear();
         for (const v of e.voice) this.joinVoice(v);
+        // A call that emptied while this session was away rang out unheard.
+        for (const c of [...this.rings.keys()]) if (!this.voice.has(c)) this.rings.delete(c);
         this.typing.clear();
         this.memberListLoaded.clear();
         return;
@@ -410,6 +419,16 @@ export class Store {
         if (v) this.voice.set(e.channel, { ...this.voice.get(e.channel), [e.user]: { ...v, ...e.data } });
         return;
       }
+      case 'callUpdate': {
+        if (e.ended) return void this.rings.delete(e.channel);
+        const ring: Ring = { channel: e.channel, initiator: e.initiator, startedAt: e.startedAt ?? 0 };
+        // Our own call, a call this account is already in, or one it already answered or ignored.
+        if (ring.initiator === this.selfId || (this.selfId && this.selfId in (this.voice.get(ring.channel) ?? {}))) return;
+        if (this.stoppedRings.has(ringKey(ring))) return;
+        const old = this.rings.get(ring.channel);
+        if (!old || ringKey(old) !== ringKey(ring)) this.rings.set(ring.channel, ring);
+        return;
+      }
       case 'unknown':
         return;
     }
@@ -464,6 +483,7 @@ export class Store {
     this.dropWindowMessages(id);
     this.unreads.delete(id);
     this.voice.delete(id);
+    this.rings.delete(id);
   }
 
   private removeServer(id: Id): void {
@@ -484,6 +504,8 @@ export class Store {
   private joinVoice(v: VoiceState): void {
     for (const [channel, users] of [...this.voice]) if (channel !== v.channel && v.user in users) this.leaveVoice(channel, v.user);
     this.voice.set(v.channel, { ...this.voice.get(v.channel), [v.user]: v });
+    // Answered, here or on another device.
+    if (v.user === this.selfId) this.stopRing(v.channel);
   }
 
   /** Leaves only the channel named, so a late leave can't undo a join elsewhere. */
@@ -492,7 +514,19 @@ export class Store {
     if (!users || !(user in users)) return;
     const rest = omit(users, [user]);
     if (Object.keys(rest).length) this.voice.set(channel, rest);
-    else this.voice.delete(channel);
+    else {
+      this.voice.delete(channel);
+      // The call is over, even if Stoat's end of the ring goes missing.
+      this.rings.delete(channel);
+    }
+  }
+
+  /** Stop a ring: answered, ignored or rung out. The same call doesn't ring again. */
+  stopRing(channel: Id): void {
+    const r = this.rings.get(channel);
+    if (!r) return;
+    this.stoppedRings.add(ringKey(r));
+    this.rings.delete(channel);
   }
 
   private clearTyping(channel: Id, user: Id): void {
@@ -661,10 +695,11 @@ export class Store {
 
   clear(): void {
     this.self = null;
-    for (const map of [this.users, this.servers, this.channels, this.members, this.emojis, this.unreads, this.messages, this.windows, this.profiles, this.mutuals, this.typing, this.voice, this.memberListLoaded, this.pending]) {
+    for (const map of [this.users, this.servers, this.channels, this.members, this.emojis, this.unreads, this.messages, this.windows, this.profiles, this.mutuals, this.typing, this.voice, this.rings, this.memberListLoaded, this.pending]) {
       (map as SvelteMap<unknown, unknown>).clear();
     }
     this.ownNonces.clear();
+    this.stoppedRings.clear();
     this.readFloor.clear();
     this.deleted.clear();
     this.settings = { notifications: emptyNotifications(), serverOrder: [] };
