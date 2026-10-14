@@ -251,7 +251,7 @@ Results go in m0-results.md, per run: resolution and framerate achieved, bitrate
 - **Fixtures**: recorded only from seeded data.
 - **Exposure**: Stoat's Swagger page, `openapi.json` and `/metrics` were reachable through Caddy's `/api` route, as m0-results.md records. Caddy blocks all three. `openapi.json` is fetched over the internal network and kept in `packages/stoat/api/0.15.5/`.
 
-**M3 cleanup**:
+**M3 cleanup**, done on 2026-10-14 as an in-place swap rather than a wipe (m3-results.md task 5). The dev data is kept for a week in `~/stoat/data-dev-2026-10-14/`. The steps as first planned:
 
 1. Run `reset-data.sh` one last time, without seeding.
 2. Delete `.allow-wipe`.

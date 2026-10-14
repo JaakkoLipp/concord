@@ -153,3 +153,29 @@ ssh -t jaakko@concord.jaalip.com 'sudo cat /root/.config/concord/restic-password
 ```
 
 **At the wipe**: the snapshots of dev data are forgotten, so production's backups start clean.
+
+## Task 5: the swap to production, 2026-10-14
+
+Jaakko asked for an in-place swap rather than a wipe. Nothing was deleted:
+
+1. **Stop and set aside**: `dc down`, then the dev data moved to `~/stoat/data-dev-2026-10-14/`: `data/db`, `data/minio` and `data/rabbit`, with `Revolt.toml.dev` and the `.allow-wipe` marker. That data was 47 accounts, one server and 831 messages.
+2. **Production configuration** in `Revolt.toml`:
+   - `[api.smtp] host = ""`, so there is no email and accounts are created verified,
+   - `restrict_server_creation` set to the placeholder that matches nobody.
+3. **Start**: `dc up -d --remove-orphans` on empty data folders. Mailpit is gone, because `.allow-wipe` is. 16 containers run, and the upload bucket was recreated.
+4. **Backups restarted**: the four dev snapshots were forgotten and pruned. The first production backup holds the empty stack.
+
+Caddy's data (certificates), `secrets.env`, `host.env`, `livekit.env` and the TURN setup are unchanged.
+
+| Check | Result |
+|---|---|
+| `GET /api/` | 0.15.5, `restrict_server_creation` holds only the placeholder |
+| Database | 0 accounts, 0 servers |
+| `routes.ts` | All pass |
+| `reset-data.sh` | Refuses: no `.allow-wipe` |
+| `pnpm seed account …` | Refuses: not a dev stack |
+| API log | Only Stoat's expected warnings, no SMTP and no captcha |
+
+- **Rollback**, while the dev copy is kept: `dc down`, move the three folders and `Revolt.toml.dev` back, restore `.allow-wipe`, then `dc up -d`.
+- **The dev copy is deleted after a week.** M4's dev stack gets a fresh seed instead, because the copy's files are encrypted with production's key in `secrets.env`.
+- **Down time**: about two minutes, longer than planned because a `cp` into the root-owned folder failed midway. The stack stayed down and nothing was lost.
