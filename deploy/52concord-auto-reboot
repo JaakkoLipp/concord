@@ -1,0 +1,6 @@
+// Installed to /etc/apt/apt.conf.d/ by deploy/server-setup.sh (m3-plan.md decision 8).
+// Reboot after a security update that needs it, at 05:30: after the 03:30 backup and the Monday 05:00
+// LiveKit restart. The floating IP and every container come back on their own (m3-results.md, task 3).
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-WithUsers "true";
+Unattended-Upgrade::Automatic-Reboot-Time "05:30";

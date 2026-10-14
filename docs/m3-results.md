@@ -26,3 +26,27 @@ Plan: [m3-plan.md](m3-plan.md). Written task by task. The decision gate verdict 
 | Public account create | 403 |
 
 **Observation: LiveKit restarts.** On the first join after LiveKit was recreated, voice-ingress answered `participant_joined` and `participant_left` with 500. LiveKit retried with backoff, and the next join was clean. The planned Monday 05:00 restart will cause the same thing. Task 3 checks whether a member who is in voice at restart time is left showing as in the channel.
+
+## Task 3: floating IP, firewall and TURN, in progress
+
+**Done on 2026-10-14**:
+- **Floating IP**: the floating IPv4 is in `/etc/netplan/60-floating-ip.yaml`, server-only. Caddy answers port 80 on it through `floating.compose.yml`, ready for the TURN hostname's certificate.
+- **Automatic reboots** for security updates at 05:30, through `52concord-auto-reboot`.
+- **Weekly LiveKit restart**: `/etc/cron.d/concord` runs it on Mondays at 05:00. It does nothing while TURN is off, and it refuses to restart without the certificate.
+- **TURN files ready**: `turn.compose.yml`, `livekit-turn.yml` and `tools/live/src/turn.ts`. The check fails as expected while TURN is off.
+
+**Two reboot tests**:
+
+1. **The first reboot broke voice.**
+   - The floating IP is set statically and the main IP comes from DHCP, so the floating one is first on `eth0` after a boot.
+   - Docker's outbound NAT takes the first address. Every container then sent from the floating IP.
+   - LiveKit discovers its node IP over STUN, so it announced the floating IP. Its media ports are published only on the main IP, and joins stuck at "connecting".
+   - The host's own traffic was fine, because its DHCP route names the main IP as source.
+   - **Fix**: `com.docker.network.host_ipv4` on the stack's network pins outbound traffic to the main IPv4. Applying it needed a `dc down` and `dc up -d`.
+2. **The second reboot was clean.** The floating IP was present, all 17 containers were up, LiveKit's node IP was the main IP, and voice connected.
+
+**Seen at every boot**: `api`, `crond`, `pushd` and `voice-ingress` panic about seven times with "Failed to connect to RabbitMQ" and restart. Docker brings containers back without Compose's startup order. They settle by themselves in about 40 seconds. No repair is needed, but it is noted for decision gate criterion 3.
+
+**Waiting for**:
+- the `turn.concord` DNS record, for the certificate,
+- the Hetzner firewall, for the firewall check.

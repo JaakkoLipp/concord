@@ -1,0 +1,13 @@
+# The TURN hostname's certificate, for LiveKit's TURN over TLS (architecture section 5.3). Mounted only by
+# floating.compose.yml. Pinned to Let's Encrypt so the files stay where turn.compose.yml mounts them: Caddy
+# would otherwise fall back to ZeroSSL, which stores them under another directory. TLS-ALPN is off because
+# 443 on the floating IPv4 belongs to LiveKit, so only HTTP-01 on port 80 can succeed.
+{$TURN_DOMAIN} {
+	tls {
+		issuer acme {
+			dir https://acme-v02.api.letsencrypt.org/directory
+			disable_tlsalpn_challenge
+		}
+	}
+	respond 404
+}

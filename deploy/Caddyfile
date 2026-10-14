@@ -92,3 +92,7 @@
 
 	reverse_proxy http://web:5000
 }
+
+# Concord: site blocks that exist only on some stacks, such as the TURN hostname (floating.compose.yml).
+# A glob that matches nothing is allowed.
+import /etc/caddy/extra/*.caddy

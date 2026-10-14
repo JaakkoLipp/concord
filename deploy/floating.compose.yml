@@ -1,0 +1,11 @@
+# Added by ./concord/dc when host.env sets FLOATING_IPV4 (architecture section 8).
+# Caddy answers Let's Encrypt's HTTP-01 challenge for the TURN hostname on port 80 of the floating IPv4.
+# This comes before TURN itself: LiveKit refuses to start without the certificate (turn.compose.yml).
+services:
+  caddy:
+    ports:
+      - "${FLOATING_IPV4}:80:80"
+    environment:
+      TURN_DOMAIN: turn.${STOAT_DOMAIN}
+    volumes:
+      - ./concord/turn.caddy:/etc/caddy/extra/turn.caddy:ro

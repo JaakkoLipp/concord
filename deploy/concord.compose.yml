@@ -121,3 +121,12 @@ services:
       BODY_SIZE_LIMIT: 1M
     volumes:
       - ./concord/web:/srv/web:ro
+
+# Outbound traffic from every container leaves from the main IPv4. Without this, Docker's NAT takes the first
+# address on eth0, which after a reboot is the floating IPv4: LiveKit then discovered the floating IP as its
+# node IP over STUN, where its media ports aren't published, and voice stopped connecting (m3-results.md task 3).
+# Changing it recreates the network: dc down, then dc up -d.
+networks:
+  default:
+    driver_opts:
+      com.docker.network.host_ipv4: ${MAIN_IPV4}

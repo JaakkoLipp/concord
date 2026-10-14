@@ -1,0 +1,27 @@
+# Concord's LiveKit config with TURN on: deploy/livekit.yml plus the TURN section. Mounted by turn.compose.yml
+# when host.env says TURN=on. Keep the two files the same apart from the turn section.
+rtc:
+  use_external_ip: true
+  port_range_start: 50000
+  port_range_end: 50100
+  tcp_port: 7881
+
+redis:
+  address: redis:6379
+
+turn:
+  enabled: true
+  # LiveKit has no way to read this from the environment, so this file names the production host.
+  domain: turn.concord.jaalip.com
+  tls_port: 443
+  udp_port: 3478
+  # The default is 30000-40000; turn.compose.yml publishes only these.
+  relay_range_start: 30000
+  relay_range_end: 30100
+  cert_file: /certs/turn.concord.jaalip.com.crt
+  key_file: /certs/turn.concord.jaalip.com.key
+
+webhook:
+  api_key: 2c2e5918ca20
+  urls:
+    - "http://voice-ingress:8500/worldwide"

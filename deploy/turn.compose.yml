@@ -1,0 +1,17 @@
+# Added by ./concord/dc when host.env says TURN=on (architecture section 5.3, m3-plan.md decision 3).
+# Never turn it on before Caddy holds the TURN hostname's certificate (floating.compose.yml): LiveKit refuses to
+# start without the files, which takes all voice down. TURN=off is the fallback.
+services:
+  livekit:
+    ports:
+      # TURN over TLS: LiveKit hands clients turns:<domain>:443, hard-coded, so it needs 443 on its own address.
+      - "${FLOATING_IPV4}:443:443"
+      # TURN over UDP and its relay ports: LiveKit hands clients turn:<node IP>:3478, and the node IP is the main
+      # IPv4, so these go there, not on the floating IP.
+      - "${MAIN_IPV4}:3478:3478/udp"
+      - "${MAIN_IPV4}:30000-30100:30000-30100/udp"
+    volumes:
+      - ./concord/livekit-turn.yml:/etc/livekit.yml:ro
+      # The directory, not the files: renewals replace them. LiveKit reads them only at start, hence the weekly
+      # restart in concord-cron.
+      - ./data/caddy-data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/turn.${STOAT_DOMAIN}:/certs:ro

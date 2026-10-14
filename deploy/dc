@@ -3,13 +3,15 @@
 # Usage on the server: ~/stoat/concord/dc up -d | ps | logs -f api | ...
 #
 # concord/host.env is server-only: the main IPv4 and IPv6, the floating IPv4 and TURN=on|off.
-# Compose reads it after Stoat's .env (STOAT_DOMAIN). Two marker-driven extras:
+# Compose reads it after Stoat's .env (STOAT_DOMAIN). Extra files, by marker:
 #   concord/.allow-wipe exists  -> a dev stack: dev.compose.yml adds Mailpit
+#   FLOATING_IPV4 set           -> floating.compose.yml: Caddy gets the TURN hostname's certificate
 #   TURN=on in host.env         -> turn.compose.yml adds LiveKit's TURN listeners
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f concord/host.env ] || { echo "concord/host.env is missing (see docs/vps-runbook.md)" >&2; exit 1; }
 files=(-f compose.yml -f concord/concord.compose.yml)
 [ -f concord/.allow-wipe ] && files+=(-f concord/dev.compose.yml)
+[ -n "$(sed -n 's/^FLOATING_IPV4=//p' concord/host.env)" ] && files+=(-f concord/floating.compose.yml)
 [ "$(sed -n 's/^TURN=//p' concord/host.env)" = on ] && files+=(-f concord/turn.compose.yml)
 exec docker compose --env-file .env --env-file concord/host.env "${files[@]}" "$@"
