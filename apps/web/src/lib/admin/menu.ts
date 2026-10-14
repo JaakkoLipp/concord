@@ -88,7 +88,9 @@ export function channelMenu(session: Session, channel: Id): MenuItem[] {
   const server = c.server;
   const items: MenuItem[] = [];
   const mine = permissionsIn(store, c);
-  if (has(mine, Permission.ManageChannel)) items.push({ label: m.admin.editChannel, onselect: () => void openChannelSettings(channel, 'overview') });
+  if (has(mine, Permission.ManageChannel) || has(mine, Permission.ManagePermissions)) {
+    items.push({ label: m.admin.editChannel, onselect: () => void openChannelSettings(channel, has(mine, Permission.ManageChannel) ? 'overview' : 'permissions') });
+  }
   if (canManageChannels(session, server)) {
     const s = store.servers.get(server)!;
     const shown = (id: Id) => { const x = store.channels.get(id); return !!x && canView(store, x); };

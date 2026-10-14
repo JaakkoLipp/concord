@@ -13,6 +13,11 @@ describe('admin events', () => {
     expect(mapFrames({ type: 'ServerMemberLeave', id: S, user: 'u' })).toEqual([{ type: 'memberLeave', server: S, user: 'u' }]);
   });
 
+  it('leaves a member with no roles, not a missing list, when their roles are cleared', () => {
+    expect(mapFrames({ type: 'ServerMemberUpdate', id: { server: S, user: 'u' }, data: {}, clear: ['Roles'] }))
+      .toEqual([{ type: 'memberUpdate', server: S, user: 'u', data: { roles: [] }, clear: [] }]);
+  });
+
   it('applies system-message channels, their removal, and emoji renames', () => {
     const store = new Store();
     for (const e of mapFrames({ type: 'ServerCreate', id: S, server: { _id: S, owner: 'o', name: 'S', channels: [G], default_permissions: 0 }, channels: [], emojis: [{ _id: E, parent: { type: 'Server', id: S }, creator_id: 'o', name: 'vanha' }] })) store.apply(e);

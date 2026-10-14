@@ -91,7 +91,11 @@ export function mapFrame(f: Frame): DomainEvent[] {
       return [{ type: 'memberLeave', server: x.id, user: x.user, ...(['Kick', 'Ban', 'Leave'].includes(x.reason) ? { reason: x.reason } : {}) }];
     case 'ServerMemberUpdate': {
       const id = x.id as { server: string; user: string };
-      return [{ type: 'memberUpdate', server: id.server, user: id.user, data: mapMemberPatch(x.data ?? {}), clear: cleared(x.clear, MEMBER_FIELDS) }];
+      const data = mapMemberPatch(x.data ?? {});
+      const clear = cleared(x.clear, MEMBER_FIELDS);
+      // Clearing roles leaves none: a member always has a list, so it becomes empty rather than missing.
+      if (clear.includes('roles')) data.roles = [];
+      return [{ type: 'memberUpdate', server: id.server, user: id.user, data, clear: clear.filter((f) => f !== 'roles') }];
     }
     case 'UserUpdate': {
       const raw = (x.data ?? {}) as Partial<WUser>;

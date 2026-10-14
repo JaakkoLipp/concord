@@ -123,3 +123,35 @@ Results for [m2c-plan.md](m2c-plan.md), recorded against the seeded Stoat 0.15.5
 | `tuuli` given Moderaattori | `onni`'s menu on her no longer offers Roles… |
 | Everyone given Create invites | The warning shows. Reset leaves it unsaved. |
 | Console errors or failed requests | Two 429s on the member list, each when the check reloaded the page right after a burst of saves. A fresh page doesn't know that this session's bucket is already spent, so it gets one 429 and retries it. |
+
+## Task 5: channel permission overrides, 2026-10-14
+
+**What is deployed**:
+- **Permissions in channel settings**, for `ManagePermissions` in that channel:
+  - Everyone, then each role with an override, then "Add a role" for roles below yours.
+  - Each permission that means something in a channel is Deny, Inherit or Allow. Server-only ones, such as kicking or managing roles, are left out.
+  - Everyone's entry says in one line what members end up with: hidden, read but not send, or read and send.
+  - Roles at or above yours are read-only. Permissions you don't hold are disabled.
+  - The invite warning shows here too.
+  - "Remove override" writes it empty, since Stoat has no delete, and an empty override counts as none.
+- **Private channels**: Create channel has "Private channel", for those with `ManagePermissions`, with the roles to let in. The channel is created, hidden from Everyone, then shown to those roles. The dialog says its name briefly reaches every member's client (decision 8).
+- **Edit channel** opens Permissions for someone who can manage permissions but not the channel itself.
+
+**Found by the live check, and fixed**:
+1. **A Stoat socket bug: a private channel never appeared for a member given a role that shows it.**
+   - **What a probe showed**: a member's socket that saw the channel created and then hidden loses track of it. Stoat even forwards it the next override change. A role that shows it then sends no `ChannelCreate`, though a second grant does. A `GET` confirms she can see it.
+   - **The fix**: after a change to your own roles, a held role's permissions or Everyone's, the session fetches, half a second later, each channel of that server it doesn't have. A channel still hidden answers 403 and is skipped. client.md section 7 describes it.
+2. **Removing all of a member's roles broke the member list.** Stoat sends `clear: ["Roles"]`, and the store deleted the list instead of emptying it. Every client showing that member then threw on each render. This dates from M1, but kicks and role changes make it common now. The mapper turns the clear into an empty list. Unit test in `admin.test.ts`.
+
+**Live check**: `node tools/live/src/overrides.ts`, with `dev-admin`, `tuuli` and `onni` in browsers on a fresh check server. Timings run from the request leaving:
+
+| Check | Result |
+|---|---|
+| Everyone denied Send messages in `#säännöt` | The summary reads "Members can read but not send." `tuuli`'s composer says she can't send after 27 ms. |
+| Moderaattori allowed to send there | Saved, as the API shows |
+| A private channel for Admin only, through Create channel, moved between General and `#säännöt` | `tuuli` never sees it |
+| `tuuli` given Admin, until the channel is in her sidebar | 546 ms, the 500 ms wait included |
+| The role taken away, until it is gone | 22 ms |
+| `onni`, who manages channels but can't see it, moves `#säännöt` up past it | `onni` sees "säännöt, General". The server has "säännöt, General, salainen": the private channel kept its category and its place after General. |
+| Moderaattori's override removed, then the page reloaded | Not listed |
+| Console errors or failed requests | One 403 for `tuuli`: the re-check fetching the private channel after her role was taken away, as designed |

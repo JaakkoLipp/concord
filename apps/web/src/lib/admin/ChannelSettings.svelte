@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
-   * Channel settings at /app/channel-settings/<channel>/<section> (m2c-plan.md): Overview, and Delete channel
-   * for those who may. Task 5 adds Permissions.
+   * Channel settings at /app/channel-settings/<channel>/<section> (m2c-plan.md): Overview, Permissions, and
+   * Delete channel, each for those who may.
    */
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
@@ -13,13 +13,15 @@
   import { toasts } from '$lib/view/toast.svelte.ts';
   import SettingsFrame from '$lib/settings/SettingsFrame.svelte';
   import ChannelOverview from './ChannelOverview.svelte';
+  import ChannelPermissions from './ChannelPermissions.svelte';
 
-  type Section = 'overview';
+  type Section = 'overview' | 'permissions';
   let { session, channel, section }: { session: Session; channel: string; section: string } = $props();
   const store = $derived(session.store);
   const info = $derived(store.channels.get(channel));
   const mine = $derived(info ? permissionsIn(store, info) : 0n);
-  const sections = $derived((['overview'] as Section[]).filter((s) => s === 'overview' && has(mine, Permission.ManageChannel)));
+  const NEEDS: Record<Section, bigint> = { overview: Permission.ManageChannel, permissions: Permission.ManagePermissions };
+  const sections = $derived((['overview', 'permissions'] as Section[]).filter((s) => has(mine, NEEDS[s])));
   const current = $derived(sections.find((s) => s === section) ?? sections[0]);
   const items = $derived(sections.map((s) => ({ id: s, label: m.admin.channelSections[s], href: resolve('/(app)/app/channel-settings/[channel]/[section]', { channel, section: s }) })));
   const name = $derived(info?.kind === 'text' ? info.name : '');
@@ -45,6 +47,7 @@
 {#if info?.kind === 'text'}
   <SettingsFrame title={name} {items} active={current ?? ''} heading={current ? m.admin.channelSections[current] : ''}>
     {#if current === 'overview'}<ChannelOverview {session} {channel} />{/if}
+    {#if current === 'permissions'}<ChannelPermissions {session} {channel} />{/if}
     {#snippet footer()}
       {#if has(mine, Permission.ManageChannel)}<Button variant="ghost" size="sm" onclick={remove}>{m.admin.deleteChannel}</Button>{/if}
     {/snippet}

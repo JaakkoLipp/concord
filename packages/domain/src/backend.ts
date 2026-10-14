@@ -228,6 +228,8 @@ export interface Backend {
   /** Delete a server. Only its owner may; for anyone else Stoat treats this as leaving. */
   deleteServer(server: Id): Promise<void>;
   leaveServer(server: Id, silent?: boolean): Promise<void>;
+  /** A channel as this account sees it now. Refused when it can't see it. */
+  channel(channel: Id): Promise<Channel>;
   /** A server as it is now. */
   server(server: Id): Promise<Server>;
   /** This account's member record in a server. */

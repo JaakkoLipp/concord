@@ -159,6 +159,8 @@ export class Session {
     this.typingState.clear();
     for (const t of this.profileRefetch.values()) clearTimeout(t);
     this.profileRefetch.clear();
+    for (const t of this.hiddenChecks.values()) clearTimeout(t);
+    this.hiddenChecks.clear();
     this.rawSettings = {};
     this.selfQueue.clear();
     this.idle.stop();
@@ -498,6 +500,15 @@ export class Session {
       case 'groupJoin':
         // Stoat sends only IDs: fetch members this account hasn't met.
         return this.meet([e.user]);
+      case 'memberUpdate':
+        if (e.user === this.store.selfId && ('roles' in e.data || e.clear.includes('roles'))) this.recheckHidden(e.server);
+        return;
+      case 'roleUpdate':
+        if ('permissions' in e.data && this.store.members.get(memberKey(e.server, this.store.selfId ?? ''))?.roles.includes(e.id)) this.recheckHidden(e.server);
+        return;
+      case 'serverUpdate':
+        if ('defaultPermissions' in e.data) this.recheckHidden(e.id);
+        return;
       case 'serverCreate': {
         // Joining or creating a server brings no member record of your own, and without it every channel
         // looks hidden (m2c-plan.md).
@@ -521,6 +532,28 @@ export class Session {
       case 'settings':
         return this.settingsChanged(e.values);
     }
+  }
+
+  private readonly hiddenChecks = new Map<Id, ReturnType<typeof setTimeout>>();
+
+  /**
+   * Fetch the channels of a server this session doesn't have, after a change that may have let it see them.
+   * Stoat's socket loses track of a channel that was hidden from it right after it was created, and then
+   * sends no `ChannelCreate` when a role later shows it (m2c-results.md task 5, checked live). A channel still
+   * hidden answers 403 and is skipped.
+   */
+  private recheckHidden(server: Id): void {
+    const pending = this.hiddenChecks.get(server);
+    if (pending) clearTimeout(pending);
+    this.hiddenChecks.set(server, setTimeout(() => {
+      this.hiddenChecks.delete(server);
+      for (const id of this.store.servers.get(server)?.channels ?? []) {
+        if (this.store.channels.has(id)) continue;
+        void this.backend.channel(id).then((channel) => {
+          if (!this.store.channels.has(id)) this.store.apply({ type: 'channelCreate', channel });
+        }).catch(() => {});
+      }
+    }, 500));
   }
 
   private meet(users: Id[]): void {

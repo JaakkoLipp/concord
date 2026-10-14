@@ -88,10 +88,18 @@ export class ServerAdmin {
     return this.run(() => this.backend.setMemberRoles(server, user, roles));
   }
 
-  /** Create a channel, in a category if one is given. Returns it. */
-  async createChannel(server: Id, kind: 'text' | 'voice', name: string, category: string | null, description?: string): Promise<Channel> {
-    const channel = await this.run(() => this.backend.createChannel(server, kind, name, description));
+  /**
+   * Create a channel, in a category if one is given. A private one is hidden from Everyone, then shown to the
+   * chosen roles: Stoat can't do it in one step, so its name reaches every member's client first (m2c-plan.md
+   * decision 8). Returns it.
+   */
+  async createChannel(server: Id, kind: 'text' | 'voice', name: string, category: string | null, opts: { description?: string; privateTo?: Id[] } = {}): Promise<Channel> {
+    const channel = await this.run(() => this.backend.createChannel(server, kind, name, opts.description));
     if (!this.store.channels.has(channel.id)) this.store.apply({ type: 'channelCreate', channel });
+    if (opts.privateTo) {
+      await this.setChannelPermissions(channel.id, 'default', { allow: 0n, deny: Permission.ViewChannel });
+      for (const role of opts.privateTo) await this.setChannelPermissions(channel.id, role, { allow: Permission.ViewChannel, deny: 0n });
+    }
     const s = this.store.servers.get(server);
     if (s && !s.channels.includes(channel.id)) this.store.servers.set(server, { ...s, channels: [...s.channels, channel.id] });
     if (category && s) await this.setCategories(server, moveChannelTo(this.store.servers.get(server)!.categories, channel.id, category));
