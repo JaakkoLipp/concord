@@ -14,7 +14,8 @@ export default {
       mode: 'hash',
       directives: {
         'default-src': ['self'],
-        'script-src': ['self'],
+        // RNNoise compiles its WebAssembly inside the microphone's AudioWorklet (client.md section 10.4).
+        'script-src': ['self', 'wasm-unsafe-eval'],
         'style-src': ['self', 'unsafe-inline'],
         'img-src': ['self', 'data:', 'blob:'],
         'media-src': ['self', 'blob:'],
