@@ -179,3 +179,17 @@ Caddy's data (certificates), `secrets.env`, `host.env`, `livekit.env` and the TU
 - **Rollback**, while the dev copy is kept: `dc down`, move the three folders and `Revolt.toml.dev` back, restore `.allow-wipe`, then `dc up -d`.
 - **The dev copy is deleted after a week.** M4's dev stack gets a fresh seed instead, because the copy's files are encrypted with production's key in `secrets.env`.
 - **Down time**: about two minutes, longer than planned because a `cp` into the root-owned folder failed midway. The stack stayed down and nothing was lost.
+
+**Bootstrap on production, 2026-10-14**:
+
+| Step | Result |
+|---|---|
+| Jaakko's account | Made with `account-link.sh`: link, password, username. Verified at creation, because there's no SMTP. |
+| `restrict_server_creation` | Jaakko's user ID only, set with `set-server-creators.sh`. The client reads it at start, so it needed a reload before "Create a server" appeared. |
+| Community server, created in our client | Everyone lacks `InviteOthers`, and Admin is rank 0 with every permission |
+| Second account, Jaakko's other address | A link with an invite. It set its password and picked a username, then stopped at the invite preview, because Join wasn't clicked. Jaakko joined on a second visit. |
+| Content for the restore drill | 4 messages, 2 attachments and a voice channel. No avatar yet. |
+| Backup after the bootstrap | Taken by hand, so the drill has real content |
+| `routes.ts` | All pass, public account creation still 403 |
+
+Voice uses Stoat's client at `ref.` until M4. Our client opens a voice channel's text chat.
