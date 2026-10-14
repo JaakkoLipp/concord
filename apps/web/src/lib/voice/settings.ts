@@ -47,7 +47,8 @@ export const DEFAULT_VOICE_SETTINGS: Readonly<VoiceSettings> = {
   statsOverlay: false,
 };
 
-interface Stored { settings: VoiceSettings; volumes: Record<string, number> }
+/** Per-user volumes in percent, and the users muted for this device only ("Mute for me"). */
+interface Stored { settings: VoiceSettings; volumes: Record<string, number>; muted: string[] }
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 const SHARE_PRESETS: SharePreset[] = ['1080p60', '1080p30', '720p30', 'text'];
@@ -75,14 +76,15 @@ function sanitise(raw: unknown): VoiceSettings {
 
 function read(): Stored {
   try {
-    const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null') as { settings?: unknown; volumes?: unknown } | null;
+    const raw = JSON.parse(localStorage.getItem(KEY) ?? 'null') as { settings?: unknown; volumes?: unknown; muted?: unknown } | null;
     const volumes: Record<string, number> = {};
     if (raw?.volumes && typeof raw.volumes === 'object') {
       for (const [id, v] of Object.entries(raw.volumes)) if (typeof v === 'number' && Number.isFinite(v)) volumes[id] = clamp(v, 0, 200);
     }
-    return { settings: sanitise(raw?.settings), volumes };
+    const muted = Array.isArray(raw?.muted) ? raw.muted.filter((id): id is string => typeof id === 'string') : [];
+    return { settings: sanitise(raw?.settings), volumes, muted };
   } catch {
-    return { settings: { ...DEFAULT_VOICE_SETTINGS }, volumes: {} };
+    return { settings: { ...DEFAULT_VOICE_SETTINGS }, volumes: {}, muted: [] };
   }
 }
 
@@ -131,6 +133,24 @@ export function setUserVolume(userId: string, percent: number): void {
   const v = clamp(Math.round(percent), 0, 200);
   if (v === 100) delete s.volumes[userId];
   else s.volumes[userId] = v;
+  write();
+}
+
+/** Every volume set on this device, in percent, by user ID. */
+export function userVolumes(): Record<string, number> {
+  return { ...current().volumes };
+}
+
+/** The users muted for this device only. */
+export function mutedForMe(): string[] {
+  return [...current().muted];
+}
+
+/** Mutes or unmutes a user for this device only. Their volume is kept for when they're unmuted. */
+export function setMutedForMe(userId: string, muted: boolean): void {
+  const s = current();
+  s.muted = s.muted.filter((id) => id !== userId);
+  if (muted) s.muted.push(userId);
   write();
 }
 

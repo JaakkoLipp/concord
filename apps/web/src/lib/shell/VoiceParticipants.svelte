@@ -13,7 +13,7 @@
   import { popout } from '$lib/view/popout.svelte.ts';
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import { app } from '$lib/session/app.svelte.ts';
-  import { personMenu } from '$lib/people/actions.ts';
+  import { participantMenu } from '$lib/call/menu.ts';
   import { voiceMarks } from './voice.ts';
 
   interface Props { store: Store; channel: Id; name: string; server?: Id | undefined; speaking?: ReadonlySet<Id> }
@@ -35,7 +35,7 @@
           marks.serverDeafened ? m.voiceState.serverDeafened : '', marks.camera ? m.voiceState.camera : '', marks.live ? m.voiceState.sharing : '',
         ].filter(Boolean))}
         onclick={(e) => popout.open(v.user, server, e.currentTarget)}
-        use:menuOn={(node) => (app.session ? personMenu(app.session, v.user, { profile: () => popout.open(v.user, server, node), server }) : [])}
+        use:menuOn={(node) => (app.session ? participantMenu(app.session, app.voice, v.user, { profile: () => popout.open(v.user, server, node), server }) : [])}
       >
         <span class="avatar"><Avatar src={avatarUrl(store.users.get(v.user) ?? { id: v.user }, member?.avatar)} size={24} /></span>
         <span class="name">{display}</span>

@@ -8,6 +8,8 @@ class ShellState {
   sidebarOpen = $state(false);
   /** The pins or search panel, which takes the side column while open (m2a-plan.md task 8). */
   find = $state<{ channel: string; mode: 'pins' | 'search'; query: string } | null>(null);
+  /** A voice channel's text chat, beside the call view (client.md section 10.3). Closed until asked for. */
+  voiceChat = $state(false);
 
   openFind(channel: string, mode: 'pins' | 'search', query = ''): void {
     this.find = { channel, mode, query };

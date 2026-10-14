@@ -2,9 +2,11 @@
   /**
    * A menu of actions, opened from a button or at the pointer for a right-click or long press. Arrow keys,
    * Home and End move, Enter or Space picks, Escape or Tab closes, as the ARIA menu pattern describes.
+   * Checkboxes toggle and close like actions; a slider keeps the menu open and moves with Left and Right.
    */
   import { tick } from 'svelte';
-  import type { MenuItem } from './types.ts';
+  import MenuSlider from './MenuSlider.svelte';
+  import type { MenuAction, MenuCheck, MenuItem } from './types.ts';
   interface Props {
     open: boolean;
     onclose: () => void;
@@ -38,11 +40,11 @@
     pos = { top, left };
   }
 
-  const buttons = () => [...(panel?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])];
+  const buttons = () => [...(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), input') ?? [])];
 
   function key(e: KeyboardEvent) {
     const list = buttons();
-    const i = list.indexOf(document.activeElement as HTMLButtonElement);
+    const i = list.indexOf(document.activeElement as HTMLElement);
     const next = e.key === 'ArrowDown' ? i + 1 : e.key === 'ArrowUp' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? list.length - 1 : null;
     if (next !== null) {
       e.preventDefault();
@@ -53,7 +55,7 @@
     }
   }
 
-  function pick(item: Exclude<MenuItem, 'separator'>) {
+  function pick(item: MenuAction | MenuCheck) {
     onclose();
     item.onselect();
   }
@@ -87,6 +89,12 @@
     {#each items as item, i (i)}
       {#if item === 'separator'}
         <div class="separator" role="separator"></div>
+      {:else if item.kind === 'range'}
+        <MenuSlider {item} />
+      {:else if item.kind === 'check'}
+        <button role="menuitemcheckbox" aria-checked={item.checked} class="check" onclick={() => pick(item)}>
+          <span>{item.label}</span><span class="box" class:on={item.checked} aria-hidden="true"></span>
+        </button>
       {:else}
         <button role="menuitem" class:danger={item.danger} disabled={item.disabled} onclick={() => pick(item)}>{item.label}</button>
       {/if}
@@ -108,6 +116,14 @@
   button.danger { color: var(--danger); }
   button.danger:hover:not(:disabled), button.danger:focus-visible { background: var(--danger-fill); color: var(--on-danger); }
   button:disabled { opacity: 0.5; }
+  .check { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
+  .box { flex: none; width: 1.125rem; height: 1.125rem; border: 2px solid var(--text-secondary); border-radius: var(--radius-xs); }
+  .box.on { position: relative; border-color: var(--accent); background: var(--accent); }
+  /* The tick, drawn with two borders so the package needs no icon set. */
+  .box.on::after {
+    content: ''; position: absolute; left: 0.3rem; top: 0.05rem; width: 0.3rem; height: 0.6rem;
+    border: solid var(--on-accent); border-width: 0 2px 2px 0; rotate: 45deg;
+  }
   .separator { height: 1px; margin: var(--space-2) var(--space-3); background: var(--border-default); }
   @keyframes pop { from { opacity: 0; transform: scale(0.98); } }
 </style>

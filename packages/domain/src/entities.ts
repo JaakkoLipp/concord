@@ -265,6 +265,12 @@ export interface Message {
 }
 
 /** What `GET /api/` tells the client about the server it talks to. */
+/**
+ * A video tier from Stoat's limits: a track's width times height may be at most `area`, and its width over height
+ * within `aspect`. voice-ingress disconnects anyone over it. Zero area, or an aspect range with equal ends, means no limit.
+ */
+export interface VideoLimit { enabled: boolean; area: number; aspect: [number, number] }
+
 export interface NodeInfo {
   version: string;
   /** User IDs allowed to create servers. Empty means everyone. */
@@ -275,6 +281,8 @@ export interface NodeInfo {
   /** Per server. */
   serverLimits: { emoji: number; roles: number; channels: number };
   voice: { enabled: boolean; nodes: { name: string }[] };
+  /** What voice-ingress lets one video track publish, for accounts younger than `social.friendRequests.newUserHours` and the rest. */
+  video: { newUser: VideoLimit; other: VideoLimit };
   /**
    * Outgoing friend requests one account may have waiting: fewer for accounts younger than
    * `newUserHours`. Group size counts every member, the owner included.

@@ -9,8 +9,10 @@ import { Permission, has, isFinalJoinFailure, joinFailure, type Id, type JoinFai
 import { permissionsIn } from '$lib/view/channels.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 import { m } from '$lib/i18n/index.ts';
-import type { Call, CallSink, Quality } from './call.ts';
+import type { Call, CallSink, Feed, Quality } from './call.ts';
 import { CONTROLS, clampVolume, toggleDeafen, toggleMute, type Controls } from './controls.ts';
+import { VideoLimitError } from './limits.ts';
+import { mutedForMe, setMutedForMe, setUserVolume, userVolumes } from './settings.ts';
 import { endCause, initial, movedElsewhere, rejoining, shown, step, type CallEvent, type CallState, type Shown } from './rejoin.ts';
 import { play } from './sounds.ts';
 
@@ -47,8 +49,14 @@ export class VoiceController {
   /** Round-trip time in ms and packet loss in %, for the quality tooltip. */
   ping = $state<number | undefined>(undefined);
   loss = $state<number | undefined>(undefined);
-  /** Per-user volume, 1 meaning 100 %. */
-  volumes = $state.raw<ReadonlyMap<Id, number>>(new Map());
+  /** Per-user volume, 1 meaning 100 %, saved on this device (m4-plan.md decision 6). */
+  volumes = $state.raw<ReadonlyMap<Id, number>>(new Map(Object.entries(userVolumes()).map(([id, percent]) => [id, percent / 100])));
+  /** Users muted for this device only, also saved. */
+  mutedForMe = $state.raw<ReadonlySet<Id>>(new Set(mutedForMe()));
+  /** The call's video, cameras and screen shares, our own included. Empty outside a call. */
+  feeds = $state.raw<Feed[]>([]);
+  /** Whether our camera is on, or starting. Off again after every call. */
+  camera = $state(false);
 
   readonly status: Shown = $derived(shown(this.state));
   readonly channel: Id | null = $derived(this.state.channel);
@@ -109,7 +117,38 @@ export class VoiceController {
   setVolume(user: Id, volume: number): void {
     const v = clampVolume(volume, this.maxVolume);
     this.volumes = new Map(this.volumes).set(user, v);
+    setUserVolume(user, v * 100);
     this.call?.setVolume(user, v);
+  }
+
+  /** A user's volume, 1 meaning 100 %. */
+  volumeOf(user: Id): number {
+    return this.volumes.get(user) ?? 1;
+  }
+
+  /** "Mute for me": silences a user on this device only, keeping their volume. */
+  toggleMutedForMe(user: Id): void {
+    const on = !this.mutedForMe.has(user);
+    const next = new Set(this.mutedForMe);
+    if (on) next.add(user);
+    else next.delete(user);
+    this.mutedForMe = next;
+    setMutedForMe(user, on);
+    this.call?.setMutedForMe(user, on);
+  }
+
+  /** Turns our camera on or off. Only in a call. */
+  toggleCamera(): void {
+    const call = this.call;
+    if (!call) return;
+    const on = !this.camera;
+    this.camera = on;
+    call.setCamera(on, this.session.videoLimit()).catch((e: unknown) => {
+      if (this.call !== call) return;
+      this.camera = false;
+      const name = e instanceof DOMException ? e.name : '';
+      toasts.show(e instanceof VideoLimitError ? m.voice.videoLimit : name === 'NotAllowedError' || name === 'SecurityError' ? m.voice.cameraDenied : m.voice.cameraFailed);
+    });
   }
 
   setPushToTalk(down: boolean): void {
@@ -147,6 +186,8 @@ export class VoiceController {
     const call = this.call;
     this.call = null;
     this.speaking = new Set();
+    this.feeds = [];
+    this.camera = false;
     this.quality = 'unknown';
     this.ping = this.loss = undefined;
     await call?.disconnect().catch(() => {});
@@ -173,7 +214,7 @@ export class VoiceController {
       const { token } = await this.session.backend.joinCall(channel, node);
       if (gen !== this.gen) return;
       const { muted, deafened } = this.controls;
-      const options = { muted, deafened, canSpeak, webAudioMix: this.webAudioMix, volumes: this.volumes };
+      const options = { muted, deafened, canSpeak, webAudioMix: this.webAudioMix, volumes: this.volumes, mutedForMe: this.mutedForMe };
       const call = await connect(livekitUrl(), token, options, this.sink(gen));
       // Superseded, or the room already ended, which the sink has handled.
       if (gen !== this.gen || this.state.phase !== 'connecting') return void call.disconnect();
@@ -201,6 +242,8 @@ export class VoiceController {
         if (cause === 'removed') this.removedAs = this.ownState ?? this.selfState();
         this.call = null;
         this.speaking = new Set();
+        this.feeds = [];
+        this.camera = false;
         this.quality = 'unknown';
         this.ping = this.loss = undefined;
         this.dispatch({ type: 'ended', cause });
@@ -208,6 +251,7 @@ export class VoiceController {
         if (cause !== 'connection') play('leave');
       },
       speaking: (ids) => { if (current()) this.speaking = new Set(ids); },
+      feeds: (feeds) => { if (current()) this.feeds = feeds; },
       quality: (q) => { if (current()) this.quality = q; },
       stats: (s) => {
         if (!current()) return;

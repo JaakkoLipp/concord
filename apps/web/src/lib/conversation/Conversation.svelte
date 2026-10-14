@@ -10,6 +10,8 @@
   import MessageList from './MessageList.svelte';
   import Upload from '@lucide/svelte/icons/upload';
   import { attachFiles } from '$lib/composer/files.ts';
+  import CallView from '$lib/call/CallView.svelte';
+  import { shell } from '$lib/view/shell.svelte.ts';
 
   let { channel, message }: { channel: string; message?: string | undefined } = $props();
   const session = $derived(app.session!);
@@ -52,6 +54,12 @@
   let dragDepth = $state(0);
   const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types.includes('Files');
 
+  /** A voice channel shows its call here, and its chat in the side panel. */
+  const voice = $derived(info?.kind === 'text' && !!info.voice);
+  // A link to a message in a voice channel opens its chat, where the message is.
+  $effect(() => {
+    if (voice && message) shell.voiceChat = true;
+  });
   const placeholder = $derived(info ? (info.kind === 'dm' ? m.shell.messageUser(channelName(store, info)) : m.shell.messageChannel(channelName(store, info))) : '');
 </script>
 
@@ -62,11 +70,15 @@
   ondragleave={() => (dragDepth = Math.max(0, dragDepth - 1))}
   ondrop={(e) => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth = 0; if (info) attachFiles(store, info, [...(e.dataTransfer?.files ?? [])]); }}>
   <ChatHeader {store} channel={info} />
-  <div class="body">
-    <MessageList {session} {channel} {target} onjump={jump} />
-  </div>
-  <Composer {placeholder} {session} channel={info} />
-  {#if dragDepth > 0 && info}
+  {#if voice && app.voice}
+    <CallView {session} voice={app.voice} {channel} />
+  {:else}
+    <div class="body">
+      <MessageList {session} {channel} {target} onjump={jump} />
+    </div>
+    <Composer {placeholder} {session} channel={info} />
+  {/if}
+  {#if dragDepth > 0 && info && !voice}
     <div class="drop" aria-hidden="true">
       <div class="drop-card">
         <Upload size={40} />

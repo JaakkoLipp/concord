@@ -12,6 +12,7 @@
   import SignalMedium from '@lucide/svelte/icons/signal-medium';
   import SignalZero from '@lucide/svelte/icons/signal-zero';
   import Video from '@lucide/svelte/icons/video';
+  import VideoOff from '@lucide/svelte/icons/video-off';
   import X from '@lucide/svelte/icons/x';
   import { resolve } from '$app/paths';
   import { m } from '$lib/i18n/index.ts';
@@ -59,7 +60,9 @@
     </div>
     {#if voice.status !== 'disconnected'}
       <div class="actions">
-        <IconButton label={m.voice.camera} disabled><Video /></IconButton>
+        <IconButton label={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} active={voice.camera} aria-pressed={voice.camera} disabled={voice.status !== 'connected'} onclick={() => voice.toggleCamera()}>
+          {#if voice.camera}<Video />{:else}<VideoOff />{/if}
+        </IconButton>
         <IconButton label={m.voice.share} disabled><ScreenShare /></IconButton>
       </div>
     {/if}

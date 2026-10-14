@@ -26,14 +26,19 @@
   import NotifyBar from '$lib/notify/NotifyBar.svelte';
   import { app } from '$lib/session/app.svelte.ts';
 
-  interface Props { store: Store; server: string | null; channel: string | null; children: Snippet; panel?: Snippet | undefined; panelWidth?: 'members' | 'profile' | 'find' }
-  let { store, server, channel, children, panel, panelWidth = 'members' }: Props = $props();
+  interface Props {
+    store: Store; server: string | null; channel: string | null; children: Snippet; panel?: Snippet | undefined; panelWidth?: 'members' | 'profile' | 'find' | 'chat';
+    /** Whether the panel shows, when not the member list's own toggle: a voice channel's chat has its own. */
+    panelOpen?: boolean | undefined;
+  }
+  let { store, server, channel, children, panel, panelWidth = 'members', panelOpen }: Props = $props();
+  const open = $derived(panelOpen ?? shell.panelOpen);
   const NO_ONE: ReadonlySet<string> = new Set();
   /** The voice panel's height, so the slide-over sidebar ends above it on narrow screens. */
   let voiceHeight = $state(0);
 </script>
 
-<div class="shell" style:--voice-h="{voiceHeight}px" class:panel={!!panel && shell.panelOpen} class:sidebar-open={shell.sidebarOpen} style:--panel-w={panelWidth === 'profile' ? 'var(--dm-panel-w)' : panelWidth === 'find' ? 'var(--popout-w)' : 'var(--members-w)'}>
+<div class="shell" style:--voice-h="{voiceHeight}px" class:panel={!!panel && open} class:sidebar-open={shell.sidebarOpen} style:--panel-w={panelWidth === 'profile' ? 'var(--dm-panel-w)' : panelWidth === 'find' || panelWidth === 'chat' ? 'var(--popout-w)' : 'var(--members-w)'}>
   <div class="rail"><ServerRail {store} active={server} /></div>
   <div class="sidebar">
     {#if server}
@@ -47,7 +52,7 @@
     <UserDock {store} />
   </div>
   <main class="main">{@render children()}</main>
-  {#if panel && shell.panelOpen}
+  {#if panel && open}
     <div class="side-panel">{@render panel()}</div>
   {/if}
   <ImageViewer />

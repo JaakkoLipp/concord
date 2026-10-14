@@ -2,16 +2,21 @@
  * One LiveKit connection (client.md sections 10.2 to 10.7). Loaded with `import()` on the first join, so
  * livekit-client stays out of the main bundle: nothing else may import livekit-client at runtime.
  *
- * It connects, publishes the microphone, plays remote audio, applies mute, deafen and volumes, and reports
- * what happens to the controller through a sink. Rejoining is the controller's: when this room ends, it ends.
+ * It connects, publishes the microphone and camera, plays remote audio, applies mute, deafen and volumes, and
+ * reports what happens to the controller through a sink, video included as plain feeds, so nothing outside this
+ * module touches a LiveKit type. Rejoining is the controller's: when this room ends, it ends.
  *
  * Never send LiveKit data: voice-ingress disconnects anyone who does. A lint rule bans the data calls.
  */
 import {
-  LocalAudioTrack, Room, RoomEvent, Track, type LocalTrack, type Participant, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication,
+  LocalAudioTrack, Room, RoomEvent, Track, VideoQuality, createLocalVideoTrack,
+  type LocalTrack, type LocalVideoTrack, type Participant, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication, type TrackPublication,
 } from 'livekit-client';
+import type { VideoLimit } from '@concord/domain';
 import { setReceiving } from './controls.ts';
+import { VideoLimitError, fitTier, withinTier, type Size } from './limits.ts';
 import { openMic, type MicChain } from './mic.ts';
+import { loadVoiceSettings, onVoiceSettings } from './settings.ts';
 import { Peers } from './peers.ts';
 import { lossBetween, sample, type Sample } from './stats.ts';
 
@@ -30,6 +35,27 @@ export interface CallSink {
   /** Someone else joined or left this call. */
   peer(change: 'join' | 'leave'): void;
   micFailed(error: unknown): void;
+  /** The video in the call changed: cameras and screen shares, our own included. */
+  feeds(feeds: Feed[]): void;
+}
+
+export type FeedSource = 'camera' | 'screen';
+/** A viewer's cap on a feed's layer. Auto leaves it to adaptive streaming, by the tile's size. */
+export type FeedQuality = 'auto' | '1080p' | '720p' | '360p';
+
+/** One video track, for a tile. The same object for as long as the track lives. */
+export interface Feed {
+  id: string;
+  user: string;
+  source: FeedSource;
+  local: boolean;
+  /**
+   * Plays it in an element. Remote video only starts once attached: adaptive streaming sizes the layer to the
+   * element and pauses it while hidden.
+   */
+  attach(el: HTMLVideoElement): void;
+  detach(el: HTMLVideoElement): void;
+  setQuality(q: FeedQuality): void;
 }
 
 export interface CallOptions {
@@ -39,27 +65,52 @@ export interface CallOptions {
   canSpeak: boolean;
   /** Mix remote audio with Web Audio, for volumes above 100 % (Chromium only). */
   webAudioMix: boolean;
+  /** Per-user volume, 1 meaning 100 %, before the output volume. */
   volumes: ReadonlyMap<string, number>;
+  /** Users muted for this device only. */
+  mutedForMe: ReadonlySet<string>;
 }
 
 export interface Call {
   setMuted(muted: boolean): Promise<void>;
   setDeafened(deafened: boolean): void;
   setVolume(user: string, volume: number): void;
+  setMutedForMe(user: string, muted: boolean): void;
   setPushToTalk(down: boolean): void;
+  /** Publishes the camera, fitted into the tier, or stops it. */
+  setCamera(on: boolean, limit: VideoLimit | null): Promise<void>;
   disconnect(): Promise<void>;
 }
 
 const STATS_EVERY_MS = 2_000;
+/** Camera capture before the tier: 720p30, with LiveKit's default simulcast layers (client.md section 10.6). */
+const CAMERA = { width: 1280, height: 720, frameRate: 30 };
+const QUALITY: Record<FeedQuality, VideoQuality> = { auto: VideoQuality.HIGH, '1080p': VideoQuality.HIGH, '720p': VideoQuality.MEDIUM, '360p': VideoQuality.LOW };
+
+/**
+ * Brings a capture inside the tier if the browser gave more than was asked: voice-ingress reads the size declared
+ * at publish, and that comes from these settings.
+ */
+async function fitCapture(track: MediaStreamTrack, limit: VideoLimit | null, frameRate: number): Promise<void> {
+  const size = (): Size => { const s = track.getSettings(); return { width: s.width ?? 0, height: s.height ?? 0 }; };
+  if (withinTier(size(), limit)) return;
+  const fit = fitTier(size(), limit);
+  if (!fit) throw new VideoLimitError();
+  await track.applyConstraints({ width: { max: fit.width }, height: { max: fit.height }, frameRate });
+  if (!withinTier(size(), limit)) throw new VideoLimitError();
+}
 
 export async function connect(url: string, token: string, options: CallOptions, sink: CallSink): Promise<Call> {
   let { muted, deafened } = options;
   const volumes = new Map(options.volumes);
+  const mutedForMe = new Set(options.mutedForMe);
+  let output = loadVoiceSettings();
   const room = new Room({
     adaptiveStream: { pixelDensity: 'screen' },
     dynacast: true,
     webAudioMix: options.webAudioMix,
     disconnectOnPageLeave: true,
+    ...(output.outputDevice ? { audioOutput: { deviceId: output.outputDevice } } : {}),
   });
   const peers = new Peers();
   /** Remote audio elements live here, out of sight. */
@@ -69,33 +120,88 @@ export async function connect(url: string, token: string, options: CallOptions, 
   let up = false;
   let chain: MicChain | null = null;
   let mic: LocalAudioTrack | null = null;
+  let camera: LocalVideoTrack | null = null;
+  /** Whether the camera should be on: it can be turned off again while it starts. */
+  let cameraWanted = false;
+  /** Feeds by publication, kept while their track is the same, so tiles keep their elements. */
+  const feedCache = new Map<string, { track: unknown; feed: Feed }>();
   let statsTimer: ReturnType<typeof setInterval> | null = null;
   let lastSample: Sample | undefined;
 
   const live = () => room.state === 'connected';
   const remotes = () => room.remoteParticipants.values();
+  /** A user's volume times the output volume (client.md section 10.5), within what this browser can play. */
   const applyVolume = (p: RemoteParticipant) => {
-    const v = volumes.get(p.identity);
-    if (v !== undefined) p.setVolume(v);
+    const v = mutedForMe.has(p.identity) ? 0 : (volumes.get(p.identity) ?? 1) * (output.outputVolume / 100);
+    const level = Math.min(options.webAudioMix ? 2 : 1, Math.max(0, v));
+    p.setVolume(level, Track.Source.Microphone);
+    p.setVolume(level, Track.Source.ScreenShareAudio);
   };
+  const stopSettings = onVoiceSettings((s) => {
+    const before = output;
+    output = s;
+    if (s.outputVolume !== before.outputVolume) for (const p of remotes()) applyVolume(p);
+    if (s.outputDevice !== before.outputDevice) void room.switchActiveDevice('audiooutput', s.outputDevice || 'default').catch(() => {});
+  });
+
+  const feedFor = (user: string, pub: TrackPublication, local: boolean): Feed | null => {
+    const track = pub.videoTrack;
+    const source: FeedSource | null = pub.source === Track.Source.Camera ? 'camera' : pub.source === Track.Source.ScreenShare ? 'screen' : null;
+    if (!track || !source || pub.isMuted) return null;
+    const id = `${user}/${pub.trackSid}`;
+    const cached = feedCache.get(id);
+    if (cached?.track === track) return cached.feed;
+    const feed: Feed = {
+      id, user, source, local,
+      attach: (el) => void track.attach(el),
+      detach: (el) => void track.detach(el),
+      setQuality: (q) => { if (!local) (pub as RemoteTrackPublication).setVideoQuality(QUALITY[q]); },
+    };
+    feedCache.set(id, { track, feed });
+    return feed;
+  };
+  /** Tells the controller what video there is now. */
+  const emitFeeds = () => {
+    const out: Feed[] = [];
+    const self = room.localParticipant;
+    for (const pub of self.videoTrackPublications.values()) { const f = feedFor(self.identity, pub, true); if (f) out.push(f); }
+    for (const p of remotes()) for (const pub of p.videoTrackPublications.values()) { const f = feedFor(p.identity, pub, false); if (f) out.push(f); }
+    const ids = new Set(out.map((f) => f.id));
+    for (const id of feedCache.keys()) if (!ids.has(id)) feedCache.delete(id);
+    sink.feeds(out);
+  };
+
   const cleanup = () => {
     if (statsTimer) clearInterval(statsTimer);
     statsTimer = null;
+    stopSettings();
     chain?.stop();
     chain = null;
     mic = null;
+    camera?.stop();
+    camera = null;
+    feedCache.clear();
     box.remove();
   };
 
   room
     .on(RoomEvent.TrackSubscribed, (track: RemoteTrack, pub: RemoteTrackPublication) => {
+      if (track.kind === Track.Kind.Video) return emitFeeds();
       if (track.kind !== Track.Kind.Audio) return;
       box.append(track.attach());
       if (deafened) pub.setEnabled(false);
     })
     .on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
+      if (track.kind === Track.Kind.Video) {
+        track.detach();
+        return emitFeeds();
+      }
       for (const el of track.detach()) el.remove();
     })
+    .on(RoomEvent.TrackMuted, emitFeeds)
+    .on(RoomEvent.TrackUnmuted, emitFeeds)
+    .on(RoomEvent.LocalTrackPublished, emitFeeds)
+    .on(RoomEvent.LocalTrackUnpublished, emitFeeds)
     .on(RoomEvent.ParticipantConnected, (p: RemoteParticipant) => {
       applyVolume(p);
       if (peers.joined(p.identity, live())) sink.peer('join');
@@ -103,6 +209,7 @@ export async function connect(url: string, token: string, options: CallOptions, 
     .on(RoomEvent.ParticipantDisconnected, (p: RemoteParticipant) => {
       // A full restart tears participants down just before the room says it is reconnecting, so look after it has.
       setTimeout(() => { if (peers.left(p.identity, live())) sink.peer('leave'); });
+      emitFeeds();
     })
     .on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => sink.speaking(speakers.map((s) => s.identity)))
     .on(RoomEvent.ConnectionQualityChanged, (q, p: Participant) => {
@@ -114,6 +221,7 @@ export async function connect(url: string, token: string, options: CallOptions, 
       if (deafened) setReceiving(remotes(), false);
       for (const p of remotes()) applyVolume(p);
       setTimeout(() => peers.reconcile(room.remoteParticipants.keys()));
+      emitFeeds();
       sink.reconnected();
     })
     .on(RoomEvent.AudioPlaybackStatusChanged, () => {
@@ -125,7 +233,10 @@ export async function connect(url: string, token: string, options: CallOptions, 
     })
     .on(RoomEvent.Disconnected, (reason) => {
       cleanup();
-      if (up) sink.ended(reason);
+      if (up) {
+        sink.feeds([]);
+        sink.ended(reason);
+      }
     });
 
   try {
@@ -138,6 +249,7 @@ export async function connect(url: string, token: string, options: CallOptions, 
   peers.seed(room.remoteParticipants.keys());
   for (const p of remotes()) applyVolume(p);
   if (deafened) setReceiving(remotes(), false);
+  emitFeeds();
   void room.startAudio().catch(() => {});
   statsTimer = setInterval(() => void readStats(), STATS_EVERY_MS);
   if (options.canSpeak) void publishMic();
@@ -181,7 +293,39 @@ export async function connect(url: string, token: string, options: CallOptions, 
     },
     setVolume(user, volume) {
       volumes.set(user, volume);
-      room.remoteParticipants.get(user)?.setVolume(volume);
+      const p = room.remoteParticipants.get(user);
+      if (p) applyVolume(p);
+    },
+    setMutedForMe(user, on) {
+      if (on) mutedForMe.add(user);
+      else mutedForMe.delete(user);
+      const p = room.remoteParticipants.get(user);
+      if (p) applyVolume(p);
+    },
+    async setCamera(on, limit) {
+      cameraWanted = on;
+      if (!on) {
+        const track = camera;
+        camera = null;
+        if (track) await room.localParticipant.unpublishTrack(track as LocalTrack).catch(() => track.stop());
+        return;
+      }
+      if (camera) return;
+      const fit = fitTier(CAMERA, limit);
+      if (!fit) throw new VideoLimitError();
+      const device = loadVoiceSettings().cameraDevice;
+      const track = await createLocalVideoTrack({ ...(device ? { deviceId: device } : {}), resolution: { ...fit, frameRate: CAMERA.frameRate } });
+      try {
+        await fitCapture(track.mediaStreamTrack, limit, CAMERA.frameRate);
+        // Turned off, or the call ended, while the camera started.
+        if (room.state === 'disconnected' || !cameraWanted || camera) throw new Superseded();
+        camera = track;
+        await room.localParticipant.publishTrack(track as LocalTrack, { source: Track.Source.Camera, simulcast: true });
+      } catch (e) {
+        if (camera === track) camera = null;
+        track.stop();
+        if (!(e instanceof Superseded)) throw e;
+      }
     },
     setPushToTalk(down) {
       chain?.setPushToTalk(down);
@@ -192,3 +336,6 @@ export async function connect(url: string, token: string, options: CallOptions, 
     },
   };
 }
+
+/** A camera or share that was turned off, or whose call ended, before it started. Not an error to show. */
+class Superseded extends Error {}

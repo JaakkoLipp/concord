@@ -3,7 +3,7 @@
  * (architecture section 4.3). Commands the UI calls live here; M2 adds the write actions.
  */
 import type { Backend, DomainEvent, Gateway, GroupEdit, SearchQuery, SelfEdit } from './backend.ts';
-import type { Id, Message, Presence, Relationship, Ring, User } from './entities.ts';
+import type { Id, Message, Presence, Relationship, Ring, User, VideoLimit } from './entities.ts';
 import { SelfQueue } from './selfqueue.ts';
 import { ServerAdmin } from './admin.svelte.ts';
 import { ACTIVE_KEY, IdleTracker } from './idle.ts';
@@ -944,6 +944,15 @@ export class Session {
     if (!limits || !self) return 10;
     const ageHours = (Date.now() - ulidTime(self)) / 3_600_000;
     return ageHours < limits.newUserHours ? limits.newUser : limits.other;
+  }
+
+  /** The video tier this account publishes under, by its age as for friend requests. Null before the node info loads. */
+  videoLimit(): VideoLimit | null {
+    const node = this.store.node;
+    const self = this.store.selfId;
+    if (!node || !self) return null;
+    const ageHours = (Date.now() - ulidTime(self)) / 3_600_000;
+    return ageHours < node.social.friendRequests.newUserHours ? node.video.newUser : node.video.other;
   }
 
   // ---------- pins and search (m2a-plan.md task 8) ----------

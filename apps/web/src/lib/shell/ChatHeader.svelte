@@ -5,6 +5,7 @@
   import Hash from '@lucide/svelte/icons/hash';
   import Menu from '@lucide/svelte/icons/menu';
   import Phone from '@lucide/svelte/icons/phone';
+  import MessageSquare from '@lucide/svelte/icons/message-square';
   import Pin from '@lucide/svelte/icons/pin';
   import UserRound from '@lucide/svelte/icons/user-round';
   import Users from '@lucide/svelte/icons/users';
@@ -45,9 +46,14 @@
     {/if}
     {@const pinsOpen = shell.find?.channel === channel.id && shell.find.mode === 'pins'}
     <IconButton label={m.find.pins} active={pinsOpen} aria-pressed={pinsOpen} onclick={() => (pinsOpen ? (shell.find = null) : shell.openFind(channel.id, 'pins'))}><Pin /></IconButton>
-    <IconButton label={panelLabel} active={shell.panelOpen} aria-pressed={shell.panelOpen} onclick={() => (shell.panelOpen = !shell.panelOpen)}>
-      {#if channel.kind === 'dm'}<UserRound />{:else}<Users />{/if}
-    </IconButton>
+    {#if channel.kind === 'text' && channel.voice}
+      <!-- A voice channel's chat takes the member list's place (client.md section 10.3). -->
+      <IconButton label={shell.voiceChat ? m.call.hideChat : m.call.showChat} active={shell.voiceChat} aria-pressed={shell.voiceChat} onclick={() => (shell.voiceChat = !shell.voiceChat)}><MessageSquare /></IconButton>
+    {:else}
+      <IconButton label={panelLabel} active={shell.panelOpen} aria-pressed={shell.panelOpen} onclick={() => (shell.panelOpen = !shell.panelOpen)}>
+        {#if channel.kind === 'dm'}<UserRound />{:else}<Users />{/if}
+      </IconButton>
+    {/if}
     <input class="search" type="search" placeholder={m.shell.search} aria-label={m.shell.search} bind:value={searchText}
       onkeydown={(e) => {
         const q = searchText.trim();

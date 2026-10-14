@@ -8,6 +8,7 @@
   import FindPanel from '$lib/conversation/FindPanel.svelte';
   import UserPopout from '$lib/people/UserPopout.svelte';
   import GroupPanel from '$lib/people/GroupPanel.svelte';
+  import VoiceChat from '$lib/call/VoiceChat.svelte';
   import { shell } from '$lib/view/shell.svelte.ts';
 
   let { children }: { children: Snippet } = $props();
@@ -28,8 +29,10 @@
 {#if session}
   {@const info = channel ? session.store.channels.get(channel) : undefined}
   {@const finding = !!shell.find && shell.find.channel === channel}
-  <Shell store={session.store} {server} {channel} panel={finding ? find : server ? members : info?.kind === 'dm' ? profile : info?.kind === 'group' ? group : undefined}
-    panelWidth={finding ? 'find' : server || info?.kind === 'group' ? 'members' : 'profile'}>
+  <!-- A voice channel shows its chat beside the call, where the member list would be (client.md section 10.3). -->
+  {@const voice = !finding && info?.kind === 'text' && !!info.voice}
+  <Shell store={session.store} {server} {channel} panel={finding ? find : voice ? chat : server ? members : info?.kind === 'dm' ? profile : info?.kind === 'group' ? group : undefined}
+    panelWidth={finding ? 'find' : voice ? 'chat' : server || info?.kind === 'group' ? 'members' : 'profile'} panelOpen={voice ? shell.voiceChat : undefined}>
     {@render children()}
   </Shell>
   <UserPopout {session} />
@@ -45,6 +48,10 @@
 
 {#snippet find()}
   {#if session && shell.find}<FindPanel {session} channel={shell.find.channel} mode={shell.find.mode} query={shell.find.query} />{/if}
+{/snippet}
+
+{#snippet chat()}
+  {#if session && channel}<VoiceChat {session} {channel} />{/if}
 {/snippet}
 
 {#snippet members()}

@@ -1,7 +1,7 @@
 /** The Stoat implementation of the domain's Backend interface. */
 import type {
   Backend, Capabilities, Channel, ChannelEdit, Emoji, Gateway, GatewayHandlers, GroupEdit, Id, Invite, InvitePreview, LoginResult, Member, SelfEdit, SelfField, Message,
-  MessagePage, MessageQuery, NodeInfo, OutgoingMessage, Override, Role, RoleEdit, SearchQuery, Server, ServerEdit, User,
+  MessagePage, MessageQuery, NodeInfo, OutgoingMessage, Override, Role, RoleEdit, SearchQuery, Server, ServerEdit, User, VideoLimit,
 } from '@concord/domain';
 import { JoinCallError, type JoinFailure } from '@concord/domain/errors';
 import type { components } from './api/types.ts';
@@ -26,6 +26,12 @@ const FRIENDLY_NAME = 'Concord';
 type WInvite = { type: string; _id: string; server: string; channel: string; creator: string };
 type WInvitePreview = components['schemas']['InviteResponse'];
 type WInviteJoin = { type: 'Server'; server: { _id: string }; channels: { _id: string }[] } | { type: 'Group'; channel: { _id: string } };
+type WVideoLimit = { video?: boolean; video_resolution?: [number, number]; video_aspect_ratio?: [number, number] };
+/** A video tier. Stoat's own defaults when the fields are missing, the strictest it ships. */
+const videoLimit = (l: WVideoLimit | undefined): VideoLimit => {
+  const [w, h] = l?.video_resolution ?? [1080, 720];
+  return { enabled: l?.video ?? true, area: w * h, aspect: l?.video_aspect_ratio ?? [0.3, 2.5] };
+};
 const mapInvite = (i: WInvite): Invite => ({ code: i._id, server: i.server, channel: i.channel, creator: i.creator });
 
 /** `join_call`'s refusals in 0.15.5 (delta/src/routes/channels/voice_join.rs). */
@@ -69,8 +75,8 @@ export class StoatBackend implements Backend {
     this.capabilities = capabilitiesFor(r.revolt);
     const limits = r.features.limits as unknown as {
       global?: { restrict_server_creation?: string[]; message_replies?: number; message_reactions?: number; group_size?: number; new_user_hours?: number; server_emoji?: number; server_roles?: number; server_channels?: number };
-      new_user?: { outgoing_friend_requests?: number };
-      default?: { file_upload_size_limits?: Record<string, number>; message_length?: number; message_attachments?: number; outgoing_friend_requests?: number };
+      new_user?: { outgoing_friend_requests?: number } & WVideoLimit;
+      default?: { file_upload_size_limits?: Record<string, number>; message_length?: number; message_attachments?: number; outgoing_friend_requests?: number } & WVideoLimit;
     };
     const livekit = (r.features as { livekit?: { enabled: boolean; nodes?: { name: string }[] } }).livekit;
     return {
@@ -85,6 +91,7 @@ export class StoatBackend implements Backend {
       },
       serverLimits: { emoji: limits.global?.server_emoji ?? 100, roles: limits.global?.server_roles ?? 200, channels: limits.global?.server_channels ?? 200 },
       voice: { enabled: livekit?.enabled ?? false, nodes: (livekit?.nodes ?? []).map((n) => ({ name: n.name })) },
+      video: { newUser: videoLimit(limits.new_user), other: videoLimit(limits.default) },
       social: {
         friendRequests: {
           newUser: limits.new_user?.outgoing_friend_requests ?? 5,
