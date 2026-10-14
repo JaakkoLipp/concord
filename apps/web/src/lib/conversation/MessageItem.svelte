@@ -30,7 +30,7 @@
   const own = $derived(message.author === store.selfId);
   /** The author's context menu. Webhook messages have no user behind them. */
   const authorMenu = (node: HTMLElement) =>
-    app.session && !message.webhook ? personMenu(app.session, message.author, { profile: () => popout.open(message.author, server, node) }) : [];
+    app.session && !message.webhook ? personMenu(app.session, message.author, { profile: () => popout.open(message.author, server, node), server }) : [];
   let menuOpen = $state(false);
   const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   /** On touch screens there is no hover: a tap on the message shows its actions. */

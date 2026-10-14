@@ -6,6 +6,7 @@ import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { BackendError, type Id, type Session } from '@concord/domain';
 import type { MenuItem } from '@concord/ui';
+import { memberItems } from '$lib/admin/members.ts';
 import { m } from '$lib/i18n/index.ts';
 import { confirm } from '$lib/view/confirm.svelte.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
@@ -82,7 +83,7 @@ async function copy(text: string): Promise<void> {
  * Everything you can do about a person, for context menus. With `primary: false`, the actions a profile
  * card already shows as buttons are left out.
  */
-export function personMenu(session: Session, user: Id, opts: { profile?: () => void; primary?: boolean; inDm?: boolean } = {}): MenuItem[] {
+export function personMenu(session: Session, user: Id, opts: { profile?: () => void; primary?: boolean; inDm?: boolean; server?: Id | undefined } = {}): MenuItem[] {
   const u = session.store.users.get(user);
   const primary = opts.primary ?? true;
   const items: MenuItem[] = [];
@@ -105,6 +106,12 @@ export function personMenu(session: Session, user: Id, opts: { profile?: () => v
     } else {
       items.push({ label: m.friends.actions.block, danger: true, onselect: () => void block(session, user) });
     }
+  }
+  // In a server: what an admin can do about this member.
+  const admin = opts.server ? memberItems(session, opts.server, user) : [];
+  if (admin.length) {
+    if (items.length && items.at(-1) !== 'separator') items.push('separator');
+    items.push(...admin);
   }
   if (items.length && items.at(-1) !== 'separator') items.push('separator');
   if (u) items.push({ label: m.people.copyUsername, onselect: () => void copy(`${u.username}#${u.discriminator}`) });

@@ -1,0 +1,148 @@
+<script lang="ts">
+  /**
+   * The Roles section (m2c-plan.md): roles strongest first, then Everyone. Roles at or above your own are
+   * locked. Move up and Move down reorder through the merged writer, so quick clicks end in the last order.
+   */
+  import { untrack } from 'svelte';
+  import { Button, Dialog, Menu, TextField, type MenuItem } from '@concord/ui';
+  import { Permission, canActOnRole, has, moveRole, rolesByRank, type Id, type Session } from '@concord/domain';
+  import Lock from '@lucide/svelte/icons/lock';
+  import Ellipsis from '@lucide/svelte/icons/ellipsis';
+  import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import { m } from '$lib/i18n/index.ts';
+  import { myRank, serverPerms } from '$lib/view/admin.ts';
+  import { confirm } from '$lib/view/confirm.svelte.ts';
+  import { toasts } from '$lib/view/toast.svelte.ts';
+  import RoleEditor from './RoleEditor.svelte';
+
+  let { session, server }: { session: Session; server: string } = $props();
+  const store = $derived(session.store);
+  const info = $derived(store.servers.get(server)!);
+  const roles = $derived(rolesByRank(info));
+  const rank = $derived(myRank(store, server));
+  const mine = $derived(serverPerms(store, server));
+  const canCreate = $derived(has(mine, Permission.ManageRole));
+  const counts = $derived.by(() => {
+    const n: Record<Id, number> = {};
+    for (const mem of store.members.values()) if (mem.server === server) for (const r of mem.roles) n[r] = (n[r] ?? 0) + 1;
+    return n;
+  });
+  // Member counts need the member list.
+  $effect(() => {
+    const id = server;
+    untrack(() => void session.loadMembers(id, false).catch(() => {}));
+  });
+
+  let selected = $state<Id | 'everyone' | null>(null);
+  let creating = $state(false);
+  let newName = $state('');
+  let busy = $state(false);
+  let menu = $state<{ items: MenuItem[]; anchor: HTMLElement } | null>(null);
+
+  async function create(e: SubmitEvent) {
+    e.preventDefault();
+    const name = newName.trim();
+    if (!name || [...name].length > 32 || busy) return;
+    busy = true;
+    try {
+      const role = await session.admin.createRole(server, name);
+      creating = false;
+      newName = '';
+      selected = role.id;
+    } catch {
+      toasts.show(m.admin.roles.failed);
+    } finally {
+      busy = false;
+    }
+  }
+
+  function move(role: Id, delta: -1 | 1) {
+    const order = rolesByRank(store.servers.get(server)!).map((r) => r.id);
+    const next = moveRole(order, info.roles, rank, role, delta);
+    if (next) void session.admin.setRanks(server, next).catch(() => toasts.show(m.admin.roles.failed));
+  }
+
+  async function remove(role: Id) {
+    const name = info.roles[role]?.name ?? '';
+    if (!(await confirm.ask({ title: m.admin.roles.deleteTitle(name), body: m.admin.roles.deleteBody, confirm: m.admin.roles.delete, danger: true }))) return;
+    try {
+      await session.admin.deleteRole(server, role);
+      if (selected === role) selected = null;
+    } catch {
+      toasts.show(m.admin.roles.failed);
+    }
+  }
+
+  function openMenu(role: Id, anchor: HTMLElement) {
+    const order = roles.map((r) => r.id);
+    const items: MenuItem[] = [
+      { label: m.admin.moveUp, disabled: !moveRole(order, info.roles, rank, role, -1), onselect: () => move(role, -1) },
+      { label: m.admin.moveDown, disabled: !moveRole(order, info.roles, rank, role, 1), onselect: () => move(role, 1) },
+    ];
+    if (has(mine, Permission.ManageRole)) items.push('separator', { label: m.admin.roles.delete, danger: true, onselect: () => void remove(role) });
+    menu = { items, anchor };
+  }
+
+  // The selected role was deleted, here or elsewhere: back to the list.
+  $effect(() => { if (selected && selected !== 'everyone' && !info.roles[selected]) selected = null; });
+</script>
+
+{#if selected}
+  <RoleEditor {session} {server} role={selected} onback={() => (selected = null)} />
+{:else}
+  <p class="intro">{m.admin.roles.intro}</p>
+  {#if canCreate}<div class="actions"><Button onclick={() => (creating = true)}>{m.admin.roles.create}</Button></div>{/if}
+  <ul class="roles" aria-label={m.admin.roles.title}>
+    {#each roles as role (role.id)}
+      {@const locked = !canActOnRole(rank, role)}
+      <li class="role" data-role={role.name}>
+        <button class="open" onclick={() => (selected = role.id)}>
+          <span class="swatch" style:background={role.colour ?? 'var(--text-muted)'} aria-hidden="true"></span>
+          <span class="name">{role.name}</span>
+          <span class="count">{m.admin.roles.members(counts[role.id] ?? 0)}</span>
+          {#if locked}<span class="locked" title={m.admin.roles.locked}><Lock size={14} aria-hidden="true" />{m.admin.roles.lockedShort}</span>{/if}
+          <ChevronRight size={16} aria-hidden="true" />
+        </button>
+        {#if !locked}
+          <button class="more" aria-label={m.admin.roles.menu(role.name)} onclick={(e) => openMenu(role.id, e.currentTarget)}><Ellipsis size={18} /></button>
+        {/if}
+      </li>
+    {/each}
+    <li class="role everyone">
+      <button class="open" onclick={() => (selected = 'everyone')}>
+        <span class="swatch" style:background="var(--text-muted)" aria-hidden="true"></span>
+        <span class="name">{m.admin.roles.everyone}</span>
+        <span class="count">{m.admin.roles.everyoneHelp}</span>
+        <ChevronRight size={16} aria-hidden="true" />
+      </button>
+    </li>
+  </ul>
+  {#if roles.some((r) => !canActOnRole(rank, r))}<p class="note">{m.admin.roles.locked}</p>{/if}
+{/if}
+
+<Menu open={!!menu} onclose={() => (menu = null)} items={menu?.items ?? []} label={m.admin.roles.title} anchor={menu?.anchor ?? null} />
+<Dialog open={creating} title={m.admin.roles.createTitle} onclose={() => (creating = false)}>
+  <form id="create-role" onsubmit={create}><TextField label={m.admin.roles.name} bind:value={newName} maxlength={64} error={[...newName.trim()].length > 32 ? m.admin.nameError : undefined} /></form>
+  {#snippet actions()}
+    <Button variant="ghost" onclick={() => (creating = false)}>{m.admin.cancel}</Button>
+    <Button type="submit" form="create-role" {busy} disabled={!newName.trim() || [...newName.trim()].length > 32}>{m.admin.roles.create}</Button>
+  {/snippet}
+</Dialog>
+
+<style>
+  .intro, .note { margin: 0 0 var(--space-5); color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
+  .note { margin-top: var(--space-4); }
+  .actions { margin-bottom: var(--space-5); }
+  .roles { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+  .role { display: flex; align-items: center; gap: var(--space-2); border-radius: var(--radius-md); }
+  .role:hover { background: var(--hover-overlay); }
+  .open { flex: 1; display: flex; align-items: center; gap: var(--space-3); min-width: 0; padding: var(--space-3) var(--space-4); border: 0; background: none; color: var(--text-normal); text-align: left; cursor: pointer; border-radius: var(--radius-md); }
+  .open:focus-visible, .more:focus-visible { outline: 2px solid var(--accent); }
+  .swatch { width: 0.875rem; height: 0.875rem; border-radius: var(--radius-full); flex: none; }
+  .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); }
+  .count { color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
+  .locked { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--text-muted); font: var(--text-sm) var(--font-sans); }
+  .more { display: grid; place-items: center; width: 2rem; height: 2rem; margin-right: var(--space-2); border: 0; border-radius: var(--radius-md); background: none; color: var(--text-secondary); cursor: pointer; }
+  .more:hover { color: var(--text-strong); background: var(--surface-4); }
+  .everyone { margin-top: var(--space-3); border-top: 1px solid var(--border-subtle); padding-top: var(--space-2); }
+</style>

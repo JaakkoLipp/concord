@@ -11,6 +11,7 @@
   import { isOwner, serverSections, type ServerSection } from '$lib/view/admin.ts';
   import SettingsFrame from '$lib/settings/SettingsFrame.svelte';
   import Overview from './Overview.svelte';
+  import Roles from './Roles.svelte';
   import DeleteServerDialog from './DeleteServerDialog.svelte';
 
   let { session, server, section }: { session: Session; server: string; section: string } = $props();
@@ -31,6 +32,7 @@
 {#if info}
   <SettingsFrame title={info.name} {items} active={current ?? ''} heading={current ? m.admin.sections[current as ServerSection] : ''}>
     {#if current === 'overview'}<Overview {session} {server} />{/if}
+    {#if current === 'roles'}<Roles {session} {server} />{/if}
     {#snippet footer()}
       {#if isOwner(store, server)}
         <Button variant="ghost" size="sm" onclick={() => (deleting = true)}>{m.admin.deleteServer}</Button>

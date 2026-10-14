@@ -90,3 +90,36 @@ Results for [m2c-plan.md](m2c-plan.md), recorded against the seeded Stoat 0.15.5
 | Console errors or failed requests | None |
 
 `removal.ts` passed again after the redirect change.
+
+## Task 4: roles, 2026-10-14
+
+**What is deployed**:
+- **Roles** in server settings, for `ManageRole` or `ManagePermissions`: roles strongest first with their colour and member count, then Everyone. Roles at or above your own show "Locked", with a note saying why. Each other role has a menu with Move up, Move down and Delete. "Create role" asks for a name and opens the new role.
+- **The role editor**:
+  - Display: the name, a colour from twelve presets (two of them gradients) or typed as any CSS colour or gradient the browser understands, and "Show members separately".
+  - Permissions: grouped as Stoat's client groups them, each with a line of help, as Deny, Inherit or Allow. Everyone's are on and off.
+  - Permissions you don't hold are disabled and say so. A locked role is read-only.
+  - Saving writes only what changed. Giving `InviteOthers` to Everyone, or to a role without Manage server, shows the warning from decision 5.
+- **Role order writes** merge as task 3's category writes do, and a `ServerRoleRanksUpdate` echo is ignored while one is pending.
+- **Roles… on members**: the people menu, opened on a member or a message author in a server, offers Roles… for members ranked below you, with a checklist of the roles you may give. Saving keeps any role you can't touch.
+
+**Unit tests**: none new. The rank rules, the merge and the merged writer were tested in tasks 1 and 3.
+
+**Changed from the plan**: the plan's check had a moderator keep a higher role on a member while changing her other roles. That can't happen. A member who holds a role above yours outranks you, so Stoat refuses any change to her roles, and the menu no longer offers Roles… for her. Keeping roles you can't touch now only guards against rank ties, which Stoat can produce after deletions. The check covers both halves instead.
+
+**Found by the live check, and fixed**:
+- **The permission switches' checkbox sat under its own track.** Clicking the label worked, but a click on the switch itself could miss. The checkbox is now on top.
+- **The check read the API too early.** The UI shows each new order at once, while the writes wait for the bucket behind the role creations, so the API caught up a few seconds later. The client was right. The check now polls until the API agrees.
+
+**Live check**: `node tools/live/src/roles.ts`, with `dev-admin` and `onni` in browsers and `tuuli` online over a socket, on a fresh check server:
+
+| Check | Result |
+|---|---|
+| The five seeded roles other than Admin, created with colours, the gradient, hoisting and Moderaattori's permissions | 24.6 s, mostly the bucket. Names, colours, hoisting, order and permissions all match the seed. |
+| Four quick Move clicks on Vakio, up twice and down twice | Back in the seeded order, in the UI and then the API |
+| `tuuli` given Pelaajat, from the request leaving until `onni`'s member list shows her under Pelaajat | 25 ms |
+| `onni`, given Testimod (role management but not `MentionEveryone`), ranked below Botit | Admin, Moderaattori, Botit and Testimod locked. `MentionEveryone` disabled and Manage roles enabled in Vakio's editor. |
+| `onni` changes `tuuli`'s roles from Pelaajat to Vakio | Saved as Vakio |
+| `tuuli` given Moderaattori | `onni`'s menu on her no longer offers Roles… |
+| Everyone given Create invites | The warning shows. Reset leaves it unsaved. |
+| Console errors or failed requests | Two 429s on the member list, each when the check reloaded the page right after a burst of saves. A fresh page doesn't know that this session's bucket is already spent, so it gets one 429 and retries it. |

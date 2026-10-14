@@ -13,7 +13,8 @@
 
   let { session }: { session: Session } = $props();
   const store = $derived(session.store);
-  const d = $derived(adminDialogs.current);
+  // Member roles have their own dialog.
+  const d = $derived(adminDialogs.current?.kind === 'memberRoles' ? null : adminDialogs.current);
   const server = $derived(d ? store.servers.get(d.server) : undefined);
 
   let name = $state('');
@@ -42,7 +43,7 @@
   async function submit(e: SubmitEvent) {
     e.preventDefault();
     // Read once: both are derived from the open dialog, and closing it clears them.
-    const d = adminDialogs.current;
+    const d = adminDialogs.current?.kind === 'memberRoles' ? null : adminDialogs.current;
     const server = d ? store.servers.get(d.server) : undefined;
     if (!d || !server || busy) return;
     busy = true;

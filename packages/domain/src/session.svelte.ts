@@ -131,6 +131,8 @@ export class Session {
           const { categories: _, ...data } = e.data;
           e = { ...e, data };
         }
+        // Likewise a role order older than the one being written.
+        if (e.type === 'rolesReorder' && this.admin.holdsRanks(e.server)) return;
         // Read before the store forgets the server.
         const removal = this.removalOf(e);
         this.store.apply(e);

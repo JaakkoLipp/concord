@@ -7,6 +7,7 @@ import type { ChannelEdit, RoleEdit, ServerEdit } from './backend.ts';
 import type { Category, Channel, Id, Override, Role } from './entities.ts';
 import { moveChannelTo } from './layout.ts';
 import { Latest } from './latest.ts';
+import { mergeOrder } from './ranks.ts';
 import { Permission, has } from './permissions.ts';
 import type { Session } from './session.svelte.ts';
 
@@ -50,6 +51,41 @@ export class ServerAdmin {
       if (fresh && now) this.store.servers.set(server, { ...now, categories: fresh.categories });
       throw e;
     }
+  }
+
+  private readonly rankWrites = new Map<Id, Latest<Id[]>>();
+
+  /** Whether a role-order echo for this server must be ignored, as for categories. */
+  holdsRanks(server: Id): boolean {
+    return !!this.rankWrites.get(server)?.holding;
+  }
+
+  /**
+   * Show a new role order at once and write it, merged at write time with roles created or deleted
+   * meanwhile. On failure the server is fetched again and this throws.
+   */
+  async setRanks(server: Id, order: Id[]): Promise<void> {
+    this.store.apply({ type: 'rolesReorder', server, order });
+    let w = this.rankWrites.get(server);
+    if (!w) {
+      w = new Latest((o) => this.run(async () => {
+        const s = this.store.servers.get(server);
+        await this.backend.setRoleRanks(server, s ? mergeOrder(o, s) : o);
+      }));
+      this.rankWrites.set(server, w);
+    }
+    try {
+      await w.set(order);
+    } catch (e) {
+      const fresh = await this.backend.server(server).catch(() => null);
+      const now = this.store.servers.get(server);
+      if (fresh && now) this.store.servers.set(server, { ...now, roles: fresh.roles });
+      throw e;
+    }
+  }
+
+  setMemberRoles(server: Id, user: Id, roles: Id[]): Promise<void> {
+    return this.run(() => this.backend.setMemberRoles(server, user, roles));
   }
 
   /** Create a channel, in a category if one is given. Returns it. */
@@ -144,7 +180,12 @@ export class ServerAdmin {
 
   // The rest are thin: each task's screen adds what it needs around them.
   setDefaultPermissions(server: Id, permissions: bigint) { return this.run(() => this.backend.setDefaultPermissions(server, permissions)); }
-  createRole(server: Id, name: string) { return this.run(() => this.backend.createRole(server, name)); }
+  /** Create a role, shown at once, at the bottom as Stoat places it. */
+  async createRole(server: Id, name: string): Promise<Role> {
+    const role = await this.run(() => this.backend.createRole(server, name));
+    this.store.apply({ type: 'roleUpdate', server, id: role.id, data: role, clear: [] });
+    return role;
+  }
   editRole(server: Id, role: Id, change: RoleEdit) { return this.run(() => this.backend.editRole(server, role, change)); }
   setRolePermissions(server: Id, role: Id, p: Override) { return this.run(() => this.backend.setRolePermissions(server, role, p)); }
   deleteRole(server: Id, role: Id) { return this.run(() => this.backend.deleteRole(server, role)); }
