@@ -207,3 +207,46 @@ Results for [m2c-plan.md](m2c-plan.md), recorded against the seeded Stoat 0.15.5
 | The name "Bad Name" | Refused, and Upload disabled |
 | Uploads sent while refusing | None |
 | Console errors or failed requests | None |
+
+## Task 8: notifications, 2026-10-14
+
+**What is deployed**:
+- **The rule** in `packages/domain/src/notify.ts`, as client.md section 8 now describes it, with decisions 1 and 2: server channels default to mentions only, and a mute lets only personal mentions through.
+- **The settings key** is read and written in the shape Stoat's client uses:
+  - Every key is kept, and an old `muted` level becomes a mute with no end.
+  - Writes merge and start from the newest local value, and an echo of our own write doesn't undo a newer change.
+  - A clock in the store ends timed mutes within 15 s, so dimming and badges come back on their own.
+- **Menus**:
+  - The server menu, the channel menu and the DM and group menus each gain Notification settings and Mute or Unmute.
+  - The channel menu gains Mark as read when the channel is unread.
+- **The dialog** has the level, with Default naming what it inherits, and the mute: 15 minutes, 1 hour, 8 hours, 24 hours, or until turned off.
+- **Turning them on**: a bar asks once per browser. User settings gain a Notifications section with the switch. It explains when the browser blocks them.
+- **The notifier**:
+  - One tab per browser holds the Web Lock and notifies.
+  - Tabs share the channel they show while focused.
+  - The title is "Name (#channel, Server)". The body shows names for mentions, channels and emoji, and replaces spoilers with "spoiler".
+  - A tag per channel collapses bursts, and a click opens the message.
+- **Messages carry Stoat's flags** now, which the store dropped before.
+
+**Unit tests**:
+- `packages/domain/src/notify.test.ts`, 8 tests: levels, mentions and flags, the silent cases, Busy and Focus, mutes, parsing Stoat's shape and the old level, writing with unknown keys kept, and mute ends.
+- `apps/web/src/lib/notify/text.test.ts`, 3 tests: the title, names and spoilers in the body, and files and length.
+
+**Live check**: `node tools/live/src/notify.ts`, with `dev` in a browser whose `Notification` is recorded and whose focus the script sets. `tuuli` writes over the API. `dev`'s own settings and status are saved first and put back.
+
+| Case | Notifications |
+|---|---|
+| A plain message, default level | 0 |
+| A mention, default level | 1, titled "tuuli (#muut, m2c-check notify …)", body "@Dev hei …", tagged with the channel |
+| A mention of dev's role | 1 |
+| A plain message after choosing All messages in the dialog | 1 |
+| A mention in the open channel while focused, then while not | 0, then 1 |
+| A mention while Busy, set over the API as another client would | 0 |
+| In Focus: a plain message, then `@everyone` | 0, then 1 |
+| Muted through the menu, which dims the channel: plain, `@everyone`, personal mention | 0, 0, 1 |
+| Two tabs, both unfocused | 1 in all |
+| The other tab focused on that channel | 0 |
+| A 1-minute mute written in Stoat's shape: while running, then after | 0, then 1 |
+| A click on the last one | Opens that message |
+| Stoat's server mute, an old `muted` level and an unknown key, then a level changed here | The server mute and the unknown key kept. The old level became a mute. The new level written. |
+| Console errors or failed requests | None |

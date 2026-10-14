@@ -247,7 +247,13 @@ Behaviour verified on 0.15.5:
 
 ## 8. Notifications
 
-**While the client is open**, notifications come from WebSocket events: the browser's `Notification` API on the web, Electron's on desktop. They follow our notification rules: per-server and per-channel mutes and "mentions only", stored in Stoat's `notifications` settings key. They never fire for the focused channel.
+**While the client is open**, notifications come from WebSocket events: the browser's `Notification` API on the web, Electron's on desktop. Built in M2c (m2c-plan.md, "Notifications"; `packages/domain/src/notify.ts`):
+- **Settings**: Stoat's `notifications` key in the shape its client writes, `{server, channel, server_mutes, channel_mutes}`, with levels all, mention and none, and mutes with an optional end. Every key is kept on writing, and an old `muted` level reads as a mute with no end.
+- **Defaults**: server channels notify for mentions only, DMs and groups for everything.
+- **A message notifies** unless it is your own, from someone you blocked, a system line, or flagged "don't notify" (flag 2). It also stays quiet while a focused window of this browser shows that channel, or while you are Busy. Otherwise the level decides, and Focus allows only mentions.
+- **Mentions**: your ID, one of your roles, `@everyone` (flag 4) or `@online` (flag 8). A muted channel or server notifies only for your own ID: a user mention or a reply to you.
+- **One tab per browser** notifies, the one holding the `concord:notify` Web Lock. Tabs share the channel they show while focused through `localStorage`.
+- **Turned on per browser**, from a bar that asks once or the Notifications section of settings.
 
 **Web push**, for the installed web app on phones, ships in M7:
 

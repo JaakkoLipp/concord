@@ -20,6 +20,8 @@
   import AdminDialogs from '$lib/admin/AdminDialogs.svelte';
   import MemberRolesDialog from '$lib/admin/MemberRolesDialog.svelte';
   import ModerationDialogs from '$lib/admin/ModerationDialogs.svelte';
+  import NotifySettingsDialog from '$lib/notify/NotifySettingsDialog.svelte';
+  import NotifyBar from '$lib/notify/NotifyBar.svelte';
   import { app } from '$lib/session/app.svelte.ts';
 
   interface Props { store: Store; server: string | null; channel: string | null; children: Snippet; panel?: Snippet | undefined; panelWidth?: 'members' | 'profile' | 'find' }
@@ -45,7 +47,8 @@
   <EmojiPicker />
   <ConfirmDialog />
   <ContextMenuHost />
-  {#if app.session}<AdminDialogs session={app.session} /><MemberRolesDialog session={app.session} /><ModerationDialogs session={app.session} />{/if}
+  {#if app.session}<AdminDialogs session={app.session} /><MemberRolesDialog session={app.session} /><ModerationDialogs session={app.session} /><NotifySettingsDialog session={app.session} />{/if}
+  <NotifyBar />
   {#if shell.sidebarOpen}
     <button class="scrim" aria-label={m.shell.closeSidebar} onclick={() => (shell.sidebarOpen = false)}></button>
   {/if}

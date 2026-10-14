@@ -6,6 +6,7 @@ import { LiveTransport, StoatBackend, StoatError } from '@concord/stoat';
 import { drafts } from '$lib/composer/drafts.ts';
 import { clearToken, loadToken, saveToken } from './token.ts';
 import { watchIdle } from './idle.ts';
+import { watchNotifications } from '$lib/notify/watch.ts';
 import { m } from '$lib/i18n/index.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 
@@ -37,11 +38,13 @@ class App {
   }
 
   private stopIdle: (() => void) | null = null;
+  private stopNotify: (() => void) | null = null;
 
   private async start(token: string): Promise<void> {
     const session = new Session(backend);
     await session.start(token, () => void this.signedOut());
     this.stopIdle = watchIdle(session);
+    this.stopNotify = watchNotifications(session);
     // Leaving needs no notice; the open conversation goes to the Friends screen on its own when its channel goes.
     session.onServerRemoved((r) => {
       if (r.reason !== 'left') toasts.show(m.admin.removed[r.reason](r.name), 'info');
@@ -58,6 +61,8 @@ class App {
   private async signedOut(): Promise<void> {
     this.stopIdle?.();
     this.stopIdle = null;
+    this.stopNotify?.();
+    this.stopNotify = null;
     await this.session?.stop();
     this.session = null;
     drafts.clear();

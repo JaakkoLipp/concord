@@ -8,7 +8,9 @@ import { SelfQueue } from './selfqueue.ts';
 import { ServerAdmin } from './admin.svelte.ts';
 import { ACTIVE_KEY, IdleTracker } from './idle.ts';
 import { BackendError } from './errors.ts';
-import { Store, memberKey, newer, type EmojiPrefs, type NotificationLevel, type PendingMessage, type Settings } from './store/store.svelte.ts';
+import { Store, memberKey, newer, type EmojiPrefs, type PendingMessage, type Settings } from './store/store.svelte.ts';
+import { parseNotifications, writeNotifications, type NotificationLevel, type NotificationSettings } from './notify.ts';
+import { Latest } from './latest.ts';
 import { ulid, ulidTime } from './ulid.ts';
 
 const PAGE = 100;
@@ -21,6 +23,8 @@ export const ACK_EVERY_MS = 2_000;
 /** A failed ack is sent again after this long. */
 const ACK_RETRY_MS = 5_000;
 const POLL_MS = 2 * 60_000;
+/** How often timed mutes are checked for ending. */
+const CLOCK_MS = 15_000;
 
 /** This account losing a server, and why. `left` covers leaving or deleting it from this session or another. */
 export interface ServerRemoval {
@@ -32,15 +36,7 @@ export interface ServerRemoval {
 const oldestFirst = (list: Message[]) => [...list].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
 export function parseSettings(raw: Record<string, { value: string }>): Settings {
-  const out: Settings = { servers: {}, channels: {}, serverOrder: [] };
-  const levels = new Set<NotificationLevel>(['all', 'mention', 'none', 'muted']);
-  try {
-    const n = JSON.parse(raw.notifications?.value ?? '{}') as { server?: Record<Id, string>; channel?: Record<Id, string> };
-    for (const [id, v] of Object.entries(n.server ?? {})) if (levels.has(v as NotificationLevel)) out.servers[id] = v as NotificationLevel;
-    for (const [id, v] of Object.entries(n.channel ?? {})) if (levels.has(v as NotificationLevel)) out.channels[id] = v as NotificationLevel;
-  } catch {
-    // Settings written by another client in a shape we don't know: keep the defaults.
-  }
+  const out: Settings = { notifications: parseNotifications(raw.notifications?.value), serverOrder: [] };
   try {
     const o = JSON.parse(raw.ordering?.value ?? '{}') as { servers?: Id[] };
     if (Array.isArray(o.servers)) out.serverOrder = o.servers.filter((s) => typeof s === 'string');
@@ -95,6 +91,8 @@ export class Session {
   private gateway: Gateway | null = null;
   private lastMemberFetch = new Map<Id, number>();
   private poll: ReturnType<typeof setInterval> | null = null;
+  private clock: ReturnType<typeof setInterval> | null = null;
+  private readonly messageListeners = new Set<(m: Message) => void>();
   private readonly onFocus = () => {
     void this.refreshMembers(false);
   };
@@ -125,6 +123,7 @@ export class Session {
     this.store.upsertUsers([self]);
     this.gateway = this.backend.connect({
       onEvent: (event) => {
+        if (event.type === 'messageCreate') queueMicrotask(() => { for (const l of this.messageListeners) l(event.message); });
         let e = event;
         // A categories echo older than the order this session is writing would move the sidebar back.
         if (e.type === 'serverUpdate' && e.data.categories && this.admin.holdsCategories(e.id)) {
@@ -146,12 +145,15 @@ export class Session {
       },
     });
     globalThis.addEventListener?.('focus', this.onFocus);
+    this.clock = setInterval(() => (this.store.now = Date.now()), CLOCK_MS);
     if (!this.backend.capabilities.serverSubscribe) this.poll = setInterval(() => void this.refreshMembers(true), POLL_MS);
   }
 
   async stop(): Promise<void> {
     globalThis.removeEventListener?.('focus', this.onFocus);
     if (this.poll) clearInterval(this.poll);
+    if (this.clock) clearInterval(this.clock);
+    this.messageListeners.clear();
     for (const a of this.acks.values()) clearTimeout(a.timer);
     if (this.emojiSave) clearTimeout(this.emojiSave);
     this.emojiSave = null;
@@ -593,12 +595,57 @@ export class Session {
    */
   private settingsChanged(values: Record<string, { value: string }>): void {
     this.rawSettings = { ...this.rawSettings, ...values };
-    if ('notifications' in values || 'ordering' in values) this.store.settings = parseSettings(this.rawSettings);
+    if ('notifications' in values || 'ordering' in values) {
+      const next = parseSettings(this.rawSettings);
+      // A change of ours still on its way, or just written, is newer than this echo.
+      if (this.notificationWrites.holding) next.notifications = this.store.settings.notifications;
+      this.store.settings = next;
+    }
     if (values[EMOJI_KEY] && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(values[EMOJI_KEY].value);
     if (values[CLOSED_DMS_KEY] && !this.closedSaving) this.store.closedDms = parseClosedDms(values[CLOSED_DMS_KEY].value);
     if (values[STATUS_KEY] && !this.statusSaving) this.store.chosenStatus = parseStatus(values[STATUS_KEY].value);
     // Another device was used, or this one's own write came back: either way, someone is here.
     if (values[ACTIVE_KEY]) this.idle.remote();
+  }
+
+  // ---------- notifications (m2c-plan.md task 8) ----------
+
+  /** Called after every new message is applied, for the notifier. Returns the call that stops it. */
+  onMessage(listener: (m: Message) => void): () => void {
+    this.messageListeners.add(listener);
+    return () => this.messageListeners.delete(listener);
+  }
+
+  private readonly notificationWrites = new Latest<NotificationSettings>(async (next) => {
+    const value = writeNotifications(this.rawSettings.notifications?.value, next);
+    await this.backend.setSettings({ notifications: value });
+    this.rawSettings = { ...this.rawSettings, notifications: { value } };
+  });
+
+  private changeNotifications(change: (n: NotificationSettings) => void): Promise<void> {
+    // From the newest local value, so two quick changes both survive.
+    const next = structuredClone($state.snapshot(this.store.settings.notifications)) as NotificationSettings;
+    change(next);
+    this.store.settings = { ...this.store.settings, notifications: next };
+    return this.notificationWrites.set(next);
+  }
+
+  /** A server's or channel's level, or null to go back to the default. */
+  setNotificationLevel(scope: 'server' | 'channel', id: Id, level: NotificationLevel | null): Promise<void> {
+    return this.changeNotifications((n) => {
+      const map = scope === 'server' ? n.server : n.channel;
+      if (level) map[id] = level;
+      else delete map[id];
+    });
+  }
+
+  /** Mute for some minutes, or until turned off with null; unmute with `false`. */
+  setMute(scope: 'server' | 'channel', id: Id, minutes: number | null | false): Promise<void> {
+    return this.changeNotifications((n) => {
+      const map = scope === 'server' ? n.serverMutes : n.channelMutes;
+      if (minutes === false) delete map[id];
+      else map[id] = minutes === null ? {} : { until: Date.now() + minutes * 60_000 };
+    });
   }
 
   // ---------- friends (m2b-plan.md task 2) ----------

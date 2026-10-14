@@ -41,7 +41,7 @@ export function mapMessage(m: WMessage): Message {
     attachments: (m.attachments ?? []).map((f) => mapFile(f)),
     edited: m.edited ?? undefined,
     embeds: mapEmbeds(m.embeds),
-    mentions: m.mentions ?? [], roleMentions: m.role_mentions ?? [], replies: m.replies ?? [],
+    mentions: m.mentions ?? [], roleMentions: m.role_mentions ?? [], replies: m.replies ?? [], flags: (m as { flags?: number }).flags || undefined,
     reactions: m.reactions ?? {},
     pinned: m.pinned ?? false,
     masquerade: m.masquerade ? clean({ name: m.masquerade.name ?? undefined, avatar: m.masquerade.avatar ?? undefined, colour: m.masquerade.colour ?? undefined }) : undefined,

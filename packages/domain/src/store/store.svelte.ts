@@ -3,6 +3,7 @@
  * handler is an idempotent upsert, so a REST response and its WebSocket echo may arrive in either order.
  * Entries are replaced, never mutated, so a component reading one key re-renders only when that key changes.
  */
+import { emptyNotifications, muteActive, type NotificationLevel, type NotificationSettings } from '../notify.ts';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { ConnectionState, DomainEvent } from '../backend.ts';
 import type { Channel, Emoji, Id, Member, Message, NodeInfo, Presence, Profile, Relationship, Server, Unread, User } from '../entities.ts';
@@ -41,7 +42,6 @@ export interface PendingFile {
   id?: Id | undefined;
 }
 
-export type NotificationLevel = 'all' | 'mention' | 'none' | 'muted';
 
 /** Emoji favourites and use counts, keyed by the Unicode emoji or a custom emoji's ID (client.md section 6.4). */
 export interface EmojiPrefs {
@@ -50,8 +50,7 @@ export interface EmojiPrefs {
 }
 
 export interface Settings {
-  servers: Record<Id, NotificationLevel>;
-  channels: Record<Id, NotificationLevel>;
+  notifications: NotificationSettings;
   serverOrder: Id[];
 }
 
@@ -73,7 +72,9 @@ export class Store {
   self = $state<User | null>(null);
   node = $state<NodeInfo | null>(null);
   connection = $state<ConnectionState>('offline');
-  settings = $state<Settings>({ servers: {}, channels: {}, serverOrder: [] });
+  settings = $state<Settings>({ notifications: emptyNotifications(), serverOrder: [] });
+  /** A clock the session moves on, so timed mutes end on their own. */
+  now = $state(Date.now());
   emojiPrefs = $state<EmojiPrefs>({ favourites: [], usage: {} });
   /** DMs this account closed, with the newest message at the time (m2b-plan.md decision 3). */
   closedDms = $state<Record<Id, Id>>({});
@@ -493,16 +494,30 @@ export class Store {
     return this.unreads.get(channel)?.mentions.length ?? 0;
   }
 
-  channelLevel(channel: Id): NotificationLevel {
+  /** The level a channel gets when it has none of its own: its server's, else mentions only, and all for DMs and groups (m2c-plan.md decision 1). */
+  defaultLevel(channel: Id): NotificationLevel {
     const c = this.channels.get(channel);
-    const own = this.settings.channels[channel];
-    if (own) return own;
-    if (c?.kind === 'text') return this.settings.servers[c.server] ?? 'all';
+    if (c?.kind === 'text') return this.settings.notifications.server[c.server] ?? 'mention';
     return 'all';
   }
 
+  channelLevel(channel: Id): NotificationLevel {
+    return this.settings.notifications.channel[channel] ?? this.defaultLevel(channel);
+  }
+
+  /** The channel itself is muted: its unread marker hides. */
   isMuted(channel: Id): boolean {
-    return this.channelLevel(channel) === 'muted';
+    return muteActive(this.settings.notifications.channelMutes[channel], this.now);
+  }
+
+  serverMuted(server: Id): boolean {
+    return muteActive(this.settings.notifications.serverMutes[server], this.now);
+  }
+
+  /** Muted for notifications: the channel, or its server. */
+  notificationsMuted(channel: Id): boolean {
+    const c = this.channels.get(channel);
+    return this.isMuted(channel) || (c?.kind === 'text' && this.serverMuted(c.server));
   }
 
   /** Server rail badge: unread in any visible channel that isn't muted, plus the mention total. */
@@ -510,7 +525,7 @@ export class Store {
     const s = this.servers.get(server);
     let unread = false;
     let mentions = 0;
-    const serverMuted = this.settings.servers[server] === 'muted';
+    const serverMuted = this.serverMuted(server);
     for (const id of s?.channels ?? []) {
       const c = this.channels.get(id);
       if (!c || !canView(c)) continue;
@@ -597,7 +612,7 @@ export class Store {
     this.ownNonces.clear();
     this.readFloor.clear();
     this.deleted.clear();
-    this.settings = { servers: {}, channels: {}, serverOrder: [] };
+    this.settings = { notifications: emptyNotifications(), serverOrder: [] };
     this.emojiPrefs = { favourites: [], usage: {} };
     this.closedDms = {};
     this.chosenStatus = null;

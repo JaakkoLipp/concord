@@ -9,6 +9,7 @@
   import { avatarUrl, presenceOf, statusTextOf } from '$lib/view/users.ts';
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import { app } from '$lib/session/app.svelte.ts';
+  import { notifyItems } from '$lib/notify/dialog.svelte.ts';
   import { personMenu } from '$lib/people/actions.ts';
   import { closeDm, leaveGroup, room, startConversation } from '$lib/people/groups.ts';
   import FriendPicker from '$lib/people/FriendPicker.svelte';
@@ -25,8 +26,9 @@
   function rowMenu(channel: string, partner: string | undefined): MenuItem[] {
     const session = app.session;
     if (!session) return [];
-    if (partner) return [...personMenu(session, partner, { inDm: true }), 'separator', { label: m.groups.closeDm, onselect: () => closeDm(session, channel) }];
-    return [{ label: m.groups.leave, danger: true, onselect: () => void leaveGroup(session, channel) }];
+    const notify = notifyItems(session, 'channel', channel, 'conversation');
+    if (partner) return [...personMenu(session, partner, { inDm: true }), 'separator', ...notify, 'separator', { label: m.groups.closeDm, onselect: () => closeDm(session, channel) }];
+    return [...notify, 'separator', { label: m.groups.leave, danger: true, onselect: () => void leaveGroup(session, channel) }];
   }
 </script>
 

@@ -221,6 +221,8 @@ export interface Message {
   embeds: Embed[];
   mentions: Id[];
   roleMentions: Id[];
+  /** Stoat's bits: 2 don't notify, 4 `@everyone`, 8 `@online`. */
+  flags?: number;
   replies: Id[];
   /** Emoji (a unicode string or a custom emoji ID) to the users who reacted. */
   reactions: Record<string, Id[]>;

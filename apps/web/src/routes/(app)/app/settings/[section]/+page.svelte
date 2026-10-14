@@ -3,7 +3,7 @@
   import { app } from '$lib/session/app.svelte.ts';
   import Settings from '$lib/settings/Settings.svelte';
 
-  const section = $derived(page.params.section === 'profile' ? 'profile' : 'profile');
+  const section = $derived(page.params.section === 'notifications' ? 'notifications' : 'profile');
 </script>
 
 {#if app.session}<Settings session={app.session} {section} />{/if}
