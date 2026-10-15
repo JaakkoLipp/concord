@@ -12,6 +12,7 @@
   import { listenPushToTalk } from '$lib/voice/audio/ptt.ts';
   import type { MicChain } from '$lib/voice/audio/chain.ts';
   import { app } from '$lib/session/app.svelte.ts';
+  import { deviceOptions } from './devices.ts';
 
   const t = m.settings.voice;
   const PRESETS: SharePreset[] = ['1080p60', '1080p30', '720p30', 'text'];
@@ -41,15 +42,6 @@
     navigator.mediaDevices?.addEventListener('devicechange', refreshDevices);
     return () => navigator.mediaDevices?.removeEventListener('devicechange', refreshDevices);
   });
-  /** The options for a device select: the default first, named after the device it is when the browser says. */
-  function options(list: MediaDeviceInfo[]) {
-    const fallback = list.find((d) => d.deviceId === 'default');
-    const named = fallback?.label.replace(/^Default\s*-\s*/, '');
-    return [
-      { id: '', label: named ? t.defaultNamed(named) : t.systemDefault },
-      ...list.filter((d) => d.deviceId !== 'default' && d.deviceId).map((d, i) => ({ id: d.deviceId, label: d.label || t.unnamed(i + 1) })),
-    ];
-  }
 
   // The mic test: the chain played back, with its level for the meters. During a call it shows the call's own
   // microphone instead, without playback, which would echo into the call, and without opening it a second time.
@@ -179,7 +171,7 @@
   <label class="field">
     <span class="label">{label}</span>
     <select {value} onchange={(e) => change(e.currentTarget.value)}>
-      {#each options(list) as o (o.id)}<option value={o.id}>{o.label}</option>{/each}
+      {#each deviceOptions(list) as o (o.id)}<option value={o.id}>{o.label}</option>{/each}
     </select>
   </label>
 {/snippet}

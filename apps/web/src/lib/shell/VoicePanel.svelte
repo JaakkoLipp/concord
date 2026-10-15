@@ -5,6 +5,8 @@
    */
   import { Button, IconButton, leave, tooltip } from '@concord/ui';
   import type { Store } from '@concord/domain';
+  import AudioLines from '@lucide/svelte/icons/audio-lines';
+  import AudioLinesOff from '@lucide/svelte/icons/audio-lines-off';
   import PhoneOff from '@lucide/svelte/icons/phone-off';
   import ScreenShare from '@lucide/svelte/icons/screen-share';
   import SignalHigh from '@lucide/svelte/icons/signal-high';
@@ -20,6 +22,8 @@
   import type { VoiceController } from '$lib/voice/controller.svelte.ts';
   import ShareDialog from '$lib/call/ShareDialog.svelte';
   import { shareDialog } from '$lib/call/share.svelte.ts';
+  import { onMount } from 'svelte';
+  import { loadVoiceSettings, onVoiceSettings, saveVoiceSettings } from '$lib/voice/settings.ts';
 
   /** `calling`: alone in a DM or group call this account started (client.md section 10.8). */
   let { store, voice, calling = false }: { store: Store; voice: VoiceController; calling?: boolean } = $props();
@@ -37,6 +41,9 @@
     : voice.status === 'reconnecting' ? m.voice.reconnecting
     : voice.ended === 'elsewhere' ? m.voice.elsewhere : m.voice.disconnected,
   );
+  // Noise suppression, on or off from here as on Discord (m4.5-plan.md task 4). Off is the browser's own.
+  let suppressing = $state(loadVoiceSettings().noiseSuppression === 'rnnoise');
+  onMount(() => onVoiceSettings((s) => (suppressing = s.noiseSuppression === 'rnnoise')));
   const tip = $derived([m.voice.quality[voice.quality], m.voice.stats(voice.ping, voice.loss)].filter(Boolean).join('. '));
 </script>
 
@@ -67,6 +74,10 @@
         </IconButton>
         <IconButton label={voice.sharing ? m.voice.stopShare : m.voice.share} active={voice.sharing} disabled={voice.status !== 'connected'}
           onclick={() => (voice.sharing ? voice.stopShare() : (shareDialog.open = true))}><ScreenShare /></IconButton>
+        <IconButton label={suppressing ? m.voice.noiseSuppressionOn : m.voice.noiseSuppressionOff} active={suppressing}
+          onclick={() => saveVoiceSettings({ noiseSuppression: suppressing ? 'off' : 'rnnoise' })}>
+          {#if suppressing}<AudioLines />{:else}<AudioLinesOff />{/if}
+        </IconButton>
       </div>
     {/if}
   </section>

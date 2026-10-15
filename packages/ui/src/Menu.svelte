@@ -39,7 +39,8 @@
       from = at;
     } else if (anchor) {
       const a = anchor.getBoundingClientRect();
-      top = a.bottom + 4;
+      // Below the anchor, or above it when there isn't room, as for the user dock at the bottom.
+      top = a.bottom + 4 + p.height + gap > window.innerHeight && a.top - 4 - p.height >= gap ? a.top - 4 - p.height : a.bottom + 4;
       left = a.right - p.width;
       from = { x: a.left + a.width / 2, y: a.bottom };
     }

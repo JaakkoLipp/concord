@@ -1,5 +1,9 @@
 <script lang="ts">
-  import { Avatar, Button, IconButton, Popover, Presence } from '@concord/ui';
+  import { Avatar, Button, IconButton, Menu, Popover, Presence, type MenuItem } from '@concord/ui';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import { deviceOptions } from '$lib/settings/devices.ts';
+  import { listDevices, maxOutputVolume, outputSelectable } from '$lib/voice/audio/output.ts';
+  import { loadVoiceSettings, saveVoiceSettings } from '$lib/voice/settings.ts';
   import type { Presence as PresenceName, Store } from '@concord/domain';
   import Headphones from '@lucide/svelte/icons/headphones';
   import HeadphoneOff from '@lucide/svelte/icons/headphone-off';
@@ -27,6 +31,39 @@
   /** What the menu shows as chosen: the saved choice, which Stoat's own data can't tell for Invisible. */
   const chosen = $derived(store.chosenStatus ?? self?.presence ?? 'Online');
 
+  // Quick voice controls (m4.5-plan.md task 4): a device, volume and settings menu beside the microphone and the
+  // headphones. A running call follows the saved settings at once.
+  let options = $state<{ items: MenuItem[]; anchor: HTMLElement } | null>(null);
+  async function openOptions(kind: 'input' | 'output', anchor: HTMLElement) {
+    if (options?.anchor === anchor) return void (options = null);
+    const s = loadVoiceSettings();
+    const t = m.settings.voice;
+    const items: MenuItem[] = [];
+    if (kind === 'input' || outputSelectable()) {
+      const list = await listDevices(kind === 'input' ? 'audioinput' : 'audiooutput');
+      const chosen = kind === 'input' ? s.inputDevice : s.outputDevice;
+      for (const o of deviceOptions(list)) {
+        items.push({ kind: 'check', label: o.label, checked: o.id === chosen, onselect: () => saveVoiceSettings(kind === 'input' ? { inputDevice: o.id } : { outputDevice: o.id }) });
+      }
+      items.push('separator');
+    }
+    items.push(kind === 'input'
+      ? { kind: 'range', label: t.inputVolume, value: s.inputVolume, min: 0, max: 200, format: t.percent, oninput: (v) => saveVoiceSettings({ inputVolume: v }) }
+      : { kind: 'range', label: t.outputVolume, value: s.outputVolume, min: 0, max: maxOutputVolume(), format: t.percent, oninput: (v) => saveVoiceSettings({ outputVolume: v }) });
+    items.push('separator', { label: m.voice.voiceSettings, onselect: () => void goto(resolve('/(app)/app/settings/[section]', { section: 'voice' })) });
+    options = { items, anchor };
+  }
+
+  /** Ctrl+Shift+M mutes and Ctrl+Shift+D deafens while the tab has focus, as in Discord's app. */
+  function shortcut(e: KeyboardEvent) {
+    const voice = app.voice;
+    if (!voice || !e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey || e.repeat) return;
+    if (e.code === 'KeyM') voice.toggleMute();
+    else if (e.code === 'KeyD') voice.toggleDeafen();
+    else return;
+    e.preventDefault();
+  }
+
   function choose(presence: PresenceName) {
     open = false;
     void app.session?.setStatus(presence).catch(() => toasts.show(m.status.failed));
@@ -49,11 +86,15 @@
         <IconButton label={voice.muted ? m.voice.unmute : m.voice.mute} onclick={() => voice.toggleMute()}>
           {#if voice.muted}<MicOff />{:else}<Mic />{/if}
         </IconButton>
+        <button class="chevron" aria-label={m.voice.inputOptions} aria-haspopup="menu" aria-expanded={!!options && options.anchor.dataset.kind === 'input'} data-kind="input"
+          onclick={(e) => void openOptions('input', e.currentTarget)}><ChevronDown /></button>
       </span>
       <span class="toggle" class:on={voice.deafened}>
         <IconButton label={voice.deafened ? m.voice.undeafen : m.voice.deafen} onclick={() => voice.toggleDeafen()}>
           {#if voice.deafened}<HeadphoneOff />{:else}<Headphones />{/if}
         </IconButton>
+        <button class="chevron" aria-label={m.voice.outputOptions} aria-haspopup="menu" aria-expanded={!!options && options.anchor.dataset.kind === 'output'} data-kind="output"
+          onclick={(e) => void openOptions('output', e.currentTarget)}><ChevronDown /></button>
       </span>
     {/if}
     <IconButton label={m.settings.open} onclick={() => void goto(resolve('/(app)/app/settings/[section]', { section: 'profile' }))}><Settings /></IconButton>
@@ -83,7 +124,9 @@
     </div>
   </Popover>
   {#if app.session}<CustomStatus session={app.session} open={custom} onclose={() => (custom = false)} />{/if}
+  <Menu open={!!options} onclose={() => (options = null)} items={options?.items ?? []} anchor={options?.anchor ?? null} label={m.voice.voiceSettings} />
 {/if}
+<svelte:window onkeydown={shortcut} />
 
 <style>
   .dock {
@@ -97,8 +140,15 @@
   }
   @media (hover: hover) { .me:hover { background: var(--hover-overlay); } }
   .text { display: grid; min-width: 0; }
-  .toggle { display: contents; }
+  /* The button and its menu's chevron, side by side as on Discord. */
+  .toggle { display: flex; align-items: center; }
   .toggle.on :global(.icon-button) { color: var(--danger); }
+  .chevron {
+    display: grid; place-items: center; width: 1rem; height: 2rem; margin-left: calc(-1 * var(--space-1)); padding: 0;
+    border: 0; border-radius: var(--radius-xs); background: none; color: var(--text-secondary);
+  }
+  .chevron :global(svg) { width: 0.875rem; height: 0.875rem; }
+  @media (hover: hover) { .chevron:hover { background: var(--hover-overlay); color: var(--text-strong); } }
   .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans); }
   .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
   .menu { display: grid; gap: var(--space-3); width: 17rem; padding: var(--space-4); }
