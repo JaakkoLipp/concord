@@ -188,6 +188,7 @@ Added on 2026-10-15 at Jaakko's request, from Discord screenshots. Small, client
   - Ctrl+Shift+M and Ctrl+Shift+D for mute and deafen, and a noise suppression toggle in the voice panel,
   - a volume for a stream's audio,
   - a voice channel's user limit in its settings,
+  - **server tags**, as Discord's, with enabling a tag gated like creating servers. Stoat has no place for them, so they need a small store of our own in `concord-web` (m4.5-plan.md decision 5),
   - M4's leftovers: sounds through the chosen speaker, Speak gained mid-call, the LiveKit restart only on a new certificate, and send-side bandwidth estimation if it helps.
 - **Link previews from "embed fixer" sites** such as kkinstagram and ddinstagram: they serve the video only to crawlers they recognise. Stoat's January poses as Discord only for a built-in list (twitter, the fx and vx fixers, x, reddit, klipy), so Instagram fixers show no preview. Recommended: a one-line pull request upstream to extend that list, since we don't patch Stoat. Fixers already on the list, such as fxtwitter, work now.
 
