@@ -22,7 +22,7 @@
     min-height: var(--control-h); padding: 0 var(--space-5);
     border: 1px solid transparent; border-radius: var(--radius-md);
     font: 500 var(--text-sm) var(--font-sans);
-    transition: background var(--dur-hover) var(--ease-out), border-color var(--dur-hover) var(--ease-out);
+    transition: background-color var(--dur-hover) var(--ease-out), border-color var(--dur-hover) var(--ease-out);
   }
   .sm { min-height: 2rem; padding: 0 var(--space-4); }
   .wide { width: 100%; }

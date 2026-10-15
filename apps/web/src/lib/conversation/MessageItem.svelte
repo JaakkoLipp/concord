@@ -132,7 +132,7 @@
   .mentioned { background: var(--accent-wash); box-shadow: inset 2px 0 0 var(--accent); }
   .mentioned:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
   .highlighted { animation: flash var(--dur-flash) var(--ease-out); }
-  @keyframes flash { from { background: var(--accent-subtle); } }
+  @keyframes flash { from { background-color: var(--accent-subtle); } }
   .line { display: flex; gap: var(--space-5); }
   .gutter { width: var(--avatar-md); flex: none; display: flex; justify-content: center; }
   .hover-time {

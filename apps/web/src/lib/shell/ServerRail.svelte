@@ -69,7 +69,7 @@
   .tile {
     display: grid; place-items: center; width: var(--rail-icon); height: var(--rail-icon);
     border-radius: var(--radius-lg); background: var(--surface-3); object-fit: cover;
-    transition: background var(--dur-hover) var(--ease-out);
+    transition: background-color var(--dur-hover) var(--ease-out);
   }
   .item:hover .home, .active .home { background: var(--accent); color: var(--on-accent); }
   .initials { color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans); }

@@ -4,7 +4,7 @@
    * for custom emoji, then Unicode categories, with a preview footer. In reaction mode it offers only
    * what Stoat accepts. Shift+click picks without closing, as on Discord.
    */
-  import { Popover } from '@concord/ui';
+  import { duration, Popover } from '@concord/ui';
   import Apple from '@lucide/svelte/icons/apple';
   import Cat from '@lucide/svelte/icons/cat';
   import Clock from '@lucide/svelte/icons/clock';
@@ -96,6 +96,21 @@
     return sections.map((s) => ({ ...s, start: (n += s.items.length) - s.items.length }));
   });
 
+  // Some 1,900 buttons would stall the opening animation for a long frame (M4.2). The picker opens with the first
+  // view's worth, then adds a few rows a frame once the animation has run.
+  const FIRST = COLUMNS * 12;
+  const STEP = COLUMNS * 16;
+  let limit = $state(FIRST);
+  const visible = $derived(laidOut.filter((s) => s.start < limit).map((s) => ({ ...s, items: s.items.slice(0, limit - s.start) })));
+  $effect(() => {
+    if (!req) { limit = FIRST; return; }
+    const total = laidOut.reduce((n, s) => n + s.items.length, 0);
+    let frame = 0;
+    const grow = () => { if (untrack(() => limit) < total) { limit += STEP; frame = requestAnimationFrame(grow); } };
+    const timer = setTimeout(grow, duration('--dur-popover'));
+    return () => { clearTimeout(timer); cancelAnimationFrame(frame); };
+  });
+
   function pick(item: Item, keepOpen: boolean) {
     if (!req || !session) return;
     req.onpick({ kind: item.kind, value: item.key });
@@ -135,6 +150,7 @@
   }
   async function jump(id: string) {
     query = '';
+    limit = Infinity;
     await tick();
     scroller?.querySelector(`#emoji-${id}`)?.scrollIntoView({ block: 'start' });
   }
@@ -155,7 +171,7 @@
       {/if}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div class="scroll" bind:this={scroller} onkeydown={gridKey}>
-        {#each laidOut as s (s.id)}
+        {#each visible as s (s.id)}
           <section aria-labelledby="emoji-{s.id}-title">
             <h3 id="emoji-{s.id}"><span id="emoji-{s.id}-title">{s.title}</span></h3>
             <div class="grid">

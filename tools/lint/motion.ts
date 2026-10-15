@@ -12,7 +12,7 @@ const dirs = process.argv.slice(2).length ? process.argv.slice(2) : ['apps/web/s
 /** What may move. clip-path is the level meter's. */
 const ALLOWED = new Set([
   'opacity', 'transform', 'translate', 'scale', 'rotate',
-  'color', 'background', 'background-color', 'border-color', 'outline-color', 'fill', 'stroke', 'clip-path',
+  'color', 'background-color', 'border-color', 'outline-color', 'fill', 'stroke', 'clip-path',
 ]);
 const EASINGS = /\b(ease|ease-in|ease-out|ease-in-out|step-start|step-end)\b|steps\(/;
 const DURATION = /(^|[\s(*/,+-])(\d*\.?\d+)(ms|s)\b/g;
@@ -68,11 +68,14 @@ for (const dir of dirs) {
 
     if (/cubic-bezier\(/.test(source)) report(source.indexOf('cubic-bezier('), 'cubic-bezier outside tokens.css: use --ease-out or --ease-in-out');
 
-    // transition: …; animation: …; and their longhands, in CSS or as a JS style object's string.
-    const decl = /\b(transition|animation)(-[a-z-]+)?['"]?\s*:\s*['"]?([^;}'"\n]+)/g;
-    for (const m of source.matchAll(decl)) {
-      const [, kind, longhand = '', value] = m;
-      const v = bare(value!);
+    // transition: …; animation: …; and their longhands. In scripts, the strings that hold transitions instead.
+    const script = file.endsWith('.ts');
+    const decls = script
+      ? [...source.matchAll(/'([^'\n]*var\(--(?:dur|ease)-[^'\n]*)'/g)].map((m) => ({ index: m.index, kind: 'transition', longhand: '', value: m[1]! }))
+      : [...source.matchAll(/\b(transition|animation)(-[a-z-]+)?\s*:\s*([^;}\n]+)/g)].map((m) => ({ index: m.index, kind: m[1]!, longhand: m[2] ?? '', value: m[3]! }));
+    for (const m of decls) {
+      const { kind, longhand, value } = m;
+      const v = bare(value);
       for (const d of v.matchAll(DURATION)) {
         if (Number(d[2]) !== 0) report(m.index, `raw duration ${d[2]}${d[3]} in ${kind}${longhand}: use a --dur- token`);
       }

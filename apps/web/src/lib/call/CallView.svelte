@@ -159,7 +159,7 @@
   .bar { display: flex; justify-content: center; gap: var(--space-4); padding: var(--space-3) var(--space-5) var(--space-5); }
   .control {
     display: grid; place-items: center; width: 3rem; height: 3rem; padding: 0; border: 0; border-radius: var(--radius-full);
-    background: var(--surface-4); color: var(--text-strong); cursor: pointer; transition: background var(--dur-hover) var(--ease-out);
+    background: var(--surface-4); color: var(--text-strong); cursor: pointer; transition: background-color var(--dur-hover) var(--ease-out);
   }
   .control:hover:not(:disabled) { background: var(--surface-6); }
   .control:disabled { opacity: 0.4; cursor: not-allowed; }

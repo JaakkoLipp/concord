@@ -3,9 +3,11 @@
    * A menu of actions, opened from a button or at the pointer for a right-click or long press. Arrow keys,
    * Home and End move, Enter or Space picks, Escape or Tab closes, as the ARIA menu pattern describes.
    * Checkboxes toggle and close like actions; a slider keeps the menu open and moves with Left and Right.
+   * It grows from the point it was opened at and fades out on close, except when opened from the keyboard.
    */
   import { tick } from 'svelte';
   import MenuSlider from './MenuSlider.svelte';
+  import { fromKeyboard, leave } from './motion.ts';
   import type { MenuAction, MenuCheck, MenuItem } from './types.ts';
   interface Props {
     open: boolean;
@@ -20,6 +22,8 @@
   let { open, onclose, items, label, anchor = null, at = null }: Props = $props();
   let panel = $state<HTMLDivElement | null>(null);
   let pos = $state({ top: 0, left: 0 });
+  let origin = $state('top left');
+  let still = $state(false);
 
   function place() {
     if (!panel) return;
@@ -27,17 +31,23 @@
     const gap = 8;
     let top = 0;
     let left = 0;
+    // The point it grows from: the click, or the middle of the anchor's edge nearest the menu.
+    let from = { x: 0, y: 0 };
     if (at) {
       top = at.y;
       left = at.x;
+      from = at;
     } else if (anchor) {
       const a = anchor.getBoundingClientRect();
       top = a.bottom + 4;
       left = a.right - p.width;
+      from = { x: a.left + a.width / 2, y: a.bottom };
     }
     top = Math.max(gap, Math.min(window.innerHeight - p.height - gap, top));
     left = Math.max(gap, Math.min(window.innerWidth - p.width - gap, left));
+    if (anchor && !at && top < anchor.getBoundingClientRect().top) from.y = anchor.getBoundingClientRect().top;
     pos = { top, left };
+    origin = `${Math.round(from.x - left)}px ${Math.round(from.y - top)}px`;
   }
 
   const buttons = () => [...(panel?.querySelectorAll<HTMLElement>('button:not(:disabled), input') ?? [])];
@@ -63,6 +73,7 @@
   $effect(() => {
     if (!open) return;
     const returnTo = document.activeElement as HTMLElement | null;
+    still = fromKeyboard();
     void tick().then(() => {
       place();
       buttons()[0]?.focus();
@@ -85,7 +96,8 @@
 </script>
 
 {#if open}
-  <div bind:this={panel} class="menu" role="menu" aria-label={label} tabindex="-1" style:top="{pos.top}px" style:left="{pos.left}px" onkeydown={key}>
+  <div bind:this={panel} class="menu" class:still role="menu" aria-label={label} tabindex="-1" style:top="{pos.top}px" style:left="{pos.left}px"
+    style:transform-origin={origin} onkeydown={key} out:leave={{ instant: still }}>
     {#each items as item, i (i)}
       {#if item === 'separator'}
         <div class="separator" role="separator"></div>
@@ -125,5 +137,6 @@
     border: solid var(--on-accent); border-width: 0 2px 2px 0; rotate: 45deg;
   }
   .separator { height: 1px; margin: var(--space-2) var(--space-3); background: var(--border-default); }
+  .still { animation: none; }
   @keyframes pop { from { opacity: 0; scale: calc(1 - 0.02 * var(--motion)); } }
 </style>
