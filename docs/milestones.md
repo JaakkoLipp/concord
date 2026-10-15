@@ -160,7 +160,7 @@ Detailed in [vps-runbook.md](vps-runbook.md).
 
 ## M4.5: Menus, GIFs and quick voice controls
 
-Added on 2026-10-15 at Jaakko's request, from Discord screenshots. Small, client-only work on what M2 and M4 built. Status: proposed scope, not yet planned.
+Added on 2026-10-15 at Jaakko's request, from Discord screenshots. Small, client-only work on what M2 and M4 built. Plan: [m4.5-plan.md](m4.5-plan.md), awaiting sign-off.
 
 **Scope**:
 - **Message menu on right-click**, as Discord's:
@@ -183,6 +183,12 @@ Added on 2026-10-15 at Jaakko's request, from Discord screenshots. Small, client
   Searches go through our own server, so the API key stays off the client. Images load through Stoat's January proxy, so GIPHY never sees members' addresses. A GIF is sent as a link and renders as Stoat's embed.
 - **Click to watch a stream**, as Discord does: a screen share shows as a tile with "Watch stream" and is downloaded only once clicked. With five or more people and 1080p60 shares, this keeps the VPS's upload and viewers' bandwidth down.
 
+- **More, added the same day**:
+  - "Mark as read" in the server icon's menu, and the unread count in the tab's title,
+  - Ctrl+Shift+M and Ctrl+Shift+D for mute and deafen, and a noise suppression toggle in the voice panel,
+  - a volume for a stream's audio,
+  - a voice channel's user limit in its settings,
+  - M4's leftovers: sounds through the chosen speaker, Speak gained mid-call, the LiveKit restart only on a new certificate, and send-side bandwidth estimation if it helps.
 - **Link previews from "embed fixer" sites** such as kkinstagram and ddinstagram: they serve the video only to crawlers they recognise. Stoat's January poses as Discord only for a built-in list (twitter, the fx and vx fixers, x, reddit, klipy), so Instagram fixers show no preview. Recommended: a one-line pull request upstream to extend that list, since we don't patch Stoat. Fixers already on the list, such as fxtwitter, work now.
 
 **Fixed already, 2026-10-15**: GIF links (KLIPY, Tenor, Giphy) play as GIFs, and a site's own video, such as Streamable's, plays in its link preview. Both came through Stoat but weren't rendered.
