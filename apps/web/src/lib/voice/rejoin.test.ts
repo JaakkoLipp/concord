@@ -2,7 +2,7 @@
 import { DisconnectReason } from 'livekit-client';
 import { describe, expect, it } from 'vitest';
 import {
-  LK_REASON, REJOIN_FOR_MS, REJOIN_GAP_MS, endCause, initial, movedElsewhere, rejoining, shown, step, type CallEvent, type CallState, type Effect,
+  LK_REASON, REJOIN_FOR_MS, REJOIN_GAP_MS, endCause, initial, movedElsewhere, rejoining, ringSuppressed, shown, step, type CallEvent, type CallState, type Effect,
 } from './rejoin.ts';
 
 const C = '01M4WPBMZW1D977DMJNR76RZQE';
@@ -142,5 +142,25 @@ describe('the rejoin rule', () => {
     expect(movedElsewhere({ joinedAt: 1 }, null)).toBe(false);
     expect(movedElsewhere({ joinedAt: 1 }, { joinedAt: 2 })).toBe(true);
     expect(movedElsewhere(null, { joinedAt: 2 })).toBe(true);
+  });
+});
+
+describe('rings during a rejoin', () => {
+  const D = 'dm';
+  it('a ring for the call being rejoined stays silent, through the wait and the reconnect', () => {
+    let s: CallState = { ...initial, phase: 'connected', channel: D, joinedAt: 0 };
+    [s] = step(s, { type: 'ended', cause: 'connection' }, 20_000);
+    expect(s.phase).toBe('waiting');
+    expect(ringSuppressed(D, { rejoiningChannel: rejoining(s), channel: s.channel, status: shown(s) })).toBe(true);
+    [s] = step(s, { type: 'retry' }, 21_000);
+    expect(ringSuppressed(D, { rejoiningChannel: rejoining(s), channel: s.channel, status: shown(s) })).toBe(true);
+  });
+
+  it('rings for other calls, and for this one once the call is over', () => {
+    const live = { rejoiningChannel: null, channel: 'other', status: 'connected' as const };
+    expect(ringSuppressed(D, live)).toBe(false);
+    expect(ringSuppressed('other', live)).toBe(true);
+    expect(ringSuppressed(D, { rejoiningChannel: null, channel: D, status: 'disconnected' })).toBe(false);
+    expect(ringSuppressed(D, { rejoiningChannel: null, channel: null, status: 'none' })).toBe(false);
   });
 });

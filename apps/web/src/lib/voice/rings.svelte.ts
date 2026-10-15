@@ -14,6 +14,7 @@ import { notifyPrefs } from '$lib/notify/prefs.svelte.ts';
 import { channelName } from '$lib/view/channels.ts';
 import { avatarUrl } from '$lib/view/users.ts';
 import type { VoiceController } from './controller.svelte.ts';
+import { ringSuppressed } from './rejoin.ts';
 import { ring } from './sounds.ts';
 
 const key = (r: Ring) => `${r.channel}:${r.startedAt}`;
@@ -83,8 +84,7 @@ export class Rings {
   }
 
   private suppressed(r: Ring): boolean {
-    if (r.channel === this.voice.rejoiningChannel) return true;
-    return r.channel === this.voice.channel && this.voice.status !== 'none' && this.voice.status !== 'disconnected';
+    return ringSuppressed(r.channel, this.voice);
   }
 
   private othersIn(channel: Id): boolean {

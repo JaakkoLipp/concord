@@ -150,6 +150,15 @@ export function shown(s: CallState): Shown {
 export const rejoining = (s: CallState): Id | null => (s.phase === 'reconnecting' || s.lostAt !== null ? s.channel : null);
 
 /**
+ * Whether a ring for a channel stays silent: this client is rejoining that call, after which whoever rejoins first
+ * rings the rest again, or is already joining or in it.
+ */
+export function ringSuppressed(channel: Id, voice: { rejoiningChannel: Id | null; channel: Id | null; status: Shown }): boolean {
+  if (channel === voice.rejoiningChannel) return true;
+  return channel === voice.channel && voice.status !== 'none' && voice.status !== 'disconnected';
+}
+
+/**
  * Whether a removal was another device taking the call: our own voice state, as Stoat reports it, shows a
  * join newer than the one we had when removed. A kick or a ban leaves no newer join behind.
  */

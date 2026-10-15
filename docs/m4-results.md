@@ -58,3 +58,22 @@ On the local stack with `dev`, `aino` and a third persona. The probe script is k
 **UI bugs, open**: during total loss the quality tooltip says "Ping 0 ms, packet loss 0 %". Missing figures should be left out, and the loss should come from received packets.
 
 **Still to probe**: the members-left check after a LiveKit restart (the third persona couldn't join Pelaamo), H.264 in headless Chromium (task 7's agent), and the AudioContext flake.
+
+## Task 8: DM and group calls, 2026-10-15
+
+`tools/live/src/dm-call.ts` with `sanna`, `lauri` and `maija`: 20 of 20 pass.
+
+| Check | Result |
+|---|---|
+| A call rings the other side | The ringing card showed 0.4 s after the call button was clicked |
+| Ignore, and the caller leaving | Ignore stops the ring for good. The caller leaving clears it within 21 ms. |
+| Hidden tab | "Sanna Korhonen: Calling you…" as a browser notification. The ring timed out at 30.3 s and the notification closed. |
+| Join from the card | Both connected 0.6 s after the call button was clicked |
+| Group | Both others rang. One joined from the card. The other ignored, then joined from the "started a call" line, whose Join went away when the call ended. |
+
+**How Stoat's ring events behaved**:
+- `VoiceCallUpdate {ended: false}` reaches only the other members, 2 to 6 ms after the caller's `VoiceChannelJoin`, once per call. The caller never gets it.
+- `{ended: true}` reaches everyone, the caller included, as the last person leaves, with `started_at: null`.
+- `started_at` has whole seconds only, so two calls in the same second look alike. The client tells them apart by the end in between.
+
+A ring for a call this client is rejoining stays silent. A unit test covers it in `rejoin.test.ts`.
