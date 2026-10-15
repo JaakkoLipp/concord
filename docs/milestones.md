@@ -22,7 +22,9 @@ Every milestone ends with a demo on Jaakko's real devices. A milestone is done w
 | M4.2 | Motion and polish: a written motion spec and a pass over the UI | M4.1 | client.md section 9, motion |
 | M4.4 | Concord's own layer beside Stoat: sessions, permissions, storage, live events | M4 | architecture section 11 |
 | M4.5 | Discord-style menus, GIFs, quick voice controls, server tags | M4.4 | m4.5 plan |
-| M4.6 | Moderation, voice and text: moving people between calls, server mute and deafen, permissions that work, timeouts, slow mode, bulk delete, the audit log, reports | M4.5 | m4.6 plan |
+| M4.6 | UI motion and design parity with Discord, from a measured spec | M4.5 | [discord-ui-motion-spec.md](design/discord-ui-motion-spec.md) |
+| M4.7 | Moderation, voice and text: moving people between calls, server mute and deafen, permissions that work, timeouts, slow mode, bulk delete, the audit log, reports | M4.5 | m4.7 plan |
+| M4.8 | Everyday usability: quick switcher and shortcuts, opening at the first unread, a mentions inbox, My Account in the app, server folders, drafts that survive a reload, message sounds, an offline banner, appearance settings, saved messages, notes, search filters | M4.5 | m4.8 plan |
 | M5 | Desktop apps for Windows and Linux | M4 | desktop spec |
 | M6 | Website: invites, registration, account management, downloads | M3 | website spec |
 | M7 | Polish, Finnish locale, PWA with web push, closed beta | M2 to M6 | none new |
@@ -240,9 +242,192 @@ Added on 2026-10-15 at Jaakko's request, from Discord screenshots. Small, client
 - A GIF found in the picker arrives as an animated embed for another member, and no request from the client goes to GIPHY.
 - A per-user volume set from the member list holds in the call and after a reload.
 
-## M4.6: Moderation, voice and text
+## M4.6: UI motion and design parity
 
-Added on 2026-10-15 at Jaakko's request. Plan: [m4.6-plan.md](m4.6-plan.md), awaiting sign-off.
+Added on 2026-10-16 at Jaakko's request. The spec is [design/discord-ui-motion-spec.md](design/discord-ui-motion-spec.md): Discord's animations, popups, layout and colours, measured frame by frame from a recording. Its section 9 is the acceptance checklist. A Sonnet agent audited the client against sections 2, 4.1 to 4.16 and 9 on 2026-10-16. Its table, each item's status with file references, goes into `m4.6-plan.md` when the plan is written. The sub-tasks below cover only what it found partial or missing.
+
+**A guide, not a copy.** Jaakko, 2026-10-16: Concord should feel like Discord while keeping its own identity. So:
+- the spec's behaviour, timings, layout and motion are the target,
+- its colours are not. Colours stay Concord's tokens, and the spec's values are only a check that nothing feels off.
+
+Where the spec's motion and M4.2's rules (client.md section 9) differ, the spec wins, and sub-task 1 changes the rules and their lint to match.
+
+**Decided**, 2026-10-16:
+1. **Concord's cyan `--accent` stays** for everything the spec draws in Discord's brand colour: links, the mention highlight, the spinner, toggles and the voice stage's tint.
+2. **Text keeps its contrast**: `--text-muted` for muted channels, and `--text-secondary` for timestamps and channel names. The spec's `#46464a` on black is about 2.2:1, below the AA contrast that M4.2 kept.
+3. **Settings becomes a modal over the app**, for user, server and channel settings alike. The shell stays mounted under the settings routes, which is a routing change.
+
+**Sub-tasks**, in dependency order. Each names its spec section, the change, the files, and its acceptance line from spec section 9.
+
+*a. Design tokens and rules*
+
+1. **Tokens and motion rules** (spec 1, 2, 5.3).
+   - Change:
+     - map each spec token to the existing one (table below), keeping Concord's colour values,
+     - add what the behaviour needs to the same file: durations of 60, 130, 300, 550 and 1800 ms, the spec's curves, the scrollbar thumb and width, and the settings nav states, in Concord's palette,
+     - split `--popout-w` (400 px) into the 300 px profile popout and a 456 px side panel width.
+   - Rules: amend client.md section 9 and its lint, so that:
+     - hover changes are instant,
+     - the settings accordion may animate `grid-template-rows`,
+     - the scroll may be a spring, and durations may reach 550 ms with the spinner's 1.8 s loop,
+     - settings close with a fade and scale.
+
+     The pill keeps M4.2's `clip-path`, which already passes, and adds the slide.
+   - Files: `packages/ui/src/tokens.css`, `packages/ui/src/base.css`, `docs/client.md` section 9, `tools/lint/motion.ts`, `tools/live/src/motion.ts`.
+   - Accept: in place of section 9's colour line, no colour in a component is hard-coded. Every colour is a token, and the motion lint passes with the new rules.
+2. **Reduced motion** (spec 5.3). Every duration in the spec becomes 0 ms under `prefers-reduced-motion: reduce`, fades included. The spring scroll jumps. The spinner keeps turning. This replaces M4.2's rule that fades stay and loops stop.
+   - Files: `packages/ui/src/tokens.css`, `packages/ui/src/motion.ts`, `docs/client.md` section 9, `tools/live/src/motion.ts`.
+   - Accept: section 9 has no line for it. From spec 5.3: with reduced motion on, `motion.ts` records no animation longer than 0 ms except the spinner, and settings scroll in one jump.
+
+*b. Instant hover*
+
+3. **Remove hover transitions** (spec 1). Background and colour transitions on hover go from:
+   - buttons (`Button` and `IconButton`, which carry the message action bar, dock, settings X and header icons),
+   - server rail tiles,
+   - call controls,
+   - the GIF star.
+
+   Press scale and toggle knobs stay; they aren't hover.
+   - Files: `packages/ui/src/Button.svelte`, `packages/ui/src/IconButton.svelte`, `apps/web/src/lib/shell/ServerRail.svelte`, `apps/web/src/lib/call/CallView.svelte`, `apps/web/src/lib/conversation/GifStar.svelte`.
+   - Accept: "No CSS transition on channel, message, member or settings nav hover. Verify with a 30 fps screen recording: the change is complete in one frame." Widened to these elements, per spec section 1.
+
+*c. Shared helpers*
+
+4. **Tooltip manager** (spec 4.3, 5.1).
+   - Show at once, with no 400 ms delay, and fade in over 100 ms.
+   - Crossfade between targets, with one element per tooltip instead of one shared element.
+   - Add the 5 px caret, 8 by 12 px padding, weight 600 and the floating background.
+   - Placement per call site: channel icons and the gear above, the rail to the right, the side panel's close below.
+   - Files: `packages/ui/src/tooltip.ts` and its callers.
+   - Accept: "Tooltips have zero show delay, fade in ~100 ms, crossfade between targets, correct side per element (channel icons top, rail right, gear top, panel close bottom)."
+5. **Spring scroll** (spec 4.13). A critically damped spring at about 12.75 rad/s. It keeps its velocity when a new target comes mid-scroll and stops on wheel or touch. No `scrollIntoView` smooth scrolling.
+   - Files: a new helper in `packages/ui/src/motion.ts`.
+   - Accept: "Sub-item click scrolls with a fixed ~550 ms spring (distance does not change the duration) and retargets without a jump."
+
+*d. Components*
+
+6. **Rail pill and rail tooltips** (spec 4.4, 4.3).
+   - The pill: selected 40 px, not 38. It slides in from the left as it grows, over 200 ms, and shrinks in 100 ms, not 150 ms both ways. It brightens as it grows.
+   - Server tooltips go to the right of the icon: the name at 16 px bold, then "Muted" when the server is muted.
+   - Files: `apps/web/src/lib/shell/ServerRail.svelte`.
+   - Accept: "Pill grows to 20px on hover in ~200 ms with slide-in from the left, 40px when selected, shrinks in ~100 ms." Plus the tooltip line.
+7. **Channel row actions** (spec 4.1).
+   - Hover and selected rows show "Invite to channel" and "Edit channel", and "Open chat" on voice channels, each with a tooltip above.
+   - Hover text goes to `--text-strong`.
+   - Files: `apps/web/src/lib/shell/ChannelSidebar.svelte`.
+   - Accept: the tooltip line ("channel icons top"), and "No CSS transition on channel … hover".
+8. **Message action bar** (spec 4.2).
+   - The floating surface `--surface-1` and 32 px height. Three recent reactions and a divider before the icons, from the quick reactions M4.5 built.
+   - Files: `apps/web/src/lib/conversation/ActionBar.svelte`, `apps/web/src/lib/conversation/MessageItem.svelte`.
+   - Accept: "No CSS transition on … message … hover", with the bar on the same surface as tooltips and popouts.
+9. **Scrollbars** (spec 4.6).
+   - 8 px, rounded, visible only while the pointer is over that scroller, in Concord's thumb colour.
+   - Chromium ignores `::-webkit-scrollbar` wherever `scrollbar-width` or `scrollbar-color` is set, so `base.css` uses one approach per engine.
+   - Files: `packages/ui/src/base.css`.
+   - Accept: "Scrollbars are 8px, rounded, … visible only while hovering their scroller", in Concord's thumb colour rather than `#585862`.
+10. **Image loading** (spec 4.8).
+    - A flat average colour from the existing thumbhash, then the image fades in over 200 ms, and embed images too.
+    - Avatars start as a black circle and fade in.
+    - Files: `apps/web/src/lib/conversation/Attachment.svelte`, `apps/web/src/lib/conversation/Embed.svelte`, `apps/web/src/lib/view/media.ts`, `packages/ui/src/Avatar.svelte`.
+    - Accept: "Images show an average-color box first, then fade in over ~200 ms."
+11. **Channel skeletons** (spec 4.7).
+    - A static message skeleton while a channel loads, with varied bar widths and no shimmer.
+    - Member list group headers render first.
+    - Content swaps in without a fade.
+    - Files: `apps/web/src/lib/conversation/MessageList.svelte`, `apps/web/src/lib/shell/MemberList.svelte`, a new skeleton component.
+    - Accept: "Text channel switch shows a static skeleton, then swaps in without a fade. Voice channel switch is instant."
+12. **Voice stage and side chat** (spec 4.9, 4.7).
+    - The stage: the spec's dark-to-light gradient with a glow at the bottom, in Concord's accent instead of blue-violet, rounded inside black, with the participant count in its header.
+    - The empty state: emoji, bar and a 24 px title, with a "Join voice" button.
+    - The side chat opens with the stage. It's 456 px wide, after an 8 px gap, with a chat icon in its header, and its close tooltip "Close" sits below.
+    - Files: `apps/web/src/lib/call/CallView.svelte`, `apps/web/src/lib/call/VoiceChat.svelte`, `apps/web/src/lib/shell/Shell.svelte`, `apps/web/src/lib/view/shell.svelte.ts`.
+    - Accept: "Voice channel switch is instant", and the tooltip line ("panel close bottom").
+13. **User panel** (spec 4.10).
+    - On hover, the status line slides up and out, and the username slides in from below, over 130 ms. Leaving reverses it.
+    - Icon buttons get the selected-row background instantly.
+    - The panel uses the subtle border and 8 px radius.
+    - Files: `apps/web/src/lib/shell/UserDock.svelte`, `apps/web/src/lib/shell/Shell.svelte`.
+    - Accept: "User panel subtext slides up to reveal the username in ~130 ms."
+14. **Profile popout** (spec 4.16).
+    - 300 px wide, 12 px left of the member list, opening at full opacity at once.
+    - Clicking another member re-anchors it at once, instead of closing and reopening. The clicked row keeps its hover background.
+    - Banner 105 px, name 20 px. The banner's round buttons, role chips with "+N", and a "Message @user" input.
+    - Files: `packages/ui/src/Popover.svelte`, `apps/web/src/lib/people/ProfileCard.svelte`, `apps/web/src/lib/people/UserPopout.svelte`, `apps/web/src/lib/shell/MemberList.svelte`.
+    - Accept: "Profile popout is 300px wide, opens instantly to the left of the member list, aligned with the clicked row, and re-anchors instantly when another member is clicked."
+15. **Spinner** (spec 4.14). The wandering cubes in Concord's accent, in place of "Loading…" text: app start, emoji picker, and loading settings pages.
+    - Files: a new `packages/ui/src/Spinner.svelte`, `apps/web/src/routes/(app)/app/+layout.svelte`, `apps/web/src/lib/emoji/EmojiPicker.svelte`.
+    - Accept: "Wandering-cubes spinner matches the keyframes in 4.14."
+16. **Settings as a modal** (spec 4.11), per decision 3.
+    - Inset 40 to 48 px over a 72 % backdrop, with the modal radius and border.
+    - Open: the backdrop fades in over 100 ms, then the modal fades and scales from 0.97 over 150 ms after 60 ms. Close mirrors it in 150 ms.
+    - A 48 px header row holds the title and X.
+    - Files: `apps/web/src/lib/settings/SettingsFrame.svelte`, `apps/web/src/routes/(app)/app/+layout.svelte`, `apps/web/src/routes/(app)/app/channels/+layout.svelte`, and the settings, server-settings and channel-settings routes.
+    - Accept: "Settings opens as an inset modal (about 40-48px from window edges) over a ~72% black backdrop. Backdrop ~100 ms, modal fade + scale 0.97 to 1 in ~150 ms after a ~60 ms delay. Close mirrors it in ~150 ms."
+17. **Settings sidebar** (spec 4.12, using 5).
+    - Layout: a profile block, a search box, grouped navigation with labels, a red "Log out", and the version. Items 36 px.
+    - Accordion: the selected item lists its page's sections, and the old group collapses as the new one opens over 300 ms.
+    - The active bar slides to the clicked section over 150 ms at the click, even when the page can't scroll.
+    - Scroll-spy for wheel scrolling.
+    - A page swap resets the scroll position.
+    - Files: `apps/web/src/lib/settings/SettingsFrame.svelte`, `apps/web/src/lib/settings/Settings.svelte`, and the section components.
+    - Accept: "Settings page swap is instant and resets scroll. The sidebar accordion collapses the old group and expands the new one together in ~300 ms ease-out cubic." And "Active sub-item bar moves at click time and slides in ~150 ms. It moves even when the content cannot scroll further."
+18. **Settings content patterns** (spec 4.15).
+    - A centred 700 px column.
+    - 20 px section headings.
+    - One shared toggle, replacing three copies, with the accent for on.
+    - An info banner.
+    - Files: `apps/web/src/lib/settings/*`, `apps/web/src/lib/notify/NotificationsSection.svelte`, `apps/web/src/lib/admin/PermissionList.svelte`, `packages/ui/src/Button.svelte`, a new `packages/ui/src/Toggle.svelte`.
+    - Accept: section 9's colour line becomes: the settings pages use only tokens, and look alike, with one toggle and one button style.
+
+**Token mapping**, spec to existing, in `packages/ui/src/tokens.css`. Values stay Concord's, as decided. "Close" means within a few units, so nothing to change:
+
+| Spec | Existing | Change |
+|---|---|---|
+| `--bg-app` | `--surface-0` #000 | none |
+| `--bg-floating` | `--surface-1` #0a0a0c | none. Tooltips and the action bar move onto it from `--surface-5` and `--surface-2` |
+| `--bg-input` | `--surface-2` #101013 | none |
+| `--bg-rail-button` | `--surface-3` #131313 | none |
+| `--bg-row-hover` | `--hover-overlay`, white 6 % | none. #0f0f0f on black against the spec's #121212 |
+| `--bg-row-selected` | `--surface-5` #242426 | none |
+| `--bg-settings-nav-hover` | `--hover-overlay` | none |
+| `--bg-settings-nav-selected` | `--surface-5` #242426 | none |
+| `--border-subtle` | `--border-subtle` #1e1e20 | none |
+| `--border-header` | `--border-subtle` | none, 2 units off |
+| `--border-floating` | `--border-default` #26262a | none |
+| `--border-modal` | `--border-subtle` | none. The settings modal uses it |
+| `--divider-settings` | `--border-faint` #18181a | none. Settings starts using it |
+| `--text-strong` | `--text-strong` #dcdcdf | none, inside the measured range |
+| `--text-default` | `--text-muted` #81828a | none |
+| `--text-muted-channel` | `--text-muted` #81828a | none, decided for contrast |
+| `--text-timestamp` | `--text-secondary` #96979e | none, decided for contrast |
+| `--text-link` | `--link`, the accent | none, decided |
+| `--brand` | `--accent` #1fb6d1 | none, decided |
+| `--brand-spinner` | `--accent` | none |
+| `--backdrop` | `--scrim` .73 | none |
+| `--scrollbar-thumb` | none, `--surface-5` today | new token, a lighter grey from Concord's palette, so the thumb shows on hover |
+| `--scrollbar-width` | none | new token, 8 px |
+| `--radius-row` | `--radius-md` 8 px | none |
+| `--radius-floating` | `--radius-md` and `--radius-lg` | menus, popovers and the dock move to `--radius-md` |
+| `--radius-modal` | none, dialogs use `--radius-lg` | new token, 10 px |
+| `--radius-server-icon` | `--radius-lg` 12 px | none |
+| `--font` | `--font-sans` Figtree | none, an open font as section 8 asks |
+
+**Deferred**: what Concord doesn't have.
+- **The "more active threads" popout and the hover-intent helper** (spec 4.5, 5.2): Stoat has no threads, so it waits for a backend of our own. The helper has no other user yet.
+- **Server folders and their tooltip** (spec 3, 4.3): M4.8 creates the folders, and the tooltip comes with them.
+- **The Appearance page's theme swatches** (spec 4.15): M4.8's appearance settings.
+- **"Forward" in the action bar** (spec 4.2): Stoat has no forwarding.
+- **Activity cards and the "now playing" subtext** (spec 4.10, 4.16): Stoat has no activities. The user panel slides between the custom status and the username instead.
+- **Nameplates** (spec 3) and the settings "NEW" badge (spec 2): no such features.
+- **The "Server Boost" page** (spec 4.14): no boosts. The spinner is used elsewhere.
+
+**Acceptance criteria**: every line of spec section 9 passes, checked with a 30 fps recording and the live motion check, with two exceptions:
+- the threads popout, deferred above,
+- the colour line, since colours are Concord's own. Instead, no component hard-codes a colour.
+
+## M4.7: Moderation, voice and text
+
+Added on 2026-10-15 at Jaakko's request, as M4.6, and renumbered M4.7 on 2026-10-16. Plan: [m4.7-plan.md](m4.7-plan.md), awaiting sign-off.
 
 **Scope**:
 - **Voice**: following a move, dragging people between voice channels and "Move to", and server mute and deafen in the participant menu, enforced by Concord clients until Stoat is fixed.
@@ -260,6 +445,44 @@ Added on 2026-10-15 at Jaakko's request. Plan: [m4.6-plan.md](m4.6-plan.md), awa
 - A reported message reaches the right moderators, with its text kept as evidence.
 - A deleted channel, and messages deleted in bulk, can be restored with their files, losing at most the last hour.
 - A moderator deleting others' messages en masse over the API loses their roles before the 30th, and the owner is told.
+
+## M4.8: Everyday usability
+
+Added on 2026-10-16 at Jaakko's request, from a Sonnet audit of the client against Discord's everyday features. A plan, `m4.8-plan.md`, is written before work starts. Moderation is M4.7. M5, M6 and M7 already cover the desktop apps, registration and the email-link account page, the Finnish translation, PWA install, mobile push and the accessibility pass.
+
+**Scope**, most valuable first:
+- **Moving around fast**: a quick switcher on Ctrl+K, which also wires up the DM list's dead "Find or start a conversation" box. Keyboard shortcuts as on Discord:
+  - Alt+Up and Down through channels, Alt+Shift+Up and Down through unread ones,
+  - Ctrl+Alt+Up and Down through servers,
+  - Esc to mark a channel read,
+  - Ctrl+/ for the list of shortcuts.
+- **Not losing your place**: a channel opens at the first unread message, with a "N new messages" bar. A mentions inbox gathers unread mentions across servers.
+- **My Account in the app**: password, email, TOTP, and the list of sessions with logging out others. Stoat has every route. M6's standalone page then serves only what email links open.
+- **The server list**: reordering by drag, written to Stoat's `ordering`, and server folders in a synced `concord:` setting.
+- **Not losing work**: drafts survive a reload, and collapsed categories stay collapsed.
+- **Notifications**: message and mention sounds, and ignoring @everyone and role mentions per server.
+- **Knowing when you're offline**: a banner while the connection is down or reconnecting.
+- **Appearance**: a light theme, a compact message layout, and the font size.
+- **Saved messages**: a "Save message" item and a way to open Stoat's private Saved Messages channel, as Discord's bookmarks.
+- **Private notes** on people, in a synced `concord:` setting.
+- **Search**: before and after dates, "from someone" as a filter on the results, and a member list filter.
+- **Smaller polish**:
+  - zoom in the image viewer,
+  - a warning before a masked link opens somewhere else,
+  - Stoat's NSFW flag on channels, with a confirmation before entering,
+  - recording voice messages, uploaded as audio files.
+
+**Not in Stoat, so not here**:
+- **Server-wide search**: Stoat searches one channel at a time. It's the likeliest upstream pull request, and decision gate criterion 2.
+- **No route or field in Stoat at all**: threads, forum and stage channels, polls, stickers, forwarding, edit history, and invite expiry and use limits.
+- **The soundboard and activities.**
+
+**Acceptance criteria**:
+- Every shortcut above works, and Ctrl+/ lists them.
+- A channel with unread messages opens at the first of them.
+- A member changes their password and logs out another session without leaving the app.
+- Server order and folders, drafts and collapsed categories survive a reload, and the server order and folders sync to a second device.
+- Losing the connection shows the banner within 2 s, and it clears on reconnect.
 
 ## M5: Desktop apps
 
