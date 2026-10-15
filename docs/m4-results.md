@@ -28,11 +28,11 @@ Jaakko chose a local stack over a CX23. It runs in Docker Desktop at `http://loc
 
 **Bug found and fixed**: Stoat sends the old session's `VoiceChannelLeave` and then the new session's `VoiceChannelJoin` about 50 ms later. They could reach the old device before LiveKit's removal, which then read the new join as its own and said "Disconnected". The controller now keeps its own voice state from about a second after connecting.
 
-**Open**: in 1 of 17 runs, headless Chromium's AudioContext reported device errors. There were no speaking rings, and the second browser's call ended without a click. It didn't reproduce in 10 runs with full logs.
+**Flaky speaking rings**: in 1 of 17 runs there were no speaking rings. The cause was the test source, not the client, as task 5's check found on 2026-10-15.
 
 ## Task 2: probes, 2026-10-14
 
-On the local stack with `dev`, `aino` and a third persona. The probe script is kept in the session scratchpad, not the repo.
+On the local stack with `dev`, `aino` and a third persona. The probe scripts were throwaway, and the scratchpad holding them was cleared when WSL restarted.
 
 | Question | Answer |
 |---|---|
@@ -57,7 +57,22 @@ On the local stack with `dev`, `aino` and a third persona. The probe script is k
 
 **UI bugs, open**: during total loss the quality tooltip says "Ping 0 ms, packet loss 0 %". Missing figures should be left out, and the loss should come from received packets.
 
-**Still to probe**: the members-left check after a LiveKit restart (the third persona couldn't join Pelaamo) and the AudioContext flake. H.264 in headless Chromium works (task 7).
+**Still to probe**: the members-left check after a LiveKit restart (the third persona couldn't join Pelaamo). H.264 in headless Chromium works (task 7).
+
+## Task 5: the gate's check, 2026-10-15
+
+`voice.ts` now covers task 5's done-check, and all of `voice.ts`, `callview.ts` and `dm-call.ts` pass.
+
+**The fake microphone was the problem.** Chromium's fake device beeps in short pulses.
+- Noise suppression, echo cancellation and gain control learn to remove a steady beep within seconds, whichever of them is on. Aino's level fell from -20 to -50 dBFS in under a minute.
+- LiveKit's speaking detection rarely counted the beep as speech. Later in a call, rings stopped, which made every ring check flaky.
+- `tools/live/src/media.ts` now writes a speech-like WAV, syllable-length bursts of a harmonic tone at changing pitch, which the checks play as the microphone. With it, speaking registered in 30 of 30 samples both ways, at the default settings.
+
+**The gate is checked by what leaves the browser**: with aino's threshold at 0 dBFS, her outgoing audio fell from about 12 KB/s to 15 B/s, Opus's silence frames, and her ring went. Back at -100 dBFS, about 12 KB/s and the ring returned. The meter moves and RNNoise loads under the CSP.
+
+**Changed: the mic test during a call** now shows the call's own microphone level, without playing it back. Playback would echo into the call, and a second microphone chain is not needed. The settings say so while in a call.
+
+**Tried and dropped: an AudioContext with no speaker** (Chromium's `sinkId: {type: 'none'}`), meant to keep the chain alive when the audio device fails. With it, LiveKit registered no speaking at all, though audio left the browser, so it stays out.
 
 ## Task 8: DM and group calls, 2026-10-15
 

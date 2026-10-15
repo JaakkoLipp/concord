@@ -9,7 +9,7 @@ import { Permission, has, isFinalJoinFailure, joinFailure, type Id, type JoinFai
 import { permissionsIn } from '$lib/view/channels.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 import { m } from '$lib/i18n/index.ts';
-import type { Call, CallSink, Feed, Quality } from './call.ts';
+import type { Call, CallSink, Feed, MicMeter, Quality } from './call.ts';
 import { CONTROLS, clampVolume, toggleDeafen, toggleMute, type Controls } from './controls.ts';
 import { VideoLimitError } from './limits.ts';
 import { mutedForMe, setMutedForMe, setUserVolume, userVolumes, type SharePreset } from './settings.ts';
@@ -177,6 +177,14 @@ export class VoiceController {
   stopShare(): void {
     this.sharing = false;
     void this.call?.stopShare().catch(() => {});
+  }
+
+  /**
+   * The call's own microphone meter, while it has one. The mic test uses it during a call rather than opening the
+   * microphone again and playing it back, which would echo into the call.
+   */
+  micMeter(): MicMeter | null {
+    return this.call?.mic() ?? null;
   }
 
   setPushToTalk(down: boolean): void {

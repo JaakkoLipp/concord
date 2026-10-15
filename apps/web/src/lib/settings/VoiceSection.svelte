@@ -11,6 +11,7 @@
   import { listDevices, maxOutputVolume, outputSelectable, playTrack, type Playback } from '$lib/voice/audio/output.ts';
   import { listenPushToTalk } from '$lib/voice/audio/ptt.ts';
   import type { MicChain } from '$lib/voice/audio/chain.ts';
+  import { app } from '$lib/session/app.svelte.ts';
 
   const t = m.settings.voice;
   const PRESETS: SharePreset[] = ['1080p60', '1080p30', '720p30', 'text'];
@@ -50,8 +51,11 @@
     ];
   }
 
-  // The mic test: the chain played back, with its level for the meters.
+  // The mic test: the chain played back, with its level for the meters. During a call it shows the call's own
+  // microphone instead, without playback, which would echo into the call, and without opening it a second time.
   let chain = $state<MicChain | null>(null);
+  let meter = $state<{ level(): number; gateOpen(): boolean } | null>(null);
+  let inCall = $state(false);
   let playback: Playback | null = null;
   let starting = $state(false);
   let micError = $state<string | undefined>();
@@ -65,11 +69,18 @@
     starting = true;
     micError = undefined;
     try {
-      const { createMicChain } = await import('$lib/voice/audio/chain.ts');
-      const c = await createMicChain(s);
-      chain = c;
-      playback = await playTrack(c.track, s.outputDevice, s.outputVolume);
-      const tick = () => { level = c.level(); open = c.gateOpen(); frame = requestAnimationFrame(tick); };
+      const call = app.voice?.micMeter();
+      if (call) {
+        meter = call;
+        inCall = true;
+      } else {
+        const { createMicChain } = await import('$lib/voice/audio/chain.ts');
+        const c = await createMicChain(s);
+        chain = meter = c;
+        playback = await playTrack(c.track, s.outputDevice, s.outputVolume);
+      }
+      const source = meter;
+      const tick = () => { level = source.level(); open = source.gateOpen(); frame = requestAnimationFrame(tick); };
       tick();
       void refreshDevices();
     } catch (e) {
@@ -84,7 +95,8 @@
     playback?.stop();
     playback = null;
     chain?.stop();
-    chain = null;
+    chain = meter = null;
+    inCall = false;
     level = -100;
     open = false;
   }
@@ -187,7 +199,7 @@
   </div>
 
   <div class="test">
-    {#if chain}
+    {#if meter}
       <Button variant="secondary" onclick={stopTest}>{t.micTestStop}</Button>
     {:else}
       <Button onclick={startTest} busy={starting}>{t.micTest}</Button>
@@ -197,7 +209,7 @@
       <span class="lit"></span>
     </div>
   </div>
-  {#if micError}<p class="error" role="alert">{micError}</p>{:else}<p class="help">{t.micTestHelp}</p>{/if}
+  {#if micError}<p class="error" role="alert">{micError}</p>{:else}<p class="help">{inCall ? t.micTestInCall : t.micTestHelp}</p>{/if}
 </section>
 
 <div class="separator" role="separator"></div>
@@ -225,7 +237,7 @@
     {#if !s.autoSensitivity}
       <label class="field">
         <span class="label">{t.sensitivity}<span class="value">{t.decibels(s.threshold)}</span></span>
-        <span class="sensitivity" style:--threshold={pct(s.threshold)} style:--level={pct(chain ? level : -100)}>
+        <span class="sensitivity" style:--threshold={pct(s.threshold)} style:--level={pct(meter ? level : -100)}>
           <span class="zone" aria-hidden="true"></span>
           <span class="zone live" aria-hidden="true"></span>
           <input class="slider bare" type="range" min="-100" max="0" step="1" value={s.threshold}

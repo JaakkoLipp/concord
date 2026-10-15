@@ -422,6 +422,7 @@ export const en = {
       micTest: 'Test microphone',
       micTestStop: 'Stop testing',
       micTestHelp: 'Talk and you’ll hear yourself, as others would. It works without joining a call.',
+      micTestInCall: 'You’re in a call, so this shows the microphone it sends, without playing you back.',
       level: 'Microphone level',
       micBlocked: 'Concord can’t use your microphone. Allow it in the site settings, by the address bar.',
       micFailed: 'The microphone didn’t start. Check that it’s plugged in and not used by another app.',

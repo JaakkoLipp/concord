@@ -77,7 +77,12 @@ export interface CallOptions {
   mutedForMe: ReadonlySet<string>;
 }
 
+/** The published microphone's meter, for the settings' mic test during a call. */
+export interface MicMeter { level(): number; gateOpen(): boolean }
+
 export interface Call {
+  /** The microphone this call publishes, once it is open. */
+  mic(): MicMeter | null;
   setMuted(muted: boolean): Promise<void>;
   setDeafened(deafened: boolean): void;
   setVolume(user: string, volume: number): void;
@@ -346,6 +351,7 @@ export async function connect(url: string, token: string, options: CallOptions, 
   }
 
   return {
+    mic: () => chain,
     async setMuted(next) {
       muted = next;
       if (mic) await (next ? mic.mute() : mic.unmute());
