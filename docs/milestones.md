@@ -171,7 +171,7 @@ Added on 2026-10-15 from Jaakko's screenshots. Plan: [m4.1-plan.md](m4.1-plan.md
 
 ## M4.2: Motion and polish
 
-Added on 2026-10-15 at Jaakko's request, after M4.1. Plan: [m4.2-plan.md](m4.2-plan.md).
+Added on 2026-10-15 at Jaakko's request, after M4.1. Plan: [m4.2-plan.md](m4.2-plan.md). Results: [m4.2-results.md](m4.2-results.md).
 
 **Scope**:
 - **A motion spec in client.md section 9**, drafted by a Sonnet agent from two reads, neither installed:
