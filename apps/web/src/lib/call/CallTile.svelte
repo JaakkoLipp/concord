@@ -4,6 +4,8 @@
    * their avatar otherwise, or a screen share. Clicking focuses it and double-clicking makes it full screen;
    * from the keyboard, Enter focuses and F goes full screen. Right-click or a long press opens its menu.
    */
+  import Volume1 from '@lucide/svelte/icons/volume-1';
+  import VolumeX from '@lucide/svelte/icons/volume-x';
   import type { Snippet } from 'svelte';
   import { untrack } from 'svelte';
   import { Avatar, enter, leave, type MenuItem } from '@concord/ui';
@@ -31,8 +33,10 @@
     children?: Snippet;
     /** Someone who joined while the call view was showing: the tile fades in. */
     appear?: boolean;
+    /** This device's volume for them, in percent, marked when it isn't 100 (m4.5-plan.md task 5). */
+    volume?: number;
   }
-  let { name, avatar, feed, screen = false, talking = false, muted = false, focused, small = false, states, ontoggle, menu, children, appear = false }: Props = $props();
+  let { name, avatar, feed, screen = false, talking = false, muted = false, focused, small = false, states, ontoggle, menu, children, appear = false, volume = 100 }: Props = $props();
   // As the tile was created: the transition reads it later, after the call view has marked the tile seen.
   const appearing = untrack(() => appear);
   let tile = $state<HTMLElement | null>(null);
@@ -69,6 +73,7 @@
   <span class="label">
     {#if muted}<MicOff size={16} aria-hidden="true" />{/if}
     <span>{screen ? m.call.screenOf(name) : name}</span>
+    {#if volume !== 100}<span class="volume" title={m.call.volumeMark(volume)} aria-hidden="true">{#if volume === 0}<VolumeX size={16} />{:else}<Volume1 size={16} />{/if}</span>{/if}
   </span>
   <button
     class="hit" aria-pressed={focused} aria-label={m.call.tile(screen ? m.call.screenOf(name) : name, states)} title={m.call.tileHelp}
@@ -104,4 +109,5 @@
   .label :global(svg) { flex: none; color: var(--danger); }
   .hit { position: absolute; inset: 0; z-index: 1; padding: 0; border: 0; border-radius: inherit; background: none; cursor: pointer; }
   .hit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .volume { display: inline-grid; color: var(--text-secondary); }
 </style>

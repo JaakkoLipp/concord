@@ -346,6 +346,8 @@ export const en = {
     fullscreen: 'Full screen',
     controls: 'Call controls',
     volume: 'User volume',
+    streamVolume: 'Stream volume',
+    volumeMark: (n: number) => `Volume ${n}%`,
     percent: (n: number) => `${n}%`,
     muteForMe: 'Mute for me',
     showChat: 'Show chat',

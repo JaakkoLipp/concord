@@ -14,6 +14,9 @@
   import { channelName } from '$lib/view/channels.ts';
   import { shell } from '$lib/view/shell.svelte.ts';
   import { app } from '$lib/session/app.svelte.ts';
+  import { participantMenu } from '$lib/call/menu.ts';
+  import { menuOn } from '$lib/view/contextmenu.svelte.ts';
+  import { dmPartner } from '$lib/view/channels.ts';
 
   let { store, channel }: { store: Store; channel: Channel | undefined } = $props();
   let searchText = $state('');
@@ -23,6 +26,7 @@
     void channelId;
     searchText = '';
   });
+  const partner = $derived(channel?.kind === 'dm' ? dmPartner(store, channel) : undefined);
   const panelLabel = $derived(channel?.kind === 'dm' ? (shell.panelOpen ? m.shell.hideProfile : m.shell.showProfile) : (shell.panelOpen ? m.shell.hideMembers : m.shell.showMembers));
 </script>
 
@@ -32,7 +36,13 @@
     <span class="icon" aria-hidden="true">
       {#if channel.kind === 'dm'}<AtSign size={22} />{:else if channel.kind === 'group'}<Users size={22} />{:else if channel.kind === 'text' && channel.voice}<Volume2 size={22} />{:else}<Hash size={22} />{/if}
     </span>
-    <h1>{channelName(store, channel)}</h1>
+    {#if channel.kind === 'dm' && partner && app.session}
+      {@const session = app.session}
+      <!-- The DM's person: their menu, with their volume, on the name as on Discord (m4.5-plan.md task 5). -->
+      <h1><span class="person" use:menuOn={() => participantMenu(session, app.voice, partner, { inDm: true })}>{channelName(store, channel)}</span></h1>
+    {:else}
+      <h1>{channelName(store, channel)}</h1>
+    {/if}
     {#if (channel.kind === 'text' || channel.kind === 'group') && channel.description}
       <span class="divider" aria-hidden="true"></span>
       <p class="topic">{channel.description}</p>

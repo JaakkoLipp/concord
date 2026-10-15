@@ -11,7 +11,7 @@
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import { app } from '$lib/session/app.svelte.ts';
   import { notifyItems } from '$lib/notify/dialog.svelte.ts';
-  import { personMenu } from '$lib/people/actions.ts';
+  import { participantMenu } from '$lib/call/menu.ts';
   import { closeDm, leaveGroup, room, startConversation } from '$lib/people/groups.ts';
   import FriendPicker from '$lib/people/FriendPicker.svelte';
   import { IconButton, type MenuItem } from '@concord/ui';
@@ -28,7 +28,7 @@
     const session = app.session;
     if (!session) return [];
     const notify = notifyItems(session, 'channel', channel, 'conversation');
-    if (partner) return [...personMenu(session, partner, { inDm: true }), 'separator', ...notify, 'separator', { label: m.groups.closeDm, onselect: () => closeDm(session, channel) }];
+    if (partner) return [...participantMenu(session, app.voice, partner, { inDm: true }), 'separator', ...notify, 'separator', { label: m.groups.closeDm, onselect: () => closeDm(session, channel) }];
     return [...notify, 'separator', { label: m.groups.leave, danger: true, onselect: () => void leaveGroup(session, channel) }];
   }
 </script>

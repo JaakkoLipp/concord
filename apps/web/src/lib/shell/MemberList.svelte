@@ -6,7 +6,7 @@
   import { popout } from '$lib/view/popout.svelte.ts';
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import { app } from '$lib/session/app.svelte.ts';
-  import { personMenu } from '$lib/people/actions.ts';
+  import { participantMenu } from '$lib/call/menu.ts';
 
   let { store, server }: { store: Store; server: string } = $props();
   const groups = $derived(store.memberGroups(server));
@@ -20,7 +20,7 @@
         {@const user = store.users.get(member.user)}
         {@const offline = presenceOf(user) === 'offline'}
         <li class:offline><button class="member" aria-label={m.people.openProfile(store.displayName(member.user, server))} onclick={(e) => popout.open(member.user, server, e.currentTarget, 'left')}
-          use:menuOn={(node) => (app.session ? personMenu(app.session, member.user, { profile: () => popout.open(member.user, server, node, 'left'), server }) : [])}>
+          use:menuOn={(node) => (app.session ? participantMenu(app.session, app.voice, member.user, { profile: () => popout.open(member.user, server, node, 'left'), server }) : [])}>
           <Avatar src={avatarUrl(user ?? { id: member.user }, member.avatar)} size={32} presence={offline ? undefined : presenceOf(user)} presenceLabel={m.presence[presenceOf(user)]} />
           <span class="text">
             <span class="name" style:--role={store.roleColour(member.user, server)}>{store.displayName(member.user, server)}</span>

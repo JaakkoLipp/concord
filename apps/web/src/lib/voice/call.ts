@@ -16,7 +16,7 @@ import type { VideoLimit } from '@concord/domain';
 import { setReceiving } from './controls.ts';
 import { VideoLimitError, fitTier, withinTier, type Size } from './limits.ts';
 import { openMic, type MicChain } from './mic.ts';
-import { loadVoiceSettings, onVoiceSettings } from './settings.ts';
+import { loadVoiceSettings, onVoiceSettings, streamVolumeKey, userOfVolumeKey } from './settings.ts';
 import type { SharePlan } from './share.ts';
 import { sharerStats, viewerStats, type Counters, type SharerStats, type ViewerStats } from './videostats.ts';
 import { Peers } from './peers.ts';
@@ -87,7 +87,8 @@ export interface Call {
   mic(): MicMeter | null;
   setMuted(muted: boolean): Promise<void>;
   setDeafened(deafened: boolean): void;
-  setVolume(user: string, volume: number): void;
+  /** A volume by key: a user's ID for their voice, `streamVolumeKey` for their stream's audio. */
+  setVolume(key: string, volume: number): void;
   setMutedForMe(user: string, muted: boolean): void;
   setPushToTalk(down: boolean): void;
   /** Publishes the camera, fitted into the tier, or stops it. */
@@ -165,12 +166,14 @@ export async function connect(url: string, token: string, options: CallOptions, 
 
   const live = () => room.state === 'connected';
   const remotes = () => room.remoteParticipants.values();
-  /** A user's volume times the output volume (client.md section 10.5), within what this browser can play. */
+  /**
+   * A user's volume times the output volume (client.md section 10.5), within what this browser can play. Their
+   * stream's audio has its own volume, under `streamVolumeKey` (m4.5-plan.md task 5).
+   */
   const applyVolume = (p: RemoteParticipant) => {
-    const v = mutedForMe.has(p.identity) ? 0 : (volumes.get(p.identity) ?? 1) * (output.outputVolume / 100);
-    const level = Math.min(options.webAudioMix ? 2 : 1, Math.max(0, v));
-    p.setVolume(level, Track.Source.Microphone);
-    p.setVolume(level, Track.Source.ScreenShareAudio);
+    const level = (own: number) => Math.min(options.webAudioMix ? 2 : 1, Math.max(0, mutedForMe.has(p.identity) ? 0 : own * (output.outputVolume / 100)));
+    p.setVolume(level(volumes.get(p.identity) ?? 1), Track.Source.Microphone);
+    p.setVolume(level(volumes.get(streamVolumeKey(p.identity)) ?? 1), Track.Source.ScreenShareAudio);
   };
   const stopSettings = onVoiceSettings((s) => {
     const before = output;
@@ -375,9 +378,9 @@ export async function connect(url: string, token: string, options: CallOptions, 
       deafened = next;
       setReceiving(remotes(), !next);
     },
-    setVolume(user, volume) {
-      volumes.set(user, volume);
-      const p = room.remoteParticipants.get(user);
+    setVolume(key, volume) {
+      volumes.set(key, volume);
+      const p = room.remoteParticipants.get(userOfVolumeKey(key));
       if (p) applyVolume(p);
     },
     setMutedForMe(user, on) {

@@ -165,3 +165,7 @@ if (typeof window !== 'undefined') {
     for (const fn of listeners) fn(copy);
   });
 }
+
+/** The key a user's stream volume is kept under, beside their voice volume under their ID (m4.5-plan.md task 5). */
+export const streamVolumeKey = (user: string) => `${user}:stream`;
+export const userOfVolumeKey = (key: string) => key.replace(/:stream$/, '');

@@ -23,7 +23,8 @@
   import StatsOverlay from './StatsOverlay.svelte';
   import type { VoiceController } from '$lib/voice/controller.svelte.ts';
   import CallTile from './CallTile.svelte';
-  import { participantMenu } from './menu.ts';
+  import { participantMenu, streamVolumeItem } from './menu.ts';
+  import { streamVolumeKey } from '$lib/voice/settings.ts';
   import { shareDialog } from './share.svelte.ts';
 
   /** `compact`: at the top of a DM or group, above its messages, rather than filling the column. */
@@ -85,6 +86,7 @@
     if (t.screen && feed) {
       const now = qualities[feed.id] ?? 'auto';
       return [
+        ...(feed.local ? [] : [streamVolumeItem(voice, t.user), 'separator' as const]),
         ...(feed.local ? [] : QUALITIES.map((q): MenuItem => ({
           kind: 'check', label: m.call.qualityItem(m.call.qualities[q]), checked: now === q,
           onselect: () => { qualities = { ...qualities, [feed.id]: q }; feed.setQuality(q); },
@@ -105,10 +107,12 @@
 {#snippet tile(t: Tile, small = false)}
   {@const talking = here && voice.speaking.has(t.user)}
   {@const muted = !t.screen && isMuted(t.user)}
+  {@const vol = t.user === store.selfId ? 100 : Math.round(voice.volumeOf(t.screen ? streamVolumeKey(t.user) : t.user) * 100)}
   <CallTile
     name={store.displayName(t.user, server)} avatar={avatar(t.user)} feed={t.feed} screen={t.screen} talking={!t.screen && talking} {muted}
     focused={focusedId === t.id} {small} appear={appears(t.id)}
-    states={[t.user === store.selfId ? m.call.you : '', talking && !t.screen ? m.voiceState.speaking : '', muted ? m.voiceState.muted : '', focusedId === t.id ? m.call.focused : ''].filter(Boolean)}
+    volume={vol}
+    states={[t.user === store.selfId ? m.call.you : '', talking && !t.screen ? m.voiceState.speaking : '', muted ? m.voiceState.muted : '', vol !== 100 ? m.call.volumeMark(vol) : '', focusedId === t.id ? m.call.focused : ''].filter(Boolean)}
     ontoggle={() => (focusedId = focusedId === t.id ? null : t.id)}
     menu={(node, fullscreen) => menu(t, node, fullscreen)}
   >

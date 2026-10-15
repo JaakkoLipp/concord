@@ -5,7 +5,9 @@
  * - Ctrl+Shift+M mutes, shown in dev's sidebar, and again unmutes; Ctrl+Shift+D deafens and undeafens,
  * - the dock's microphone menu lists devices and saves a choice, and its input volume at 0 silences the call,
  * - the speaker menu has the output volume and a link to the settings,
- * - the voice panel's noise suppression toggle switches it while the call keeps sending.
+ * - the voice panel's noise suppression toggle switches it while the call keeps sending,
+ * - per-user volume (task 5): set to 40 % from the member list, it marks aino's row in the call and holds after a
+ *   reload, and a stream tile's menu would offer its own volume (covered by share.ts' tiles, not here).
  * Usage: node tools/live/src/voice-controls.ts [screenshot-dir]
  */
 import type { Browser, Page, Request } from 'playwright-core';
@@ -150,7 +152,36 @@ try {
   check(off && on && plain > talking / 2 && suppressed > talking / 2, `the panel's noise suppression toggle switches it while the call sends: ${plain} B/s off, ${suppressed} B/s on`);
 
 
-  for (const s of [aino, dev]) await s.page.locator('section[aria-label="Voice call"]').getByRole('button', { name: 'Disconnect' }).click();
+  // Per-user volume from the member list (m4.5-plan.md task 5).
+  // The call view has no member list: a text channel shows it, and the sidebar still lists the call.
+  await dev.page.getByRole('link', { name: /^pelit/ }).click();
+  const members = dev.page.getByRole('complementary', { name: 'Members' });
+  await members.getByRole('button', { name: /Aino Virtanen/ }).first().click({ button: 'right' });
+  const devMenu = dev.page.getByRole('menu');
+  await devMenu.waitFor({ timeout: 5_000 });
+  await devMenu.locator('input[type=range]').first().evaluate((el) => {
+    (el as HTMLInputElement).value = '40';
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await dev.page.keyboard.press('Escape');
+  const marked = await passes(row(dev.page, /Aino Virtanen.*Volume 40%/).waitFor({ timeout: 3_000 }));
+  check(marked, 'a volume of 40 % set in the member list marks aino in the call');
+  await dev.page.reload();
+  await dev.page.getByText('Voice connected').waitFor({ timeout: 20_000 }).catch(() => {});
+  const kept = await passes(row(dev.page, /Aino Virtanen.*Volume 40%/).waitFor({ timeout: 15_000 }));
+  await members.getByRole('button', { name: /Aino Virtanen/ }).first().click({ button: 'right' });
+  await devMenu.waitFor({ timeout: 5_000 });
+  const value = await devMenu.locator('input[type=range]').first().inputValue();
+  await dev.page.keyboard.press('Escape');
+  check(kept && value === '40', `it holds after a reload: the mark, and the menu's slider at ${value}`);
+  // Back to 100 %, so later runs start clean.
+  await dev.page.evaluate(() => {
+    const raw = JSON.parse(localStorage.getItem('concord:voice') ?? '{}') as { volumes?: Record<string, number> };
+    raw.volumes = {};
+    localStorage.setItem('concord:voice', JSON.stringify(raw));
+  });
+
+  for (const s of [aino, dev]) await s.page.locator('section[aria-label="Voice call"]').getByRole('button', { name: 'Disconnect' }).click().catch(() => {});
   const problems = [dev, aino].flatMap((s) => [...s.problems.failed, ...s.problems.console]);
   check(problems.length === 0, `no failed requests or console errors${problems.length ? `: ${problems.slice(0, 6).join('; ')}` : ''}`);
 } catch (e) {
