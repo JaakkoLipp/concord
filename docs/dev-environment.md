@@ -290,7 +290,7 @@ Done once on 2026-10-14. Nothing is installed in WSL itself: Docker Desktop's WS
 2. **Config**, written by hand as `generate_config.sh` would for `localhost`, with `http://` and `ws://`:
    - `.env` with `STOAT_DOMAIN=localhost`, `.env.web` with `HOSTNAME=http://localhost`, and `stoat.json`,
    - `secrets.env` with fresh VAPID, file and LiveKit secrets, the LiveKit key id being `2c2e5918ca20` as in `deploy/livekit.yml`,
-   - `Revolt.toml` with the hosts, both video tiers at 2560 × 1440, Mailpit as SMTP, and the `restrict_server_creation` placeholder.
+   - `Revolt.toml` with the hosts, both video tiers at 2560 × 1440, Mailpit as SMTP, and the `restrict_server_creation` placeholder. `january` is `http://january:14705`: the API fetches link previews from it inside Docker, where `localhost` is the API's own container. Our client uses the relative `/january` path anyway.
 3. **Our files**: `deploy/` copied to `~/stoat/concord/`, with:
    - `host.env` holding `MAIN_IPV4=127.0.0.1`, `MAIN_IPV6=::1`, `TURN=off` and `LOCAL=on`,
    - `livekit.env` holding the same key pair,

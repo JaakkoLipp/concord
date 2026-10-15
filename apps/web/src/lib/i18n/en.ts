@@ -127,6 +127,7 @@ export const en = {
     openOriginal: 'Open original',
     close: 'Close',
     playVideo: 'Play video',
+    gif: 'GIF',
     reactedWith: (who: string, emoji: string) => `${who} reacted with ${emoji}`,
     reactionLabel: (emoji: string, n: number, mine: boolean) => `${emoji}, ${n} ${n === 1 ? 'reaction' : 'reactions'}${mine ? ', including yours' : ''}`,
   },

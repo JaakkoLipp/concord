@@ -12,6 +12,10 @@
   const safe = (url: string | undefined) => (url && /^https?:\/\//i.test(url) ? url : undefined);
   const link = $derived(embed.kind === 'website' || embed.kind === 'text' ? safe(embed.url) : undefined);
   const colour = $derived(embed.kind === 'website' || embed.kind === 'text' ? embed.colour : undefined);
+  // January marks GIF sites (KLIPY, Giphy, Tenor) as special GIFs, with the animation as a video or an image.
+  const gif = $derived(embed.kind === 'website' && embed.special?.type === 'other' && embed.special.name === 'GIF' ? (embed.video ?? embed.image) : undefined);
+  // GIFs play by themselves, as on Discord, unless the system asks for reduced motion: then they wait for a click.
+  const still = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 </script>
 
 {#if embed.kind === 'image'}
@@ -24,6 +28,16 @@
   {@const size = fit(embed.width, embed.height, 400, 300)}
   <!-- svelte-ignore a11y_media_has_caption -->
   <video class="media" controls preload="metadata" src={proxied(embed.url)} width={size.width} style:aspect-ratio="{size.width} / {size.height}"></video>
+{:else if gif && embed.kind === 'website'}
+  {@const size = fit(gif.width, gif.height, 400, 300)}
+  <div class="media gif" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}">
+    {#if embed.video}
+      <video src={proxied(embed.video.url)} autoplay={!still} controls={still} loop muted playsinline aria-label={embed.title ?? m.conversation.gif}></video>
+    {:else}
+      <img src={proxied(gif.url)} alt={embed.title ?? m.conversation.gif} loading="lazy" decoding="async" />
+    {/if}
+    <span class="badge" aria-hidden="true">{m.conversation.gif}</span>
+  </div>
 {:else}
   <article class="card" style:--embed={colour}>
     <div class="text">
@@ -35,7 +49,13 @@
         <div class="description">{#if embed.kind === 'text'}<Markdown source={embed.description} />{:else}{embed.description}{/if}</div>
       {/if}
     </div>
-    {#if embed.kind === 'website' && embed.image}
+    {#if embed.kind === 'website' && embed.video && embed.special?.type !== 'youtube'}
+      <!-- A site's own video (og:video), such as a clip, plays here with its preview image as the poster. -->
+      {@const size = fit(embed.video.width, embed.video.height, 400, 300)}
+      <!-- svelte-ignore a11y_media_has_caption -->
+      <video class="media large" controls preload="metadata" src={proxied(embed.video.url)} poster={embed.image ? proxied(embed.image.url) : undefined}
+        width={size.width} style:aspect-ratio="{size.width} / {size.height}"></video>
+    {:else if embed.kind === 'website' && embed.image}
       {@const img = embed.image}
       {@const large = img.size === 'large' || !!embed.special}
       {@const size = large ? fit(img.width, img.height, 400, 300) : fit(img.width, img.height, 80, 80)}
@@ -77,4 +97,10 @@
   .video-link { cursor: pointer; }
   .play { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; filter: drop-shadow(0 1px 4px #000); }
   video.media { cursor: auto; background: #000; }
+  .gif { cursor: auto; }
+  .gif video, .gif img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .badge {
+    position: absolute; top: var(--space-3); left: var(--space-3); padding: var(--space-1) var(--space-3); border-radius: var(--radius-xs);
+    background: var(--scrim); color: var(--text-strong); font: 700 var(--text-xs) var(--font-sans);
+  }
 </style>

@@ -183,6 +183,10 @@ Added on 2026-10-15 at Jaakko's request, from Discord screenshots. Small, client
   Searches go through our own server, so the API key stays off the client. Images load through Stoat's January proxy, so GIPHY never sees members' addresses. A GIF is sent as a link and renders as Stoat's embed.
 - **Click to watch a stream**, as Discord does: a screen share shows as a tile with "Watch stream" and is downloaded only once clicked. With five or more people and 1080p60 shares, this keeps the VPS's upload and viewers' bandwidth down.
 
+- **Link previews from "embed fixer" sites** such as kkinstagram and ddinstagram: they serve the video only to crawlers they recognise. Stoat's January poses as Discord only for a built-in list (twitter, the fx and vx fixers, x, reddit, klipy), so Instagram fixers show no preview. Recommended: a one-line pull request upstream to extend that list, since we don't patch Stoat. Fixers already on the list, such as fxtwitter, work now.
+
+**Fixed already, 2026-10-15**: GIF links (KLIPY, Tenor, Giphy) play as GIFs, and a site's own video, such as Streamable's, plays in its link preview. Both came through Stoat but weren't rendered.
+
 **Not in Stoat, so left out**: threads (decision gate criterion 2), forwarding, server-side bookmarks and reminders, and apps. Bookmarks or reminders could be kept in our own synced settings later if missed.
 
 **Needs from Jaakko**: a GIPHY API key, from a free GIPHY developer account.

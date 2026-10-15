@@ -46,6 +46,9 @@
   const colour = $derived(message.masquerade?.colour ?? (server ? store.roleColour(message.author, server) : undefined));
   const avatar = $derived(message.masquerade?.avatar ? proxied(message.masquerade.avatar) : avatarUrl(user ?? { id: message.author }, member?.avatar));
   const sent = $derived(ulidTime(message.id));
+  // A message that is only a GIF's link shows the GIF alone, as Discord does. Editing still shows the link.
+  const gifOnly = $derived(message.embeds.length === 1 && message.embeds[0]!.kind === 'website' && message.embeds[0]!.special?.type === 'other'
+    && message.embeds[0]!.special.name === 'GIF' && message.content?.trim() === message.embeds[0]!.url && !message.edited);
   const mentioned = $derived(message.author !== store.selfId && store.mentionsSelf(message) && store.channels.get(message.channel)?.kind === 'text');
 </script>
 
@@ -80,7 +83,7 @@
         {/if}
         {#if editing && actions}
           <EditBox text={message.content ?? ''} {store} {server} onsave={(t) => actions.saveEdit(message, t)} oncancel={() => actions.cancelEdit()} />
-        {:else if message.content}
+        {:else if message.content && !gifOnly}
           <div class="content"><Markdown source={message.content} />{#if message.edited}<span class="edited" title={fullDate(new Date(message.edited))}>{m.conversation.edited}</span>{/if}</div>
         {/if}
         {#if pending?.files.length}
