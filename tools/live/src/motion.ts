@@ -63,8 +63,11 @@ function recorder() {
             return r;
           };
           const values = new Set(frames.map((f) => resolve(String(f[k] ?? style?.getPropertyValue(css)))));
-          // Identity in any spelling: none, a scale of 1, a translation or rotation of 0.
-          const n = (v: string) => v === 'none' || v.split(/\s+/).every((x) => Number(x) === 1 || /^0(px|deg)?$/.test(x)) ? 'identity' : v;
+          // A from-only animation ends at the element's own value: identity for a movement, 1 for opacity.
+          const moves = ['transform', 'translate', 'scale', 'rotate'].includes(css);
+          if (!frames.some((f) => f.computedOffset === 1 && k in f)) values.add(moves ? 'none' : css === 'opacity' ? '1' : 'own value');
+          // A movement's identity in any spelling: none, a scale of 1, a translation or rotation of 0.
+          const n = (v: string) => moves && (v === 'none' || v.split(/\s+/).every((x) => Number(x) === 1 || /^0(px|deg)?$/.test(x))) ? 'identity' : v;
           if (new Set([...values].map(n)).size > 1) props.push(css);
         }
       }
@@ -101,7 +104,8 @@ async function step(p: Page, mode: string, name: string, act: () => Promise<void
   const bad = seen.filter((s) => s.props.some((x) => !allowed.includes(x)));
   check(!bad.length, `${mode}: ${name} animates ${props.join(', ') || 'nothing'}${bad.length ? ` (not allowed: ${JSON.stringify(bad)})` : ''}`);
   if (expect.some !== undefined) check(expect.some === seen.length > 0, `${mode}: ${name} ${expect.some ? 'animates' : "doesn't animate"}`);
-  check(gap < 50, `${mode}: ${name} longest frame ${gap.toFixed(0)} ms${long.length ? ` (${long.join('; ')})` : ''}`);
+  // Frames count where something animates: a page change that doesn't animate isn't an animation's dropped frame.
+  if (seen.length) check(gap < 50, `${mode}: ${name} longest frame ${gap.toFixed(0)} ms${long.length ? ` (${long.join('; ')})` : ''}`);
   return seen;
 }
 
@@ -159,6 +163,37 @@ for (const mode of ['no-preference', 'reduce'] as const) {
   });
   check(await p.locator('.concord-tooltip').evaluate((e) => getComputedStyle(e).opacity === '1'), `${mode}: the neighbour's tooltip shows at once`);
   await p.mouse.move(800, 400);
+
+  // Dialogs: the custom status dialog, from the dock's menu, closed with Escape.
+  await p.locator('section.dock button.me').click();
+  await p.waitForTimeout(300);
+  await step(p, mode, 'dialog opens', () => p.getByRole('button', { name: /custom status/i }).click(), { some: true });
+  const title = await p.locator('dialog[open] h2').innerText();
+  await step(p, mode, 'dialog closes', async () => {
+    await p.keyboard.press('Escape');
+    await p.waitForTimeout(30);
+    const leaving = await p.locator('dialog[open] h2').count() ? await p.locator('dialog[open] h2').innerText() : '';
+    check(leaving === title, `${mode}: the closing dialog keeps its content (${JSON.stringify(leaving)})`);
+  }, { some: true });
+  check(await p.locator('dialog[open]').count() === 0, `${mode}: the dialog has closed`);
+
+  // The image viewer, from #kuvat-ja-videot.
+  await p.goto(`${APP}/channels/${st.serverId}/${st.channels.kuvat}`, { waitUntil: 'networkidle' });
+  await p.waitForTimeout(500);
+  const image = p.getByRole('button', { name: /^View image/ }).last();
+  if (await image.count()) {
+    await step(p, mode, 'image viewer opens', () => image.click(), { some: true });
+    await step(p, mode, 'image viewer closes', () => p.keyboard.press('Escape'), { some: true });
+    check(await p.locator('dialog.viewer[open]').count() === 0, `${mode}: the image viewer has closed`);
+  } else check(false, `${mode}: no image to open in the viewer`);
+
+  // Settings fades in as a page, a change of section doesn't replay it, and closing is instant.
+  const page = (seen: Seen[]) => seen.filter((x) => x.what.includes('.settings')).length;
+  const opened = await step(p, mode, 'settings opens', () => p.getByRole('button', { name: 'User settings' }).click(), { some: true });
+  check(page(opened) === 1, `${mode}: settings fades in`);
+  const moved = await step(p, mode, 'settings changes section', () => p.getByRole('link', { name: 'Notifications' }).click());
+  check(page(moved) === 0, `${mode}: a change of section doesn't fade the page`);
+  await step(p, mode, 'settings closes', () => p.keyboard.press('Escape'), { some: false });
   await p.context().close();
 }
 await browser.close();

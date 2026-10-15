@@ -72,7 +72,9 @@
 <Toaster />
 
 <style>
-  .settings { position: fixed; inset: 0; z-index: 800; display: flex; background: var(--surface-0); }
+  /* Settings is a page: it fades in when opened, without a scale, and closes at once (client.md section 9). */
+  .settings { position: fixed; inset: 0; z-index: 800; display: flex; background: var(--surface-0); animation: page-in var(--dur-modal) var(--ease-out); }
+  @keyframes page-in { from { opacity: 0; } }
   .nav { flex: 1 0 auto; display: flex; justify-content: flex-end; background: var(--surface-1); overflow-y: auto; }
   .nav-inner { display: grid; align-content: start; gap: var(--space-1); width: var(--settings-nav-w); padding: var(--space-10) var(--space-3) var(--space-5) var(--space-5); }
   h2 { margin: 0 0 var(--space-3); padding: 0 var(--space-3); color: var(--text-secondary); font: 700 var(--text-xs) var(--font-sans); text-transform: uppercase; letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -10,4 +10,4 @@ export { default as Tabs } from './Tabs.svelte';
 export { default as TextField } from './TextField.svelte';
 export type { MenuAction, MenuCheck, MenuItem, MenuRange, PresenceState, Tab } from './types.ts';
 export { tooltip } from './tooltip.ts';
-export { duration, fromKeyboard, leave, moving } from './motion.ts';
+export { dialogLeave, duration, fromKeyboard, leave, moving, settle } from './motion.ts';

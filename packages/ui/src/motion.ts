@@ -38,3 +38,31 @@ export function leave(node: HTMLElement, { instant = false }: { instant?: boolea
     css: (t: number) => `opacity: ${t}; scale: ${1 - shrink * (1 - t)}; pointer-events: none;`,
   };
 }
+
+const exits = new WeakMap<HTMLDialogElement, Animation[]>();
+
+/**
+ * `out:dialogLeave={dialog}`, on a native dialog's content: keeps the content while the dialog and its backdrop
+ * fade out at --dur-exit. The dialog's owner calls `close()` when the outro ends, and `settle()` before reopening.
+ */
+export function dialogLeave(_node: Element, dialog: HTMLDialogElement | null | undefined) {
+  if (!dialog?.open) return { duration: 0 };
+  const ms = duration('--dur-exit');
+  const options: KeyframeAnimationOptions = { duration: ms, easing: token('--ease-out'), fill: 'forwards' };
+  dialog.inert = true;
+  const list = [dialog.animate([{ opacity: 1, scale: 1 }, { opacity: 0, scale: moving() ? 0.98 : 1 }], options)];
+  try {
+    list.push(dialog.animate([{ opacity: 1 }, { opacity: 0 }], { ...options, pseudoElement: '::backdrop' }));
+  } catch {
+    // A browser that can't animate ::backdrop drops it at close instead.
+  }
+  exits.set(dialog, list);
+  return { duration: ms };
+}
+
+/** Clears a dialog's exit: once it has closed, or when it opens again mid-exit. */
+export function settle(dialog: HTMLDialogElement): void {
+  for (const a of exits.get(dialog) ?? []) a.cancel();
+  exits.delete(dialog);
+  dialog.inert = false;
+}
