@@ -6,8 +6,9 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 
 **This session's job, in order:**
 1. **M4.1, UI alignment fixes**: `docs/m4.1-plan.md`. Small. Ask Jaakko for sign-off, then build it.
-2. **M4.4, Concord's own layer**: `docs/architecture.md` section 11 and `docs/m4.4-plan.md`. The design is approved and was revised after a challenger review. The plan awaits sign-off.
-3. **M4.5, menus, GIFs, quick voice controls, server tags**: `docs/m4.5-plan.md`, awaiting sign-off. Tasks 1 to 9 don't need M4.4, and task 10, server tags, does.
+2. **M4.2, motion and polish**: in `docs/milestones.md`, not yet planned. Its first step is the motion spec. Read the skills it names, don't install them.
+3. **M4.4, Concord's own layer**: `docs/architecture.md` section 11 and `docs/m4.4-plan.md`. The design is approved and was revised after a challenger review. The plan awaits sign-off.
+4. **M4.5, menus, GIFs, quick voice controls, server tags**: `docs/m4.5-plan.md`, awaiting sign-off. Tasks 1 to 9 don't need M4.4, and task 10, server tags, does.
 
 ## How to work
 

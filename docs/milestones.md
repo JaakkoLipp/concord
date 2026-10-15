@@ -19,6 +19,7 @@ Every milestone ends with a demo on Jaakko's real devices. A milestone is done w
 | M3 | VPS to production, media validated on real networks, decision gate part B | M2 | [vps-runbook.md](vps-runbook.md), ops spec |
 | M4 | Voice and 1080p60 screen share in the browser | M3 | client.md voice section |
 | M4.1 | UI alignment fixes from Jaakko's review | M4 | none |
+| M4.2 | Motion and polish: a written motion spec and a pass over the UI | M4.1 | client.md section 9, motion |
 | M4.4 | Concord's own layer beside Stoat: sessions, permissions, storage, live events | M4 | architecture section 11 |
 | M4.5 | Discord-style menus, GIFs, quick voice controls, server tags | M4.4 | m4.5 plan |
 | M5 | Desktop apps for Windows and Linux | M4 | desktop spec |
@@ -167,6 +168,20 @@ Added on 2026-10-15 from Jaakko's screenshots. Plan: [m4.1-plan.md](m4.1-plan.md
 - The user dock and the composer don't line up: their heights and bottom edges differ.
 - The typing indicator ("… is typing") is too tight against the composer and looks awkward.
 - Menu items, such as the server menu's, get a check that their text is aligned.
+
+## M4.2: Motion and polish
+
+Added on 2026-10-15 at Jaakko's request, after M4.1. Not yet planned.
+
+**Scope**:
+- **A motion spec in client.md section 9**, drafted by a Sonnet agent from two reads, neither installed:
+  - Emil Kowalski's motion skill (nexu-io/open-design, Apache-2.0),
+  - the motion foundations of Apple's Human Interface Guidelines.
+
+  It covers transform and opacity only, durations as tokens, one easing language, a frequency rule (the more often it fires, the less it moves), and a reduced-motion fallback for everything.
+- **A pass over the UI**: menus, popovers and dialogs opening and closing, hover and press states, messages arriving, the voice panel, joins and leaves in a call, and toasts.
+
+**Acceptance criteria**: Jaakko signs off the feel on production. With reduced motion on, nothing moves but fades. No animation drops a frame in Chrome's performance panel on the reference machine.
 
 ## M4.4: Concord's own layer
 
