@@ -1,8 +1,9 @@
 export type * from './entities.ts';
 export type * from './backend.ts';
+export type * from './layer.ts';
 export * from './permissions.ts';
 export { BackendError, JoinCallError, joinFailure, isFinalJoinFailure, type JoinFailure } from './errors.ts';
-export { ulid } from './ulid.ts';
+export { ulid, isUlid, ULID_PATTERN } from './ulid.ts';
 export { Store, memberKey, newer, WINDOW_MAX, type EmojiPrefs, type MessageWindow, type PendingFile, type PendingMessage, type Settings } from './store/store.svelte.ts';
 export * from './notify.ts';
 export { Session, parseSettings, type ServerRemoval } from './session.svelte.ts';

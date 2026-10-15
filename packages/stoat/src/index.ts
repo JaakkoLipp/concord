@@ -5,3 +5,5 @@ export { StoatError } from './rest.ts';
 export { capabilitiesFor } from './capabilities.ts';
 export { fileUrl } from './map/file.ts';
 export type { Transport } from './transport.ts';
+export { mapServer } from './map/server.ts';
+export { mapMember } from './map/member.ts';

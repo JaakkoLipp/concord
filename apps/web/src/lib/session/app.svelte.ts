@@ -1,7 +1,7 @@
 /**
  * The app's one session. Created on demand in the browser; the (app) route group never renders on the server.
  */
-import { Session } from '@concord/domain';
+import { Session, type LayerMe } from '@concord/domain';
 import { LiveTransport, StoatBackend, StoatError } from '@concord/stoat';
 import { drafts } from '$lib/composer/drafts.ts';
 import { clearToken, loadToken, saveToken } from './token.ts';
@@ -11,6 +11,7 @@ import { m } from '$lib/i18n/index.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 import { VoiceController } from '$lib/voice/controller.svelte.ts';
 import { Rings } from '$lib/voice/rings.svelte.ts';
+import { HttpLayer } from '$lib/layer/client.ts';
 
 // The (app) group has ssr = false, so this only runs in the browser; the guard keeps server builds importable.
 export const backend = new StoatBackend(new LiveTransport(typeof location === 'undefined' ? 'http://localhost' : location.origin));
@@ -21,6 +22,9 @@ class App {
   voice = $state<VoiceController | null>(null);
   /** DM and group calls ringing this account (client.md section 10.8). */
   rings = $state<Rings | null>(null);
+  /** Concord's own layer (architecture section 11), and who it says this account is. */
+  layer = $state<HttpLayer | null>(null);
+  layerMe = $state<LayerMe | null>(null);
   /** 'checking' until the stored token has been tried. */
   status = $state<'checking' | 'signed-out' | 'signed-in'>('checking');
 
@@ -57,6 +61,9 @@ class App {
     });
     this.voice = new VoiceController(session);
     this.rings = new Rings(session, this.voice);
+    this.layer = new HttpLayer(() => token, () => void this.signedOut());
+    // The layer is optional to chat: if it's down, the app works without what it adds.
+    this.layer.me().then((me) => (this.layerMe = me), () => {});
     this.session = session;
     this.status = 'signed-in';
   }
@@ -71,6 +78,8 @@ class App {
     this.rings = null;
     this.voice?.destroy();
     this.voice = null;
+    this.layer = null;
+    this.layerMe = null;
     this.stopIdle?.();
     this.stopIdle = null;
     this.stopNotify?.();

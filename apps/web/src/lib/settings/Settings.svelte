@@ -24,6 +24,15 @@
   {#if section === 'notifications'}<NotificationsSection />{/if}
   {#if section === 'voice'}<VoiceSection />{/if}
   {#snippet footer()}
+    {@const gates = app.layerMe?.gates}
+    {#if gates?.serverCreator || gates?.admin}
+      <p class="gates">{[gates.serverCreator && m.settings.gates.serverCreator, gates.admin && m.settings.gates.admin].filter(Boolean).join(' · ')}</p>
+    {/if}
     <Button variant="ghost" size="sm" onclick={() => app.signOut()}>{m.session.logout}</Button>
   {/snippet}
 </SettingsFrame>
+
+<style>
+  /* Our own gates, from the layer (architecture section 11), read-only. */
+  .gates { margin: 0 0 var(--space-2); padding: 0 var(--space-3); color: var(--text-muted); font: 500 var(--text-xs) var(--font-sans); }
+</style>

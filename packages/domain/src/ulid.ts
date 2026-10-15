@@ -1,6 +1,11 @@
 /** ULIDs for client-made IDs, such as a pending message's idempotency key. They sort by time like Stoat's. */
 const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
+/** The shape of a Stoat ID: 26 characters of Crockford's base 32. */
+export const ULID_PATTERN = '[0-9A-HJKMNP-TV-Z]{26}';
+const ULID_ONLY = new RegExp(`^${ULID_PATTERN}$`);
+export const isUlid = (s: unknown): s is string => typeof s === 'string' && ULID_ONLY.test(s);
+
 export function ulid(now = Date.now()): string {
   let time = '';
   for (let t = now, i = 0; i < 10; i++, t = Math.floor(t / 32)) time = ALPHABET[t % 32]! + time;

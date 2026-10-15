@@ -13,3 +13,5 @@ build/
 apps/web/static/app/emoji/
 # Claude Code worktrees of parallel sessions.
 .claude/worktrees/
+# The layer store of `pnpm dev` (apps/web/src/hooks.server.ts).
+apps/web/.data/

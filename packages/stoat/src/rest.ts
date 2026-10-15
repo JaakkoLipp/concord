@@ -3,6 +3,7 @@
  * normalised to StoatError.
  */
 import { BackendError } from '@concord/domain/errors';
+import { ULID_PATTERN } from '@concord/domain';
 import { routeOf } from './route.ts';
 import type { HttpResponse, Transport } from './transport.ts';
 
@@ -25,7 +26,7 @@ export const RETRY_FOR_MS = 60_000;
  * a 10 s (m2c-plan.md, checked live). Known up front, so a burst of admin saves waits instead of failing.
  */
 const SERVER_LIMIT = 5;
-const SERVER_PATH = /^\/servers\/([0-9A-HJKMNP-TV-Z]{26})(?:\/|$)/;
+const SERVER_PATH = new RegExp(`^/servers/(${ULID_PATTERN})(?:/|$)`);
 /**
  * Stoat's window ends up to a second after its `x-ratelimit-reset-after` says (m2c-results.md task 3,
  * measured live), so a bucket is taken as reset only this much later.

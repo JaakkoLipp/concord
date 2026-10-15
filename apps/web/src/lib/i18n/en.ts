@@ -406,6 +406,7 @@ export const en = {
     open: 'User settings',
     close: 'Close',
     sections: { profile: 'Profile', notifications: 'Notifications', voice: 'Voice and video' },
+    gates: { serverCreator: 'Can create servers', admin: 'System admin' },
     voice: {
       voice: 'Voice',
       video: 'Video',
