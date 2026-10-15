@@ -5,7 +5,9 @@
    * the bottom, new content keeps them there. Otherwise the message at the top of the view stays put while
    * history loads above it or media and late embeds change height.
    */
-  import { Permission, has, type Message, type PendingMessage, type Session } from '@concord/domain';
+  import { Permission, ULID_PATTERN, has, type Message, type PendingMessage, type Session } from '@concord/domain';
+  import { customEmojiUrl, twemojiUrl } from '$lib/markdown/emoji.ts';
+  import type { QuickEmoji } from './menu.ts';
   import { resolve } from '$app/paths';
   import { permissionsIn } from '$lib/view/channels.ts';
   import { compose } from '$lib/view/compose.svelte.ts';
@@ -21,6 +23,7 @@
   import { dayLabel, sameDay, ulidTime } from '$lib/markdown/time.ts';
   import { m } from '$lib/i18n/index.ts';
   import MessageItem from './MessageItem.svelte';
+  import { copyImage, saveImage } from './images.ts';
 
   interface Props { session: Session; channel: string; target?: string | undefined; onjump: (id: string) => void }
   let { session, channel, target, onjump }: Props = $props();
@@ -47,6 +50,39 @@
   const linkTo = (msg: Message) => location.origin + (info?.kind === 'text'
     ? resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server: info.server, channel, message: msg.id })
     : resolve('/(app)/app/channels/@me/[channel]/[[message]]', { channel, message: msg.id }));
+  const reactWith = (msg: Message, key: string) => void session.backend.reactionEmoji().then((form) => {
+    const current = store.messages.get(msg.id);
+    const emoji = form(key);
+    if (!current || !emoji) return;
+    // Stoat's spelling, or the key already on the message, so ❤ and ❤️ count as one (m2a-plan.md, checked live).
+    actions.toggleReaction(current, reactionKey(Object.keys(current.reactions), emoji));
+  });
+  // The context menu's quick reactions: the most used, then Discord's usual four (m4.5-plan.md task 2).
+  const DEFAULT_QUICK = ['👍', '❤️', '😂', '😮'];
+  const CUSTOM = new RegExp(`^${ULID_PATTERN}$`);
+  const quick = $derived.by((): QuickEmoji[] => {
+    const used = Object.entries(store.emojiPrefs.usage).sort((a, b) => b[1] - a[1]).map(([k]) => k)
+      .filter((k) => !CUSTOM.test(k) || store.emojis.has(k));
+    return [...new Set([...used, ...DEFAULT_QUICK])].slice(0, 4).map((key) => CUSTOM.test(key)
+      ? { key, label: `:${store.emojis.get(key)!.name}:`, image: customEmojiUrl(key) }
+      : { key, label: key, image: twemojiUrl(key) });
+  });
+  // One message at a time is reached by Tab: the last one focused, else the newest. Up and Down move between them.
+  let focusId = $state<string | null>(null);
+  function rove(e: KeyboardEvent) {
+    const el = e.target as HTMLElement;
+    if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || !el.matches('article.message')) return;
+    const all = [...(scroller?.querySelectorAll<HTMLElement>('article.message') ?? [])];
+    const next = all[all.indexOf(el) + (e.key === 'ArrowUp' ? -1 : 1)];
+    if (!next) return;
+    e.preventDefault();
+    next.focus();
+    next.scrollIntoView({ block: 'nearest' });
+  }
+  function focused(e: FocusEvent) {
+    const id = (e.target as HTMLElement).closest<HTMLElement>('article.message')?.dataset.id;
+    if (id) focusId = id;
+  }
   const remove = (msg: Message) => void session.deleteMessage(channel, msg.id).catch(() => toasts.show(m.actions.deleteFailed));
   const actions: MessageActions = $derived({
     send: has(perms, Permission.SendMessage),
@@ -54,13 +90,10 @@
     react: has(perms, Permission.React),
     toggleReaction: (msg, emoji) => void session.react(channel, msg.id, emoji)
       .catch((e: unknown) => toasts.show(e instanceof Error && e.message === 'reaction limit' ? m.emoji.reactionLimit : m.emoji.reactFailed)),
-    pickReaction: (msg, anchor) => picker.open(anchor, 'react', (e) => void session.backend.reactionEmoji().then((form) => {
-      const current = store.messages.get(msg.id);
-      const emoji = form(e.value);
-      if (!current || !emoji) return;
-      // Stoat's spelling, or the key already on the message, so ❤ and ❤️ count as one (m2a-plan.md, checked live).
-      actions.toggleReaction(current, reactionKey(Object.keys(current.reactions), emoji));
-    })),
+    // The picker counts its own use for "frequently used"; the menu's quick reactions count here.
+    pickReaction: (msg, anchor) => picker.open(anchor, 'react', (e) => reactWith(msg, e.value)),
+    quickReact: (msg, key) => { session.useEmoji(key); reactWith(msg, key); },
+
     reply: (msg) => { compose.reply(channel, msg.id); compose.focus(); },
     edit: (msg) => { compose.editing = msg.id; },
     saveEdit: (msg, text) => {
@@ -76,6 +109,18 @@
     copyLink: (msg) => void copy(linkTo(msg)),
     copyId: (msg) => void copy(msg.id),
     select: (id) => (selected = id),
+    markUnread: (msg) => {
+      const ids = win?.ids ?? [];
+      const i = ids.indexOf(msg.id);
+      const before = i > 0 ? ids[i - 1] : undefined;
+      session.markUnread(channel, before);
+      unreadFrom = before ?? '0';
+    },
+    copyText: (msg) => void copy(msg.content ?? ''),
+    openUrl: (url) => void window.open(url, '_blank', 'noopener,noreferrer'),
+    copyUrl: (url) => void copy(url),
+    copyImage: (src) => void copyImage(src).then(() => toasts.show(m.actions.copied, 'info'), () => toasts.show(m.actions.copyImageFailed)),
+    saveImage: (src, name) => void saveImage(src, name).catch(() => toasts.show(m.actions.saveImageFailed)),
   });
 
   // Messages sent from here and not yet confirmed, shown after the newest message (client.md section 4.3).
@@ -258,7 +303,12 @@
     };
   });
   $effect(() => {
-    if (active && stuck && win?.atNewest && store.connection === 'ready' && store.isUnread(channel)) session.markRead(channel);
+    if (active && stuck && win?.atNewest && store.connection === 'ready' && store.isUnread(channel) && !session.heldUnread.has(channel)) session.markRead(channel);
+  });
+  // "Mark unread" holds while the channel stays open; leaving it lets the next visit read it.
+  $effect(() => {
+    const c = channel;
+    return () => session.releaseUnread(c);
   });
 
   // Any change in content height (new messages, images, late embeds) keeps the view where it was.
@@ -274,7 +324,8 @@
   });
 </script>
 
-<div class="scroller" bind:this={scroller} {onscroll} role="log" aria-live={stuck ? 'polite' : 'off'} aria-label={m.conversation.messages} tabindex="-1">
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+<div class="scroller" bind:this={scroller} {onscroll} onkeydown={rove} onfocusin={focused} role="log" aria-live={stuck ? 'polite' : 'off'} aria-label={m.conversation.messages} tabindex="-1">
   <div class="content" bind:this={content}>
     {#if win?.atOldest}
       <div class="start">
@@ -302,7 +353,8 @@
       {#if !row.blocked || runOpen(row.blocked)}
         <MessageItem message={row.message} pending={row.pending} {store} {server} continuation={row.continuation && row.blocked?.first !== row.message.id} highlighted={highlighted === row.message.id} {onjump}
           onretry={(key) => void session.retry(key)} ondiscard={(key) => session.discard(key)}
-          actions={row.pending || row.message.system ? undefined : actions} editing={compose.editing === row.message.id} selected={selected === row.message.id} />
+          actions={row.pending || row.message.system ? undefined : actions} editing={compose.editing === row.message.id} selected={selected === row.message.id}
+          {quick} tabbable={row.message.id === (focusId && messages.some((x) => x.id === focusId) ? focusId : messages.at(-1)?.id)} />
       {/if}
     {/each}
     <div class="end"></div>

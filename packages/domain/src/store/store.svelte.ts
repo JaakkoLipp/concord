@@ -156,6 +156,17 @@ export class Store {
     this.unreads.set(channel, this.withFloor(u));
   }
 
+  /**
+   * Move the read point back to just after `before`, for "Mark unread": `before` is the message before the one
+   * marked, or undefined when it is the channel's first. Mentions already read stay read.
+   */
+  markUnread(channel: Id, before: Id | undefined): void {
+    if (before) this.readFloor.set(channel, before);
+    else this.readFloor.delete(channel);
+    const u = this.unreads.get(channel);
+    this.unreads.set(channel, { channel, mentions: u?.mentions ?? [], ...(before ? { lastId: before } : {}) });
+  }
+
   /** The read point is the later of the server's and this client's; mentions at or before it are read. */
   private withFloor(u: Unread): Unread {
     const floor = this.readFloor.get(u.channel);

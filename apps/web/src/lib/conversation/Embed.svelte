@@ -22,7 +22,7 @@
   {@const size = fit(embed.width, embed.height, 400, 300)}
   <button class="media" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.viewImage('')}
     onclick={() => viewer.open({ src: proxied(embed.url), alt: '', width: embed.width, height: embed.height, original: safe(embed.url) })}>
-    <img src={proxied(embed.url)} alt="" loading="lazy" decoding="async" />
+    <img src={proxied(embed.url)} data-original={embed.url} alt="" loading="lazy" decoding="async" />
   </button>
 {:else if embed.kind === 'video'}
   {@const size = fit(embed.width, embed.height, 400, 300)}
@@ -34,7 +34,7 @@
     {#if embed.video}
       <video src={proxied(embed.video.url)} autoplay={!still} controls={still} loop muted playsinline aria-label={embed.title ?? m.conversation.gif}></video>
     {:else}
-      <img src={proxied(gif.url)} alt={embed.title ?? m.conversation.gif} loading="lazy" decoding="async" />
+      <img src={proxied(gif.url)} data-original={gif.url} alt={embed.title ?? m.conversation.gif} loading="lazy" decoding="async" />
     {/if}
     <span class="badge" aria-hidden="true">{m.conversation.gif}</span>
   </div>
@@ -61,17 +61,17 @@
       {@const size = large ? fit(img.width, img.height, 400, 300) : fit(img.width, img.height, 80, 80)}
       {#if embed.special?.type === 'youtube' && link}
         <a class="media large video-link" href={link} target="_blank" rel="noopener noreferrer" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.playVideo}>
-          <img src={proxied(img.url)} alt="" loading="lazy" />
+          <img src={proxied(img.url)} data-original={img.url} alt="" loading="lazy" />
           <span class="play" aria-hidden="true"><Play size={28} /></span>
         </a>
       {:else}
         <button class="media" class:large class:thumb={!large} style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.viewImage(embed.title ?? '')}
           onclick={() => viewer.open({ src: proxied(img.url), alt: embed.title ?? '', width: img.width, height: img.height, original: safe(img.url) })}>
-          <img src={proxied(img.url)} alt="" loading="lazy" decoding="async" />
+          <img src={proxied(img.url)} data-original={img.url} alt="" loading="lazy" decoding="async" />
         </button>
       {/if}
     {:else if embed.kind === 'text' && embed.media}
-      <img class="media large" src={fileUrl(embed.media, { maxSide: 800 })} alt="" loading="lazy" />
+      <img class="media large" src={fileUrl(embed.media, { maxSide: 800 })} data-original={fileUrl(embed.media)} data-name={embed.media.filename} alt="" loading="lazy" />
     {/if}
   </article>
 {/if}

@@ -16,7 +16,7 @@
   <button class="media" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" style:background-image={thumb ? `url(${thumb})` : undefined}
     aria-label={m.conversation.viewImage(file.filename)}
     onclick={() => viewer.open({ src: url, alt: file.filename, width: file.width, height: file.height, original: url })}>
-    <img src={fileUrl(file, { maxSide: 800 })} alt={file.filename} width={size.width} height={size.height} loading="lazy" decoding="async" />
+    <img src={fileUrl(file, { maxSide: 800 })} data-original={fileUrl(file)} data-name={file.filename} alt={file.filename} width={size.width} height={size.height} loading="lazy" decoding="async" />
   </button>
 {:else if file.kind === 'video'}
   <!-- svelte-ignore a11y_media_has_caption -->

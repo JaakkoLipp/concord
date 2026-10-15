@@ -19,19 +19,31 @@
   import EditBox from '$lib/composer/EditBox.svelte';
 
   import type { MessageActions } from './actions.ts';
+  import { messageMenu, targetOf, type QuickEmoji } from './menu.ts';
 
   interface Props {
     message: Message; store: Store; server: string | undefined; continuation: boolean; highlighted: boolean; onjump: (id: string) => void;
     /** Set while the message is sending or has failed. */
     pending?: PendingMessage | undefined; onretry?: (key: string) => void; ondiscard?: (key: string) => void;
     actions?: MessageActions | undefined; editing?: boolean; selected?: boolean;
+    /** The context menu's quick reactions. */
+    quick?: QuickEmoji[];
+    /** Whether Tab reaches this message: one message in the list at a time, and the arrow keys move between them. */
+    tabbable?: boolean;
   }
-  let { message, store, server, continuation, highlighted, onjump, pending, onretry, ondiscard, actions, editing = false, selected = false }: Props = $props();
+  let { message, store, server, continuation, highlighted, onjump, pending, onretry, ondiscard, actions, editing = false, selected = false, quick = [], tabbable = false }: Props = $props();
   const own = $derived(message.author === store.selfId);
   /** The author's context menu. Webhook messages have no user behind them. */
   const authorMenu = (node: HTMLElement) =>
     app.session && !message.webhook ? personMenu(app.session, message.author, { profile: () => popout.open(message.author, server, node), server }) : [];
   let menuOpen = $state(false);
+  /** The message's own context menu (m4.5-plan.md task 2). Selected text and the edit box keep the browser's menu. */
+  function messageContextMenu(node: HTMLElement, e?: Event) {
+    if (!actions || editing) return [];
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed && node.contains(selection.anchorNode)) return [];
+    return messageMenu(message, actions, { own, canMarkUnread: true, quick, target: targetOf(e), anchor: node });
+  }
   const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   /** On touch screens there is no hover: a tap on the message shows its actions. */
   function tap(e: MouseEvent) {
@@ -57,9 +69,11 @@
     <SystemLine {message} {store} {server} {onjump} />
   </div>
 {:else}
-  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+  <!-- A message is focusable, one at a time, so the keyboard reaches its actions and context menu (m4.5-plan.md task 2). -->
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
   <article class="row message" class:continuation class:mentioned class:highlighted class:sending={pending?.state === 'sending'} class:failed={pending?.state === 'failed'} aria-busy={pending?.state === 'sending' || undefined}
-    class:selected class:menu-open={menuOpen} class:editing onclick={tap} id="message-{message.id}" data-id={message.id} aria-labelledby="author-{message.id}">
+    class:selected class:menu-open={menuOpen} class:editing onclick={tap} id="message-{message.id}" data-id={message.id} aria-labelledby="author-{message.id}"
+    tabindex={tabbable ? 0 : -1} use:menuOn={messageContextMenu}>
     {#each message.replies as reply (reply)}
       <ReplyPreview id={reply} {store} {server} {onjump} />
     {/each}
@@ -127,6 +141,8 @@
   .row { position: relative; padding: 0 var(--space-5); content-visibility: auto; contain-intrinsic-size: auto 2.75rem; }
   .message { margin-top: var(--space-5); padding-top: var(--space-1); padding-bottom: var(--space-1); }
   .message.continuation { margin-top: 0; padding-top: 0.125rem; padding-bottom: 0.125rem; }
+  /* Inside the row, so the list's edges don't clip it. */
+  .message:focus-visible { outline-offset: -2px; border-radius: 0; }
   .system { margin-top: var(--space-3); }
   @media (hover: hover) { .row:hover { background: var(--hover-overlay); } }
   .mentioned { background: var(--accent-wash); box-shadow: inset 2px 0 0 var(--accent); }

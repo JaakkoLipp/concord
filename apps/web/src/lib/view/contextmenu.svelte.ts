@@ -1,6 +1,6 @@
 /**
- * The one context menu (m2b-plan.md task 3), opened by right-click, or by a long press on touch screens,
- * where iOS sends no contextmenu event.
+ * The one context menu (m2b-plan.md task 3), opened by right-click, by a long press on touch screens, where iOS
+ * sends no contextmenu event, or from the keyboard with the context-menu key or Shift+F10 (m4.5-plan.md task 2).
  */
 import type { MenuItem } from '@concord/ui';
 
@@ -20,26 +20,62 @@ export const contextMenu = new ContextMenu();
 
 const LONG_PRESS_MS = 500;
 
-/** `use:menuOn={(node) => items}`: open the context menu with these items on right-click or a long press. */
-export function menuOn(node: HTMLElement, items: (node: HTMLElement) => MenuItem[]) {
+/**
+ * When the context-menu key or Shift+F10 was last pressed. The browser turns either into a contextmenu event,
+ * whose coordinates then say nothing useful, so the menu opens at the element instead.
+ */
+let menuKeyAt = -Infinity;
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) menuKeyAt = performance.now();
+  }, true);
+}
+
+/** Events an inner element's menu already took, such as the author's name inside a message: the outer one stands aside. */
+const claimed = new WeakSet<Event>();
+
+/** Where a contextmenu event's menu opens: the pointer, or the element's top left corner when it came from the keyboard. */
+function pointOf(e: MouseEvent, node: HTMLElement): { x: number; y: number } {
+  const fromKey = performance.now() - menuKeyAt < 500 || (e.clientX === 0 && e.clientY === 0);
+  if (!fromKey) return { x: e.clientX, y: e.clientY };
+  const r = node.getBoundingClientRect();
+  return { x: r.left + 8, y: Math.max(0, r.top) + 8 };
+}
+
+/**
+ * `use:menuOn={(node, event) => items}`: open the context menu with these items on right-click, a long press or
+ * the keyboard. `event` is the one that opened it, so a menu can offer more for what was pressed, such as a link.
+ */
+export function menuOn(node: HTMLElement, items: (node: HTMLElement, event?: Event) => MenuItem[]) {
   let get = items;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let opened = false;
   const cancel = () => { if (timer) clearTimeout(timer); timer = null; };
   const onContext = (e: MouseEvent) => {
-    e.preventDefault();
+    if (claimed.has(e)) return;
     cancel();
     // Android sends contextmenu for a long press too: one menu, not two.
-    if (opened) return;
-    contextMenu.open(get(node), e.clientX, e.clientY);
+    if (opened) {
+      e.preventDefault();
+      return;
+    }
+    // No items, such as over selected text or the edit box: the browser's own menu shows.
+    const list = get(node, e);
+    if (!list.length) return;
+    claimed.add(e);
+    e.preventDefault();
+    const at = pointOf(e, node);
+    contextMenu.open(list, at.x, at.y);
   };
   const onTouchStart = (e: TouchEvent) => {
     opened = false;
+    if (claimed.has(e)) return;
+    claimed.add(e);
     const t = e.touches[0];
     if (!t) return;
     timer = setTimeout(() => {
       opened = true;
-      contextMenu.open(get(node), t.clientX, t.clientY);
+      contextMenu.open(get(node, e), t.clientX, t.clientY);
     }, LONG_PRESS_MS);
   };
   const onTouchEnd = (e: TouchEvent) => {
@@ -56,7 +92,7 @@ export function menuOn(node: HTMLElement, items: (node: HTMLElement) => MenuItem
   node.addEventListener('touchend', onTouchEnd);
   node.addEventListener('touchcancel', cancel);
   return {
-    update(next: (node: HTMLElement) => MenuItem[]) { get = next; },
+    update(next: (node: HTMLElement, event?: Event) => MenuItem[]) { get = next; },
     destroy() {
       cancel();
       node.removeEventListener('contextmenu', onContext);

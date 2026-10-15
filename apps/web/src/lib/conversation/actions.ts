@@ -10,4 +10,9 @@ export interface MessageActions {
   reply(m: Message): void; edit(m: Message): void; saveEdit(m: Message, text: string): void; cancelEdit(): void;
   delete(m: Message, skipConfirm: boolean): void; pin(m: Message): void; copyLink(m: Message): void; copyId(m: Message): void;
   select(id: string | null): void;
+  /** The context menu's extras (m4.5-plan.md task 2). `key` is a quick reaction's emoji, as the picker hands it over. */
+  quickReact(m: Message, key: string): void;
+  markUnread(m: Message): void; copyText(m: Message): void;
+  openUrl(url: string): void; copyUrl(url: string): void;
+  copyImage(src: string): void; saveImage(src: string, name: string): void;
 }

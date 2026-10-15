@@ -12,6 +12,7 @@ import { Store, memberKey, newer, type EmojiPrefs, type PendingMessage, type Set
 import { parseNotifications, writeNotifications, type NotificationLevel, type NotificationSettings } from './notify.ts';
 import { HOLD_MS, Latest } from './latest.ts';
 import { ulid, ulidTime } from './ulid.ts';
+import { SvelteSet } from 'svelte/reactivity';
 
 const PAGE = 100;
 const FOCUS_REFETCH_MS = 60_000;
@@ -997,6 +998,7 @@ export class Session {
    * every ACK_EVERY_MS, with a trailing ack for the newest message when several arrive in that time.
    */
   markRead(channel: Id, upTo?: Id): void {
+    this.heldUnread.delete(channel);
     const c = this.store.channels.get(channel);
     const target = upTo ?? (c && c.kind !== 'saved' ? c.lastMessageId : undefined);
     if (!target) return;
@@ -1007,6 +1009,31 @@ export class Session {
     const wait = a.at + ACK_EVERY_MS - Date.now();
     if (wait <= 0) return this.flushAck(channel);
     a.timer = setTimeout(() => this.flushAck(channel), wait);
+  }
+
+  /**
+   * Channels marked unread on this device, which stay unread while open until left, or until this account
+   * sends there (m4.5-plan.md task 2). The view checks this before reading a channel on its own.
+   */
+  readonly heldUnread = new SvelteSet<Id>();
+
+  /**
+   * "Mark unread" from a message: the read point moves to just before it, here at once and to Stoat, which
+   * accepts an acknowledgement that moves backwards. `before` is the message before it, or undefined for the
+   * channel's first, which Stoat can't express: then only this device shows it unread.
+   */
+  markUnread(channel: Id, before: Id | undefined): void {
+    const a = this.acks.get(channel);
+    if (a?.timer) clearTimeout(a.timer);
+    this.acks.set(channel, { at: Date.now(), sent: before });
+    this.store.markUnread(channel, before);
+    this.heldUnread.add(channel);
+    if (before) void this.backend.ack(channel, before).catch(() => {});
+  }
+
+  /** Leaving a channel ends its "Mark unread" hold: the next visit reads it as usual. */
+  releaseUnread(channel: Id): void {
+    this.heldUnread.delete(channel);
   }
 
   private flushAck(channel: Id): void {

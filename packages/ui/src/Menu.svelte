@@ -8,7 +8,7 @@
   import { tick } from 'svelte';
   import MenuSlider from './MenuSlider.svelte';
   import { fromKeyboard, leave } from './motion.ts';
-  import type { MenuAction, MenuCheck, MenuItem } from './types.ts';
+  import type { MenuItem } from './types.ts';
   interface Props {
     open: boolean;
     onclose: () => void;
@@ -65,7 +65,7 @@
     }
   }
 
-  function pick(item: MenuAction | MenuCheck) {
+  function pick(item: { onselect: () => void }) {
     onclose();
     item.onselect();
   }
@@ -103,6 +103,14 @@
         <div class="separator" role="separator"></div>
       {:else if item.kind === 'range'}
         <MenuSlider {item} />
+      {:else if item.kind === 'row'}
+        <div class="row" role="group" aria-label={item.label}>
+          {#each item.items as entry, j (j)}
+            <button role="menuitem" class="chip" aria-label={entry.label} title={entry.label} onclick={() => pick(entry)}>
+              {#if entry.image}<img src={entry.image} alt="" draggable="false" />{:else}{entry.text}{/if}
+            </button>
+          {/each}
+        </div>
       {:else if item.kind === 'check'}
         <button role="menuitemcheckbox" aria-checked={item.checked} class="check" onclick={() => pick(item)}>
           <span>{item.label}</span><span class="box" class:on={item.checked} aria-hidden="true"></span>
@@ -138,6 +146,9 @@
     content: ''; position: absolute; left: 0.3rem; top: 0.05rem; width: 0.3rem; height: 0.6rem;
     border: solid var(--on-accent); border-width: 0 2px 2px 0; rotate: 45deg;
   }
+  .row { display: flex; gap: var(--space-1); justify-content: space-between; }
+  .chip { display: grid; place-items: center; flex: 1 1 0; min-width: 2.25rem; height: 2.25rem; padding: 0; border-radius: var(--radius-md); background: var(--surface-3); font-size: 1.25rem; line-height: 1; text-align: center; }
+  .chip img { width: 1.375rem; height: 1.375rem; object-fit: contain; }
   .separator { height: 1px; margin: var(--space-2) var(--space-3); background: var(--border-default); }
   .still { animation: none; }
   @keyframes pop { from { opacity: 0; scale: calc(1 - 0.02 * var(--motion)); } }
