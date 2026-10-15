@@ -31,6 +31,8 @@ export class StoatClient {
       res = await this.fetch(`${this.base}${path}`, {
         headers: token ? { 'x-session-token': token } : {},
         signal: AbortSignal.timeout(TIMEOUT_MS),
+        // Never follow a redirect with the caller's token.
+        redirect: 'manual',
       });
     } catch {
       throw stoatUnavailable();
@@ -42,6 +44,10 @@ export class StoatClient {
       throw new LayerError(429, 'RateLimited', { retry_after: after });
     }
     if (res.status >= 500) {
+      await res.body?.cancel();
+      throw stoatUnavailable();
+    }
+    if (res.status >= 300 && res.status < 400) {
       await res.body?.cancel();
       throw stoatUnavailable();
     }

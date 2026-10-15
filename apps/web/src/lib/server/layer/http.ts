@@ -5,9 +5,19 @@
  */
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { Caller, Layer, Use } from './layer.ts';
-import { LayerError } from './util.ts';
+import { LayerError, TtlCache } from './util.ts';
 
 let current: Layer | null = null;
+const logged = new TtlCache<string, true>(10_000, Date.now);
+
+/** The caller's address, or "unknown": adapter-node throws when the address header is missing. */
+function address(event: RequestEvent): string {
+  try {
+    return event.getClientAddress();
+  } catch {
+    return 'unknown';
+  }
+}
 
 export function setLayer(layer: Layer): void {
   current = layer;
@@ -20,10 +30,15 @@ function refusal(e: unknown, event: RequestEvent, caller: Caller | null): Respon
     console.error(`layer: ${event.request.method} ${event.url.pathname} failed:`, e instanceof Error ? e.message : e);
     return json({ type: 'InternalError' }, { status: 500, headers: NO_STORE });
   }
-  // A 401 is an expired session, which is routine; the rest are worth seeing. Never the token.
+  // A 401 is an expired session, which is routine; the rest are worth seeing, once a minute per caller and kind,
+  // so a flood can't fill the disk with log lines. Never the token.
   if (e.status !== 401) {
-    const who = caller ? `user ${caller.id}` : `address ${event.getClientAddress()}`;
-    console.log(`layer: ${e.status} ${e.type} ${event.request.method} ${event.url.pathname} ${who}`);
+    const who = caller ? `user ${caller.id}` : `address ${address(event)}`;
+    const line = `${who} ${e.status} ${e.type}`;
+    if (!logged.get(line)) {
+      logged.set(line, true, 60_000);
+      console.log(`layer: ${e.status} ${e.type} ${event.request.method} ${event.url.pathname} ${who}`);
+    }
   }
   const headers: Record<string, string> = { ...NO_STORE };
   if (e.status === 429 && typeof e.extra.retry_after === 'number') headers['retry-after'] = String(Math.ceil(e.extra.retry_after / 1000));
@@ -41,7 +56,7 @@ export function endpoint(use: Use, handler: (ctx: { event: RequestEvent; layer: 
     let caller: Caller | null = null;
     try {
       const l = layer();
-      caller = await l.authenticate(event.request.headers.get('x-session-token'), event.getClientAddress());
+      caller = await l.authenticate(event.request.headers.get('x-session-token'), address(event));
       l.limit(caller, use);
       const body = await handler({ event, layer: l, caller });
       return body instanceof Response ? body : json(body, { headers: NO_STORE });

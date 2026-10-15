@@ -57,6 +57,21 @@ export const LIMITS = {
 
 const MAX_TOKEN = 256;
 
+/**
+ * The key an address is limited by. An IPv6 client usually holds a whole /64, so its addresses count as one.
+ * IPv4, and IPv4 mapped into IPv6, count one by one.
+ */
+export function addressKey(address: string): string {
+  const mapped = /^::ffff:([0-9.]+)$/i.exec(address);
+  if (mapped) return mapped[1]!;
+  if (!address.includes(':')) return address;
+  const [head = '', tail = ''] = address.toLowerCase().split('::');
+  const left = head ? head.split(':') : [];
+  const right = tail ? tail.split(':') : [];
+  const groups = address.includes('::') ? [...left, ...Array<string>(Math.max(0, 8 - left.length - right.length)).fill('0'), ...right] : left;
+  return `${groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':')}::/64`;
+}
+
 export class Layer {
   readonly config: LayerConfig;
   readonly store: DatabaseSync;
@@ -99,7 +114,7 @@ export class Layer {
     if (cached === null) throw new LayerError(401, 'InvalidSession');
     if (cached) return { id: cached, token };
     if (!this.known.get(key)) {
-      const wait = this.addresses.take(address);
+      const wait = this.addresses.take(addressKey(address));
       if (wait) throw new LayerError(429, 'RateLimited', { retry_after: wait, limit: 'address' });
     }
     const id = await this.sessionLookups.run(key, async () => {
@@ -122,9 +137,10 @@ export class Layer {
   /**
    * The caller's permissions in a server, by Stoat's rules through packages/domain's calculator. At most two
    * Stoat calls, from the caller's own 5-per-10-s bucket for that server, so answers are cached for 30 s.
-   * 0 when the caller can't see the server or isn't a member. `server` must already be checked.
+   * 0 when the caller can't see the server or isn't a member.
    */
   async serverPermissions(caller: Caller, server: string): Promise<bigint> {
+    if (!isUlid(server)) throw new LayerError(400, 'InvalidId', { field: 'server' });
     const key = `${caller.id}:${server}`;
     const cached = this.permissionCache.get(key);
     if (cached !== undefined) return cached;

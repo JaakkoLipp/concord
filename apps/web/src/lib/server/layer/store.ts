@@ -57,6 +57,11 @@ export function openStore(path: string, migrations: Migration[], log: (line: str
     for (const m of migrations.slice(current)) {
       db.exec('BEGIN IMMEDIATE');
       try {
+        // Another process starting at the same moment may have applied it already.
+        if (Number((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version) >= m.version) {
+          db.exec('ROLLBACK');
+          continue;
+        }
         db.exec(m.sql);
         db.exec(`PRAGMA user_version = ${m.version}`);
         db.exec('COMMIT');

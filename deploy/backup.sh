@@ -53,5 +53,7 @@ restic forget --quiet --prune --keep-daily 7 --keep-weekly 4 --keep-monthly 6
 [ "$(date +%u)" != 7 ] || restic check --quiet
 
 size=$(du -sh "$RESTIC_REPOSITORY" | cut -f1)
-echo "ok $(date -u +%FT%TZ) repository $size, layer copy $layer" > "$STATUS"
+# A failed layer copy still saves everything else, but the status says so from its first word.
+[ "$layer" = ok ] && outcome=ok || outcome=warn
+echo "$outcome $(date -u +%FT%TZ) repository $size, layer copy $layer" > "$STATUS"
 log "ok, repository $size, layer copy $layer"

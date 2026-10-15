@@ -11,8 +11,13 @@ export function requireId(value: unknown, what = 'id'): string {
 }
 
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
-/** Control characters, and the format characters that change direction or hide text. Joiners stay, for emoji. */
-const UNWANTED = /[\p{Cc}​‎‏‪-‮⁠-⁤⁦-⁩﻿]/u;
+/**
+ * Control and format characters, which change direction or hide text, line and paragraph separators, and blanks
+ * that look like nothing. The zero-width joiner and non-joiner stay, for emoji and scripts that need them.
+ */
+const UNWANTED = /(?![\u200C\u200D])[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\u034F\u115F\u1160\u2800\u3164\uFFA0]/u;
+/** A visible character is at most this many UTF-16 units, far more than any real emoji sequence. */
+const MAX_UNITS_PER_CHARACTER = 16;
 
 /** Visible characters, as people count them: an emoji with its modifiers is one. */
 export const visibleLength = (text: string) => [...graphemes.segment(text)].length;
@@ -23,6 +28,8 @@ export const visibleLength = (text: string) => [...graphemes.segment(text)].leng
  */
 export function requireText(value: unknown, { max, min = 1, field = 'text' }: { max: number; min?: number; field?: string }): string {
   if (typeof value !== 'string') throw new LayerError(400, 'InvalidText', { field });
+  // Before any work, so a large body can't make the segmenter build a million objects.
+  if (value.length > max * MAX_UNITS_PER_CHARACTER) throw new LayerError(400, 'InvalidText', { field, min, max });
   const text = value.normalize('NFC').trim();
   const length = visibleLength(text);
   if (UNWANTED.test(text) || length < min || length > max) throw new LayerError(400, 'InvalidText', { field, min, max });

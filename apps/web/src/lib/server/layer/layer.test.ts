@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Permission } from '@concord/domain';
-import { Layer, LIMITS, configFrom } from './layer.ts';
+import { Layer, LIMITS, addressKey, configFrom } from './layer.ts';
 import { MIGRATIONS } from './migrations.ts';
 import { openStore } from './store.ts';
 import { requireId, requireText, visibleLength } from './input.ts';
@@ -269,12 +269,35 @@ describe('the input checks', () => {
   });
 
   it('normalises text and counts what people see', async () => {
-    expect(requireText('  Café ', { max: 4 })).toBe('Café');
-    expect(visibleLength('👩‍👩‍👧‍👦🇫🇮')).toBe(2);
-    expect(requireText('👩‍👩‍👧‍👦🇫🇮', { max: 2 })).toBe('👩‍👩‍👧‍👦🇫🇮');
-    for (const bad of ['ABCDE', '', '   ', 'a\u0000b', 'a‮b', 'a​b', 7]) {
+    // Escapes, so the test shows what it tries: a combining accent, a family emoji and a flag.
+    const family = '\u{1F469}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466}';
+    const flag = '\u{1F1EB}\u{1F1EE}';
+    expect(requireText('  Cafe\u0301 ', { max: 4 })).toBe('Caf\u00E9');
+    expect(visibleLength(family + flag)).toBe(2);
+    expect(requireText(family + flag, { max: 2 })).toBe(family + flag);
+    const hidden = ['\u0000', '\u202E', '\u200B', '\u00AD', '\u2028', '\u3164', '\u{E0041}'];
+    for (const bad of ['ABCDE', '', '   ', ...hidden.map((h) => `a${h}b`), 7]) {
       expect((await refusal(() => requireText(bad, { max: 4 }))).type).toBe('InvalidText');
     }
     expect(requireText('', { max: 4, min: 0 })).toBe('');
+    // The joiner in a family emoji is allowed, though it's a format character.
+    expect(requireText(`a\u200Cb`, { max: 4 })).toBe('a\u200Cb');
+  });
+
+  it('refuses a huge text before counting it', async () => {
+    const start = performance.now();
+    expect((await refusal(() => requireText('x'.repeat(1_000_000), { max: 4 }))).type).toBe('InvalidText');
+    expect(performance.now() - start).toBeLessThan(50);
+  });
+});
+
+describe('the address key', () => {
+  it('groups an IPv6 /64 and keeps IPv4 apart', () => {
+    expect(addressKey('203.0.113.7')).toBe('203.0.113.7');
+    expect(addressKey('::ffff:203.0.113.7')).toBe('203.0.113.7');
+    expect(addressKey('2001:db8:1:2:aaaa:bbbb:cccc:dddd')).toBe('2001:db8:1:2::/64');
+    expect(addressKey('2001:0db8:0001:0002::1')).toBe('2001:db8:1:2::/64');
+    expect(addressKey('2001:db8::1')).toBe('2001:db8:0:0::/64');
+    expect(addressKey('2001:DB8:1:2::ffff')).toBe(addressKey('2001:db8:1:2:9:9:9:9'));
   });
 });

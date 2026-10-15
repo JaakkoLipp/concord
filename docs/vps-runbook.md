@@ -152,10 +152,11 @@ The test page and the M0 encoder runs are specified in section 7 of [dev-environ
    - **Concord's own layer** (architecture section 11.5): put the snapshot's `concord/data/layer-backup.db` in place as `concord/data/layer.db`, with no `-wal` or `-shm` beside it, owned by uid 1000, before `dc up -d`. `/app/api/v1/health` then answers 200, and the settings sidebar shows Jaakko's gates.
 4. **Concord's own layer** (architecture section 11.5):
    - **Its data** is `~/stoat/concord/data/`, made by `pnpm deploy:stack`, owned by uid 1000 and never touched by deploys.
-   - **Backups**: the nightly backup runs `concord/layer-copy.sh` first, a consistent copy in `layer-backup.db`, and saves that, never the live files. `last-backup` ends in `layer copy ok` or `layer copy FAILED`. A failure doesn't stop the rest, so the previous copy is saved instead.
+   - **Backups**: the nightly backup runs `concord/layer-copy.sh` first, a consistent copy in `layer-backup.db`, and saves that, never the live files. `last-backup` starts with `warn` and ends in `layer copy FAILED` when the copy failed. A failure doesn't stop the rest, so the previous copy is saved instead.
    - **Health**: `curl -s https://concord.jaalip.com/app/api/v1/health`. A layer that couldn't start answers 503 `LayerUnavailable`, and `dc logs concord-web` says why on its `layer: NOT STARTED` line, while the client is still served.
    - **Rolling back past a migration**: each migration first copies the file to `layer.db.before-vN`. An older build refuses a newer file, so stop `concord-web`, replace `layer.db` with that copy and delete `layer.db-wal` and `layer.db-shm`, then deploy the older build. Rows written since the migration are lost.
    - **The admin list** is `ADMIN_USER_IDS=` in `host.env`: user IDs, separated by commas. Apply a change with `concord/dc up -d concord-web`.
+   - **Cache lifetimes, by design**: a session that signed out still works on the layer for up to 60 s, and a removed role still counts for up to 30 s.
 5. **Upgrade drill**, if Stoat releases a new version during M3:
    1. Take a MongoDB dump. Migrations run automatically at startup and there is no downgrade, so rolling back means restoring this dump.
    2. Read the release notes and the self-hosted repo's notices. Diff its `compose.yml`, `Caddyfile` and `generate_config.sh` against our pinned commit, and carry new configuration keys over by hand.
