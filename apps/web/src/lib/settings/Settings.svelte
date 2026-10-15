@@ -19,7 +19,7 @@
   const items = $derived(SECTIONS.map((s) => ({ id: s, label: m.settings.sections[s], href: resolve('/(app)/app/settings/[section]', { section: s }) })));
 </script>
 
-<SettingsFrame title={m.settings.title} {items} active={section} heading={m.settings.sections[section]}>
+<SettingsFrame title={m.settings.title} {items} active={section} heading={m.settings.sections[section]} wide={section === 'profile'}>
   {#if section === 'profile'}<ProfileEditor {session} />{/if}
   {#if section === 'notifications'}<NotificationsSection />{/if}
   {#if section === 'voice'}<VoiceSection />{/if}

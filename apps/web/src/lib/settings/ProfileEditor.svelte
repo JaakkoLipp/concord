@@ -212,7 +212,8 @@
     background: var(--surface-4); border: 1px solid var(--border-default); box-shadow: var(--shadow-popover);
   }
   .unsaved span { flex: 1; color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans); }
-  @media (max-width: 1000px) {
+  /* Side by side only with room for the form beside the 400 px card; otherwise the preview goes below the form. */
+  @container settings (max-width: 52rem) {
     .editor { grid-template-columns: minmax(0, 1fr); }
     .preview { position: static; }
   }

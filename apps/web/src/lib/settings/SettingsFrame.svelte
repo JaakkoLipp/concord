@@ -21,8 +21,10 @@
     children: Snippet;
     /** Below the sections, after a separator: log out, delete server and the like. */
     footer?: Snippet;
+    /** A wider column, for a section with a preview beside its form. */
+    wide?: boolean;
   }
-  let { title, items, active, heading, children, footer }: Props = $props();
+  let { title, items, active, heading, children, footer, wide = false }: Props = $props();
 
   // Opened from inside the app, history can go back to it. Opened from a link or a reload, it can't.
   let fromApp = false;
@@ -59,7 +61,7 @@
     </div>
   </nav>
   <main class="content">
-    <div class="column">
+    <div class="column" class:wide>
       <h1>{heading}</h1>
       {@render children()}
     </div>
@@ -80,7 +82,9 @@
   .separator { height: 1px; margin: var(--space-3); background: var(--border-default); }
   .nav-inner :global(.button) { justify-content: flex-start; padding: 0 var(--space-3); font-size: var(--text-md); }
   .content { flex: 1 1 calc(var(--settings-col-w) + 10rem); display: flex; align-items: flex-start; overflow-y: auto; }
-  .column { width: min(var(--settings-col-w), 100%); padding: var(--space-10) var(--space-8) var(--space-8); }
+  /* A container, so a section can lay itself out by the room it really has (ProfileEditor). */
+  .column { width: min(var(--settings-col-w), 100%); padding: var(--space-10) var(--space-8) var(--space-8); container: settings / inline-size; }
+  .column.wide { width: min(var(--settings-col-wide-w), 100%); }
   h1 { margin: 0 0 var(--space-7); color: var(--text-strong); font: 700 var(--text-xl) var(--font-sans); }
   .close { position: sticky; top: 0; padding: var(--space-10) var(--space-5) 0; }
   @media (max-width: 800px) {
