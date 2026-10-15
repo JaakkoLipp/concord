@@ -23,6 +23,8 @@ export const TYPING_STOP_MS = 1_000;
 export const ACK_EVERY_MS = 2_000;
 /** A failed ack is sent again after this long. */
 const ACK_RETRY_MS = 5_000;
+/** How long Stoat's record of a channel's newest message can trail it, with room to spare (m4.5-results.md task 3). */
+const SERVER_ACK_LAG_MS = 15_000;
 const POLL_MS = 2 * 60_000;
 /** How often timed mutes are checked for ending. */
 const CLOCK_MS = 15_000;
@@ -1029,6 +1031,30 @@ export class Session {
     this.store.markUnread(channel, before);
     this.heldUnread.add(channel);
     if (before) void this.backend.ack(channel, before).catch(() => {});
+  }
+
+  /**
+   * "Mark as read" for a whole server: every channel here at once, and one acknowledgement to Stoat, which
+   * acknowledges each channel and tells this account's other devices. Stoat acknowledges each channel's newest
+   * message as it last recorded it, which trails new messages by 5 to 8 s (m4.5-results.md task 3), so a channel
+   * with a message newer than that is acknowledged on its own afterwards, with the message this client knows.
+   */
+  async markServerRead(server: Id): Promise<void> {
+    const recent: [Id, Id][] = [];
+    for (const id of this.store.servers.get(server)?.channels ?? []) {
+      const c = this.store.channels.get(id);
+      this.heldUnread.delete(id);
+      if (!c || c.kind === 'saved' || !c.lastMessageId) continue;
+      this.store.markRead(id, c.lastMessageId);
+      if (ulidTime(c.lastMessageId) > Date.now() - SERVER_ACK_LAG_MS) recent.push([id, c.lastMessageId]);
+    }
+    await this.backend.ackServer(server);
+    await Promise.all(recent.map(([id, message]) => {
+      const a = this.acks.get(id);
+      if (a?.timer) clearTimeout(a.timer);
+      this.acks.set(id, { at: Date.now(), sent: message });
+      return this.backend.ack(id, message);
+    }));
   }
 
   /** Leaving a channel ends its "Mark unread" hold: the next visit reads it as usual. */

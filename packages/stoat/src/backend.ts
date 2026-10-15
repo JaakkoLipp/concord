@@ -188,6 +188,11 @@ export class StoatBackend implements Backend {
     await this.rest.request('PUT', `/channels/${channel}/ack/${message}`);
   }
 
+  /** Each channel's acknowledgement reaches this account's other devices as its own ChannelAck (m4.5-results.md). */
+  async ackServer(server: string): Promise<void> {
+    await this.rest.request('PUT', `/servers/${server}/ack`);
+  }
+
   async editMessage(channel: string, message: string, content: string): Promise<Message> {
     return mapMessage(await this.rest.request<WMessage>('PATCH', `/channels/${channel}/messages/${message}`, { content }));
   }

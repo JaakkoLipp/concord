@@ -49,6 +49,11 @@ export function serverMenu(session: Session, server: Id): MenuItem[] {
     items.push('separator');
     items.push({ label: m.admin.leaveServer, danger: true, onselect: () => void leaveServer(session, server) });
   }
+  // First, as on Discord, while anything in the server is unread (m4.5-plan.md task 3).
+  const badge = store.serverBadge(server, (c) => canView(store, c));
+  if (badge.unread || badge.mentions) {
+    items.unshift({ label: m.notify.markRead, onselect: () => void session.markServerRead(server).catch(() => toasts.show(m.notify.markReadFailed)) }, 'separator');
+  }
   return items;
 }
 

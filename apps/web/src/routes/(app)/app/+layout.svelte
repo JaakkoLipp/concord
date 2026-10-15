@@ -8,6 +8,7 @@
   import { app } from '$lib/session/app.svelte.ts';
   import { m } from '$lib/i18n/index.ts';
   import type { Snippet } from 'svelte';
+  import { titleFor, unreadTotal } from '$lib/shell/title.ts';
 
   let { children }: { children: Snippet } = $props();
   const onLogin = $derived(page.url.pathname.startsWith('/app/login'));
@@ -24,6 +25,11 @@
 
   $effect(() => {
     void app.restore();
+  });
+
+  // Mentions and DMs waiting, in the tab's title.
+  $effect(() => {
+    document.title = titleFor(app.session ? unreadTotal(app.session.store) : 0);
   });
 
   $effect(() => {

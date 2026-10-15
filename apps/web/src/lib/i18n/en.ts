@@ -662,6 +662,7 @@ export const en = {
     muteConversation: 'Mute',
     unmuteConversation: 'Unmute',
     markRead: 'Mark as read',
+    markReadFailed: "Couldn't mark the server as read.",
     failed: 'Couldn’t save the notification settings.',
   },
   admin: {
