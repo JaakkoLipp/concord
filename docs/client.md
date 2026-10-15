@@ -379,7 +379,7 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
 5. **Slight.** No enter starts from nothing, and none travels far. Popovers, dialogs and call tiles start at 0.98 scale with opacity 0, rises are `--space-2`, and a pressed button scales to 0.98.
 6. **Two curves.** `--ease-out` covers every enter, exit, press and hover. `--ease-in-out` covers things moving on screen, such as the phone drawer and the typing dots. `linear` is for the level meter only. There is no ease-in and no springs.
 7. **Durations** are the tokens above. Only `--dur-loop` and `--dur-flash` exceed 200 ms.
-8. **Reduced motion keeps the fades.** `--motion` is 0 under `prefers-reduced-motion`. Every scale and movement is written to collapse at 0, such as `scale(calc(1 - 0.02 * var(--motion)))`. Opacity and colour still fade, the drawer and toggle knobs fade into place, and looping pulses stop.
+8. **Reduced motion keeps the fades.** `--motion` is 0 under `prefers-reduced-motion`. Every scale and movement is written to collapse at 0, such as `scale(calc(1 - 0.02 * var(--motion)))`. Opacity and colour still fade. The phone drawer, toggle knobs, category chevrons and the rail's pill snap into place, and looping pulses stop.
 9. **Exits keep their content.** A closing menu, popover, dialog or toast stays on screen with what it showed while it fades, ignores the pointer, and gives focus back at once.
 
 **Components seen in the reference**:

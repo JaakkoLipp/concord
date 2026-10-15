@@ -125,5 +125,5 @@
     border: solid var(--on-accent); border-width: 0 2px 2px 0; rotate: 45deg;
   }
   .separator { height: 1px; margin: var(--space-2) var(--space-3); background: var(--border-default); }
-  @keyframes pop { from { opacity: 0; transform: scale(0.98); } }
+  @keyframes pop { from { opacity: 0; scale: calc(1 - 0.02 * var(--motion)); } }
 </style>

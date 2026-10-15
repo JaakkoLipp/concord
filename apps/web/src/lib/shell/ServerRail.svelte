@@ -77,15 +77,16 @@
   button.item { padding: 0; border: 0; background: none; cursor: pointer; }
   .add { color: var(--status-online); }
   .item:hover .add { background: var(--status-online); color: var(--on-accent); }
-  /* The pill on the left edge: a dot for unread, taller on hover, full height when selected. */
+  /* The pill on the left edge: a dot for unread, taller on hover, full height when selected. It is always
+     38 px tall and scaled, since animating its height would lay out the rail on every frame. */
   .pill {
-    position: absolute; left: 0; top: 50%; width: 4px; height: 0; translate: 0 -50%;
+    position: absolute; left: 0; top: 50%; width: 4px; height: 38px; translate: 0 -50%; scale: 1 0;
     border-radius: 0 var(--radius-xs) var(--radius-xs) 0; background: var(--text-strong);
-    transition: height var(--dur-popover) var(--ease-out);
+    transition: scale calc(var(--dur-popover) * var(--motion)) var(--ease-out);
   }
-  .unread .pill { height: 8px; }
-  .item:hover .pill { height: 20px; }
-  .active .pill { height: 38px; }
+  .unread .pill { scale: 1 calc(8 / 38); }
+  .item:hover .pill { scale: 1 calc(20 / 38); }
+  .active .pill { scale: 1; }
   .badge { position: absolute; right: 12px; bottom: -4px; padding: 2px; border-radius: var(--radius-full); background: var(--surface-0); line-height: 0; }
   .separator { width: 32px; height: 1px; flex: none; background: var(--border-default); margin: var(--space-1) 0; }
   .item:focus-visible { outline: none; }

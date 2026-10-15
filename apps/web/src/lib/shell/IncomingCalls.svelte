@@ -50,13 +50,18 @@
     background: var(--surface-4); box-shadow: var(--shadow-popover); animation: rise var(--dur-popover) var(--ease-out);
   }
   /* A slow pulse while it rings, as the tone does. */
-  .avatar { display: grid; border-radius: 50%; animation: pulse 2s var(--ease-out) infinite; }
+  .avatar { position: relative; display: grid; border-radius: 50%; }
+  .avatar::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    box-shadow: 0 0 0 2px var(--status-online); animation: pulse calc(var(--dur-loop) * 2) var(--ease-in-out) infinite;
+  }
   .text { min-width: 0; }
   .who, .where { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .who { color: var(--text-strong); font: 600 var(--text-md) var(--font-sans); }
   .where { color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
   .actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
-  @keyframes rise { from { opacity: 0; translate: 0 calc(-1 * var(--space-3)); } }
-  @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 var(--status-online); } 50% { box-shadow: 0 0 0 4px transparent; } }
-  @media (prefers-reduced-motion: reduce) { .card, .avatar { animation: none; } }
+  @keyframes rise { from { opacity: 0; translate: 0 calc(-1 * var(--space-2) * var(--motion)); } }
+  @keyframes pulse { 0%, 100% { opacity: 1; scale: 1; } 50% { opacity: 0; scale: 1.15; } }
+  /* A loop: reduced motion stops it, leaving the ring still. */
+  @media (prefers-reduced-motion: reduce) { .avatar::after { animation: none; } }
 </style>

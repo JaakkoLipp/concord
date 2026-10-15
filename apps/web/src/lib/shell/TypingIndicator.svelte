@@ -32,9 +32,9 @@
     color: var(--text-secondary); font: 500 var(--text-xs) var(--font-sans);
   }
   .dots { display: inline-flex; gap: 2px; }
-  .dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: blink 1.2s infinite ease-in-out; }
-  .dots i:nth-child(2) { animation-delay: 0.15s; }
-  .dots i:nth-child(3) { animation-delay: 0.3s; }
+  .dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: blink var(--dur-loop) infinite var(--ease-in-out); }
+  .dots i:nth-child(2) { animation-delay: calc(var(--dur-loop) / 8); }
+  .dots i:nth-child(3) { animation-delay: calc(var(--dur-loop) / 4); }
   @keyframes blink { 0%, 60%, 100% { opacity: 0.3; } 30% { opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { .dots i { animation: none; } }
 </style>

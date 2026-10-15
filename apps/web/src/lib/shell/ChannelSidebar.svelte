@@ -130,7 +130,7 @@
     background: none; border: 0; color: var(--text-secondary); font: 500 var(--text-sm) var(--font-sans); text-align: left;
   }
   .category:hover { color: var(--text-strong); }
-  .category :global(svg) { transition: rotate var(--dur-popover) var(--ease-out); }
+  .category :global(svg) { transition: rotate calc(var(--dur-popover) * var(--motion)) var(--ease-out); }
   .category.collapsed :global(svg) { rotate: -90deg; }
   .channel {
     position: relative; display: flex; align-items: center; gap: var(--space-3);

@@ -67,5 +67,5 @@
     box-shadow: var(--shadow-popover);
     animation: pop var(--dur-popover) var(--ease-out);
   }
-  @keyframes pop { from { opacity: 0; transform: scale(0.98); } }
+  @keyframes pop { from { opacity: 0; scale: calc(1 - 0.02 * var(--motion)); } }
 </style>

@@ -43,6 +43,9 @@
   --control-h: 40px; --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px;
 
   --shadow-popover: 0 8px 32px rgb(0 0 0 / 0.28);  /* proposal: on black, borders carry most elevation */
-  --dur-hover: 100ms; --dur-press: 60ms; --dur-popover: 140ms; --dur-modal: 200ms;   /* proposals */
-  --ease-out: cubic-bezier(0.2, 0, 0, 1); --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  /* Motion, client.md section 9: slight, as Discord's. Exits are faster than enters. */
+  --dur-hover: 120ms; --dur-press: 120ms; --dur-popover: 150ms; --dur-modal: 200ms; --dur-toast: 200ms; --dur-exit: 100ms;
+  --dur-meter: 60ms; --dur-loop: 1.2s; --dur-flash: 2s;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1); --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --motion: 1;   /* 0 under reduced motion: scales and movements collapse, fades stay */
 }

@@ -23,8 +23,9 @@ a:hover { text-decoration: underline; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
+/* Reduced motion keeps the fades: every scale and movement is written to collapse when --motion is 0. */
 @media (prefers-reduced-motion: reduce) {
-  :root { --dur-hover: 0ms; --dur-press: 0ms; --dur-popover: 0ms; --dur-modal: 0ms; }
+  :root { --motion: 0; }
 }
 /* Thin scrollbars on the dark surfaces, like the reference. */
 * { scrollbar-width: thin; scrollbar-color: var(--surface-5) transparent; }

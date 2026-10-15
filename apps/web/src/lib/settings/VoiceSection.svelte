@@ -329,7 +329,7 @@
     position: absolute; inset: calc((var(--icon-md) - var(--space-2)) / 2) 0; border-radius: var(--radius-full);
     background: linear-gradient(to right, var(--status-idle) var(--threshold), var(--status-online) var(--threshold)); opacity: 0.35;
   }
-  .zone.live { opacity: 1; clip-path: inset(0 calc(100% - var(--level)) 0 0); transition: clip-path var(--dur-press) linear; }
+  .zone.live { opacity: 1; clip-path: inset(0 calc(100% - var(--level)) 0 0); transition: clip-path var(--dur-meter) linear; }
   .slider.bare { position: relative; }
   .slider.bare::-webkit-slider-runnable-track { background: transparent; }
   .slider.bare::-moz-range-track { background: transparent; }
@@ -340,7 +340,7 @@
     --segments: repeating-linear-gradient(to right, var(--text-strong) 0 var(--space-2), transparent var(--space-2) var(--space-3));
     position: relative; flex: 1; height: var(--icon-lg); background: var(--surface-5); mask: var(--segments);
   }
-  .lit { position: absolute; inset: 0; background: var(--text-secondary); clip-path: inset(0 calc(100% - var(--level)) 0 0); transition: clip-path var(--dur-press) linear; }
+  .lit { position: absolute; inset: 0; background: var(--text-secondary); clip-path: inset(0 calc(100% - var(--level)) 0 0); transition: clip-path var(--dur-meter) linear; }
   .meter.open .lit { background: var(--status-online); }
 
   .group { display: grid; gap: var(--space-2); margin: 0; padding: 0; border: 0; }
@@ -356,7 +356,7 @@
   .switch { position: relative; flex: none; display: inline-flex; cursor: pointer; }
   .switch input { position: absolute; inset: 0; z-index: 1; opacity: 0; margin: 0; cursor: inherit; }
   .track { width: 2.5rem; height: 1.5rem; border-radius: var(--radius-full); background: var(--surface-5); position: relative; }
-  .track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 1.125rem; height: 1.125rem; border-radius: var(--radius-full); background: var(--text-strong); transition: translate var(--dur-hover) var(--ease-out); }
+  .track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 1.125rem; height: 1.125rem; border-radius: var(--radius-full); background: var(--text-strong); transition: translate calc(var(--dur-hover) * var(--motion)) var(--ease-out); }
   .switch input:checked + .track { background: var(--status-online); }
   .switch input:checked + .track::after { translate: 1rem 0; }
   .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -369,5 +369,4 @@
 
   .camera { display: flex; align-items: flex-end; gap: var(--space-5); flex-wrap: wrap; }
   video { width: min(100%, var(--popout-w)); aspect-ratio: 16 / 9; border-radius: var(--radius-lg); background: var(--surface-2); object-fit: cover; }
-  @media (prefers-reduced-motion: reduce) { .zone.live, .lit { transition: none; } }
 </style>

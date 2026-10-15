@@ -22,6 +22,5 @@
   }
   .toast.error { border-color: var(--danger); }
   button { display: grid; padding: 0; border: 0; background: none; color: var(--text-secondary); cursor: pointer; }
-  @keyframes rise { from { opacity: 0; transform: translateY(-4px); } }
-  @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+  @keyframes rise { from { opacity: 0; translate: 0 calc(-1 * var(--space-2) * var(--motion)); } }
 </style>

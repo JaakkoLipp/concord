@@ -60,8 +60,12 @@
   }
   .participant:hover { background: var(--hover-overlay); color: var(--text-normal); }
   .participant:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-  .avatar { display: grid; flex: none; border-radius: var(--radius-full); transition: box-shadow var(--dur-hover) var(--ease-out); }
-  .talking .avatar { box-shadow: 0 0 0 2px var(--status-online); }
+  .avatar { position: relative; display: grid; flex: none; border-radius: var(--radius-full); }
+  .avatar::after {
+    content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    box-shadow: 0 0 0 2px var(--status-online); opacity: 0; transition: opacity var(--dur-hover) var(--ease-out);
+  }
+  .talking .avatar::after { opacity: 1; }
   .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .marks { display: flex; align-items: center; gap: var(--space-2); flex: none; color: var(--text-secondary); }
   .server { display: grid; color: var(--danger); }
