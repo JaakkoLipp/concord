@@ -1,17 +1,33 @@
-# Concord: handoff for the next session (M4.4 and M4.5)
+# Concord: handoff for the next session
 
 You are continuing Concord, a Discord-style chat client on a self-hosted, unmodified Stoat 0.15.5 backend, for a ~200-person community in Finland. Jaakko directs the product, reviews on the live client and tests on real devices. Coding agents do most implementation. Jaakko's pronouns are not stated: use the name or they/them.
 
-**M4 is built and on production** at `https://concord.jaalip.com/app`: voice, the call view, camera, 1080p60 screen share, DM calls with ringing, voice settings with RNNoise and push-to-talk. What's left of M4 needs people and devices (below). Read `docs/m4-results.md` first.
+**On production** at `https://concord.jaalip.com/app`:
+- **M4**, voice: the call view, camera, 1080p60 screen share, DM calls with ringing, and voice settings with RNNoise and push-to-talk. What's left of M4 needs people and devices (below). `docs/m4-results.md`.
+- **M4.1 and M4.2**, alignment and motion: `docs/m4.1-results.md` and `docs/m4.2-results.md`. Motion rules are in client.md section 9, enforced by `tools/lint/motion.ts`.
+- **M4.4, Concord's own layer**, 2026-10-15: `docs/m4.4-results.md` and architecture section 11.
+  - It lives in `concord-web`, under `/app/api/v1/`.
+  - It provides the session check, the permission check, the server-creator and admin gates, limits, and a SQLite store at `~/stoat/concord/data/`.
+  - The store is in the nightly backup through `layer-copy.sh`.
+  - `ADMIN_USER_IDS` on production holds Jaakko's admin account.
+- **M4.5**, 2026-10-15: `docs/m4.5-results.md`. Built:
+  - message, link and image menus with Mark unread,
+  - Mark as read for a server, and unread counts in the tab's title,
+  - quick voice controls and shortcuts,
+  - per-user and per-stream volume,
+  - streams that start unwatched,
+  - a voice channel user limit,
+  - sounds through the chosen speaker,
+  - Speak gained mid-call,
+  - the January pull request text,
+  - server tags, the layer's first feature.
 
-**M4.1 and M4.2 are built and on production** (2026-10-15):
-- **M4.1, alignment**: `docs/m4.1-results.md`. It includes the follow-up from Jaakko's Discord screenshot: the voice panel and user dock in one panel, level with the composer, and "is typing" above the composer.
-- **M4.2, motion**: `docs/m4.2-results.md`. The rules are in client.md section 9, Motion: Discord's style, slight. `tools/lint/motion.ts` in `pnpm verify` enforces them, and `tools/live/src/motion.ts` checks them live. New UI follows them: animate only transform, opacity and colours, timings from tokens, `leave` and `enter` from `@concord/ui`, and hover colours behind `@media (hover: hover)`.
+  **Left: task 7, the GIF picker**, waiting for Jaakko's choice. The results' task 7 section has the options; the recommendation is KLIPY straight from the browser.
 
-**This session's job, in order:**
-1. **Jaakko's review of M4.1 and M4.2** on production, if not given yet: the feel with reduced motion on and off, and one Chrome performance recording on the reference machine.
-2. **M4.4, Concord's own layer**: `docs/architecture.md` section 11 and `docs/m4.4-plan.md`. The design is approved and was revised after a challenger review. The plan awaits sign-off.
-3. **M4.5, menus, GIFs, quick voice controls, server tags**: `docs/m4.5-plan.md`, awaiting sign-off. Tasks 1 to 9 don't need M4.4, and task 10, server tags, does. Its new menus and pickers use M4.2's `Menu`, `Popover` and motion helpers.
+**This session's job:**
+1. **Jaakko's review** of M4.4 and M4.5 on production, and of M4.1 and M4.2 if not given yet.
+2. **Task 7 of M4.5** once Jaakko has chosen a GIF provider.
+3. **Then the next milestone** in `docs/milestones.md`, planned first, or the admin panel's plan if Jaakko wants it sooner (below).
 
 ## How to work
 
@@ -24,7 +40,10 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
   - The seed and the persona checks refuse any stack but the local one.
   - Deploys to `/app` are fine. `deploy:web` runs `routes.ts` afterwards.
 - **Commit and push at the end of each finished task**, after `pnpm verify`, run right before the commit.
-- **Testing stays light**: unit tests for the risky core, and scripted live checks in `tools/live/src/`, of which `voice`, `callview`, `dm-call`, `share` and `voice-restart` cover M4. They play `media.ts`'s speech-like fake microphone, because Chromium's own beep is filtered away within seconds.
+- **Testing stays light**: unit tests for the risky core, and scripted live checks in `tools/live/src/`.
+  - M4 is covered by `voice`, `callview`, `dm-call`, `share` and `voice-restart`, M4.4 by `layer`, and M4.5 by `menus`, `server-read`, `voice-controls`, `voice-channel` and `tags`.
+  - The call checks play `media.ts`'s speech-like fake microphone, which Chromium's audio processing still learns to filter within a minute or so, so keep each call check short. New ones share `calls.ts`.
+- **The layer**: a new table is a new numbered file in `apps/web/src/lib/server/layer/migrations/`, imported by name in `migrations.ts`. A unit test fails if one is missing. Every endpoint goes through `endpoint()` in `http.ts`.
 - **Sonnet subagents** (`model: "sonnet"`) do research, the challenger review of each plan, and the review of the session's diff before handing over. Keep synthesis and final writing in the main session. Never run scripts or build tools inside downloaded clones.
 - **Private addresses**: Jaakko's admin email must never appear in files or commit messages. `pnpm verify` fails on personal mail addresses.
 
@@ -38,24 +57,24 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 
 ## Open with Jaakko
 
-**Sign-offs**: M4.4 and M4.5. **Reviews**: M4.1 and M4.2 on production.
+**Reviews on production**:
+- M4.4: the settings sidebar shows "Can create servers · System admin".
+- M4.5: right-click menus, Mark unread, the dock's chevrons, Watch stream, the user limit, and server tags in server settings and profile settings.
+- M4.1 and M4.2 if not reviewed yet: the feel with reduced motion on and off, and one Chrome performance recording including the emoji picker's first open.
 
-**Decisions pending, each with a recommendation in its plan:**
-- Restart LiveKit only when the TURN certificate is renewed. It's in the repo and not yet on production. A restart leaves Stoat's voice state wrong: m4-results.md task 9.
-- Try `use_send_side_bwe` locally, so screen-share viewers don't stick at 360p.
-- Rename noise suppression "Off" to "Browser default".
-- The browser tab icon is white on transparent, as asked, and may be faint on light tab bars.
+**Decisions:**
+- **GIFs**: KLIPY from the browser (recommended), asking a provider to approve our proxy, or no picker. See m4.5-results.md task 7.
+- **The admin panel**: Jaakko wants it to do, as a GUI in the web client, what they do over SSH during the beta, with its scope kept small. Some of those tasks need root or Docker, which the layer must never have: changing server creators restarts `api`, restarting LiveKit, and creating accounts by email. The recommendation is a small root-side runner on the VPS that does only a fixed list of actions the panel requests. Its plan, in another session's worktree (`.claude/worktrees/concord-admin-panel-9b4095/docs/admin-panel-plan.md`, uncommitted), predates the layer and reads MongoDB directly; it should move onto `/app/api/v1/admin/*` and the layer's admin gate.
+- **The browser tab icon** is white on transparent, as asked, and may be faint on light tab bars.
+
+**For Jaakko on Windows**: Chrome may keep Ctrl+Shift+M, the new mute shortcut, for its profile switcher (m4.5-results.md task 4).
 
 **Jaakko's tasks for M4:**
 1. Encoder runs 1 to 4 on Windows Chrome, on `/spike/`.
 2. A real-microphone check on production.
 3. A Wi-Fi switch during a call.
 4. The voice evening: five or more people for 30 minutes, a game share from Windows Chrome, a Firefox sharer and viewer, and a forced-relay run with UDP 3478 closed briefly. It completes decision gate part B.
-5. The restore drill.
-
-**Also from Jaakko:**
-- a GIPHY developer key for M4.5, typed into `host.env` on the VPS,
-- later, an admin user ID in `host.env` for the admin panel.
+5. The restore drill, now with the layer's store (vps-runbook.md section 7).
 
 **Carried from M3:**
 - M2's device checks with a tester.
@@ -63,14 +82,14 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 - Save the restic password in a password manager.
 - Remove `/spike/` from production after the voice evening.
 
-**Other sessions:**
-- The admin-panel session's draft plan should move onto Concord's own layer: `/app/api/v1/admin/*`, with no direct database reads.
-- An end-to-end encryption session for DMs was told about the layer.
+**Other sessions**: an end-to-end encryption session for DMs was told about the layer.
 
 **Upstream candidates** (architecture section 9):
-- January's Discord user agent for Instagram embed fixers,
-- voice-ingress's state after LiveKit restarts,
-- voice moderation acting on the moderator instead of the target.
+- January and the Instagram embed fixers: the pull request text and its tested pattern are in m4.5-results.md task 9, for Jaakko to file.
+- voice-ingress's state after LiveKit restarts.
+- Voice moderation acting on the moderator instead of the target.
+
+**Known, not fixed**: a screen-share viewer whose downlink was squeezed can stay at 360p for minutes. Send-side estimation didn't help (m4.5-results.md task 1).
 
 ## Commands (WSL, from the repo root)
 
