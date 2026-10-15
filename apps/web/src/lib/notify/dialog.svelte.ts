@@ -12,8 +12,13 @@ class NotifyDialog {
 
 export const notifyDialog = new NotifyDialog();
 
-/** Notification settings, and a quick mute until turned off or an unmute, for any menu. */
-export function notifyItems(session: Session, scope: 'server' | 'channel', id: Id, kind: 'server' | 'channel' | 'conversation'): MenuItem[] {
+/** Notification settings, for any menu. */
+export function notifySettingsItem(scope: 'server' | 'channel', id: Id): MenuItem {
+  return { label: m.notify.settings, onselect: () => notifyDialog.open(scope, id) };
+}
+
+/** A quick mute until turned off, or an unmute, for any menu. */
+export function notifyMuteItem(session: Session, scope: 'server' | 'channel', id: Id, kind: 'server' | 'channel' | 'conversation'): MenuItem {
   const store = session.store;
   const muted = scope === 'server' ? store.serverMuted(id) : store.isMuted(id);
   const labels = {
@@ -21,8 +26,10 @@ export function notifyItems(session: Session, scope: 'server' | 'channel', id: I
     channel: [m.notify.muteChannel, m.notify.unmuteChannel],
     conversation: [m.notify.muteConversation, m.notify.unmuteConversation],
   }[kind];
-  return [
-    { label: m.notify.settings, onselect: () => notifyDialog.open(scope, id) },
-    { label: muted ? labels[1]! : labels[0]!, onselect: () => void session.setMute(scope, id, muted ? false : null).catch(() => toasts.show(m.notify.failed)) },
-  ];
+  return { label: muted ? labels[1]! : labels[0]!, onselect: () => void session.setMute(scope, id, muted ? false : null).catch(() => toasts.show(m.notify.failed)) };
+}
+
+/** Notification settings, then the quick mute. */
+export function notifyItems(session: Session, scope: 'server' | 'channel', id: Id, kind: 'server' | 'channel' | 'conversation'): MenuItem[] {
+  return [notifySettingsItem(scope, id), notifyMuteItem(session, scope, id, kind)];
 }

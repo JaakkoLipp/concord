@@ -7,7 +7,7 @@ import { m } from '$lib/i18n/index.ts';
 import { channelsWith, isOwner, serverPerms, serverSections } from '$lib/view/admin.ts';
 import { canView, permissionsIn } from '$lib/view/channels.ts';
 import { adminDialogs } from './dialogs.svelte.ts';
-import { notifyItems } from '$lib/notify/dialog.svelte.ts';
+import { notifyItems, notifyMuteItem, notifySettingsItem } from '$lib/notify/dialog.svelte.ts';
 import { confirm } from '$lib/view/confirm.svelte.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 
@@ -38,13 +38,13 @@ export function serverMenu(session: Session, server: Id): MenuItem[] {
   const items: MenuItem[] = [];
   const sections = serverSections(store, server);
   if (channelsWith(store, server, Permission.InviteOthers).length) items.push({ label: m.admin.invite.people, onselect: () => adminDialogs.open({ kind: 'invite', server, channel: null }) });
-  if (sections.length) items.push({ label: m.admin.serverSettings, onselect: () => void openServerSettings(server, sections[0]!) });
+  items.push(notifyMuteItem(session, 'server', server, 'server'));
   if (canManageChannels(session, server)) {
     items.push({ label: m.admin.createChannel, onselect: () => adminDialogs.open({ kind: 'createChannel', server, category: null }) });
     items.push({ label: m.admin.createCategory, onselect: () => adminDialogs.open({ kind: 'category', server, id: null }) });
   }
-  if (items.length) items.push('separator');
-  items.push(...notifyItems(session, 'server', server, 'server'));
+  items.push('separator', notifySettingsItem('server', server));
+  if (sections.length) items.push({ label: m.admin.serverSettings, onselect: () => void openServerSettings(server, sections[0]!) });
   if (!isOwner(store, server)) {
     items.push('separator');
     items.push({ label: m.admin.leaveServer, danger: true, onselect: () => void leaveServer(session, server) });
