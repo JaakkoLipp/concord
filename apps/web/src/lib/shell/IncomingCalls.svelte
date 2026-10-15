@@ -3,7 +3,7 @@
    * The ringing card for a DM or group call (client.md section 10.8): the caller, where, Join and Ignore. It
    * doesn't take focus, so typing carries on; Escape inside it ignores the call.
    */
-  import { Avatar, Button } from '@concord/ui';
+  import { Avatar, Button, leave, slide } from '@concord/ui';
   import type { Ring, Store } from '@concord/domain';
   import Phone from '@lucide/svelte/icons/phone';
   import PhoneOff from '@lucide/svelte/icons/phone-off';
@@ -25,7 +25,7 @@
   {#each rings.shown as r (r.channel)}
     <!-- Escape reaches the card only from its own buttons, which are the interactive part. -->
     <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-    <section class="card" aria-label={m.voice.ring.label(caller(r))} onkeydown={(e) => { if (e.key === 'Escape') rings.ignore(r); }}>
+    <section class="card" animate:slide out:leave aria-label={m.voice.ring.label(caller(r))} onkeydown={(e) => { if (e.key === 'Escape') rings.ignore(r); }}>
       <span class="avatar"><Avatar src={avatarUrl(store.users.get(r.initiator) ?? { id: r.initiator })} size={40} /></span>
       <div class="text">
         <p class="who">{caller(r)}</p>
@@ -47,7 +47,7 @@
   .card {
     display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-3) var(--space-4);
     padding: var(--space-4); border: 1px solid var(--border-default); border-radius: var(--radius-lg);
-    background: var(--surface-4); box-shadow: var(--shadow-popover); animation: rise var(--dur-popover) var(--ease-out);
+    background: var(--surface-4); box-shadow: var(--shadow-popover); animation: rise var(--dur-toast) var(--ease-out);
   }
   /* A slow pulse while it rings, as the tone does. */
   .avatar { position: relative; display: grid; border-radius: 50%; }

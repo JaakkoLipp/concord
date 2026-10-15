@@ -1,12 +1,13 @@
 <script lang="ts">
   import X from '@lucide/svelte/icons/x';
   import { m } from '$lib/i18n/index.ts';
+  import { leave, slide } from '@concord/ui';
   import { toasts } from '$lib/view/toast.svelte.ts';
 </script>
 
 <div class="toaster" role="status" aria-live="polite">
   {#each toasts.list as t (t.id)}
-    <div class="toast" class:error={t.tone === 'error'}>
+    <div class="toast" class:error={t.tone === 'error'} animate:slide out:leave>
       <span>{t.text}</span>
       <button aria-label={m.toast.dismiss} onclick={() => toasts.dismiss(t.id)}><X size={14} /></button>
     </div>
@@ -18,7 +19,7 @@
   .toast {
     display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); pointer-events: auto;
     border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-4); color: var(--text-strong);
-    font: var(--text-sm) var(--font-sans); box-shadow: var(--shadow-popover); animation: rise var(--dur-popover) var(--ease-out);
+    font: var(--text-sm) var(--font-sans); box-shadow: var(--shadow-popover); animation: rise var(--dur-toast) var(--ease-out);
   }
   .toast.error { border-color: var(--danger); }
   button { display: grid; padding: 0; border: 0; background: none; color: var(--text-secondary); cursor: pointer; }

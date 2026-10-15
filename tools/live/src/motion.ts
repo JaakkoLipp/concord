@@ -8,10 +8,12 @@
  * - no frame stalls longer than 50 ms. Headless has no GPU, so frame times are a lower bound.
  */
 import type { Browser, Page } from 'playwright-core';
+import { chromium } from 'playwright-core';
 import { loadState } from '../../seed/src/config.ts';
 import { assertDevStack } from '../../seed/src/vps.ts';
-import { APP, launch } from './browser.ts';
+import { APP } from './browser.ts';
 import { signIn } from './login.ts';
+import { fakeMediaArgs } from './media.ts';
 
 await assertDevStack();
 const out = process.argv[2];
@@ -83,7 +85,7 @@ const reset = (p: Page) => p.evaluate(() => { const w = window as unknown as Rec
 const take = (p: Page) => p.evaluate(() => { const w = window as unknown as Recorded; return { seen: w.__seen, gap: w.__gap, long: w.__long }; });
 
 async function session(browser: Browser, reducedMotion: 'no-preference' | 'reduce') {
-  const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, reducedMotion });
+  const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, reducedMotion, permissions: ['microphone'] });
   await context.addInitScript(recorder);
   const page = await context.newPage();
   await signIn(page, 'dev');
@@ -109,8 +111,12 @@ async function step(p: Page, mode: string, name: string, act: () => Promise<void
   return seen;
 }
 
-const browser = await launch();
-for (const mode of ['no-preference', 'reduce'] as const) {
+// Joins calls as seeded personas: the local stack only, as assertDevStack checked.
+const browser = await chromium.launch({ headless: true, args: [...fakeMediaArgs(), '--autoplay-policy=no-user-gesture-required'] });
+
+// MOTION_MODES=reduce runs one pass only.
+const modes = (process.env.MOTION_MODES?.split(',') ?? ['no-preference', 'reduce']) as ('no-preference' | 'reduce')[];
+for (const mode of modes) {
   const p = await session(browser, mode);
   const header = p.getByRole('button', { name: /menu$/ }).first();
   const menu = p.getByRole('menu');
@@ -194,6 +200,41 @@ for (const mode of ['no-preference', 'reduce'] as const) {
   const moved = await step(p, mode, 'settings changes section', () => p.getByRole('link', { name: 'Notifications' }).click());
   check(page(moved) === 0, `${mode}: a change of section doesn't fade the page`);
   await step(p, mode, 'settings closes', () => p.keyboard.press('Escape'), { some: false });
+
+  // Voice: the panel, someone joining and leaving, grid and focus, and leaving.
+  await p.goto(`${APP}/channels/${st.serverId}/${st.channels.pelit}`, { waitUntil: 'networkidle' });
+  await p.waitForTimeout(500);
+  const panel = (seen: Seen[]) => seen.filter((x) => x.what.includes('.panel')).length;
+  const tile = (seen: Seen[]) => seen.filter((x) => x.what.includes('.tile') && !x.what.startsWith('CSSTransition')).length;
+  const joined = await step(p, mode, 'joining a call', async () => {
+    await p.getByRole('link', { name: /^Pelaamo/ }).click();
+    await p.getByText('Voice connected').waitFor({ timeout: 20_000 });
+  }, { some: true });
+  check(panel(joined) > 0, `${mode}: the voice panel fades in`);
+  check(tile(joined) === 0, `${mode}: the call view's first tiles don't animate`);
+  // Tiles arriving in the call view's first second are people already there, which don't fade in.
+  const aino = await (await browser.newContext({ permissions: ['microphone'] })).newPage();
+  await signIn(aino, 'aino');
+  await aino.goto(`${APP}/channels/${st.serverId}/${st.channels.pelit}`, { waitUntil: 'networkidle' });
+  await p.waitForTimeout(1_500);
+  const added = await step(p, mode, 'someone joins', async () => {
+    await aino.getByRole('link', { name: /^Pelaamo/ }).click();
+    await aino.getByText('Voice connected').waitFor({ timeout: 20_000 });
+    await p.locator('.call .tile').nth(1).waitFor().catch(async (e) => { await p.screenshot({ path: '/tmp/claude-1000/-home-jaakko-concord/6d1a5d5f-b74d-4d7c-93ed-9884c164f5b7/scratchpad/fail-dev.png' }); await aino.screenshot({ path: '/tmp/claude-1000/-home-jaakko-concord/6d1a5d5f-b74d-4d7c-93ed-9884c164f5b7/scratchpad/fail-aino.png' }); throw e; });
+  });
+  check(tile(added) > 0, `${mode}: a joining tile fades in`);
+  const focused = await step(p, mode, 'focusing a tile', () => p.locator('.grid .tile').first().click());
+  check(tile(focused) === 0, `${mode}: switching to focus doesn't animate the tiles`);
+  await p.locator('.main-tile .tile').click();
+  await p.waitForTimeout(300);
+  const removed = await step(p, mode, 'someone leaves', async () => {
+    await aino.getByRole('button', { name: 'Disconnect' }).first().click();
+    await p.waitForFunction(() => document.querySelectorAll('.call .tile').length === 1, null, { timeout: 15_000 });
+  });
+  check(tile(removed) > 0, `${mode}: a leaving tile fades out`);
+  const left = await step(p, mode, 'leaving the call', () => p.getByRole('button', { name: 'Disconnect' }).first().click(), { some: true });
+  check(panel(left) > 0, `${mode}: the voice panel fades out`);
+  await aino.context().close();
   await p.context().close();
 }
 await browser.close();

@@ -5,7 +5,8 @@
    * from the keyboard, Enter focuses and F goes full screen. Right-click or a long press opens its menu.
    */
   import type { Snippet } from 'svelte';
-  import { Avatar, type MenuItem } from '@concord/ui';
+  import { untrack } from 'svelte';
+  import { Avatar, enter, leave, type MenuItem } from '@concord/ui';
   import MicOff from '@lucide/svelte/icons/mic-off';
   import { m } from '$lib/i18n/index.ts';
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
@@ -28,8 +29,12 @@
     menu: (tile: HTMLElement, fullscreen: () => void) => MenuItem[];
     /** Drawn over the picture, such as the stats overlay. */
     children?: Snippet;
+    /** Someone who joined while the call view was showing: the tile fades in. */
+    appear?: boolean;
   }
-  let { name, avatar, feed, screen = false, talking = false, muted = false, focused, small = false, states, ontoggle, menu, children }: Props = $props();
+  let { name, avatar, feed, screen = false, talking = false, muted = false, focused, small = false, states, ontoggle, menu, children, appear = false }: Props = $props();
+  // As the tile was created: the transition reads it later, after the call view has marked the tile seen.
+  const appearing = untrack(() => appear);
   let tile = $state<HTMLElement | null>(null);
 
   function fullscreen() {
@@ -53,7 +58,8 @@
   }
 </script>
 
-<div class="tile" class:focused class:talking class:screen class:small bind:this={tile}>
+<!-- Someone joining fades in and someone leaving fades out. -->
+<div class="tile" class:focused class:talking class:screen class:small bind:this={tile} in:enter={{ instant: !appearing }} out:leave>
   {#if feed}
     <video use:play={feed} class:mirror={feed.local && feed.source === 'camera'} autoplay playsinline muted></video>
   {:else}

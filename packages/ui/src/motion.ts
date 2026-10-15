@@ -1,6 +1,7 @@
 /**
  * Motion helpers for client.md section 9, reading their timings from tokens.css so the CSS and these agree.
  */
+import { flip } from 'svelte/animate';
 import { quintOut } from 'svelte/easing';
 
 const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -27,8 +28,22 @@ export const fromKeyboard = () => keyboard;
 /**
  * `out:leave`: a closing surface fades and shrinks slightly toward its transform-origin, at --dur-exit.
  * Svelte freezes an outgoing block, so it keeps showing what it showed. It ignores the pointer and focus as it goes.
- * quintOut is the curve --ease-out draws.
+ * quintOut is the curve --ease-out draws. `in:enter` is its opposite, at --dur-popover unless another token is named.
  */
+export function enter(_node: HTMLElement, { name = '--dur-popover', instant = false }: { name?: string; instant?: boolean } = {}) {
+  const shrink = moving() ? 0.02 : 0;
+  return {
+    duration: instant ? 0 : duration(name),
+    easing: quintOut,
+    css: (t: number) => `opacity: ${t}; scale: ${1 - shrink * (1 - t)};`,
+  };
+}
+
+/** Siblings sliding into place after one leaves, as `animate:slide`: a flip at --dur-exit, none under reduced motion. */
+export function slide(node: Element, rects: { from: DOMRect; to: DOMRect }) {
+  return flip(node, rects, { duration: moving() ? duration('--dur-exit') : 0, easing: quintOut });
+}
+
 export function leave(node: HTMLElement, { instant = false }: { instant?: boolean } = {}) {
   node.inert = true;
   const shrink = moving() ? 0.02 : 0;

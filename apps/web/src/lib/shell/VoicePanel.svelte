@@ -3,7 +3,7 @@
    * The voice panel above the user dock, in one panel with it as on Discord (client.md section 10.3): the call's
    * state, its connection quality, where it is, and its controls. After a call ends without the user, it says why and offers Rejoin.
    */
-  import { Button, IconButton, tooltip } from '@concord/ui';
+  import { Button, IconButton, leave, tooltip } from '@concord/ui';
   import type { Store } from '@concord/domain';
   import PhoneOff from '@lucide/svelte/icons/phone-off';
   import ScreenShare from '@lucide/svelte/icons/screen-share';
@@ -41,7 +41,7 @@
 </script>
 
 {#if voice.status !== 'none'}
-  <section class="panel" aria-label={m.voice.panel}>
+  <section class="panel" aria-label={m.voice.panel} out:leave>
     <div class="top">
       {#if voice.status === 'connected'}
         <!-- A button only so keyboard users can reach the tooltip with ping and loss. -->
@@ -74,7 +74,12 @@
 <ShareDialog {voice} />
 
 <style>
-  .panel { display: grid; gap: var(--space-3); padding: var(--space-3); border-bottom: 1px solid var(--border-default); }
+  /* It fades in with a slight rise when joining and fades out when leaving. The dock panel's height changes at once. */
+  .panel {
+    display: grid; gap: var(--space-3); padding: var(--space-3); border-bottom: 1px solid var(--border-default);
+    transform-origin: bottom center; animation: rise var(--dur-modal) var(--ease-out);
+  }
+  @keyframes rise { from { opacity: 0; translate: 0 calc(var(--space-2) * var(--motion)); } }
   .top { display: flex; align-items: center; gap: var(--space-3); }
   .quality {
     display: grid; place-items: center; flex: none; width: 2.25rem; height: 2.25rem; padding: 0;

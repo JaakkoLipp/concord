@@ -47,6 +47,18 @@
     ];
   });
   let focusedId = $state<string | null>(null);
+
+  // Only someone joining fades in: not the tiles there as the view opens, nor any tile on a switch between
+  // grid and focus, which remounts them all (client.md section 9).
+  const seen = new Set<string>();
+  let settled = $state(false);
+  $effect(() => {
+    if (!here) { settled = false; seen.clear(); return; }
+    const t = setTimeout(() => (settled = true), 1_000);
+    return () => clearTimeout(t);
+  });
+  $effect(() => { for (const t of tiles) seen.add(t.id); });
+  const appears = (id: string) => settled && !seen.has(id);
   const focused = $derived(tiles.find((t) => t.id === focusedId));
   const rest = $derived(focused ? tiles.filter((t) => t !== focused) : tiles);
 
@@ -94,7 +106,7 @@
   {@const muted = !t.screen && isMuted(t.user)}
   <CallTile
     name={store.displayName(t.user, server)} avatar={avatar(t.user)} feed={t.feed} screen={t.screen} talking={!t.screen && talking} {muted}
-    focused={focusedId === t.id} {small}
+    focused={focusedId === t.id} {small} appear={appears(t.id)}
     states={[t.user === store.selfId ? m.call.you : '', talking && !t.screen ? m.voiceState.speaking : '', muted ? m.voiceState.muted : '', focusedId === t.id ? m.call.focused : ''].filter(Boolean)}
     ontoggle={() => (focusedId = focusedId === t.id ? null : t.id)}
     menu={(node, fullscreen) => menu(t, node, fullscreen)}
