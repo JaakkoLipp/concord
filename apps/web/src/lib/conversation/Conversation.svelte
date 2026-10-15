@@ -60,6 +60,11 @@
   $effect(() => {
     if (voice && message) shell.voiceChat = true;
   });
+  /** A DM or group shows its call at the top while one runs, or while we're calling (client.md section 10.3). */
+  const dmCall = $derived(
+    (info?.kind === 'dm' || info?.kind === 'group') && !!app.voice
+    && (store.voice.has(channel) || (app.voice.channel === channel && app.voice.status !== 'none' && app.voice.status !== 'disconnected')),
+  );
   const placeholder = $derived(info ? (info.kind === 'dm' ? m.shell.messageUser(channelName(store, info)) : m.shell.messageChannel(channelName(store, info))) : '');
 </script>
 
@@ -73,6 +78,7 @@
   {#if voice && app.voice}
     <CallView {session} voice={app.voice} {channel} />
   {:else}
+    {#if dmCall && app.voice}<CallView {session} voice={app.voice} {channel} compact />{/if}
     <div class="body">
       <MessageList {session} {channel} {target} onjump={jump} />
     </div>

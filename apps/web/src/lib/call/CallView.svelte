@@ -23,7 +23,8 @@
   import CallTile from './CallTile.svelte';
   import { participantMenu } from './menu.ts';
 
-  let { session, voice, channel }: { session: Session; voice: VoiceController; channel: Id } = $props();
+  /** `compact`: at the top of a DM or group, above its messages, rather than filling the column. */
+  let { session, voice, channel, compact = false }: { session: Session; voice: VoiceController; channel: Id; compact?: boolean } = $props();
   const store = $derived(session.store);
   const info = $derived(store.channels.get(channel));
   const server = $derived(info?.kind === 'text' ? info.server : undefined);
@@ -77,7 +78,7 @@
   />
 {/snippet}
 
-<section class="call" aria-label={info ? m.call.view(channelName(store, info)) : undefined}>
+<section class="call" class:compact aria-label={info ? m.call.view(channelName(store, info)) : undefined}>
   {#if here}
     {#if focused}
       <div class="stage">
@@ -118,6 +119,8 @@
 
 <style>
   .call { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--surface-0); }
+  .compact { flex: none; height: min(26rem, 45%); border-bottom: 1px solid var(--border-subtle); }
+  .compact .lobby { gap: var(--space-4); padding: var(--space-5); }
   .grid {
     flex: 1; min-height: 0; overflow-y: auto; display: grid; align-content: center; gap: var(--space-3); padding: var(--space-5);
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
