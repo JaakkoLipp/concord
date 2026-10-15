@@ -236,7 +236,8 @@ try {
     console.log(`  ${s.handle}: ${[...s.problems.failed, ...s.problems.console].slice(0, 5).join('; ') || 'no problems logged'}`);
   }
 } finally {
-  for (const s of seats) await hangUp(s).catch(() => {});
+  // Only seats still in a call, so a clean run doesn't wait out the click's timeout.
+  for (const s of seats) if (await s.page.getByRole('region', { name: 'Voice call' }).isVisible().catch(() => false)) await hangUp(s).catch(() => {});
   await browser.close();
 }
 console.log('\nStoat frames and what the browsers did, ms since the run began:');
