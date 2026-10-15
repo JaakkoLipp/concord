@@ -9,14 +9,16 @@
  * Never send LiveKit data: voice-ingress disconnects anyone who does. A lint rule bans the data calls.
  */
 import {
-  LocalAudioTrack, Room, RoomEvent, Track, VideoQuality, createLocalVideoTrack,
-  type LocalTrack, type LocalVideoTrack, type Participant, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication, type TrackPublication,
+  LocalAudioTrack, Room, RoomEvent, Track, VideoPreset, VideoQuality, createLocalVideoTrack,
+  type AudioCaptureOptions, type LocalTrack, type LocalTrackPublication, type LocalVideoTrack, type Participant, type RemoteParticipant, type RemoteTrack, type RemoteTrackPublication, type TrackPublication,
 } from 'livekit-client';
 import type { VideoLimit } from '@concord/domain';
 import { setReceiving } from './controls.ts';
 import { VideoLimitError, fitTier, withinTier, type Size } from './limits.ts';
 import { openMic, type MicChain } from './mic.ts';
 import { loadVoiceSettings, onVoiceSettings } from './settings.ts';
+import type { SharePlan } from './share.ts';
+import { sharerStats, viewerStats, type Counters, type SharerStats, type ViewerStats } from './videostats.ts';
 import { Peers } from './peers.ts';
 import { lossBetween, sample, type Sample } from './stats.ts';
 
@@ -37,6 +39,8 @@ export interface CallSink {
   micFailed(error: unknown): void;
   /** The video in the call changed: cameras and screen shares, our own included. */
   feeds(feeds: Feed[]): void;
+  /** Our screen share started or stopped, from the app or the browser's own stop button. */
+  sharing(on: boolean): void;
 }
 
 export type FeedSource = 'camera' | 'screen';
@@ -56,6 +60,8 @@ export interface Feed {
   attach(el: HTMLVideoElement): void;
   detach(el: HTMLVideoElement): void;
   setQuality(q: FeedQuality): void;
+  /** The stats overlay's figures: a viewer's for a remote feed, the sharer's for our own. */
+  stats(): Promise<{ viewer?: ViewerStats; sharer?: SharerStats } | null>;
 }
 
 export interface CallOptions {
@@ -79,12 +85,31 @@ export interface Call {
   setPushToTalk(down: boolean): void;
   /** Publishes the camera, fitted into the tier, or stops it. */
   setCamera(on: boolean, limit: VideoLimit | null): Promise<void>;
+  /**
+   * Captures the screen with the browser's picker and publishes it by the plan, with its audio when asked and
+   * offered. Call it straight from a click: the picker needs the user's gesture.
+   */
+  startShare(plan: SharePlan, audio: boolean, limit: VideoLimit | null): Promise<void>;
+  stopShare(): Promise<void>;
   disconnect(): Promise<void>;
 }
 
 const STATS_EVERY_MS = 2_000;
 /** Camera capture before the tier: 720p30, with LiveKit's default simulcast layers (client.md section 10.6). */
 const CAMERA = { width: 1280, height: 720, frameRate: 30 };
+/**
+ * Screen-share audio (client.md section 10.6): no processing, stereo, and not the call itself. These go inside
+ * the audio constraints, because LiveKit doesn't pass its own `suppressLocalAudioPlayback` to the browser.
+ */
+function screenAudio(): AudioCaptureOptions {
+  const supported = navigator.mediaDevices.getSupportedConstraints() as Record<string, boolean | undefined>;
+  return {
+    echoCancellation: false, noiseSuppression: false, autoGainControl: false, voiceIsolation: false, channelCount: 2,
+    ...(supported.restrictOwnAudio ? { restrictOwnAudio: true } : {}),
+    // The sharer keeps hearing what they share.
+    ...(supported.suppressLocalAudioPlayback ? { suppressLocalAudioPlayback: false } : {}),
+  } as AudioCaptureOptions;
+}
 const QUALITY: Record<FeedQuality, VideoQuality> = { auto: VideoQuality.HIGH, '1080p': VideoQuality.HIGH, '720p': VideoQuality.MEDIUM, '360p': VideoQuality.LOW };
 
 /**
@@ -123,6 +148,9 @@ export async function connect(url: string, token: string, options: CallOptions, 
   let camera: LocalVideoTrack | null = null;
   /** Whether the camera should be on: it can be turned off again while it starts. */
   let cameraWanted = false;
+  let screen: { video: LocalVideoTrack; audio: LocalAudioTrack | null } | null = null;
+  /** Whether a share should be running: it can be stopped while the picker is open. */
+  let shareWanted = false;
   /** Feeds by publication, kept while their track is the same, so tiles keep their elements. */
   const feedCache = new Map<string, { track: unknown; feed: Feed }>();
   let statsTimer: ReturnType<typeof setInterval> | null = null;
@@ -151,11 +179,22 @@ export async function connect(url: string, token: string, options: CallOptions, 
     const id = `${user}/${pub.trackSid}`;
     const cached = feedCache.get(id);
     if (cached?.track === track) return cached.feed;
+    const counters: Counters = new Map();
     const feed: Feed = {
       id, user, source, local,
       attach: (el) => void track.attach(el),
       detach: (el) => void track.detach(el),
       setQuality: (q) => { if (!local) (pub as RemoteTrackPublication).setVideoQuality(QUALITY[q]); },
+      async stats() {
+        if (local) {
+          const report = await track.getRTCStatsReport().catch(() => undefined);
+          const sharer = report && sharerStats(report.values(), counters);
+          return sharer ? { sharer } : null;
+        }
+        const report = await track.getRTCStatsReport().catch(() => undefined);
+        const viewer = report && viewerStats(report.values(), counters, pub.dimensions?.height);
+        return viewer ? { viewer } : null;
+      },
     };
     feedCache.set(id, { track, feed });
     return feed;
@@ -180,6 +219,10 @@ export async function connect(url: string, token: string, options: CallOptions, 
     mic = null;
     camera?.stop();
     camera = null;
+    screen?.video.stop();
+    screen?.audio?.stop();
+    screen = null;
+    shareWanted = false;
     feedCache.clear();
     box.remove();
   };
@@ -194,14 +237,20 @@ export async function connect(url: string, token: string, options: CallOptions, 
     .on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
       if (track.kind === Track.Kind.Video) {
         track.detach();
-        return emitFeeds();
+        // LiveKit says so before it lets go of the track: look once it has.
+        return void queueMicrotask(emitFeeds);
       }
       for (const el of track.detach()) el.remove();
     })
+    .on(RoomEvent.TrackUnpublished, emitFeeds)
     .on(RoomEvent.TrackMuted, emitFeeds)
     .on(RoomEvent.TrackUnmuted, emitFeeds)
     .on(RoomEvent.LocalTrackPublished, emitFeeds)
-    .on(RoomEvent.LocalTrackUnpublished, emitFeeds)
+    .on(RoomEvent.LocalTrackUnpublished, (pub: LocalTrackPublication) => {
+      // The browser's own stop button ends the capture, and LiveKit unpublishes it: tidy up the rest.
+      if (screen && pub.track === screen.video) void endShare();
+      emitFeeds();
+    })
     .on(RoomEvent.ParticipantConnected, (p: RemoteParticipant) => {
       applyVolume(p);
       if (peers.joined(p.identity, live())) sink.peer('join');
@@ -271,6 +320,20 @@ export async function connect(url: string, token: string, options: CallOptions, 
     }
   }
 
+  /** Stops our share, whichever way it ended, and says so once. */
+  async function endShare() {
+    const s = screen;
+    screen = null;
+    shareWanted = false;
+    if (!s) return;
+    for (const t of [s.video, s.audio]) {
+      if (!t) continue;
+      if (room.state !== 'disconnected') await room.localParticipant.unpublishTrack(t as LocalTrack).catch(() => {});
+      t.stop();
+    }
+    sink.sharing(false);
+  }
+
   async function readStats() {
     // Our own microphone's sender stats, or, when only listening, the first remote audio track's.
     const track = mic ?? [...remotes()].flatMap((p) => [...p.audioTrackPublications.values()]).find((pub) => pub.track)?.track;
@@ -326,6 +389,57 @@ export async function connect(url: string, token: string, options: CallOptions, 
         track.stop();
         if (!(e instanceof Superseded)) throw e;
       }
+    },
+    async startShare(plan, audio, limit) {
+      if (screen || shareWanted) return;
+      shareWanted = true;
+      let tracks: LocalTrack[];
+      try {
+        tracks = await room.localParticipant.createScreenTracks({
+          // 0 x 0 asks for the source's own size, as the Text preset wants.
+          resolution: plan.capture ? { ...plan.capture, frameRate: plan.fps } : { width: 0, height: 0 },
+          contentHint: plan.hint,
+          selfBrowserSurface: 'exclude',
+          surfaceSwitching: 'include',
+          ...(audio ? { audio: screenAudio(), systemAudio: 'include' as const } : {}),
+        });
+      } catch (e) {
+        shareWanted = false;
+        throw e;
+      }
+      const video = tracks.find((t) => t.kind === Track.Kind.Video) as LocalVideoTrack;
+      const sound = (tracks.find((t) => t.kind === Track.Kind.Audio) as LocalAudioTrack | undefined) ?? null;
+      try {
+        const media = video.mediaStreamTrack;
+        if (!plan.capture) await media.applyConstraints({ frameRate: { max: plan.fps } });
+        await fitCapture(media, limit, plan.fps);
+        if (room.state === 'disconnected' || !shareWanted) throw new Superseded();
+        screen = { video, audio: sound };
+        const { width = 0, height = 1 } = media.getSettings();
+        const layers = plan.layers.map((l) => new VideoPreset(Math.round((l.height * width) / height / 2) * 2, l.height, l.bitrate, l.fps, 'high'));
+        await room.localParticipant.publishTrack(video as LocalTrack, {
+          source: Track.Source.ScreenShare,
+          videoCodec: plan.codec,
+          backupCodec: plan.backup ? { codec: 'vp8' } : false,
+          degradationPreference: plan.degradation,
+          screenShareEncoding: { maxBitrate: plan.bitrate, maxFramerate: plan.fps, priority: 'high' },
+          simulcast: layers.length > 0,
+          ...(layers.length ? { screenShareSimulcastLayers: layers } : {}),
+        });
+        if (sound && screen?.audio === sound) {
+          await room.localParticipant.publishTrack(sound as LocalTrack, { source: Track.Source.ScreenShareAudio, dtx: false, red: false, forceStereo: true });
+        }
+        if (screen?.video === video) sink.sharing(true);
+      } catch (e) {
+        if (screen?.video === video) await endShare();
+        else for (const t of tracks) t.stop();
+        shareWanted = false;
+        if (!(e instanceof Superseded)) throw e;
+      }
+    },
+    async stopShare() {
+      shareWanted = false;
+      await endShare();
     },
     setPushToTalk(down) {
       chain?.setPushToTalk(down);

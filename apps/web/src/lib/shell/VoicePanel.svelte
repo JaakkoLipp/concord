@@ -18,6 +18,8 @@
   import { m } from '$lib/i18n/index.ts';
   import { channelName } from '$lib/view/channels.ts';
   import type { VoiceController } from '$lib/voice/controller.svelte.ts';
+  import ShareDialog from '$lib/call/ShareDialog.svelte';
+  import { shareDialog } from '$lib/call/share.svelte.ts';
 
   /** `calling`: alone in a DM or group call this account started (client.md section 10.8). */
   let { store, voice, calling = false }: { store: Store; voice: VoiceController; calling?: boolean } = $props();
@@ -63,11 +65,13 @@
         <IconButton label={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} active={voice.camera} aria-pressed={voice.camera} disabled={voice.status !== 'connected'} onclick={() => voice.toggleCamera()}>
           {#if voice.camera}<Video />{:else}<VideoOff />{/if}
         </IconButton>
-        <IconButton label={m.voice.share} disabled><ScreenShare /></IconButton>
+        <IconButton label={voice.sharing ? m.voice.stopShare : m.voice.share} active={voice.sharing} aria-pressed={voice.sharing} disabled={voice.status !== 'connected'}
+          onclick={() => (voice.sharing ? voice.stopShare() : (shareDialog.open = true))}><ScreenShare /></IconButton>
       </div>
     {/if}
   </section>
 {/if}
+<ShareDialog {voice} />
 
 <style>
   .panel {

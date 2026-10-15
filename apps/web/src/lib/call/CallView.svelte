@@ -18,10 +18,13 @@
   import { avatarUrl } from '$lib/view/users.ts';
   import { popout } from '$lib/view/popout.svelte.ts';
   import { voiceMarks } from '$lib/shell/voice.ts';
-  import type { Feed } from '$lib/voice/call.ts';
+  import type { Feed, FeedQuality } from '$lib/voice/call.ts';
+  import { loadVoiceSettings, onVoiceSettings, saveVoiceSettings } from '$lib/voice/settings.ts';
+  import StatsOverlay from './StatsOverlay.svelte';
   import type { VoiceController } from '$lib/voice/controller.svelte.ts';
   import CallTile from './CallTile.svelte';
   import { participantMenu } from './menu.ts';
+  import { shareDialog } from './share.svelte.ts';
 
   /** `compact`: at the top of a DM or group, above its messages, rather than filling the column. */
   let { session, voice, channel, compact = false }: { session: Session; voice: VoiceController; channel: Id; compact?: boolean } = $props();
@@ -57,7 +60,27 @@
     return marks.muted || marks.serverMuted;
   }
 
+  /** Each remote share's quality cap, from its tile menu. Auto leaves the layer to the tile's size. */
+  let qualities = $state<Record<string, FeedQuality>>({});
+  const QUALITIES: FeedQuality[] = ['auto', '1080p', '720p', '360p'];
+  /** The stats overlay over screen shares, a device setting. */
+  let overlay = $state(loadVoiceSettings().statsOverlay);
+  $effect(() => onVoiceSettings((s) => (overlay = s.statsOverlay)));
+
   function menu(t: Tile, node: HTMLElement, fullscreen: () => void): MenuItem[] {
+    const feed = t.feed;
+    if (t.screen && feed) {
+      const now = qualities[feed.id] ?? 'auto';
+      return [
+        ...(feed.local ? [] : QUALITIES.map((q): MenuItem => ({
+          kind: 'check', label: m.call.qualityItem(m.call.qualities[q]), checked: now === q,
+          onselect: () => { qualities = { ...qualities, [feed.id]: q }; feed.setQuality(q); },
+        }))),
+        { kind: 'check', label: m.call.statsOverlay, checked: overlay, onselect: () => saveVoiceSettings({ statsOverlay: !overlay }) },
+        'separator',
+        { label: m.call.fullscreen, onselect: fullscreen },
+      ];
+    }
     return [
       ...participantMenu(session, voice, t.user, { profile: () => popout.open(t.user, server, node), server }),
       'separator',
@@ -75,7 +98,9 @@
     states={[t.user === store.selfId ? m.call.you : '', talking && !t.screen ? m.voiceState.speaking : '', muted ? m.voiceState.muted : '', focusedId === t.id ? m.call.focused : ''].filter(Boolean)}
     ontoggle={() => (focusedId = focusedId === t.id ? null : t.id)}
     menu={(node, fullscreen) => menu(t, node, fullscreen)}
-  />
+  >
+    {#if t.screen && t.feed && overlay}<StatsOverlay feed={t.feed} />{/if}
+  </CallTile>
 {/snippet}
 
 <section class="call" class:compact aria-label={info ? m.call.view(channelName(store, info)) : undefined}>
@@ -97,7 +122,8 @@
       <button class="control" class:on={voice.camera} aria-pressed={voice.camera} aria-label={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} use:tooltip={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} disabled={voice.status !== 'connected'} onclick={() => voice.toggleCamera()}>
         {#if voice.camera}<Video />{:else}<VideoOff />{/if}
       </button>
-      <button class="control" aria-label={m.voice.share} use:tooltip={m.voice.share} disabled><ScreenShare /></button>
+      <button class="control" class:on={voice.sharing} aria-pressed={voice.sharing} aria-label={voice.sharing ? m.voice.stopShare : m.voice.share} use:tooltip={voice.sharing ? m.voice.stopShare : m.voice.share}
+        disabled={voice.status !== 'connected'} onclick={() => (voice.sharing ? voice.stopShare() : (shareDialog.open = true))}><ScreenShare /></button>
       <button class="control leave" aria-label={m.voice.disconnect} use:tooltip={m.voice.disconnect} onclick={() => voice.leave()}><PhoneOff /></button>
     </div>
   {:else}

@@ -12,7 +12,8 @@ import { m } from '$lib/i18n/index.ts';
 import type { Call, CallSink, Feed, Quality } from './call.ts';
 import { CONTROLS, clampVolume, toggleDeafen, toggleMute, type Controls } from './controls.ts';
 import { VideoLimitError } from './limits.ts';
-import { mutedForMe, setMutedForMe, setUserVolume, userVolumes } from './settings.ts';
+import { mutedForMe, setMutedForMe, setUserVolume, userVolumes, type SharePreset } from './settings.ts';
+import { sharePlan, shareBrowser } from './share.ts';
 import { endCause, initial, movedElsewhere, rejoining, shown, step, type CallEvent, type CallState, type Shown } from './rejoin.ts';
 import { play } from './sounds.ts';
 
@@ -57,6 +58,8 @@ export class VoiceController {
   feeds = $state.raw<Feed[]>([]);
   /** Whether our camera is on, or starting. Off again after every call. */
   camera = $state(false);
+  /** Whether our screen share is on, or its picker open. Off again after every call. */
+  sharing = $state(false);
 
   readonly status: Shown = $derived(shown(this.state));
   readonly channel: Id | null = $derived(this.state.channel);
@@ -151,6 +154,31 @@ export class VoiceController {
     });
   }
 
+  /**
+   * Shares the screen with a preset, fitted into the tier (client.md section 10.6). Call it from the share
+   * dialog's click, so the browser's picker has the user's gesture. Cancelling the picker is not an error.
+   */
+  startShare(preset: SharePreset, audio: boolean): void {
+    const call = this.call;
+    if (!call || this.sharing) return;
+    const limit = this.session.videoLimit();
+    const plan = sharePlan(preset, limit, shareBrowser(navigator.userAgent));
+    if (!plan) return void toasts.show(m.voice.videoLimit);
+    this.sharing = true;
+    call.startShare(plan, audio, limit).catch((e: unknown) => {
+      if (this.call !== call) return;
+      this.sharing = false;
+      const name = e instanceof DOMException ? e.name : '';
+      if (name === 'NotAllowedError' || name === 'AbortError') return;
+      toasts.show(e instanceof VideoLimitError ? m.voice.videoLimit : m.voice.shareFailed);
+    });
+  }
+
+  stopShare(): void {
+    this.sharing = false;
+    void this.call?.stopShare().catch(() => {});
+  }
+
   setPushToTalk(down: boolean): void {
     this.call?.setPushToTalk(down);
   }
@@ -188,6 +216,7 @@ export class VoiceController {
     this.speaking = new Set();
     this.feeds = [];
     this.camera = false;
+    this.sharing = false;
     this.quality = 'unknown';
     this.ping = this.loss = undefined;
     await call?.disconnect().catch(() => {});
@@ -244,6 +273,7 @@ export class VoiceController {
         this.speaking = new Set();
         this.feeds = [];
         this.camera = false;
+        this.sharing = false;
         this.quality = 'unknown';
         this.ping = this.loss = undefined;
         this.dispatch({ type: 'ended', cause });
@@ -252,6 +282,7 @@ export class VoiceController {
       },
       speaking: (ids) => { if (current()) this.speaking = new Set(ids); },
       feeds: (feeds) => { if (current()) this.feeds = feeds; },
+      sharing: (on) => { if (current()) this.sharing = on; },
       quality: (q) => { if (current()) this.quality = q; },
       stats: (s) => {
         if (!current()) return;
