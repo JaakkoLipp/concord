@@ -53,5 +53,16 @@ for (const prefix of ['/ws', '/autumn/', '/january/', '/gifbox/', '/livekit/', '
 const post = await fetch(`${origin}/api/auth/account/create`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
 console.log(`${post.status === 403 ? 'ok  ' : 'FAIL'} public account create -> ${post.status}`);
 if (post.status !== 403) failed++;
+// Concord's own layer (architecture section 11): up, with Stoat reachable from it, and closed without a session.
+const health = await fetch(`${origin}/app/api/v1/health`);
+const healthBody = (await health.json().catch(() => ({}))) as { stoat?: string; type?: string };
+const healthy = health.status === 200 && healthBody.stoat === 'up';
+console.log(`${healthy ? 'ok  ' : 'FAIL'} /app/api/v1/health -> ${health.status} ${healthBody.stoat ?? healthBody.type ?? ''}`);
+if (!healthy) failed++;
+const me = await fetch(`${origin}/app/api/v1/me`);
+const meBody = (await me.json().catch(() => ({}))) as { type?: string };
+const closed = me.status === 401 && meBody.type === 'InvalidSession';
+console.log(`${closed ? 'ok  ' : 'FAIL'} /app/api/v1/me without a session -> ${me.status} ${meBody.type ?? ''}`);
+if (!closed) failed++;
 console.log(failed ? `routes: ${failed} failed` : 'routes: all passed');
 process.exit(failed ? 1 : 0);
