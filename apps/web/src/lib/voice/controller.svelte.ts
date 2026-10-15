@@ -9,6 +9,7 @@ import { Permission, has, isFinalJoinFailure, joinFailure, type Id, type JoinFai
 import { permissionsIn } from '$lib/view/channels.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 import { m } from '$lib/i18n/index.ts';
+import { webAudioOutput } from './audio/output.ts';
 import type { Call, CallSink, Feed, MicMeter, Quality } from './call.ts';
 import { CONTROLS, clampVolume, toggleDeafen, toggleMute, type Controls } from './controls.ts';
 import { VideoLimitError } from './limits.ts';
@@ -20,7 +21,6 @@ import { play } from './sounds.ts';
 /** Our own LiveKit, behind our origin. Never the URL Stoat returns. Local dev runs on plain http. */
 const livekitUrl = () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/livekit`;
 /** Web Audio mixing, for volumes above 100 %, only where it can still route to a chosen output: Chromium. */
-const chromium = () => typeof navigator !== 'undefined' && /\bChrom(e|ium)\//.test(navigator.userAgent);
 const DEFAULT_NODE = 'worldwide';
 
 /** Why the panel shows a call as ended: another device took it, or anything else. */
@@ -37,12 +37,13 @@ export class VoiceController {
   /** Our own voice state in Stoat when the server removed us, to tell another device from a kick. */
   private removedAs = $state.raw<{ joinedAt: number } | null>(null);
   /**
-   * This connection's own voice state in Stoat, taken at the first stats tick that sees it, about a second after
+   * This connection's own voice state in Stoat, taken at the first stats tick that sees it, two seconds after
    * connecting. Not taken at the removal: another device's join can reach us before LiveKit's removal does, and
    * would then look like our own.
    */
   private ownState: { joinedAt: number } | null = null;
-  readonly webAudioMix = chromium();
+  /** Web Audio mixing, for volumes above 100 %, only where it can also play to the chosen speaker (output.ts). */
+  readonly webAudioMix = webAudioOutput();
 
   /** Who is speaking in this call, by user ID, ourselves included. Empty outside a call. */
   speaking = $state.raw<ReadonlySet<Id>>(new Set());
@@ -251,7 +252,7 @@ export class VoiceController {
       const { token } = await this.session.backend.joinCall(channel, node);
       if (gen !== this.gen) return;
       const { muted, deafened } = this.controls;
-      const options = { muted, deafened, canSpeak, webAudioMix: this.webAudioMix, volumes: this.volumes, mutedForMe: this.mutedForMe };
+      const options = { current: () => gen === this.gen && this.state.phase === 'connecting', muted, deafened, canSpeak, webAudioMix: this.webAudioMix, volumes: this.volumes, mutedForMe: this.mutedForMe };
       const call = await connect(livekitUrl(), token, options, this.sink(gen));
       // Superseded, or the room already ended, which the sink has handled.
       if (gen !== this.gen || this.state.phase !== 'connecting') return void call.disconnect();

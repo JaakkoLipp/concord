@@ -77,15 +77,18 @@ function openContext(stream: MediaStream): { ctx: AudioContext; source: MediaStr
 export async function createMicChain(settings: VoiceSettings): Promise<MicChain> {
   let current = { ...settings };
   let stream = await navigator.mediaDevices.getUserMedia({ audio: constraints(current) });
-  let ctx: AudioContext;
-  let source: MediaStreamAudioSourceNode;
+  let opened: ReturnType<typeof openContext> | undefined;
   try {
-    ({ ctx, source } = openContext(stream));
-    await Promise.all([ctx.audioWorklet.addModule(gateWorkletUrl), ctx.audioWorklet.addModule(rnnoiseWorkletUrl)]);
+    opened = openContext(stream);
+    // Only the gate is needed: RNNoise loads in setRnnoise, whose failure leaves the voice unsuppressed.
+    await opened.ctx.audioWorklet.addModule(gateWorkletUrl);
   } catch (e) {
     for (const t of stream.getTracks()) t.stop();
+    void opened?.ctx.close().catch(() => undefined);
     throw e;
   }
+  const ctx = opened.ctx;
+  let source = opened.source;
 
   const mono = { channelCount: 1, channelCountMode: 'explicit', channelInterpretation: 'speakers' } as const;
   const junction = new GainNode(ctx, mono);
@@ -109,11 +112,16 @@ export async function createMicChain(settings: VoiceSettings): Promise<MicChain>
   // Changes apply one at a time, in order, so a quick series can't interleave.
   let queue = Promise.resolve();
 
+  let rnnoiseLoaded = false;
   /** RNNoise in or out, between the junction and the input volume. */
   async function setRnnoise(want: boolean): Promise<void> {
     // At another rate (the Firefox fallback above) RNNoise would distort the voice: bypass it.
     const on = want && ctx.sampleRate === 48000;
-    const next = on ?new RnnoiseWorkletNode(ctx, { maxChannels: 1, wasmBinary: await rnnoiseWasm() }) : null;
+    if (on && !rnnoiseLoaded) {
+      await ctx.audioWorklet.addModule(rnnoiseWorkletUrl);
+      rnnoiseLoaded = true;
+    }
+    const next = on ? new RnnoiseWorkletNode(ctx, { maxChannels: 1, wasmBinary: await rnnoiseWasm() }) : null;
     if (stopped) { next?.destroy(); return; }
     junction.disconnect();
     if (next) junction.connect(next).connect(gain);
@@ -124,10 +132,12 @@ export async function createMicChain(settings: VoiceSettings): Promise<MicChain>
 
   /** Opens the microphone again with the current settings, behind the same junction and output track. */
   async function replaceSource(): Promise<void> {
+    // The new microphone first: if it can't be opened, the old one keeps sending.
+    const next = await navigator.mediaDevices.getUserMedia({ audio: constraints(current) });
+    if (stopped) { for (const t of next.getTracks()) t.stop(); return; }
     source.disconnect();
-    for (const t of stream.getTracks()) t.stop();
-    stream = await navigator.mediaDevices.getUserMedia({ audio: constraints(current) });
-    if (stopped) { for (const t of stream.getTracks()) t.stop(); return; }
+    for (const t of stream.getTracks()) { t.onended = null; t.stop(); }
+    stream = next;
     source = ctx.createMediaStreamSource(stream);
     source.connect(junction);
     watchEnded();

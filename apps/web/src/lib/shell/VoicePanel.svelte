@@ -62,10 +62,10 @@
     </div>
     {#if voice.status !== 'disconnected'}
       <div class="actions">
-        <IconButton label={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} active={voice.camera} aria-pressed={voice.camera} disabled={voice.status !== 'connected'} onclick={() => voice.toggleCamera()}>
+        <IconButton label={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} active={voice.camera} disabled={voice.status !== 'connected'} onclick={() => voice.toggleCamera()}>
           {#if voice.camera}<Video />{:else}<VideoOff />{/if}
         </IconButton>
-        <IconButton label={voice.sharing ? m.voice.stopShare : m.voice.share} active={voice.sharing} aria-pressed={voice.sharing} disabled={voice.status !== 'connected'}
+        <IconButton label={voice.sharing ? m.voice.stopShare : m.voice.share} active={voice.sharing} disabled={voice.status !== 'connected'}
           onclick={() => (voice.sharing ? voice.stopShare() : (shareDialog.open = true))}><ScreenShare /></IconButton>
       </div>
     {/if}

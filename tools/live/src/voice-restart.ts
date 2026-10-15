@@ -84,8 +84,8 @@ try {
   const [dev, aino] = await Promise.all([seat('dev'), seat('aino')]);
   const before = await hearing(aino.page);
 
-  netns(RULES.map((r) => `iptables -I INPUT ${r}`).join(' && '));
   cut = true;
+  netns(RULES.map((r) => `iptables -I INPUT ${r}`).join(' && '));
   await aino.page.waitForTimeout(15_000);
   const during = await hearing(aino.page);
   netns(RULES.map((r) => `iptables -D INPUT ${r}`).join(' && '));

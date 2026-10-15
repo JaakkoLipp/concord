@@ -116,13 +116,13 @@
       </div>
     {/if}
     <div class="bar" role="toolbar" aria-label={m.call.controls}>
-      <button class="control" class:off={voice.muted} aria-pressed={voice.muted} aria-label={voice.muted ? m.voice.unmute : m.voice.mute} use:tooltip={voice.muted ? m.voice.unmute : m.voice.mute} onclick={() => voice.toggleMute()}>
+      <button class="control" class:off={voice.muted} aria-label={voice.muted ? m.voice.unmute : m.voice.mute} use:tooltip={voice.muted ? m.voice.unmute : m.voice.mute} onclick={() => voice.toggleMute()}>
         {#if voice.muted}<MicOff />{:else}<Mic />{/if}
       </button>
-      <button class="control" class:on={voice.camera} aria-pressed={voice.camera} aria-label={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} use:tooltip={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} disabled={voice.status !== 'connected'} onclick={() => voice.toggleCamera()}>
+      <button class="control" class:on={voice.camera} aria-label={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} use:tooltip={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} disabled={voice.status !== 'connected'} onclick={() => voice.toggleCamera()}>
         {#if voice.camera}<Video />{:else}<VideoOff />{/if}
       </button>
-      <button class="control" class:on={voice.sharing} aria-pressed={voice.sharing} aria-label={voice.sharing ? m.voice.stopShare : m.voice.share} use:tooltip={voice.sharing ? m.voice.stopShare : m.voice.share}
+      <button class="control" class:on={voice.sharing} aria-label={voice.sharing ? m.voice.stopShare : m.voice.share} use:tooltip={voice.sharing ? m.voice.stopShare : m.voice.share}
         disabled={voice.status !== 'connected'} onclick={() => (voice.sharing ? voice.stopShare() : (shareDialog.open = true))}><ScreenShare /></button>
       <button class="control leave" aria-label={m.voice.disconnect} use:tooltip={m.voice.disconnect} onclick={() => voice.leave()}><PhoneOff /></button>
     </div>

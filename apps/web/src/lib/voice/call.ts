@@ -65,6 +65,8 @@ export interface Feed {
 }
 
 export interface CallOptions {
+  /** False once the join was cancelled or replaced: then the call ends as soon as it connects, without the microphone. */
+  current: () => boolean;
   muted: boolean;
   deafened: boolean;
   /** Whether this account may speak in the channel. Without it, the call only listens. */
@@ -215,7 +217,10 @@ export async function connect(url: string, token: string, options: CallOptions, 
     sink.feeds(out);
   };
 
+  /** Removes the listeners that start audio after the browser blocked autoplay. */
+  let unblock: (() => void) | null = null;
   const cleanup = () => {
+    unblock?.();
     if (statsTimer) clearInterval(statsTimer);
     statsTimer = null;
     stopSettings();
@@ -280,10 +285,15 @@ export async function connect(url: string, token: string, options: CallOptions, 
     })
     .on(RoomEvent.AudioPlaybackStatusChanged, () => {
       // Autoplay was refused: start audio on the next click or key anywhere.
-      if (room.canPlaybackAudio) return;
-      const start = () => void room.startAudio().catch(() => {});
-      window.addEventListener('pointerdown', start, { once: true, capture: true });
-      window.addEventListener('keydown', start, { once: true, capture: true });
+      if (room.canPlaybackAudio || unblock) return;
+      unblock = () => {
+        window.removeEventListener('pointerdown', start, true);
+        window.removeEventListener('keydown', start, true);
+        unblock = null;
+      };
+      const start = () => { unblock?.(); void room.startAudio().catch(() => {}); };
+      window.addEventListener('pointerdown', start, true);
+      window.addEventListener('keydown', start, true);
     })
     .on(RoomEvent.Disconnected, (reason) => {
       cleanup();
@@ -299,6 +309,11 @@ export async function connect(url: string, token: string, options: CallOptions, 
     cleanup();
     throw e;
   }
+  if (!options.current()) {
+    await room.disconnect();
+    cleanup();
+    throw new Error('join cancelled');
+  }
   up = true;
   peers.seed(room.remoteParticipants.keys());
   for (const p of remotes()) applyVolume(p);
@@ -310,7 +325,7 @@ export async function connect(url: string, token: string, options: CallOptions, 
 
   async function publishMic() {
     try {
-      const c = await openMic();
+      const c = await openMic((e) => { if (room.state !== 'disconnected') sink.micFailed(e); });
       if (room.state === 'disconnected') return c.stop();
       chain = c;
       const track = new LocalAudioTrack(c.track, undefined, true);

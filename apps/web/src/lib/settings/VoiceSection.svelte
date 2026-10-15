@@ -63,6 +63,8 @@
   let open = $state(false);
   let frame = 0;
   let stopKeys: (() => void) | null = null;
+  /** Leaving settings while the microphone prompt is open must not leave a test running behind it. */
+  let destroyed = false;
 
   async function startTest() {
     if (starting) return;
@@ -76,8 +78,11 @@
       } else {
         const { createMicChain } = await import('$lib/voice/audio/chain.ts');
         const c = await createMicChain(s);
+        if (destroyed) return c.stop();
         chain = meter = c;
-        playback = await playTrack(c.track, s.outputDevice, s.outputVolume);
+        const p = await playTrack(c.track, s.outputDevice, s.outputVolume);
+        if (destroyed) return void p.stop();
+        playback = p;
       }
       const source = meter;
       const tick = () => { level = source.level(); open = source.gateOpen(); frame = requestAnimationFrame(tick); };
@@ -100,7 +105,7 @@
     level = -100;
     open = false;
   }
-  onMount(() => () => { stopTest(); stopCamera(); });
+  onMount(() => () => { destroyed = true; stopTest(); stopCamera(); });
 
   // Push-to-talk works in the test too, except while a new key is being recorded.
   let recording = $state(false);

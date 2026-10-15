@@ -157,3 +157,29 @@ Chrome's receive-side estimate only grows when traffic approaches it, so a viewe
 - **What this means in practice**: a restart is the trigger. Without one, leaving and closing the browser work, as tasks 3 and 4 showed.
 
 **Changed, in the repo, not yet on production**: `restart-livekit.sh` checks weekly but restarts LiveKit only when the TURN certificate is newer than the running LiveKit, about every two months instead of every week.
+
+## Review of the session's diff, 2026-10-15
+
+A Sonnet review of `19f18dd..HEAD` found no path from a default command to production or real data. Ports bind to `127.0.0.1` only, the rejoin rules hold, and no LiveKit data API is used.
+
+**Fixed**:
+- **The seed's guard** now also refuses any stack but the local one, so a stray `CONCORD_HOST` can't point it at production, whatever marker files exist there.
+- **Mic test**: leaving settings while the microphone prompt was open left a test running, playing you back until a reload.
+- **Mic chain**:
+  - a failed start leaked its AudioContext,
+  - RNNoise failing to load killed the whole microphone, where it should have left the voice unsuppressed,
+  - a device change now opens the new microphone before closing the old, and a failure shows a toast instead of silence.
+- **A join cancelled while connecting** no longer opens the microphone or shows others a join and leave.
+- **Volumes above 100 %** follow the same test as the speaker choice, so headless and odd Chromiums agree.
+- **Small fixes**:
+  - the autoplay-unblock listeners are removed on disconnect,
+  - buttons whose label flips no longer also say "pressed",
+  - `create-account.sh` keeps the password off command lines,
+  - `voice-restart.ts` can't leave a drop rule behind.
+- **`restart-livekit.sh`** starts a LiveKit that isn't running instead of failing silently.
+
+**Known limits, left**:
+- A kick in the first two seconds of a call, before the client has noted its own voice state, may say "Joined from another device".
+- Join and leave sounds ignore the chosen speaker and output volume (M7 polish).
+- Gaining the Speak permission mid-call takes a rejoin before the microphone is sent.
+- Nothing unit-tests `chain.ts`, `call.ts` or the controller's races. The live checks cover them.

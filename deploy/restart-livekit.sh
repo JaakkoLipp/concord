@@ -13,7 +13,14 @@ if ! test -s "$cert"; then
   logger -t concord "restart-livekit: $cert missing, LiveKit not restarted"
   exit 1
 fi
-started="$(docker inspect -f '{{.State.StartedAt}}' "$(concord/dc ps -q livekit)")"
+# A LiveKit that isn't running is started, whatever the certificate.
+id="$(concord/dc ps -q livekit)"
+if [ -z "$id" ] || [ "$(docker inspect -f '{{.State.Running}}' "$id")" != true ]; then
+  concord/dc up -d livekit
+  logger -t concord "restart-livekit: LiveKit wasn't running, started"
+  exit 0
+fi
+started="$(docker inspect -f '{{.State.StartedAt}}' "$id")"
 if [ "$(stat -c %Y "$cert")" -le "$(date -d "$started" +%s)" ]; then
   logger -t concord "restart-livekit: certificate unchanged since LiveKit started, not restarted"
   exit 0

@@ -7,8 +7,8 @@ import { loadVoiceSettings, onVoiceSettings, type VoiceSettings } from './settin
 
 export type { MicChain };
 
-/** A chain that follows the settings until stopped. */
-export async function openMic(): Promise<MicChain> {
+/** A chain that follows the settings until stopped. A change that fails, such as a new device, is reported. */
+export async function openMic(failed: (e: unknown) => void): Promise<MicChain> {
   const chain = await createMicChain(loadVoiceSettings());
   let stopKey = () => {};
   const keys = (s: VoiceSettings) => {
@@ -18,7 +18,7 @@ export async function openMic(): Promise<MicChain> {
   keys(loadVoiceSettings());
   const stopSettings = onVoiceSettings((s) => {
     keys(s);
-    void chain.update(s).catch(() => {});
+    void chain.update(s).catch(failed);
   });
   return {
     ...chain,

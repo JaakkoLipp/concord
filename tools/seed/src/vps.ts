@@ -1,4 +1,4 @@
-import { sameHost } from '../../target.ts';
+import { LOCAL, sameHost } from '../../target.ts';
 import { REMOTE_DIR } from './config.ts';
 import { q, ssh } from './ssh.ts';
 
@@ -9,6 +9,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * seed can never create personas or servers next to real people, even on an empty database.
  */
 export async function assertDevStack(): Promise<void> {
+  // Since M4 the only dev stack is the local one: a stray CONCORD_HOST can't point the seed at another machine.
+  if (!LOCAL) throw new Error('the seed and the persona checks run on the local dev stack only (tools/target.ts)');
   // The check runs over SSH, while the seed and the live checks use the API and the app: all must be one stack.
   sameHost();
   const out = await ssh(`test -f ${REMOTE_DIR}/.allow-wipe && echo dev || echo production`);
