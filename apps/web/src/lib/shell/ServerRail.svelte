@@ -86,7 +86,7 @@
     transition: scale calc(var(--dur-popover) * var(--motion)) var(--ease-out);
   }
   .unread .pill { scale: 1 calc(8 / 38); }
-  .item:hover .pill { scale: 1 calc(20 / 38); }
+  @media (hover: hover) { .item:hover .pill { scale: 1 calc(20 / 38); } }
   .active .pill { scale: 1; }
   .badge { position: absolute; right: 12px; bottom: -4px; padding: 2px; border-radius: var(--radius-full); background: var(--surface-0); line-height: 0; }
   .separator { width: 32px; height: 1px; flex: none; background: var(--border-default); margin: var(--space-1) 0; }

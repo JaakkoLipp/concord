@@ -219,7 +219,8 @@
   section { content-visibility: auto; contain-intrinsic-size: auto 12rem; }
   .grid { display: grid; grid-template-columns: repeat(9, 1fr); }
   .grid button { display: grid; place-items: center; aspect-ratio: 1; padding: var(--space-1); border: 0; border-radius: var(--radius-md); background: none; cursor: pointer; }
-  .grid button:hover, .grid button:focus-visible { background: var(--hover-overlay); outline: none; }
+  .grid button:focus-visible { background: var(--hover-overlay); outline: none; }
+  @media (hover: hover) { .grid button:hover { background: var(--hover-overlay); } }
   .grid img { width: 100%; max-width: 2rem; height: auto; object-fit: contain; }
   .empty { margin: var(--space-6) 0; text-align: center; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
   footer { display: flex; align-items: center; gap: var(--space-3); min-height: 3rem; padding: 0 var(--space-4); border-top: 1px solid var(--border-subtle); background: var(--surface-2); border-radius: 0 0 var(--radius-lg) var(--radius-lg); }

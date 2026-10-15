@@ -32,6 +32,7 @@ export function tooltip(node: HTMLElement, text: string | undefined) {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const show = (delay: number) => {
     if (!current) return;
+    if (timer) clearTimeout(timer);
     const warm = performance.now() - hiddenAt < WARM_MS;
     timer = setTimeout(() => {
       const tip = ensure();

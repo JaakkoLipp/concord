@@ -191,6 +191,12 @@ for (const mode of modes) {
     await step(p, mode, 'image viewer opens', () => image.click(), { some: true });
     await step(p, mode, 'image viewer closes', () => p.keyboard.press('Escape'), { some: true });
     check(await p.locator('dialog.viewer[open]').count() === 0, `${mode}: the image viewer has closed`);
+    // A click beside the image, inside the dialog's padding box, closes it too.
+    await image.click();
+    await p.waitForTimeout(400);
+    await p.mouse.click(80, 450);
+    await p.waitForTimeout(400);
+    check(await p.locator('dialog.viewer[open]').count() === 0, `${mode}: a click beside the image closes the viewer`);
   } else check(false, `${mode}: no image to open in the viewer`);
 
   // Settings fades in as a page, a change of section doesn't replay it, and closing is instant.
@@ -220,7 +226,7 @@ for (const mode of modes) {
   const added = await step(p, mode, 'someone joins', async () => {
     await aino.getByRole('link', { name: /^Pelaamo/ }).click();
     await aino.getByText('Voice connected').waitFor({ timeout: 20_000 });
-    await p.locator('.call .tile').nth(1).waitFor().catch(async (e) => { await p.screenshot({ path: '/tmp/claude-1000/-home-jaakko-concord/6d1a5d5f-b74d-4d7c-93ed-9884c164f5b7/scratchpad/fail-dev.png' }); await aino.screenshot({ path: '/tmp/claude-1000/-home-jaakko-concord/6d1a5d5f-b74d-4d7c-93ed-9884c164f5b7/scratchpad/fail-aino.png' }); throw e; });
+    await p.locator('.call .tile').nth(1).waitFor();
   });
   check(tile(added) > 0, `${mode}: a joining tile fades in`);
   const focused = await step(p, mode, 'focusing a tile', () => p.locator('.grid .tile').first().click());

@@ -57,7 +57,8 @@
     const t = setTimeout(() => (settled = true), 1_000);
     return () => clearTimeout(t);
   });
-  $effect(() => { for (const t of tiles) seen.add(t.id); });
+  // Only those showing now: someone who leaves and comes back fades in again.
+  $effect(() => { seen.clear(); for (const t of tiles) seen.add(t.id); });
   const appears = (id: string) => settled && !seen.has(id);
   const focused = $derived(tiles.find((t) => t.id === focusedId));
   const rest = $derived(focused ? tiles.filter((t) => t !== focused) : tiles);

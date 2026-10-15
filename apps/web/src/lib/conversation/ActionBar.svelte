@@ -54,7 +54,8 @@
     display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-2) var(--space-3);
     border: 0; border-radius: var(--radius-xs); background: none; color: var(--text-normal); font: 500 var(--text-sm) var(--font-sans); text-align: left; cursor: pointer;
   }
-  .menu button:hover, .menu button:focus-visible { background: var(--accent); color: var(--on-accent); outline: none; }
+  .menu button:focus-visible { background: var(--accent); color: var(--on-accent); outline: none; }
+  @media (hover: hover) { .menu button:hover { background: var(--accent); color: var(--on-accent); } }
   .menu .danger { color: var(--danger); }
   .menu .danger:focus-visible { background: var(--danger-fill); color: var(--on-danger); }
   @media (hover: hover) { .menu .danger:hover { background: var(--danger-fill); color: var(--on-danger); } }

@@ -42,7 +42,9 @@
   .viewer[open] { display: grid; animation: viewer-in var(--dur-modal) var(--ease-out); }
   .viewer::backdrop { background: var(--scrim); }
   .viewer[open]::backdrop { animation: fade-in var(--dur-modal) var(--ease-out); }
-  .content { display: grid; place-items: center; width: 100%; height: 100%; }
+  /* It fills the dialog, so clicks beside the image pass through to the dialog, which closes on them. */
+  .content { display: grid; place-items: center; width: 100%; height: 100%; pointer-events: none; }
+  .content > * { pointer-events: auto; }
   @keyframes viewer-in { from { opacity: 0; scale: calc(1 - 0.02 * var(--motion)); } }
   @keyframes fade-in { from { opacity: 0; } }
   img { max-width: min(100%, 90vw); max-height: 85dvh; width: auto; height: auto; object-fit: contain; border-radius: var(--radius-md); }

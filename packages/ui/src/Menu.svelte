@@ -124,7 +124,8 @@
     min-height: 2rem; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-xs);
     background: none; color: var(--text-normal); font: 500 var(--text-sm) var(--font-sans); text-align: left;
   }
-  button:hover:not(:disabled), button:focus-visible { background: var(--surface-5); color: var(--text-strong); outline: none; }
+  button:focus-visible { background: var(--surface-5); color: var(--text-strong); outline: none; }
+  @media (hover: hover) { button:hover:not(:disabled) { background: var(--surface-5); color: var(--text-strong); } }
   button.danger { color: var(--danger); }
   button.danger:focus-visible { background: var(--danger-fill); color: var(--on-danger); }
   @media (hover: hover) { button.danger:hover:not(:disabled) { background: var(--danger-fill); color: var(--on-danger); } }

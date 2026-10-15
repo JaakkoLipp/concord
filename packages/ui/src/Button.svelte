@@ -34,7 +34,7 @@
   .secondary { background: var(--surface-4); color: var(--text-strong); border-color: var(--border-default); }
   @media (hover: hover) { .secondary:hover:not(:disabled) { background: var(--surface-5); } }
   .danger { background: var(--danger-fill); color: var(--on-danger); }
-  .danger:hover:not(:disabled) { filter: brightness(1.1); }
+  @media (hover: hover) { .danger:hover:not(:disabled) { filter: brightness(1.1); } }
   .ghost { background: transparent; color: var(--text-secondary); }
   @media (hover: hover) { .ghost:hover:not(:disabled) { background: var(--hover-overlay); color: var(--text-strong); } }
   .button:disabled { opacity: 0.5; cursor: not-allowed; }
