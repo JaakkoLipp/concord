@@ -2,7 +2,7 @@
   import { Badge, tooltip } from '@concord/ui';
   import { fileUrl } from '@concord/stoat';
   import type { Store } from '@concord/domain';
-  import MessageCircle from '@lucide/svelte/icons/message-circle';
+  import Logo from '$lib/brand/Logo.svelte';
   import Plus from '@lucide/svelte/icons/plus';
   import CreateServerDialog from '$lib/admin/CreateServerDialog.svelte';
   import { serverMenu } from '$lib/admin/menu.ts';
@@ -30,7 +30,7 @@
 <nav class="rail" aria-label={m.shell.servers}>
   <a class="item" class:active={active === null} href={resolve('/app/channels/@me')} aria-current={active === null ? 'page' : undefined} use:tooltip={m.shell.directMessages} aria-label={m.shell.directMessages}>
     <span class="pill" aria-hidden="true"></span>
-    <span class="tile home"><MessageCircle /></span>
+    <span class="tile home"><Logo /></span>
     {#if dmMentions}<span class="badge"><Badge count={dmMentions} label={m.shell.mentions(dmMentions)} /></span>{/if}
   </a>
   <div class="separator" role="separator"></div>
@@ -71,7 +71,6 @@
     border-radius: var(--radius-lg); background: var(--surface-3); object-fit: cover;
     transition: background var(--dur-hover) var(--ease-out);
   }
-  .home :global(svg) { width: var(--icon-lg); height: var(--icon-lg); }
   .item:hover .home, .active .home { background: var(--accent); color: var(--on-accent); }
   .initials { color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans); }
   .item:hover .initials { background: var(--surface-5); }

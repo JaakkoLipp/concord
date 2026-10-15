@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Logo from '$lib/brand/Logo.svelte';
   import { Button } from '@concord/ui';
   import { StoatError } from '@concord/stoat';
   import { m } from '$lib/i18n/index.ts';
@@ -90,6 +91,7 @@
 </script>
 
 <main class="page">
+  <div class="brand"><Logo size="var(--avatar-md)" /><span>{m.app.name}</span></div>
   <div class="card">
     {#if step.kind === 'credentials'}
       <h1>{m.login.title}</h1>
@@ -144,7 +146,8 @@
 </main>
 
 <style>
-  .page { display: grid; place-items: center; min-height: 100dvh; padding: var(--space-5); overflow: auto; }
+  .page { display: grid; place-items: center; align-content: center; gap: var(--space-6); min-height: 100dvh; padding: var(--space-5); overflow: auto; }
+  .brand { display: flex; align-items: center; gap: var(--space-3); color: var(--text-strong); font: 700 var(--text-xl) var(--font-sans); }
   .card {
     width: min(100%, 30rem); padding: var(--space-8);
     background: var(--surface-1); border: 1px solid var(--border-default); border-radius: var(--radius-xl);

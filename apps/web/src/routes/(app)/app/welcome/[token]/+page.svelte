@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Logo from '$lib/brand/Logo.svelte';
   // The welcome link (m3-plan.md task 2): there is no email in M3, so Jaakko sends each person a one-time link
   // made by deploy/account-link.sh. It sets their password; then they log in and go on to the invite, if any.
   import { goto } from '$app/navigation';
@@ -53,6 +54,7 @@
 </script>
 
 <main class="page">
+  <div class="brand"><Logo size="var(--avatar-md)" /><span>{m.app.name}</span></div>
   <div class="card">
     {#if done}
       <h1>{m.welcome.doneTitle}</h1>
@@ -79,7 +81,8 @@
 </main>
 
 <style>
-  .page { display: grid; place-items: center; min-height: 100dvh; padding: var(--space-5); overflow: auto; }
+  .page { display: grid; place-items: center; align-content: center; gap: var(--space-6); min-height: 100dvh; padding: var(--space-5); overflow: auto; }
+  .brand { display: flex; align-items: center; gap: var(--space-3); color: var(--text-strong); font: 700 var(--text-xl) var(--font-sans); }
   .card {
     width: min(100%, 30rem); padding: var(--space-8);
     background: var(--surface-1); border: 1px solid var(--border-default); border-radius: var(--radius-xl);
