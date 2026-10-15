@@ -249,6 +249,7 @@ Added on 2026-10-15 at Jaakko's request. Plan: [m4.6-plan.md](m4.6-plan.md), awa
 - **Permissions that work**: every permission in the role editor has a visible effect, or a reason shown when it's missing, and members can set their own server nickname and avatar.
 - **Text**: timeouts, slow mode, deleting a banned user's recent messages, reasons, other people's nicknames and avatars, deleting many messages at once, and the audit log.
 - **Reports**, through Concord's own layer, to a server's moderators or the app's admins.
+- **Protecting history**: dangerous permissions hard to hand out by accident, a guard bot that strips the roles of anyone mass-deleting and alerts the owner, hourly message backups and a restore tool.
 - **Upstream**: a fix for Stoat's voice moderation bug.
 
 **Acceptance criteria**:
@@ -257,6 +258,7 @@ Added on 2026-10-15 at Jaakko's request. Plan: [m4.6-plan.md](m4.6-plan.md), awa
 - Those without a permission see none of its actions, or a reason why not, never a blank screen or a misleading error.
 - Every moderation action shows in the audit log with its reason.
 - A reported message reaches the right moderators, with its text kept as evidence.
+- A moderator deleting messages en masse over the API loses their roles before the 40th message, and a deleted channel can be restored with its messages and files.
 
 ## M5: Desktop apps
 
