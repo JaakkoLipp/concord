@@ -41,7 +41,7 @@
     display: flex; align-items: center; gap: var(--space-4); width: 100%; min-height: var(--row-member); padding: var(--space-1) var(--space-3);
     border: 0; border-radius: var(--radius-md); background: none; text-align: left;
   }
-  .member:hover { background: var(--hover-overlay); }
+  @media (hover: hover) { .member:hover { background: var(--hover-overlay); } }
   .offline { opacity: 0.45; }
   .offline:hover { opacity: 1; }
   .text { display: grid; min-width: 0; }

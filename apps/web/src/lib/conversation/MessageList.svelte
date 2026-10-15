@@ -331,7 +331,7 @@
     border-radius: var(--radius-md); background: var(--surface-2); color: var(--text-secondary); font: var(--text-sm) var(--font-sans);
   }
   .blocked-run button { padding: 0; border: 0; background: none; color: var(--link); font: 500 var(--text-sm) var(--font-sans); }
-  .blocked-run button:hover { text-decoration: underline; }
+  @media (hover: hover) { .blocked-run button:hover { text-decoration: underline; } }
   .present {
     position: absolute; left: 50%; bottom: calc(var(--composer-h) + var(--space-8)); translate: -50% 0; z-index: 5;
     display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-5);

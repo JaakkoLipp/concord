@@ -108,7 +108,7 @@
     display: flex; align-items: center; gap: var(--space-4); min-height: var(--row-dm); margin-top: 2px; padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none;
   }
-  .row:hover { background: var(--hover-overlay); color: var(--text-normal); text-decoration: none; }
+  @media (hover: hover) { .row:hover { background: var(--hover-overlay); color: var(--text-normal); text-decoration: none; } }
   .row.active { background: var(--surface-5); color: var(--text-strong); }
   .row.unread { color: var(--text-strong); }
   .friends { min-height: var(--row-dm); font: 500 var(--text-md) var(--font-sans); }

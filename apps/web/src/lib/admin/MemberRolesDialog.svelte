@@ -68,7 +68,7 @@
 <style>
   .list { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; max-height: 50vh; overflow-y: auto; }
   .row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); cursor: pointer; color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); }
-  .row:hover { background: var(--hover-overlay); }
+  @media (hover: hover) { .row:hover { background: var(--hover-overlay); } }
   .swatch { width: 0.875rem; height: 0.875rem; border-radius: var(--radius-full); flex: none; }
   .note { margin: var(--space-4) 0 0; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
 </style>

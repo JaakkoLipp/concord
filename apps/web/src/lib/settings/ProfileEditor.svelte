@@ -194,7 +194,7 @@
     display: inline-flex; align-items: center; min-height: 2rem; padding: 0 var(--space-4); border-radius: var(--radius-md);
     background: var(--accent); color: var(--on-accent); font: 500 var(--text-sm) var(--font-sans); cursor: pointer;
   }
-  .upload:hover { background: var(--accent-hover); }
+  @media (hover: hover) { .upload:hover { background: var(--accent-hover); } }
   .upload:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
   .upload input { position: absolute; width: 1px; height: 1px; opacity: 0; }
   textarea {

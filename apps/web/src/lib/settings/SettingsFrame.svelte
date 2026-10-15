@@ -79,7 +79,7 @@
   .nav-inner { display: grid; align-content: start; gap: var(--space-1); width: var(--settings-nav-w); padding: var(--space-10) var(--space-3) var(--space-5) var(--space-5); }
   h2 { margin: 0 0 var(--space-3); padding: 0 var(--space-3); color: var(--text-secondary); font: 700 var(--text-xs) var(--font-sans); text-transform: uppercase; letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .item { display: block; padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); color: var(--text-secondary); font: 500 var(--text-md) var(--font-sans); text-decoration: none; }
-  .item:hover { background: var(--hover-overlay); color: var(--text-normal); text-decoration: none; }
+  @media (hover: hover) { .item:hover { background: var(--hover-overlay); color: var(--text-normal); text-decoration: none; } }
   .item.active { background: var(--surface-5); color: var(--text-strong); }
   .separator { height: 1px; margin: var(--space-3); background: var(--border-default); }
   .nav-inner :global(.button) { justify-content: flex-start; padding: 0 var(--space-3); font-size: var(--text-md); }

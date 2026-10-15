@@ -363,7 +363,7 @@
 
   .advanced { display: grid; gap: var(--space-5); }
   .advanced summary { width: fit-content; color: var(--text-secondary); font: 700 var(--text-xs) var(--font-sans); letter-spacing: 0.02em; text-transform: uppercase; cursor: pointer; }
-  .advanced summary:hover { color: var(--text-strong); }
+  @media (hover: hover) { .advanced summary:hover { color: var(--text-strong); } }
   .advanced summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-xs); }
   .advanced[open] summary { margin-bottom: var(--space-5); }
 

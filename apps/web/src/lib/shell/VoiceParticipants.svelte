@@ -58,7 +58,7 @@
     border: 0; border-radius: var(--radius-md); background: none; color: var(--text-secondary); text-align: left;
     font: 500 var(--text-sm) var(--font-sans); cursor: pointer;
   }
-  .participant:hover { background: var(--hover-overlay); color: var(--text-normal); }
+  @media (hover: hover) { .participant:hover { background: var(--hover-overlay); color: var(--text-normal); } }
   .participant:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .avatar { position: relative; display: grid; flex: none; border-radius: var(--radius-full); }
   .avatar::after {

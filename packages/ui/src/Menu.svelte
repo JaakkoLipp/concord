@@ -126,7 +126,8 @@
   }
   button:hover:not(:disabled), button:focus-visible { background: var(--surface-5); color: var(--text-strong); outline: none; }
   button.danger { color: var(--danger); }
-  button.danger:hover:not(:disabled), button.danger:focus-visible { background: var(--danger-fill); color: var(--on-danger); }
+  button.danger:focus-visible { background: var(--danger-fill); color: var(--on-danger); }
+  @media (hover: hover) { button.danger:hover:not(:disabled) { background: var(--danger-fill); color: var(--on-danger); } }
   button:disabled { opacity: 0.5; }
   .check { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); }
   .box { flex: none; width: 1.125rem; height: 1.125rem; border: 2px solid var(--text-secondary); border-radius: var(--radius-xs); }

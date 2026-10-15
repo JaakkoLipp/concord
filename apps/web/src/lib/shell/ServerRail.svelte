@@ -71,12 +71,13 @@
     border-radius: var(--radius-lg); background: var(--surface-3); object-fit: cover;
     transition: background-color var(--dur-hover) var(--ease-out);
   }
-  .item:hover .home, .active .home { background: var(--accent); color: var(--on-accent); }
+  .active .home { background: var(--accent); color: var(--on-accent); }
+  @media (hover: hover) { .item:hover .home { background: var(--accent); color: var(--on-accent); } }
   .initials { color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans); }
-  .item:hover .initials { background: var(--surface-5); }
+  @media (hover: hover) { .item:hover .initials { background: var(--surface-5); } }
   button.item { padding: 0; border: 0; background: none; cursor: pointer; }
   .add { color: var(--status-online); }
-  .item:hover .add { background: var(--status-online); color: var(--on-accent); }
+  @media (hover: hover) { .item:hover .add { background: var(--status-online); color: var(--on-accent); } }
   /* The pill on the left edge: a dot for unread, taller on hover, full height when selected. It is always
      38 px tall and scaled, since animating its height would lay out the rail on every frame. */
   .pill {

@@ -43,7 +43,7 @@
     border: 1px solid transparent; border-radius: var(--radius-md); background: var(--surface-3);
     color: var(--text-secondary); font: 500 var(--text-sm) var(--font-sans); font-variant-numeric: tabular-nums; cursor: pointer;
   }
-  .chip:hover:not(:disabled) { border-color: var(--border-control); }
+  @media (hover: hover) { .chip:hover:not(:disabled) { border-color: var(--border-control); } }
   .chip:disabled { cursor: default; }
   .chip.mine { background: var(--accent-subtle); border-color: var(--accent); color: var(--text-strong); }
   .add { visibility: hidden; color: var(--text-secondary); }

@@ -36,6 +36,6 @@
     border: 0; border-radius: var(--radius-md); background: none; color: var(--text-secondary);
     font: 500 var(--text-md) var(--font-sans); white-space: nowrap;
   }
-  button:hover { background: var(--hover-overlay); color: var(--text-normal); }
+  @media (hover: hover) { button:hover { background: var(--hover-overlay); color: var(--text-normal); } }
   button.selected { background: var(--surface-5); color: var(--text-strong); }
 </style>

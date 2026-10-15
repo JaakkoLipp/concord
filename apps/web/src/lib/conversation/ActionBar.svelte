@@ -56,5 +56,6 @@
   }
   .menu button:hover, .menu button:focus-visible { background: var(--accent); color: var(--on-accent); outline: none; }
   .menu .danger { color: var(--danger); }
-  .menu .danger:hover, .menu .danger:focus-visible { background: var(--danger-fill); color: var(--on-danger); }
+  .menu .danger:focus-visible { background: var(--danger-fill); color: var(--on-danger); }
+  @media (hover: hover) { .menu .danger:hover { background: var(--danger-fill); color: var(--on-danger); } }
 </style>

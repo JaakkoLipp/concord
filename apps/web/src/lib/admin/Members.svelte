@@ -68,7 +68,7 @@
   .count { margin: 0 0 var(--space-4); color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
   .members { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
   .member { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3); border-radius: var(--radius-md); }
-  .member:hover { background: var(--hover-overlay); }
+  @media (hover: hover) { .member:hover { background: var(--hover-overlay); } }
   .text { flex: 1; display: grid; gap: 2px; min-width: 0; }
   .name { display: flex; align-items: center; gap: var(--space-2); color: var(--role, var(--text-strong)); font: 500 var(--text-md) var(--font-sans); }
   .owner { padding: 0 var(--space-2); border-radius: var(--radius-xs); background: var(--surface-4); color: var(--text-secondary); font: 500 var(--text-xs) var(--font-sans); }

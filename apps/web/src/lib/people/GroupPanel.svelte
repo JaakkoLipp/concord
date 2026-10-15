@@ -61,7 +61,7 @@
   h3 { margin: var(--space-3) var(--space-3) var(--space-2); color: var(--text-secondary); font: 500 var(--text-xs) var(--font-sans); text-transform: uppercase; letter-spacing: 0.02em; }
   ul { margin: 0; padding: 0; list-style: none; flex: 1; }
   .member { display: flex; align-items: center; gap: var(--space-4); width: 100%; min-height: var(--row-member); padding: var(--space-1) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: inherit; text-align: left; }
-  .member:hover { background: var(--hover-overlay); }
+  @media (hover: hover) { .member:hover { background: var(--hover-overlay); } }
   .offline .member { opacity: 0.45; }
   .text { display: grid; min-width: 0; }
   .name { display: flex; align-items: center; gap: var(--space-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); }

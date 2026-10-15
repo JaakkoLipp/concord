@@ -128,9 +128,9 @@
   .message { margin-top: var(--space-5); padding-top: var(--space-1); padding-bottom: var(--space-1); }
   .message.continuation { margin-top: 0; padding-top: 0.125rem; padding-bottom: 0.125rem; }
   .system { margin-top: var(--space-3); }
-  .row:hover { background: var(--hover-overlay); }
+  @media (hover: hover) { .row:hover { background: var(--hover-overlay); } }
   .mentioned { background: var(--accent-wash); box-shadow: inset 2px 0 0 var(--accent); }
-  .mentioned:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  @media (hover: hover) { .mentioned:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); } }
   .highlighted { animation: flash var(--dur-flash) var(--ease-out); }
   @keyframes flash { from { background-color: var(--accent-subtle); } }
   .line { display: flex; gap: var(--space-5); }
@@ -143,7 +143,7 @@
   .body { min-width: 0; flex: 1; }
   .head { display: flex; align-items: baseline; gap: var(--space-3); min-width: 0; }
   .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0; border: 0; background: none; color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); }
-  .name:hover { text-decoration: underline; text-decoration-color: var(--text-strong); }
+  @media (hover: hover) { .name:hover { text-decoration: underline; text-decoration-color: var(--text-strong); } }
   .avatar-button { padding: 0; border: 0; background: none; border-radius: 50%; height: fit-content; }
   .name[style*='--role'] { background: var(--role); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .tag { padding: 0 var(--space-2); border-radius: var(--radius-xs); background: var(--accent); color: var(--on-accent); font: 700 0.625rem/1rem var(--font-sans); text-transform: uppercase; }
@@ -162,6 +162,6 @@
   .failed .content { color: var(--danger); }
   .not-sent { margin: var(--space-1) 0 0; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
   .not-sent button { margin-left: var(--space-2); padding: 0; border: 0; background: none; color: var(--link); font: inherit; cursor: pointer; }
-  .not-sent button:hover { text-decoration: underline; }
+  @media (hover: hover) { .not-sent button:hover { text-decoration: underline; } }
   .edited { margin-left: var(--space-2); color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
 </style>

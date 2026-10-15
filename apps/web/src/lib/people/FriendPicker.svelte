@@ -99,7 +99,7 @@
   .count { margin: var(--space-3) 0; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
   .list { max-height: 18rem; overflow-y: auto; margin: 0 0 var(--space-4); padding: 0; list-style: none; }
   .friend { display: flex; align-items: center; gap: var(--space-4); min-height: 2.75rem; padding: 0 var(--space-3); border-radius: var(--radius-md); cursor: pointer; }
-  .friend:hover { background: var(--hover-overlay); }
+  @media (hover: hover) { .friend:hover { background: var(--hover-overlay); } }
   .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); }
   .tag { margin-left: var(--space-3); color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
   input[type='checkbox'] { width: 1.125rem; height: 1.125rem; accent-color: var(--accent); }

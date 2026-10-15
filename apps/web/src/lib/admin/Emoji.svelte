@@ -131,12 +131,12 @@
   .error { margin: 0; color: var(--danger); font: var(--text-sm) var(--font-sans); }
   .list { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
   .emoji { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); }
-  .emoji:hover { background: var(--hover-overlay); }
+  @media (hover: hover) { .emoji:hover { background: var(--hover-overlay); } }
   .emoji img { width: 2rem; height: 2rem; object-fit: contain; }
   .text { flex: 1; display: grid; gap: 2px; min-width: 0; }
   .colon { display: flex; align-items: center; color: var(--text-secondary); font: var(--text-md) var(--font-mono); }
   .name { min-width: 0; width: 100%; max-width: 20rem; padding: 2px var(--space-1); border: 1px solid transparent; border-radius: var(--radius-xs); background: none; color: var(--text-strong); font: inherit; }
-  .name:hover { border-color: var(--border-control); }
+  @media (hover: hover) { .name:hover { border-color: var(--border-control); } }
   .name:focus-visible { outline: none; border-color: var(--accent); background: var(--surface-0); }
   .name[aria-invalid='true'] { border-color: var(--danger); }
   .by { color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }

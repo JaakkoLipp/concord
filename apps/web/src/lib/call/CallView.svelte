@@ -159,17 +159,19 @@
   .bar { display: flex; justify-content: center; gap: var(--space-4); padding: var(--space-3) var(--space-5) var(--space-5); }
   .control {
     display: grid; place-items: center; width: 3rem; height: 3rem; padding: 0; border: 0; border-radius: var(--radius-full);
-    background: var(--surface-4); color: var(--text-strong); cursor: pointer; transition: background-color var(--dur-hover) var(--ease-out);
+    background: var(--surface-4); color: var(--text-strong); cursor: pointer;
+    transition: background-color var(--dur-hover) var(--ease-out), scale var(--dur-press) var(--ease-out);
   }
-  .control:hover:not(:disabled) { background: var(--surface-6); }
+  .control:active:not(:disabled) { scale: calc(1 - 0.02 * var(--motion)); }
+  @media (hover: hover) { .control:hover:not(:disabled) { background: var(--surface-6); } }
   .control:disabled { opacity: 0.4; cursor: not-allowed; }
   .control:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .control :global(svg) { width: var(--icon-lg); height: var(--icon-lg); }
   .control.off { color: var(--danger); }
   .control.on { background: var(--text-strong); color: var(--surface-0); }
-  .control.on:hover:not(:disabled) { background: var(--text-normal); }
+  @media (hover: hover) { .control.on:hover:not(:disabled) { background: var(--text-normal); } }
   .control.leave { background: var(--danger-fill); color: var(--on-danger); }
-  .control.leave:hover { background: var(--danger); }
+  @media (hover: hover) { .control.leave:hover { background: var(--danger); } }
   .lobby {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-5); padding: var(--space-8);
     color: var(--text-secondary); font: var(--text-md) var(--font-sans); text-align: center;

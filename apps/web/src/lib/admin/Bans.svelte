@@ -61,7 +61,7 @@
   .search { margin-bottom: var(--space-4); }
   .bans { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
   .ban { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3); border-radius: var(--radius-md); }
-  .ban:hover { background: var(--hover-overlay); }
+  @media (hover: hover) { .ban:hover { background: var(--hover-overlay); } }
   .text { flex: 1; display: grid; gap: 2px; min-width: 0; }
   .name { color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); }
   .reason { color: var(--text-normal); font: var(--text-sm) var(--font-sans); overflow-wrap: anywhere; }

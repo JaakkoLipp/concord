@@ -172,5 +172,5 @@
     display: block; margin: var(--space-5) auto 0; padding: var(--space-2);
     background: none; border: 0; color: var(--link); font: 500 var(--text-sm) var(--font-sans);
   }
-  .link:hover { text-decoration: underline; }
+  @media (hover: hover) { .link:hover { text-decoration: underline; } }
 </style>

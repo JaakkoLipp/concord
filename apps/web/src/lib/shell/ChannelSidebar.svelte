@@ -113,7 +113,8 @@
     flex: 1; display: flex; align-items: center; gap: var(--space-3); min-width: 0; padding: 0 var(--space-5);
     background: none; border: 0; color: var(--text-strong); text-align: left; cursor: pointer;
   }
-  .header-button:hover, .header-button[aria-expanded='true'] { background: var(--hover-overlay); }
+  .header-button[aria-expanded='true'] { background: var(--hover-overlay); }
+  @media (hover: hover) { .header-button:hover { background: var(--hover-overlay); } }
   .header-button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .setup { display: grid; gap: var(--space-3); margin: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--surface-3); border-left: 3px solid var(--status-idle); }
   .setup p { margin: 0; color: var(--text-normal); font: var(--text-sm) var(--font-sans); }
@@ -122,14 +123,14 @@
   .group + .group { margin-top: var(--space-6); }
   .category-row { display: flex; align-items: center; }
   .add { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; margin-right: var(--space-1); padding: 0; border: 0; border-radius: var(--radius-xs); background: none; color: var(--text-secondary); cursor: pointer; }
-  .add:hover { color: var(--text-strong); }
+  @media (hover: hover) { .add:hover { color: var(--text-strong); } }
   .add:focus-visible { outline: 2px solid var(--accent); }
   .category {
     flex: 1; min-width: 0;
     display: flex; align-items: center; gap: var(--space-2); width: 100%; padding: var(--space-2) var(--space-3);
     background: none; border: 0; color: var(--text-secondary); font: 500 var(--text-sm) var(--font-sans); text-align: left;
   }
-  .category:hover { color: var(--text-strong); }
+  @media (hover: hover) { .category:hover { color: var(--text-strong); } }
   .category :global(svg) { transition: rotate calc(var(--dur-popover) * var(--motion)) var(--ease-out); }
   .category.collapsed :global(svg) { rotate: -90deg; }
   .channel {
@@ -138,13 +139,15 @@
     border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none;
     font: 500 var(--text-md) var(--font-sans);
   }
-  .channel:hover { background: var(--hover-overlay); color: var(--text-normal); text-decoration: none; }
+  @media (hover: hover) { .channel:hover { background: var(--hover-overlay); color: var(--text-normal); text-decoration: none; } }
   .channel.active { background: var(--surface-5); color: var(--text-strong); }
   .channel.unread { color: var(--text-strong); }
   .channel.muted { color: var(--text-muted); font-weight: 400; }
-  .channel.muted:hover, .channel.muted.active { color: var(--text-secondary); }
+  .channel.muted.active { color: var(--text-secondary); }
+  @media (hover: hover) { .channel.muted:hover { color: var(--text-secondary); } }
   .icon { display: grid; place-items: center; color: var(--text-muted); flex: none; }
-  .channel.active .icon, .channel:hover .icon { color: var(--text-secondary); }
+  .channel.active .icon { color: var(--text-secondary); }
+  @media (hover: hover) { .channel:hover .icon { color: var(--text-secondary); } }
   .channel.occupied .icon { color: var(--status-online); }
   .limit {
     flex: none; padding: 0 var(--space-2); border-radius: var(--radius-xs); background: var(--surface-4); color: var(--text-secondary);

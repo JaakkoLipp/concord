@@ -39,6 +39,6 @@
   .name { flex: none; color: var(--text-strong); font-weight: 500; }
   .name[style*='--role'] { background: var(--role); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .snippet { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .reply:hover .snippet { color: var(--text-strong); }
+  @media (hover: hover) { .reply:hover .snippet { color: var(--text-strong); } }
   .missing { font-style: italic; }
 </style>

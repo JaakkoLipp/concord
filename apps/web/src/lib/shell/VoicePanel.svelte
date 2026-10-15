@@ -97,6 +97,6 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     color: var(--text-secondary); font: var(--text-xs) var(--font-sans); text-decoration: none;
   }
-  .where:hover { color: var(--text-strong); text-decoration: underline; }
+  @media (hover: hover) { .where:hover { color: var(--text-strong); text-decoration: underline; } }
   .actions { display: flex; gap: var(--space-1); }
 </style>

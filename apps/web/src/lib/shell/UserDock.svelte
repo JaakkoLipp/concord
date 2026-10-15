@@ -95,7 +95,7 @@
     display: flex; align-items: center; gap: var(--space-3); flex: 1; min-width: 0; padding: var(--space-1) var(--space-2);
     background: none; border: 0; border-radius: var(--radius-md); text-align: left;
   }
-  .me:hover { background: var(--hover-overlay); }
+  @media (hover: hover) { .me:hover { background: var(--hover-overlay); } }
   .text { display: grid; min-width: 0; }
   .toggle { display: contents; }
   .toggle.on :global(.icon-button) { color: var(--danger); }
@@ -107,7 +107,7 @@
     display: flex; align-items: center; gap: var(--space-4); min-height: 2.25rem; padding: var(--space-2) var(--space-3);
     border: 0; border-radius: var(--radius-md); background: none; color: var(--text-normal); text-align: left; font: 500 var(--text-sm) var(--font-sans);
   }
-  .statuses button:hover, .custom button:hover { background: var(--hover-overlay); color: var(--text-strong); }
+  @media (hover: hover) { .statuses button:hover, .custom button:hover { background: var(--hover-overlay); color: var(--text-strong); } }
   .statuses button.checked { background: var(--surface-5); color: var(--text-strong); }
   .choice { display: grid; }
   .choice-help { color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }

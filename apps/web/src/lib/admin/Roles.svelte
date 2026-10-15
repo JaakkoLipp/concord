@@ -138,7 +138,7 @@
   .actions { margin-bottom: var(--space-5); }
   .roles { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
   .role { display: flex; align-items: center; gap: var(--space-2); border-radius: var(--radius-md); }
-  .role:hover { background: var(--hover-overlay); }
+  @media (hover: hover) { .role:hover { background: var(--hover-overlay); } }
   .open { flex: 1; display: flex; align-items: center; gap: var(--space-3); min-width: 0; padding: var(--space-3) var(--space-4); border: 0; background: none; color: var(--text-normal); text-align: left; cursor: pointer; border-radius: var(--radius-md); }
   .open:focus-visible, .more:focus-visible { outline: 2px solid var(--accent); }
   .swatch { width: 0.875rem; height: 0.875rem; border-radius: var(--radius-full); flex: none; }
@@ -146,6 +146,6 @@
   .count { color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
   .locked { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--text-muted); font: var(--text-sm) var(--font-sans); }
   .more { display: grid; place-items: center; width: 2rem; height: 2rem; margin-right: var(--space-2); border: 0; border-radius: var(--radius-md); background: none; color: var(--text-secondary); cursor: pointer; }
-  .more:hover { color: var(--text-strong); background: var(--surface-4); }
+  @media (hover: hover) { .more:hover { color: var(--text-strong); background: var(--surface-4); } }
   .everyone { margin-top: var(--space-3); border-top: 1px solid var(--border-subtle); padding-top: var(--space-2); }
 </style>

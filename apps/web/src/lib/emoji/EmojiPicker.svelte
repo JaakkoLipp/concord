@@ -212,7 +212,7 @@
   .body { flex: 1; min-height: 0; display: flex; }
   .nav { display: flex; flex-direction: column; gap: var(--space-1); padding: 0 var(--space-2); overflow-y: auto; border-right: 1px solid var(--border-subtle); }
   .nav button { display: grid; place-items: center; width: 2rem; height: 2rem; flex: none; padding: 0; border: 0; border-radius: var(--radius-md); background: none; color: var(--text-secondary); cursor: pointer; }
-  .nav button:hover { background: var(--hover-overlay); color: var(--text-strong); }
+  @media (hover: hover) { .nav button:hover { background: var(--hover-overlay); color: var(--text-strong); } }
   .nav img { width: 1.25rem; height: 1.25rem; object-fit: contain; }
   .scroll { flex: 1; min-width: 0; overflow-y: auto; padding: 0 var(--space-3) var(--space-3); }
   h3 { position: sticky; top: 0; z-index: 1; margin: 0; padding: var(--space-3) var(--space-1) var(--space-2); background: var(--surface-1); color: var(--text-secondary); font: 700 var(--text-xs) var(--font-sans); text-transform: uppercase; }

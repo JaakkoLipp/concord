@@ -145,7 +145,7 @@
   .entries { display: grid; gap: var(--space-4); position: sticky; top: var(--space-4); }
   ul { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
   .entry { display: flex; align-items: center; gap: var(--space-3); width: 100%; padding: var(--space-2) var(--space-3); border: 0; border-radius: var(--radius-md); background: none; color: var(--text-secondary); font: 500 var(--text-md) var(--font-sans); text-align: left; cursor: pointer; }
-  .entry:hover { background: var(--hover-overlay); color: var(--text-normal); }
+  @media (hover: hover) { .entry:hover { background: var(--hover-overlay); color: var(--text-normal); } }
   .entry.active { background: var(--surface-5); color: var(--text-strong); }
   .entry:focus-visible { outline: 2px solid var(--accent); }
   .swatch { width: 0.75rem; height: 0.75rem; border-radius: var(--radius-full); flex: none; }

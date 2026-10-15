@@ -26,7 +26,7 @@
     transition: background-color var(--dur-hover) var(--ease-out), color var(--dur-hover) var(--ease-out);
   }
   .sm { width: 1.5rem; height: 1.5rem; }
-  .icon-button:hover:not(:disabled) { background: var(--hover-overlay); color: var(--text-strong); }
+  @media (hover: hover) { .icon-button:hover:not(:disabled) { background: var(--hover-overlay); color: var(--text-strong); } }
   .active { color: var(--text-strong); }
   .icon-button:disabled { opacity: 0.4; cursor: not-allowed; }
   .icon-button :global(svg) { width: var(--icon-md); height: var(--icon-md); }

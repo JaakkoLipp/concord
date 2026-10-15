@@ -52,5 +52,5 @@
   .text { min-width: 0; }
   .time { color: var(--text-secondary); font: var(--text-xs) var(--font-sans); font-variant-numeric: tabular-nums; }
   .link { padding: 0; background: none; border: 0; color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); }
-  .link:hover { text-decoration: underline; }
+  @media (hover: hover) { .link:hover { text-decoration: underline; } }
 </style>
