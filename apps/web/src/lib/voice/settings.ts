@@ -3,6 +3,8 @@
  * per-user volumes in the same store. Plain TypeScript: the settings section holds its own state, and the
  * voice controller listens for changes to update a running call.
  */
+import { DEFAULT_DEAFEN_KEY, DEFAULT_MUTE_KEY, parseKeybind, type Keybind } from './keybinds.ts';
+
 const KEY = 'concord:voice';
 
 export type InputMode = 'voice' | 'ptt';
@@ -28,6 +30,9 @@ export interface VoiceSettings {
   autoGainControl: boolean;
   sharePreset: SharePreset;
   statsOverlay: boolean;
+  /** Keybinds that toggle mute and deafen while Concord has focus, or null for none. */
+  muteKey: Keybind | null;
+  deafenKey: Keybind | null;
 }
 
 export const DEFAULT_VOICE_SETTINGS: Readonly<VoiceSettings> = {
@@ -45,6 +50,8 @@ export const DEFAULT_VOICE_SETTINGS: Readonly<VoiceSettings> = {
   autoGainControl: true,
   sharePreset: '1080p60',
   statsOverlay: false,
+  muteKey: DEFAULT_MUTE_KEY,
+  deafenKey: DEFAULT_DEAFEN_KEY,
 };
 
 /** Per-user volumes in percent, and the users muted for this device only ("Mute for me"). */
@@ -71,6 +78,8 @@ function sanitise(raw: unknown): VoiceSettings {
   if (SHARE_PRESETS.includes(r.sharePreset as SharePreset)) s.sharePreset = r.sharePreset as SharePreset;
   const key = r.pushToTalkKey as Record<string, unknown> | null | undefined;
   if (key && typeof key.code === 'string' && typeof key.label === 'string') s.pushToTalkKey = { code: key.code, label: key.label };
+  // A keybind cleared by the user is stored as null; one never set keeps its default.
+  for (const k of ['muteKey', 'deafenKey'] as const) if (r[k] !== undefined) s[k] = parseKeybind(r[k]);
   return s;
 }
 

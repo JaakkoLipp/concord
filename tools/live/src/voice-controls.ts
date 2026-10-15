@@ -2,7 +2,8 @@
  * Quick voice controls (m4.5-plan.md task 4) on the local dev stack: `dev` and `aino` join the seeded Pelaamo with
  * the speech-like fake microphone (media.ts), fresh, because Chromium's audio processing learns to filter that tone
  * within a minute or so. Checks, by what aino sends and what dev sees:
- * - Ctrl+Shift+M mutes, shown in dev's sidebar, and again unmutes; Ctrl+Shift+D deafens and undeafens,
+ * - Ctrl+Shift+M mutes, shown in dev's sidebar, and again unmutes; Ctrl+Shift+D deafens and undeafens; a mute
+ *   keybind recorded in Voice and video settings replaces it, and a plain key is refused there,
  * - the dock's microphone menu lists devices and saves a choice, and its input volume at 0 silences the call,
  * - the speaker menu has the output volume and a link to the settings,
  * - the voice panel's noise suppression toggle switches it while the call keeps sending,
@@ -49,6 +50,25 @@ try {
   await aino.page.keyboard.press('Control+Shift+KeyD');
   const hearing = await passes(dock(aino.page).getByRole('button', { name: 'Deafen', exact: true }).waitFor({ timeout: 2_000 }));
   check(deaf && hearing, 'Ctrl+Shift+D deafens, and again undeafens');
+
+  // A keybind of one's own, from Voice and video settings.
+  await dock(aino.page).getByRole('button', { name: 'User settings' }).click();
+  await aino.page.getByRole('link', { name: 'Voice and video' }).click();
+  const muteRow = aino.page.locator('.field', { hasText: 'Toggle mute' });
+  await muteRow.getByRole('button', { name: 'Record key' }).click();
+  await aino.page.keyboard.press('KeyK');
+  const refused = await passes(aino.page.getByText(/Hold Ctrl, Alt or Shift/).waitFor({ timeout: 2_000 }));
+  await aino.page.keyboard.press('Control+Alt+KeyK');
+  const shown = (await muteRow.locator('kbd').textContent())?.trim();
+  check(refused && shown === 'Ctrl + Alt + K', `a plain key is refused, and Ctrl+Alt+K is recorded as the mute keybind (${shown})`);
+  await aino.page.keyboard.press('Escape');
+  await aino.page.keyboard.press('Control+Shift+KeyM');
+  const oldIgnored = await passes(dock(aino.page).getByRole('button', { name: 'Mute', exact: true }).waitFor({ timeout: 1_000 }));
+  await aino.page.keyboard.press('Control+Alt+KeyK');
+  const newMutes = await passes(dock(aino.page).getByRole('button', { name: 'Unmute', exact: true }).waitFor({ timeout: 2_000 }));
+  await aino.page.keyboard.press('Control+Alt+KeyK');
+  const newUnmutes = await passes(dock(aino.page).getByRole('button', { name: 'Mute', exact: true }).waitFor({ timeout: 2_000 }));
+  check(oldIgnored && newMutes && newUnmutes, 'the new keybind mutes and unmutes, and Ctrl+Shift+M no longer does');
 
   const settings = () => aino.page.evaluate(() => (JSON.parse(localStorage.getItem('concord:voice') ?? '{}') as { settings?: Record<string, unknown> }).settings ?? {});
   const setRange = (value: number) => aino.page.getByRole('menu').locator('input[type=range]').evaluate((el, v) => {

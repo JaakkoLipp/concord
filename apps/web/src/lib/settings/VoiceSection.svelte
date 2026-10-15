@@ -13,6 +13,7 @@
   import type { MicChain } from '$lib/voice/audio/chain.ts';
   import { app } from '$lib/session/app.svelte.ts';
   import { deviceOptions } from './devices.ts';
+  import { keybindFrom, keybindLabel, sameKeybind } from '$lib/voice/keybinds.ts';
 
   const t = m.settings.voice;
   const PRESETS: SharePreset[] = ['1080p60', '1080p30', '720p30', 'text'];
@@ -99,8 +100,11 @@
   }
   onMount(() => () => { destroyed = true; stopTest(); stopCamera(); });
 
-  // Push-to-talk works in the test too, except while a new key is being recorded.
-  let recording = $state(false);
+  // Push-to-talk works in the test too, except while a new key is being recorded. `recording` says which key.
+  type Recorded = 'ptt' | 'muteKey' | 'deafenKey';
+  let recording = $state<Recorded | null>(null);
+  /** Why the last key pressed while recording a keybind wasn't taken. */
+  let keyNote = $state<string | null>(null);
   $effect(() => {
     const c = chain;
     const code = s.inputMode === 'ptt' && !recording ? s.pushToTalkKey?.code : undefined;
@@ -114,15 +118,28 @@
    * Listened for on the window, because Safari doesn't focus a clicked button, so its own keydown never comes.
    */
   function recordKey(e: KeyboardEvent) {
-    if (e.key === 'Tab') { recording = false; return; }
+    if (e.key === 'Tab') { recording = null; return; }
     e.preventDefault();
     e.stopPropagation();
-    if (e.key !== 'Escape') set({ pushToTalkKey: { code: e.code, label: e.key === ' ' ? e.code : e.key.length === 1 ? e.key.toUpperCase() : e.key } });
-    recording = false;
+    const target = recording;
+    if (e.key === 'Escape' || !target) { recording = null; return; }
+    if (target === 'ptt') {
+      set({ pushToTalkKey: { code: e.code, label: e.key === ' ' ? e.code : e.key.length === 1 ? e.key.toUpperCase() : e.key } });
+      recording = null;
+      return;
+    }
+    // A keybind: wait through modifiers on their own, and refuse a key that typing would set off or one already taken.
+    const bind = keybindFrom(e);
+    if (!bind) { if (!/^(Control|Shift|Alt|Meta|OS)/.test(e.code)) keyNote = t.keybindNeedsModifier; return; }
+    const other = target === 'muteKey' ? 'deafenKey' : 'muteKey';
+    if (sameKeybind(bind, s[other])) { keyNote = t.keybindTaken(other === 'muteKey' ? t.mute : t.deafen); return; }
+    set({ [target]: bind });
+    recording = null;
   }
   $effect(() => {
     if (!recording) return;
-    const stop = () => (recording = false);
+    keyNote = null;
+    const stop = () => (recording = null);
     window.addEventListener('keydown', recordKey, true);
     window.addEventListener('blur', stop);
     return () => { window.removeEventListener('keydown', recordKey, true); window.removeEventListener('blur', stop); };
@@ -222,9 +239,9 @@
     <div class="field">
       <span class="label" id="ptt-key">{t.shortcut}</span>
       <div class="key">
-        <kbd class:empty={!s.pushToTalkKey}>{recording ? t.recording : (s.pushToTalkKey?.label ?? t.noShortcut)}</kbd>
-        <Button variant="secondary" size="sm" aria-describedby="ptt-key" onclick={() => (recording = !recording)} onblur={() => (recording = false)}>
-          {recording ? t.recordHelp : t.recordShortcut}
+        <kbd class:empty={!s.pushToTalkKey}>{recording === 'ptt' ? t.recording : (s.pushToTalkKey?.label ?? t.noShortcut)}</kbd>
+        <Button variant="secondary" size="sm" aria-describedby="ptt-key" onclick={() => (recording = recording === 'ptt' ? null : 'ptt')} onblur={() => (recording = null)}>
+          {recording === 'ptt' ? t.recordHelp : t.recordShortcut}
         </Button>
       </div>
       <p class="help">{t.pttHelp}</p>
@@ -264,6 +281,25 @@
 </section>
 
 <div class="separator" role="separator"></div>
+
+<section aria-labelledby="keybinds-heading">
+  <h2 id="keybinds-heading">{t.keybinds}</h2>
+  {#each [['muteKey', t.mute], ['deafenKey', t.deafen]] as const as [field, label] (field)}
+    {@const bind = s[field]}
+    <div class="field">
+      <span class="label" id="{field}-label">{label}</span>
+      <div class="key">
+        <kbd class:empty={!bind}>{recording === field ? t.recording : bind ? keybindLabel(bind) : t.noShortcut}</kbd>
+        <Button variant="secondary" size="sm" aria-describedby="{field}-label" onclick={() => (recording = recording === field ? null : field)} onblur={() => (recording = null)}>
+          {recording === field ? t.recordHelp : t.recordShortcut}
+        </Button>
+        {#if bind && recording !== field}<Button variant="ghost" size="sm" aria-describedby="{field}-label" onclick={() => set({ [field]: null })}>{t.clearKeybind}</Button>{/if}
+      </div>
+      {#if recording === field && keyNote}<p class="help" role="status">{keyNote}</p>{/if}
+    </div>
+  {/each}
+  <p class="help">{t.keybindsHelp}</p>
+</section>
 
 <section aria-labelledby="video-heading">
   <h2 id="video-heading">{t.video}</h2>

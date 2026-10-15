@@ -67,7 +67,7 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 - **The admin panel**: Jaakko wants it to do, as a GUI in the web client, what they do over SSH during the beta, with its scope kept small. Some of those tasks need root or Docker, which the layer must never have: changing server creators restarts `api`, restarting LiveKit, and creating accounts by email. The recommendation is a small root-side runner on the VPS that does only a fixed list of actions the panel requests. Its plan, in another session's worktree (`.claude/worktrees/concord-admin-panel-9b4095/docs/admin-panel-plan.md`, uncommitted), predates the layer and reads MongoDB directly; it should move onto `/app/api/v1/admin/*` and the layer's admin gate.
 - **The browser tab icon** is white on transparent, as asked, and may be faint on light tab bars.
 
-**For Jaakko on Windows**: Chrome may keep Ctrl+Shift+M, the new mute shortcut, for its profile switcher (m4.5-results.md task 4).
+**Mute and deafen keybinds** are in Voice and video settings, Ctrl+Shift+M and Ctrl+Shift+D by default, so a combination a browser keeps for itself can be changed (m4.5-results.md, follow-up).
 
 **Jaakko's tasks for M4:**
 1. Encoder runs 1 to 4 on Windows Chrome, on `/spike/`.

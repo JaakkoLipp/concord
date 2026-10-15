@@ -4,6 +4,7 @@
   import { deviceOptions } from '$lib/settings/devices.ts';
   import { listDevices, maxOutputVolume, outputSelectable } from '$lib/voice/audio/output.ts';
   import { loadVoiceSettings, saveVoiceSettings } from '$lib/voice/settings.ts';
+  import { matches } from '$lib/voice/keybinds.ts';
   import type { Presence as PresenceName, Store } from '@concord/domain';
   import Headphones from '@lucide/svelte/icons/headphones';
   import HeadphoneOff from '@lucide/svelte/icons/headphone-off';
@@ -54,12 +55,13 @@
     options = { items, anchor };
   }
 
-  /** Ctrl+Shift+M mutes and Ctrl+Shift+D deafens while the tab has focus, as in Discord's app. */
+  /** The mute and deafen keybinds from Voice and video settings, Ctrl+Shift+M and Ctrl+Shift+D unless changed. */
   function shortcut(e: KeyboardEvent) {
     const voice = app.voice;
-    if (!voice || !e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey || e.repeat) return;
-    if (e.code === 'KeyM') voice.toggleMute();
-    else if (e.code === 'KeyD') voice.toggleDeafen();
+    if (!voice || e.repeat) return;
+    const s = loadVoiceSettings();
+    if (matches(s.muteKey, e)) voice.toggleMute();
+    else if (matches(s.deafenKey, e)) voice.toggleDeafen();
     else return;
     e.preventDefault();
   }
