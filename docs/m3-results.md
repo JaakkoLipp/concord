@@ -221,7 +221,7 @@ Caddy's data (certificates), `secrets.env`, `host.env`, `livekit.env` and the TU
 | API log | Only Stoat's expected warnings, no SMTP and no captcha |
 
 - **Rollback**, while the dev copy is kept: `dc down`, move the three folders and `Revolt.toml.dev` back, restore `.allow-wipe`, then `dc up -d`.
-- **The dev copy is deleted after a week.** M4's dev stack gets a fresh seed instead, because the copy's files are encrypted with production's key in `secrets.env`.
+- **The dev copy was deleted on 2026-10-15**, at Jaakko's request. M4's dev stack gets a fresh seed instead, because the copy's files are encrypted with production's key in `secrets.env`.
 - **Down time**: about two minutes, longer than planned because a `cp` into the root-owned folder failed midway. The stack stayed down and nothing was lost.
 
 **Bootstrap on production, 2026-10-14**:

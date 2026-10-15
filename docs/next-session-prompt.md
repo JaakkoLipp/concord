@@ -55,7 +55,6 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 
 **Carried from M3:**
 - M2's device checks with a tester.
-- Before the 21st, delete `~/stoat/data-dev-2026-10-14/` on the VPS.
 - Save the restic password in a password manager.
 - Remove `/spike/` from production after the voice evening.
 
