@@ -320,3 +320,51 @@ There is an explicit go or no-go on Stoat in two parts. Part A comes at the end 
 5. Voice reliability problems trace back to Stoat's voice-ingress or token handling rather than to LiveKit or the network.
 
 **Switching cost**, a rough estimate: four to six weeks of backend work. Most Stoat-specific client code sits in `packages/stoat`, and the UI, domain store and LiveKit voice code would stay. The email link paths, markdown dialect, permission model and voice join flow also follow Stoat's conventions. A replacement backend would either keep those conventions or the client would adapt in a few places.
+
+## 11. Concord's own layer
+
+Approved by Jaakko on 2026-10-15, built in M4.4. Stoat has no place for some things Concord wants, such as server tags, and no admin API. Instead of each feature growing its own server code, one small layer of our own holds them.
+
+### 11.1 Shape
+
+- **Beside Stoat, not in front of it.** Clients keep talking to Stoat directly for chat, voice and everything else. The layer answers only for what Stoat can't do, so it adds no latency to chat and can't take chat down.
+- **It lives in `concord-web`**, the SvelteKit server that already serves `/app` on the VPS. Its endpoints are SvelteKit `+server.ts` routes under `/app/api/v1/`, and the pages stay client-rendered. No new container, and Caddy needs no change.
+- **It reaches Stoat over the stack's internal network** (`http://api:14702`), never through the public hostname.
+- **One instance only.** Nothing in it is built to run twice.
+
+### 11.2 The shared core
+
+Every feature uses these, and none brings its own:
+
+| Part | What it does |
+|---|---|
+| **Who you are** | The client sends its Stoat session token in the `X-Session-Token` header, never a cookie, so there is no cross-site request risk. The layer checks it with Stoat's `GET /users/@me` and caches the answer for 60 s by a hash of the token. Anything else is 401. |
+| **What you may do** | Stoat's own permissions, worked out by `packages/domain`'s calculator from the server, the caller's member record and the roles, fetched from Stoat with the caller's token. Plus our own gates: the server-creator list from `GET /api/` (`restrict_server_creation`), and `ADMIN_USER_IDS` in the server-only `host.env`. |
+| **Storage** | One SQLite file, `concord/data/concord.db`, through Node's built-in `node:sqlite`, so no new dependency. Numbered SQL migrations in the repo, applied at start, with a version table. |
+| **Live updates** | One event stream per client at `/app/api/v1/events`, read with `fetch` and a streaming body, not `EventSource`, because `EventSource` can't send the token header. Events are small and name what changed, such as `{type: "tag", user}`. The client fetches the details. |
+| **Limits** | Per-user rate limits in memory, generous for reads and tight for writes. Errors are `{type}` as Stoat's are, so the client handles both alike. |
+| **Logs** | Writes and refusals are logged without tokens, emails or message content. |
+
+### 11.3 Rules
+
+- **Store only what Stoat has no place for.** Never keep a copy of Stoat's data. Read it from Stoat when needed, cached for seconds, not stored.
+- **Write to Stoat only through its API**, as the caller. The exceptions are the few admin actions already done over SSH, such as writing a password link, and each needs the admin gate.
+- **Check on the server, every call.** Hiding a button proves nothing.
+- **Stoat's data stays where it is.** If a Stoat field can hold something properly, it goes there.
+
+### 11.4 What uses it
+
+| Feature | Milestone |
+|---|---|
+| Server tags | M4.5 |
+| The admin panel: status, user and server lists, password links | Its own plan, rebased on this layer |
+| Bookmarks and reminders, if missed | Later |
+| Registration, the invite allowlist and the account pages (section 7) | M6 |
+| Web push to installed apps | M7, if Stoat's own push isn't enough |
+
+### 11.5 Operations
+
+- **Backups**: the nightly `backup.sh` takes a consistent copy with `VACUUM INTO` inside `concord-web` before restic saves it. The restore drill restores it too.
+- **The database file** is in a read-write mount next to the read-only build, so a deploy never touches the data.
+- **On the local dev stack** it runs the same way, with its own file.
+- **If we ever leave Stoat** (section 10), this layer is the start of our own backend. Its endpoints and storage carry over, and only the session check and permission lookups change.

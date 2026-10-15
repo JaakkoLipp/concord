@@ -18,14 +18,15 @@ Every milestone ends with a demo on Jaakko's real devices. A milestone is done w
 | M2 | Full text chat, DMs and friends, in three parts: M2a messaging, M2b social, M2c administration | M1 | client.md, one plan per part |
 | M3 | VPS to production, media validated on real networks, decision gate part B | M2 | [vps-runbook.md](vps-runbook.md), ops spec |
 | M4 | Voice and 1080p60 screen share in the browser | M3 | client.md voice section |
-| M4.5 | Discord-style menus, GIFs, quick voice controls | M4 | m4.5 plan |
+| M4.4 | Concord's own layer beside Stoat: sessions, permissions, storage, live events | M4 | architecture section 11 |
+| M4.5 | Discord-style menus, GIFs, quick voice controls, server tags | M4.4 | m4.5 plan |
 | M5 | Desktop apps for Windows and Linux | M4 | desktop spec |
 | M6 | Website: invites, registration, account management, downloads | M3 | website spec |
 | M7 | Polish, Finnish locale, PWA with web push, closed beta | M2 to M6 | none new |
 | M8 | Launch to the whole community | M7 | none new |
 | M9 | Native Linux client | M8 | native client spec |
 
-M4 and M6 can run in parallel after M3. M4.5 was added on 2026-10-15 at Jaakko's request, before M5. The desktop, website, ops and native-client specs are written just before their milestones, so they reflect what the client work has taught us.
+M4 and M6 can run in parallel after M3. M4.4 and M4.5 were added on 2026-10-15 at Jaakko's request, before M5. The desktop, website, ops and native-client specs are written just before their milestones, so they reflect what the client work has taught us.
 
 ## Decision gate
 
@@ -157,6 +158,17 @@ Detailed in [vps-runbook.md](vps-runbook.md).
 - **First task**: a separate dev stack, a CX23 at `dev.concord.jaalip.com` with a fresh seed (m3-plan.md decision 6).
 - **The voice evening also covers M3's criteria 2 to 4**: 30 minutes of voice with four or more people on different networks, the screen-share runs on the test page, and a forced relay with UDP 3478 closed. Its results complete decision gate part B.
 - **The restore drill** from vps-runbook.md section 7.
+
+## M4.4: Concord's own layer
+
+Added on 2026-10-15 at Jaakko's request. Designed in architecture section 11, planned in [m4.4-plan.md](m4.4-plan.md).
+
+**Scope**: the shared core of a small layer beside Stoat, inside `concord-web`, for what Stoat has no place for. It covers checking the Stoat session, permissions and our own gates, a SQLite store with migrations, a live event stream, the client side of it, backups and docs. No user-facing feature: server tags in M4.5 and the admin panel are its first users.
+
+**Acceptance criteria**:
+- An endpoint refuses a missing, bad or expired session, a caller without the Stoat permission it needs, and one outside our gates. Unit tests and a live check show each.
+- A write by one client reaches another client's event stream within a second, on the local stack and on production.
+- The store survives a `concord-web` redeploy and is in the nightly backup, and a restore brings it back.
 
 ## M4.5: Menus, GIFs and quick voice controls
 
