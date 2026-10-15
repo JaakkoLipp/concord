@@ -19,8 +19,8 @@ export interface Preset {
 }
 
 export const PRESETS: Record<SharePreset, Preset> = {
-  '1080p60': { size: { width: 1920, height: 1080 }, fps: 60, bitrate: 8_000_000, degradation: 'maintain-framerate', hint: 'motion' },
-  '1080p30': { size: { width: 1920, height: 1080 }, fps: 30, bitrate: 5_000_000, degradation: 'maintain-framerate', hint: 'motion' },
+  '1080p60': { size: { width: 1920, height: 1080 }, fps: 60, bitrate: 12_000_000, degradation: 'maintain-framerate', hint: 'motion' },
+  '1080p30': { size: { width: 1920, height: 1080 }, fps: 30, bitrate: 8_000_000, degradation: 'maintain-framerate', hint: 'motion' },
   '720p30': { size: { width: 1280, height: 720 }, fps: 30, bitrate: 3_000_000, degradation: 'maintain-framerate', hint: 'motion' },
   text: { size: null, fps: 5, bitrate: 3_000_000, degradation: 'maintain-resolution', hint: 'detail' },
 };

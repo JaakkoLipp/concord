@@ -577,8 +577,8 @@ Then `createScreenTracks` captures the screen:
 
 | Preset | Resolution | fps | Max bitrate | Degradation |
 |---|---|---|---|---|
-| 1080p60, the default | 1920 × 1080 | 60 | 8 Mbps | keep framerate |
-| 1080p30 | 1920 × 1080 | 30 | 5 Mbps | keep framerate |
+| 1080p60, the default | 1920 × 1080 | 60 | 12 Mbps | keep framerate |
+| 1080p30 | 1920 × 1080 | 30 | 8 Mbps | keep framerate |
 | 720p30 | 1280 × 720 | 30 | 3 Mbps | keep framerate |
 | Text | source, within the limit | 5 | 3 Mbps | keep resolution |
 

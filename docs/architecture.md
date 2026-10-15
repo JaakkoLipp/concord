@@ -204,7 +204,7 @@ The headroom over 1920x1080 lets ultrawide monitors share at 1080p height withou
 **Client publishing**, to be confirmed by measurements: encoders and sharer CPU in M0, network behaviour and TURN in M3, both against the VPS's LiveKit.
 
 - **Capture**: our own `getDisplayMedia` call, up to 1920x1080 at 60 fps, clamped so the area never exceeds the server limit.
-- **Encoding**: about 8 Mbps at 60 fps, high priority. Content hint `motion` for games and `detail` for text-heavy shares.
+- **Encoding**: about 12 Mbps at 60 fps, high priority. Content hint `motion` for games and `detail` for text-heavy shares.
 - **Codec**: H.264, so Windows can use hardware encoders. M0 compares it with VP8, VP9 and AV1 on Jaakko's hardware.
 - **Backup codec off, if M0 allows.** LiveKit adds a VP8 backup by default. When any viewer can't decode the primary codec, every viewer falls back to VP8. If every target browser decodes H.264, the backup only costs sharer CPU. Linux Firefox depends on the OpenH264 plugin, so M0 tests it as a viewer. If it fails, the backup stays on.
 - **Layers**: with H.264 or VP8, simulcast layers at 720p30 and 360p15 under the full layer. VP9 and AV1 use layered SVC encoding instead, where simulcast settings do not apply. Dynacast and adaptive streaming are off by default in LiveKit, and we turn both on. Viewers on weaker connections or in small tiles then get a lower layer automatically.

@@ -18,12 +18,12 @@ describe('shareBrowser', () => {
 describe('sharePlan', () => {
   it('publishes 1080p60 from Chromium as H.264 with a VP8 backup and 720p30 and 360p15 under it', () => {
     const p = sharePlan('1080p60', OURS, 'chromium')!;
-    expect(p).toMatchObject({ capture: { width: 1920, height: 1080 }, fps: 60, bitrate: 8_000_000, degradation: 'maintain-framerate', hint: 'motion', codec: 'h264', backup: true });
+    expect(p).toMatchObject({ capture: { width: 1920, height: 1080 }, fps: 60, bitrate: 12_000_000, degradation: 'maintain-framerate', hint: 'motion', codec: 'h264', backup: true });
     expect(p.layers).toEqual([{ height: 720, fps: 30, bitrate: 2_500_000 }, { height: 360, fps: 15, bitrate: 600_000 }]);
   });
 
   it('publishes VP8 in one layer from Firefox', () => {
-    expect(sharePlan('1080p30', OURS, 'firefox')).toMatchObject({ codec: 'vp8', backup: false, layers: [], fps: 30, bitrate: 5_000_000 });
+    expect(sharePlan('1080p30', OURS, 'firefox')).toMatchObject({ codec: 'vp8', backup: false, layers: [], fps: 30, bitrate: 8_000_000 });
   });
 
   it('keeps 720p30 to one layer under it, and Text at the source size, 5 fps, keeping resolution', () => {
