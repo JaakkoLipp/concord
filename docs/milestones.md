@@ -18,13 +18,14 @@ Every milestone ends with a demo on Jaakko's real devices. A milestone is done w
 | M2 | Full text chat, DMs and friends, in three parts: M2a messaging, M2b social, M2c administration | M1 | client.md, one plan per part |
 | M3 | VPS to production, media validated on real networks, decision gate part B | M2 | [vps-runbook.md](vps-runbook.md), ops spec |
 | M4 | Voice and 1080p60 screen share in the browser | M3 | client.md voice section |
+| M4.5 | Discord-style menus, GIFs, quick voice controls | M4 | m4.5 plan |
 | M5 | Desktop apps for Windows and Linux | M4 | desktop spec |
 | M6 | Website: invites, registration, account management, downloads | M3 | website spec |
 | M7 | Polish, Finnish locale, PWA with web push, closed beta | M2 to M6 | none new |
 | M8 | Launch to the whole community | M7 | none new |
 | M9 | Native Linux client | M8 | native client spec |
 
-M4 and M6 can run in parallel after M3. The desktop, website, ops and native-client specs are written just before their milestones, so they reflect what the client work has taught us.
+M4 and M6 can run in parallel after M3. M4.5 was added on 2026-10-15 at Jaakko's request, before M5. The desktop, website, ops and native-client specs are written just before their milestones, so they reflect what the client work has taught us.
 
 ## Decision gate
 
@@ -156,6 +157,40 @@ Detailed in [vps-runbook.md](vps-runbook.md).
 - **First task**: a separate dev stack, a CX23 at `dev.concord.jaalip.com` with a fresh seed (m3-plan.md decision 6).
 - **The voice evening also covers M3's criteria 2 to 4**: 30 minutes of voice with four or more people on different networks, the screen-share runs on the test page, and a forced relay with UDP 3478 closed. Its results complete decision gate part B.
 - **The restore drill** from vps-runbook.md section 7.
+
+## M4.5: Menus, GIFs and quick voice controls
+
+Added on 2026-10-15 at Jaakko's request, from Discord screenshots. Small, client-only work on what M2 and M4 built. Status: proposed scope, not yet planned.
+
+**Scope**:
+- **Message menu on right-click**, as Discord's:
+  - a row of quick reactions from frequently used emoji, and "Add reaction" with the picker,
+  - Edit, Reply, Pin, Copy text, Copy link, Copy ID and Delete, each shown only when allowed,
+  - Mark unread, if Stoat accepts an acknowledgement that moves backwards (probed first).
+- **Menus on links and images**: Open link, Copy link, Copy image, Save image.
+- **Quick audio menus in the user dock**, from the chevrons next to the microphone and headphones buttons:
+  - input or output device, and input or output volume,
+  - a link to Voice and video settings.
+- **Per-user volume everywhere a person appears in a call**:
+  - in the member list and the DM header as well as the call tile and the sidebar,
+  - shown on the participant while not 100 %.
+
+  The slider, the 200 % limit in Chromium and saving per device exist since M4.
+- **GIFs through GIPHY**:
+  - a GIF tab in the emoji picker, with search and trending,
+  - "Powered by GIPHY" as GIPHY's terms require.
+
+  Searches go through our own server, so the API key stays off the client. Images load through Stoat's January proxy, so GIPHY never sees members' addresses. A GIF is sent as a link and renders as Stoat's embed.
+- **Click to watch a stream**, as Discord does: a screen share shows as a tile with "Watch stream" and is downloaded only once clicked. With five or more people and 1080p60 shares, this keeps the VPS's upload and viewers' bandwidth down.
+
+**Not in Stoat, so left out**: threads (decision gate criterion 2), forwarding, server-side bookmarks and reminders, and apps. Bookmarks or reminders could be kept in our own synced settings later if missed.
+
+**Needs from Jaakko**: a GIPHY API key, from a free GIPHY developer account.
+
+**Acceptance criteria**:
+- Right-clicking a message, a link, an image, a person or a voice participant opens the matching menu, by mouse and by the keyboard's context-menu key.
+- A GIF found in the picker arrives as an animated embed for another member, and no request from the client goes to GIPHY.
+- A per-user volume set from the member list holds in the call and after a reload.
 
 ## M5: Desktop apps
 
