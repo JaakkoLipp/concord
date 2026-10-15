@@ -22,6 +22,7 @@ Every milestone ends with a demo on Jaakko's real devices. A milestone is done w
 | M4.2 | Motion and polish: a written motion spec and a pass over the UI | M4.1 | client.md section 9, motion |
 | M4.4 | Concord's own layer beside Stoat: sessions, permissions, storage, live events | M4 | architecture section 11 |
 | M4.5 | Discord-style menus, GIFs, quick voice controls, server tags | M4.4 | m4.5 plan |
+| M4.6 | Moderation, voice and text: moving people between calls, server mute and deafen, permissions that work, timeouts, slow mode, bulk delete, the audit log, reports | M4.5 | m4.6 plan |
 | M5 | Desktop apps for Windows and Linux | M4 | desktop spec |
 | M6 | Website: invites, registration, account management, downloads | M3 | website spec |
 | M7 | Polish, Finnish locale, PWA with web push, closed beta | M2 to M6 | none new |
@@ -238,6 +239,24 @@ Added on 2026-10-15 at Jaakko's request, from Discord screenshots. Small, client
 - Right-clicking a message, a link, an image, a person or a voice participant opens the matching menu, by mouse and by the keyboard's context-menu key.
 - A GIF found in the picker arrives as an animated embed for another member, and no request from the client goes to GIPHY.
 - A per-user volume set from the member list holds in the call and after a reload.
+
+## M4.6: Moderation, voice and text
+
+Added on 2026-10-15 at Jaakko's request. Plan: [m4.6-plan.md](m4.6-plan.md), awaiting sign-off.
+
+**Scope**:
+- **Voice**: following a move, dragging people between voice channels and "Move to", and server mute and deafen in the participant menu, enforced by Concord clients until Stoat is fixed.
+- **Permissions that work**: every permission in the role editor has a visible effect, or a reason shown when it's missing, and members can set their own server nickname and avatar.
+- **Text**: timeouts, slow mode, deleting a banned user's recent messages, reasons, other people's nicknames and avatars, deleting many messages at once, and the audit log.
+- **Reports**, through Concord's own layer, to a server's moderators or the app's admins.
+- **Upstream**: a fix for Stoat's voice moderation bug.
+
+**Acceptance criteria**:
+- A moderator drags someone into another voice channel, and their call follows without a click.
+- A server mute silences the target within seconds, and they can't undo it.
+- Those without a permission see none of its actions, or a reason why not, never a blank screen or a misleading error.
+- Every moderation action shows in the audit log with its reason.
+- A reported message reaches the right moderators, with its text kept as evidence.
 
 ## M5: Desktop apps
 
