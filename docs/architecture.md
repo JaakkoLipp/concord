@@ -323,12 +323,13 @@ There is an explicit go or no-go on Stoat in two parts. Part A comes at the end 
 
 ## 11. Concord's own layer
 
-Approved by Jaakko on 2026-10-15, built in M4.4. Stoat has no place for some things Concord wants, such as server tags, and no admin API. Instead of each feature growing its own server code, one small layer of our own holds them.
+Approved by Jaakko on 2026-10-15, built in M4.4, revised after a Sonnet challenger review the same day. Stoat has no place for some things Concord wants, such as server tags, and no admin API. Instead of each feature growing its own server code, one small layer of our own holds them.
 
 ### 11.1 Shape
 
 - **Beside Stoat, not in front of it.** Clients keep talking to Stoat directly for chat, voice and everything else. The layer answers only for what Stoat can't do, so it adds no latency to chat and can't take chat down.
-- **It lives in `concord-web`**, the SvelteKit server that already serves `/app` on the VPS. Its endpoints are SvelteKit `+server.ts` routes under `/app/api/v1/`, and the pages stay client-rendered. No new container, and Caddy needs no change.
+- **It lives in `concord-web`**, the SvelteKit server that already serves `/app` on the VPS. Its endpoints are SvelteKit `+server.ts` routes under `/app/api/v1/`, with the pages still client-rendered. Caddy already sends `/app/*` there.
+  - M6 changes that: it adds server-rendered pages outside `/app` (section 7), new Caddy routes and per-page SSR. M6's registration code runs in the same process, with its own rate limits.
 - **It reaches Stoat over the stack's internal network** (`http://api:14702`), never through the public hostname.
 - **One instance only.** Nothing in it is built to run twice.
 
@@ -338,33 +339,43 @@ Every feature uses these, and none brings its own:
 
 | Part | What it does |
 |---|---|
-| **Who you are** | The client sends its Stoat session token in the `X-Session-Token` header, never a cookie, so there is no cross-site request risk. The layer checks it with Stoat's `GET /users/@me` and caches the answer for 60 s by a hash of the token. Anything else is 401. |
-| **What you may do** | Stoat's own permissions, worked out by `packages/domain`'s calculator from the server, the caller's member record and the roles, fetched from Stoat with the caller's token. Plus our own gates: the server-creator list from `GET /api/` (`restrict_server_creation`), and `ADMIN_USER_IDS` in the server-only `host.env`. |
-| **Storage** | One SQLite file, `concord/data/concord.db`, through Node's built-in `node:sqlite`, so no new dependency. Numbered SQL migrations in the repo, applied at start, with a version table. |
-| **Live updates** | One event stream per client at `/app/api/v1/events`, read with `fetch` and a streaming body, not `EventSource`, because `EventSource` can't send the token header. Events are small and name what changed, such as `{type: "tag", user}`. The client fetches the details. |
-| **Limits** | Per-user rate limits in memory, generous for reads and tight for writes. Errors are `{type}` as Stoat's are, so the client handles both alike. |
+| **Who you are** | The client sends its Stoat session token in the `X-Session-Token` header, never a cookie, so there is no cross-site request risk. The layer checks it with Stoat's `GET /users/@me`. Good answers are cached for 60 s and bad ones for 10 s, by a hash of the token, in a bounded cache. A per-address limit applies before any Stoat call, so random tokens can't make it call Stoat at will. |
+| **Stoat failing** | Stoat down or slow gives 503, never 401. The client signs out only on the layer's own 401, so a Stoat blip never logs anyone out. |
+| **What you may do** | Stoat's own permissions, worked out by `packages/domain`'s calculator from the server, the caller's member record and the roles. These are fetched with the caller's token, so they share the caller's 5-per-10-s bucket for that server. So permission answers are cached for 30 s, a write costs at most two Stoat calls, and reads never cost any. Our own gates are the server-creator list in `GET /api/` and `ADMIN_USER_IDS`, passed into the container's environment from the server-only `host.env`. |
+| **Storage** | One SQLite file through Node's built-in `node:sqlite`, so no new dependency, in WAL mode with a busy timeout. Numbered SQL migrations in the repo run at start, after copying the file aside. The layer refuses to start against a database newer than its build knows, so a rollback can't damage data. |
+| **Updates** | Clients fetch what they show when they open, every 60 s and when the window regains focus. A live event stream comes later, when a feature needs sub-second updates. |
+| **Limits** | Per-user rate limits in memory, generous for reads and tight for writes. Errors are `{type}` as Stoat's are. |
+| **Input** | IDs must have the ULID shape before they go into any URL to Stoat, so a crafted ID can't reach another internal route. Text is normalised and limited by visible characters. The layer never fetches a URL a client supplied. Bodies stay under the 1 MB `BODY_SIZE_LIMIT`. |
 | **Logs** | Writes and refusals are logged without tokens, emails or message content. |
 
 ### 11.3 Rules
 
 - **Store only what Stoat has no place for.** Never keep a copy of Stoat's data. Read it from Stoat when needed, cached for seconds, not stored.
+- **Membership is not re-checked on reads.** The caller's token can't prove other people's membership without running into Stoat's limits. So clients show a stored per-user fact, such as a tag, only for people their own member lists contain, and the layer removes stale rows when it next writes.
 - **Write to Stoat only through its API**, as the caller. The exceptions are the few admin actions already done over SSH, such as writing a password link, and each needs the admin gate.
+- **No direct database access.** Stoat's MongoDB has no login, and the same network holds Valkey, RabbitMQ and MinIO. The admin panel's lists come from a root cron job that writes a small snapshot, with no emails, into a read-only mount, as its status page does.
 - **Check on the server, every call.** Hiding a button proves nothing.
-- **Stoat's data stays where it is.** If a Stoat field can hold something properly, it goes there.
+
+**If `concord-web` is compromised**, an attacker gets:
+- the layer's database,
+- the session tokens passing through it,
+- the stack's internal network, where Stoat's services trust each other.
+
+That is why the layer stays small and reviewed, holds no Stoat data, and never mounts the Docker socket.
 
 ### 11.4 What uses it
 
 | Feature | Milestone |
 |---|---|
 | Server tags | M4.5 |
-| The admin panel: status, user and server lists, password links | Its own plan, rebased on this layer |
+| The admin panel: status, user and server lists, password links | Its own plan, moved onto this layer: `/app/api/v1/admin/*`, 404 for anyone not on the admin list, with the session check and gate from M4.4 |
 | Bookmarks and reminders, if missed | Later |
 | Registration, the invite allowlist and the account pages (section 7) | M6 |
-| Web push to installed apps | M7, if Stoat's own push isn't enough |
+| End-to-end encryption's key directory, if that work goes ahead | Its own plan |
 
 ### 11.5 Operations
 
-- **Backups**: the nightly `backup.sh` takes a consistent copy with `VACUUM INTO` inside `concord-web` before restic saves it. The restore drill restores it too.
-- **The database file** is in a read-write mount next to the read-only build, so a deploy never touches the data.
+- **Backups**: `backup.sh` first asks `concord-web` for a `VACUUM INTO` copy in `concord/data/`. A failure there is logged and flagged but doesn't stop the database dump. restic saves the copy, never the live file, its WAL or its shared memory.
+- **The data folder** is a read-write mount next to the read-only build, writable by the container's user, so a deploy never touches the data.
 - **On the local dev stack** it runs the same way, with its own file.
 - **If we ever leave Stoat** (section 10), this layer is the start of our own backend. Its endpoints and storage carry over, and only the session check and permission lookups change.

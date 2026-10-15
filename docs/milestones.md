@@ -163,12 +163,12 @@ Detailed in [vps-runbook.md](vps-runbook.md).
 
 Added on 2026-10-15 at Jaakko's request. Designed in architecture section 11, planned in [m4.4-plan.md](m4.4-plan.md).
 
-**Scope**: the shared core of a small layer beside Stoat, inside `concord-web`, for what Stoat has no place for. It covers checking the Stoat session, permissions and our own gates, a SQLite store with migrations, a live event stream, the client side of it, backups and docs. No user-facing feature: server tags in M4.5 and the admin panel are its first users.
+**Scope**: the shared core of a small layer beside Stoat, inside `concord-web`, for what Stoat has no place for. It covers checking the Stoat session, permissions and our own gates, a SQLite store with migrations, the client side of it, backups and docs. Clients poll for now, and a live event stream comes when a feature needs it. No user-facing feature: server tags in M4.5 and the admin panel are its first users.
 
 **Acceptance criteria**:
 - An endpoint refuses a missing, bad or expired session, a caller without the Stoat permission it needs, and one outside our gates. Unit tests and a live check show each.
-- A write by one client reaches another client's event stream within a second, on the local stack and on production.
-- The store survives a `concord-web` redeploy and is in the nightly backup, and a restore brings it back.
+- A Stoat outage gives 503, and nobody is signed out by it.
+- The store survives a `concord-web` redeploy and a rollback, is in the nightly backup, and a restore brings it back.
 
 ## M4.5: Menus, GIFs and quick voice controls
 
