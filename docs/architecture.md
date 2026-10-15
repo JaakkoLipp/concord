@@ -369,7 +369,7 @@ That is why the layer stays small and reviewed, holds no Stoat data, and never m
 |---|---|
 | Server tags | M4.5 |
 | GIF search, keeping the GIPHY key on the server | M4.5 |
-| The admin panel: status, user and server lists, password links | Its own plan, moved onto this layer: `/app/api/v1/admin/*`, 404 for anyone not on the admin list, with the session check and gate from M4.4 |
+| The admin panel | Its own plan, moved onto this layer: `/app/api/v1/admin/*`, 404 for anyone not on the admin list, with the session check and gate from M4.4. Jaakko's direction, 2026-10-15: a view in the web client that does what they do over SSH during the beta, with its scope kept small |
 | Bookmarks and reminders, if missed | Later |
 | Registration, the invite allowlist and the account pages (section 7) | M6 |
 | End-to-end encryption's key directory, if that work goes ahead | Its own plan |
