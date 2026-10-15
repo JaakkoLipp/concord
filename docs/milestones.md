@@ -162,7 +162,7 @@ Detailed in [vps-runbook.md](vps-runbook.md).
 
 ## M4.1: UI alignment fixes
 
-Added on 2026-10-15 from Jaakko's screenshots. Small CSS fixes, deployed and checked by screenshot:
+Added on 2026-10-15 from Jaakko's screenshots. Plan: [m4.1-plan.md](m4.1-plan.md). Small CSS fixes, deployed and checked by screenshot:
 - The composer's placeholder text isn't vertically centred in its box.
 - The user dock and the composer don't line up: their heights and bottom edges differ.
 - The typing indicator ("… is typing") is too tight against the composer and looks awkward.
