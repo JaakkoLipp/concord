@@ -121,7 +121,7 @@ The address must be the person's own and distinct: Stoat treats `+` and dotted v
    - Mount `deploy/livekit.yml` over LiveKit's config, and pass the keys environment file to LiveKit.
    - Mount Caddy's certificate directory for Let's Encrypt read-only at `/certs`. Mount the directory, not single files, because renewals replace the files.
    - Publish LiveKit's 443 over TCP on the floating IP, and 3478 over UDP plus the relay ports 30000 to 30100 over UDP on the **main** IP. LiveKit hands clients `turn:<node IP>:3478`, and its node IP is the main IP. Only `turns:<domain>:443` uses the floating IP (m3-plan.md).
-4. Add a cron job that restarts LiveKit at 05:00 every Monday to pick up renewed certificates. It drops calls in progress, hence the hour.
+4. Add a cron job that checks at 05:00 every Monday and restarts LiveKit only when the certificate was renewed since it started. A restart drops calls in progress, hence the hour.
 5. Verify in step 6 with the test page.
 
 ## 5. Smoke test with Stoat's own client

@@ -134,3 +134,26 @@ Chrome's receive-side estimate only grows when traffic approaches it, so a viewe
 
 **Quality menu**: with adaptive streaming, `setVideoQuality` can only lower the layer that the tile's size asks for. So "1080p" behaves like Auto, and a small tile can't be forced up to 1080p.
 
+
+## Task 9: reconnects, 2026-10-15
+
+`tools/live/src/voice-restart.ts`, on the local stack only, with `dev`, `aino` and `ben`. It passes.
+
+| Check | Result |
+|---|---|
+| Media into LiveKit dropped for 15 s | Audio fell from about 12 KB/s to 0. The call stayed up, and audio was back at about 9.5 KB/s 5 s later, without a click. |
+| LiveKit restarted | Both showed "Reconnecting…", then "Voice connected" 0 to 8 s later, through LiveKit's own reconnect with no new `join_call`, and audio flowed again |
+
+**Stoat's voice state after a LiveKit restart is unreliable.** This is decision gate criterion 5 evidence: the problems are in voice-ingress, not LiveKit or our client.
+- **A ghost**: `ben` closed his browser just before the restart. In some runs he stayed listed in the channel indefinitely, to fresh clients too, even after everyone else left. His next call clears it.
+- **People missing**: in other runs, the sidebar listed nobody 30 s after the restart, though `dev` and `aino` were talking.
+- **Delays**: joins and leaves showed up to 30 s late, and a join right after an earlier restart took 36 s.
+- **Why, from Stoat 0.15.5's source** (a Sonnet agent read it):
+  - Voice state lives only in Redis, with no expiry, and nothing reconciles it with LiveKit.
+  - voice-ingress handles each webhook by user identity alone, so an old session's late leave can remove someone who is back.
+  - When room metadata is missing, it answers 500 without logging why. After a restart LiveKit probably recreates the room without Stoat's metadata (unconfirmed).
+  - LiveKit retries failed webhooks, but drops events older than 30 s and loses its queue in a restart, so a lost leave is never redone.
+  - Unchanged on Stoat's main branch.
+- **What this means in practice**: a restart is the trigger. Without one, leaving and closing the browser work, as tasks 3 and 4 showed.
+
+**Changed, in the repo, not yet on production**: `restart-livekit.sh` checks weekly but restarts LiveKit only when the TURN certificate is newer than the running LiveKit, about every two months instead of every week.

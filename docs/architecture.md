@@ -228,7 +228,7 @@ The VPS milestone, M3, enables LiveKit's built-in TURN on `turn.concord.jaalip.c
 - **A second public IPv4.** Caddy already owns 443 on the main address. We attach a Hetzner floating IP, configure it persistently in the OS, point `turn.concord.jaalip.com` at it, and bind LiveKit's TURN listener to it. This costs a few euros a month and avoids running a TLS-sniffing proxy in front of Caddy.
 - **TURN over UDP on 3478**, cheap to add alongside. It goes on the **main** IP, with relay ports 30000 to 30100. LiveKit hands clients `turn:<node IP>:3478`, and the node IP is the main IP. Only `turns:<domain>:443` uses the floating IP (m3-plan.md, checked in M3).
 - **Outbound traffic stays on the main IP.** LiveKit learns its node IP from the address its traffic leaves from. After a reboot, Docker sent from the floating IP, which broke voice. `com.docker.network.host_ipv4` on the stack's network pins it (m3-results.md task 3).
-- **Certificate**: Caddy also listens on port 80 of the floating IP, so it can answer the certificate challenge for `turn.concord.jaalip.com`. LiveKit mounts Caddy's certificate directory read-only and restarts weekly at a quiet hour to pick up renewals. A restart drops calls in progress, which is why it runs at night.
+- **Certificate**: Caddy also listens on port 80 of the floating IP, so it can answer the certificate challenge for `turn.concord.jaalip.com`. LiveKit mounts Caddy's certificate directory read-only. A weekly job at a quiet hour restarts it when the certificate has been renewed, about every two months. A restart drops calls in progress and leaves Stoat's voice state unreliable for a while (m4-results.md, task 9), which is why it runs at night and only when needed.
 
 ### 5.4 Known Stoat quirks
 
