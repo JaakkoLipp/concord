@@ -77,3 +77,14 @@ export function publicEndpoint(handler: (ctx: { event: RequestEvent; layer: Laye
     }
   };
 }
+
+/** The request's JSON body as an object, or 400 InvalidBody. Bodies stay under BODY_SIZE_LIMIT, 1 MB. */
+export async function body(event: RequestEvent): Promise<Record<string, unknown>> {
+  try {
+    const value: unknown = await event.request.json();
+    if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+  } catch {
+    // Not JSON: refused below.
+  }
+  throw new LayerError(400, 'InvalidBody');
+}

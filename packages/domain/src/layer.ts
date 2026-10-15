@@ -17,6 +17,21 @@ export interface LayerMe {
   gates: LayerGates;
 }
 
+/** A server's tag (m4.5-plan.md task 10): up to 4 letters or digits, with one of its custom emoji as the badge. */
+export interface ServerTag {
+  server: Id;
+  tag: string;
+  emoji: Id;
+}
+
 export interface Layer {
   me(): Promise<LayerMe>;
+  /** The tags these users wear, by user. */
+  wornTags(users: Id[]): Promise<Record<Id, ServerTag>>;
+  /** These servers' tags, by server. */
+  serverTags(servers: Id[]): Promise<Record<Id, ServerTag>>;
+  setServerTag(server: Id, tag: string, emoji: Id): Promise<ServerTag>;
+  removeServerTag(server: Id): Promise<void>;
+  /** Wear a server's tag, or none. */
+  wearTag(server: Id | null): Promise<void>;
 }

@@ -35,3 +35,9 @@ export function requireText(value: unknown, { max, min = 1, field = 'text' }: { 
   if (UNWANTED.test(text) || length < min || length > max) throw new LayerError(400, 'InvalidText', { field, min, max });
   return text;
 }
+
+/** A list of IDs, each checked, without repeats, at most `max`. */
+export function requireIds(value: unknown, max: number, what = 'ids'): string[] {
+  if (!Array.isArray(value) || value.length > max) throw new LayerError(400, 'InvalidId', { field: what, max });
+  return [...new Set(value.map((v) => requireId(v, what)))];
+}

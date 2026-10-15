@@ -12,6 +12,7 @@ import { toasts } from '$lib/view/toast.svelte.ts';
 import { VoiceController } from '$lib/voice/controller.svelte.ts';
 import { Rings } from '$lib/voice/rings.svelte.ts';
 import { HttpLayer } from '$lib/layer/client.ts';
+import { tags } from '$lib/layer/tags.svelte.ts';
 
 // The (app) group has ssr = false, so this only runs in the browser; the guard keeps server builds importable.
 export const backend = new StoatBackend(new LiveTransport(typeof location === 'undefined' ? 'http://localhost' : location.origin));
@@ -64,6 +65,7 @@ class App {
     this.layer = new HttpLayer(() => token, () => void this.signedOut());
     // The layer is optional to chat: if it's down, the app works without what it adds.
     this.layer.me().then((me) => (this.layerMe = me), () => {});
+    tags.start(session.store, this.layer);
     this.session = session;
     this.status = 'signed-in';
   }
@@ -80,6 +82,7 @@ class App {
     this.voice = null;
     this.layer = null;
     this.layerMe = null;
+    tags.end();
     this.stopIdle?.();
     this.stopIdle = null;
     this.stopNotify?.();

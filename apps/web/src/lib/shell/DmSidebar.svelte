@@ -12,6 +12,7 @@
   import { app } from '$lib/session/app.svelte.ts';
   import { notifyItems } from '$lib/notify/dialog.svelte.ts';
   import { participantMenu } from '$lib/call/menu.ts';
+  import TagBadge from '$lib/people/TagBadge.svelte';
   import { closeDm, leaveGroup, room, startConversation } from '$lib/people/groups.ts';
   import FriendPicker from '$lib/people/FriendPicker.svelte';
   import { IconButton, type MenuItem } from '@concord/ui';
@@ -68,7 +69,10 @@
         <Avatar src={avatarUrl(user ?? (partner ? { id: partner } : undefined))} size={32} presence={presenceOf(user)} />
       {/if}
       <span class="text">
-        <span class="name">{channelName(store, channel)}</span>
+        <span class="top">
+          <span class="name">{channelName(store, channel)}</span>
+          {#if partner}<TagBadge {store} user={partner} plain />{/if}
+        </span>
         {#if channel.kind === 'group'}
           <span class="sub">{m.common.members(channel.recipients.length)}</span>
         {:else if statusTextOf(user)}
@@ -120,4 +124,5 @@
   .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--text-md) var(--font-sans); }
   .call { display: grid; flex: none; color: var(--status-online); }
   .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
+  .top { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 </style>

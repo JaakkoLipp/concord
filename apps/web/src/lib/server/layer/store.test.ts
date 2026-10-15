@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -70,6 +70,11 @@ describe('store', () => {
     expect(version(db)).toBe(1);
     expect(db.prepare("SELECT name FROM sqlite_master WHERE name = 'half'").get()).toBeUndefined();
     db.close();
+  });
+
+  it('imports every migration file there is', () => {
+    const files = readdirSync(join(import.meta.dirname, 'migrations')).filter((f) => f.endsWith('.sql')).sort();
+    expect(MIGRATIONS.map((m) => `${String(m.version).padStart(3, '0')}-${m.name}.sql`)).toEqual(files);
   });
 
   it('reads numbered migration files and refuses gaps', () => {

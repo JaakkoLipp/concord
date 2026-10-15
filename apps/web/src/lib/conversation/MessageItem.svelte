@@ -16,6 +16,7 @@
   import ReplyPreview from './ReplyPreview.svelte';
   import SystemLine from './SystemLine.svelte';
   import ActionBar from './ActionBar.svelte';
+  import TagBadge from '$lib/people/TagBadge.svelte';
   import EditBox from '$lib/composer/EditBox.svelte';
 
   import type { MessageActions } from './actions.ts';
@@ -89,6 +90,7 @@
         {#if !continuation}
           <header class="head">
             <button class="name" id="author-{message.id}" style:--role={colour} onclick={(e) => popout.open(message.author, server, e.currentTarget)} use:menuOn={authorMenu}>{name}</button>
+            {#if !message.webhook && !message.masquerade}<TagBadge {store} user={message.author} />{/if}
             {#if user?.bot || message.webhook}<span class="tag">{message.webhook ? m.conversation.webhook : m.conversation.bot}</span>{/if}
             <time class="time" datetime={sent.toISOString()} title={fullDate(sent)}>{timeOfDay(sent)}</time>
           </header>

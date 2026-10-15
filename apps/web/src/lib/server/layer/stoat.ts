@@ -86,6 +86,13 @@ export class StoatClient {
     return status === 200 ? (body as WireServer) : null;
   }
 
+  /** A custom emoji's server, or null when there is no such emoji or it belongs to no server. */
+  async emojiServer(token: string, emoji: string): Promise<string | null> {
+    const { status, body } = await this.get(`/custom/emoji/${emoji}`, token);
+    const parent = status === 200 ? (body as { parent?: { type?: string; id?: string } }).parent : undefined;
+    return parent?.type === 'Server' && parent.id ? parent.id : null;
+  }
+
   /** The caller's member record in a server, or null when they aren't a member. */
   async member(token: string, server: string, user: string): Promise<WireMember | null> {
     const { status, body } = await this.get(`/servers/${server}/members/${user}`, token);

@@ -7,6 +7,7 @@
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import { app } from '$lib/session/app.svelte.ts';
   import { participantMenu } from '$lib/call/menu.ts';
+  import TagBadge from '$lib/people/TagBadge.svelte';
 
   let { store, server }: { store: Store; server: string } = $props();
   const groups = $derived(store.memberGroups(server));
@@ -23,7 +24,10 @@
           use:menuOn={(node) => (app.session ? participantMenu(app.session, app.voice, member.user, { profile: () => popout.open(member.user, server, node, 'left'), server }) : [])}>
           <Avatar src={avatarUrl(user ?? { id: member.user }, member.avatar)} size={32} presence={offline ? undefined : presenceOf(user)} presenceLabel={m.presence[presenceOf(user)]} />
           <span class="text">
-            <span class="name" style:--role={store.roleColour(member.user, server)}>{store.displayName(member.user, server)}</span>
+            <span class="top">
+              <span class="name" style:--role={store.roleColour(member.user, server)}>{store.displayName(member.user, server)}</span>
+              <TagBadge {store} user={member.user} plain />
+            </span>
             {#if user?.statusText && !offline}<span class="sub">{user.statusText}</span>{/if}
           </span>
         </button></li>
@@ -52,4 +56,5 @@
   /* Role colours may be gradients, so they paint the text through background-clip. */
   .name[style*='--role'] { background: var(--role); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
+  .top { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 </style>

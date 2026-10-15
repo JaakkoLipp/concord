@@ -1,5 +1,6 @@
 <script lang="ts">
   /** Profile contents for the popout and the DM profile panel (client.md section 7, reference screenshots). */
+  import TagBadge from './TagBadge.svelte';
   import { Avatar } from '@concord/ui';
   import { fileUrl } from '@concord/stoat';
   import { memberKey, type Session, type Store } from '@concord/domain';
@@ -38,7 +39,7 @@
     <span class="avatar-ring"><Avatar src={preview?.avatar ?? avatarUrl(u ?? { id: user }, member?.avatar)} size={variant === 'popout' ? 80 : 80} {presence} presenceLabel={m.presence[presence]} /></span>
   </div>
   <div class="details">
-    <h2 class="display">{name}</h2>
+    <h2 class="display">{name}{#if !preview}<TagBadge {store} {user} />{/if}</h2>
     <p class="username">{u ? `${u.username}#${u.discriminator}` : ''}{#if pronouns}<span class="dot" aria-hidden="true"></span>{pronouns}{/if}</p>
     {#if u?.bot}<span class="tag">{m.conversation.bot}</span>{/if}
     {#if statusText}<p class="status">{statusText}</p>{/if}

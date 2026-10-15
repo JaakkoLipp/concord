@@ -149,6 +149,10 @@ export const en = {
     call: (by: string) => `${by} started a call.`,
     joinCall: 'Join call',
   },
+  tags: {
+    label: (tag: string, server: string) => (server ? `Server tag ${tag}, from ${server}` : `Server tag ${tag}`),
+    from: (tag: string) => `Server tag ${tag}`,
+  },
   people: {
     profile: 'Profile',
     about: 'About me',
@@ -430,6 +434,12 @@ export const en = {
     close: 'Close',
     sections: { profile: 'Profile', notifications: 'Notifications', voice: 'Voice and video' },
     gates: { serverCreator: 'Can create servers', admin: 'System admin' },
+    tag: {
+      heading: 'Server tag',
+      help: 'Wear a server’s tag next to your name everywhere. Only people in that server see it.',
+      none: 'None',
+      failed: 'Couldn’t change your tag.',
+    },
     voice: {
       voice: 'Voice',
       video: 'Video',
@@ -710,7 +720,22 @@ export const en = {
     leaveUnsavedBody: 'Your changes will be lost.',
     leaveUnsaved: 'Leave',
     writesWaiting: 'Changes are still being saved.',
-    sections: { overview: 'Overview', roles: 'Roles', emoji: 'Emoji', invites: 'Invites', members: 'Members', bans: 'Bans' },
+    sections: { overview: 'Overview', roles: 'Roles', emoji: 'Emoji', invites: 'Invites', members: 'Members', bans: 'Bans', tag: 'Server tag' },
+    tag: {
+      intro: 'A short tag members can wear next to their name everywhere, with one of this server’s emoji as its badge.',
+      tag: 'Tag',
+      tagHint: 'Up to 4 letters or digits.',
+      tagError: 'Use 1 to 4 letters or digits.',
+      badge: 'Badge',
+      noEmoji: 'Upload an emoji to this server first: the badge is one of its own.',
+      preview: 'Shows as',
+      enable: 'Enable tag',
+      save: 'Save tag',
+      disable: 'Disable tag',
+      disabled: 'The tag is off, for everyone wearing it too.',
+      saveFailed: 'Couldn’t save the tag.',
+      loadFailed: 'Couldn’t load the tag.',
+    },
     overview: {
       name: 'Server name',
       description: 'Description',

@@ -12,6 +12,7 @@
   import NotificationsSection from '$lib/notify/NotificationsSection.svelte';
   import SettingsFrame from './SettingsFrame.svelte';
   import VoiceSection from './VoiceSection.svelte';
+  import TagChooser from './TagChooser.svelte';
 
   type Section = 'profile' | 'notifications' | 'voice';
   let { session, section }: { session: Session; section: Section } = $props();
@@ -20,7 +21,7 @@
 </script>
 
 <SettingsFrame title={m.settings.title} {items} active={section} heading={m.settings.sections[section]} wide={section === 'profile'}>
-  {#if section === 'profile'}<ProfileEditor {session} />{/if}
+  {#if section === 'profile'}<ProfileEditor {session} /><TagChooser {session} />{/if}
   {#if section === 'notifications'}<NotificationsSection />{/if}
   {#if section === 'voice'}<VoiceSection />{/if}
   {#snippet footer()}
