@@ -2,7 +2,7 @@
  * A message's context menu (m4.5-plan.md task 2): quick reactions, then what the action bar offers and more,
  * and extra items for the link or image that was pressed. Every item shows only when it is allowed.
  */
-import type { Message } from '@concord/domain';
+import type { FavouriteGif, Message } from '@concord/domain';
 import type { MenuItem } from '@concord/ui';
 import { m } from '$lib/i18n/index.ts';
 import type { MessageActions } from './actions.ts';
@@ -11,6 +11,8 @@ import type { MessageActions } from './actions.ts';
 export interface MenuTarget {
   link?: string;
   image?: { src: string; original: string; name: string };
+  /** A GIF that can be starred, as its star would save it. */
+  gif?: FavouriteGif;
 }
 
 const urlOf = (s: string): URL | null => {
@@ -32,6 +34,14 @@ export function targetOf(event: Event | undefined): MenuTarget {
   if (img && original && (original.protocol === 'https:' || original.protocol === 'http:')) {
     const name = img.dataset.name ?? (decodeURIComponent(original.pathname.split('/').pop() ?? '') || 'image');
     target.image = { src: img.currentSrc || img.src, original: original.href, name };
+  }
+  const holder = el?.closest<HTMLElement>('[data-gif]');
+  if (holder?.dataset.gif) {
+    try {
+      target.gif = JSON.parse(holder.dataset.gif) as FavouriteGif;
+    } catch {
+      // Not ours: no item.
+    }
   }
   return target;
 }
@@ -70,7 +80,11 @@ export function messageMenu(msg: Message, a: MessageActions, o: Options): MenuIt
   if (msg.content) main.push({ label: m.actions.copyText, onselect: () => a.copyText(msg) });
   main.push({ label: m.actions.copyLink, onselect: () => a.copyLink(msg) }, { label: m.actions.copyId, onselect: () => a.copyId(msg) });
   groups.push(main);
-  const { link, image } = o.target;
+  const { link, image, gif } = o.target;
+  if (gif) {
+    const on = a.isFavouriteGif(gif.url);
+    groups.push([{ label: on ? m.gifs.unfavourite : m.gifs.favourite, onselect: () => a.toggleFavouriteGif(gif) }]);
+  }
   if (link) groups.push([{ label: m.actions.openLink, onselect: () => a.openUrl(link) }, { label: m.actions.copyUrl, onselect: () => a.copyUrl(link) }]);
   if (image) {
     groups.push([

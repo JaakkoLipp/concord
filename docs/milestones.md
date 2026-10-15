@@ -196,7 +196,7 @@ Added on 2026-10-15 at Jaakko's request. Designed in architecture section 11, pl
 
 ## M4.5: Menus, GIFs and quick voice controls
 
-Added on 2026-10-15 at Jaakko's request, from Discord screenshots. Small, client-only work on what M2 and M4 built. Plan: [m4.5-plan.md](m4.5-plan.md), signed off on 2026-10-15. **Tasks 1 to 6 and 8 to 10 built and on production the same day**: [m4.5-results.md](m4.5-results.md). Task 7, the GIF picker, waits for Jaakko's choice of provider.
+Added on 2026-10-15 at Jaakko's request, from Discord screenshots. Small, client-only work on what M2 and M4 built. Plan: [m4.5-plan.md](m4.5-plan.md), signed off on 2026-10-15. **Tasks 1 to 6 and 8 to 10 built and on production the same day**: [m4.5-results.md](m4.5-results.md). Task 7 became favourite GIFs without search, at Jaakko's choice, built the same day.
 
 **Scope**:
 - **Message menu on right-click**, as Discord's:

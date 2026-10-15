@@ -3,6 +3,8 @@
    * The composer (client.md section 6.3). The editor loads lazily; until then, and when this account can't
    * send here, the box is drawn at its real size. Each channel keeps its own draft while the tab is open.
    */
+  import ImagePlay from '@lucide/svelte/icons/image-play';
+  import GifPicker from '$lib/composer/GifPicker.svelte';
   import { untrack } from 'svelte';
   import Plus from '@lucide/svelte/icons/plus';
   import AtSign from '@lucide/svelte/icons/at-sign';
@@ -14,7 +16,7 @@
   import SendHorizontal from '@lucide/svelte/icons/send-horizontal';
   import Smile from '@lucide/svelte/icons/smile';
   import { IconButton } from '@concord/ui';
-  import { Permission, has, type Channel, type Session } from '@concord/domain';
+  import { Permission, has, type Channel, type FavouriteGif, type Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
   import { COUNTER_FROM, byteLength, outgoing, serialise } from '$lib/composer/text.ts';
   import type { ComposerEditor, ListKey, Query } from '$lib/composer/editor.ts';
@@ -144,6 +146,16 @@
 
   // The emoji picker inserts at the caret: Unicode as itself, custom emoji as a token (client.md section 6.4).
   let emojiButton = $state<HTMLElement | null>(null);
+  // Favourite GIFs (m4.5 follow-up): picking one sends its link at once, as a reply when replying, as on Discord.
+  let gifButton = $state<HTMLElement | null>(null);
+  let gifsOpen = $state(false);
+  function sendGif(gif: FavouriteGif) {
+    gifsOpen = false;
+    if (!channel || block) return;
+    void session.send(channel.id, gif.url, reply ? [reply] : []);
+    compose.clearReply(channel.id);
+    editor?.focus();
+  }
   function openPicker() {
     if (!emojiButton || !editor) return;
     picker.open(emojiButton, 'insert', (e) => editor?.insert(e.kind === 'custom' ? serialise.emoji(e.value) : e.value));
@@ -241,6 +253,7 @@
     {#if left <= COUNTER_FROM}
       <span class="counter" class:over={left < 0} aria-label={m.composer.bytesLeftLabel(left)}>{left}</span>
     {/if}
+    <span class="side" bind:this={gifButton}><IconButton label={m.gifs.button} disabled={!editor} active={gifsOpen} aria-haspopup="dialog" aria-expanded={gifsOpen} onclick={() => (gifsOpen = !gifsOpen)}><ImagePlay size={22} /></IconButton></span>
     <span class="side" bind:this={emojiButton}><IconButton label={m.composer.emoji} disabled={!editor} active={!!picker.request && picker.request.anchor === emojiButton} onclick={openPicker}><Smile size={22} /></IconButton></span>
     {#if touch}
       <span class="side">
@@ -251,6 +264,7 @@
     {/if}
   </div>
   {#if channel}<TypingIndicator {store} channel={channel.id} {server} />{/if}
+  <GifPicker {store} anchor={gifButton} open={gifsOpen} onclose={() => (gifsOpen = false)} onpick={sendGif} />
   </div>
 {/if}
 

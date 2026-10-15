@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { Embed } from '@concord/domain';
+  import type { Embed, FavouriteGif } from '@concord/domain';
+  import GifStar from './GifStar.svelte';
   import { fileUrl } from '@concord/stoat';
   import Play from '@lucide/svelte/icons/play';
   import Markdown from '$lib/markdown/Markdown.svelte';
@@ -16,27 +17,52 @@
   const gif = $derived(embed.kind === 'website' && embed.special?.type === 'other' && embed.special.name === 'GIF' ? (embed.video ?? embed.image) : undefined);
   // GIFs play by themselves, as on Discord, unless the system asks for reduced motion: then they wait for a click.
   const still = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Favourite GIFs (m4.5 follow-up): what a star saves. The link is what gets sent again; the media shows it.
+  const websiteGif = $derived.by((): FavouriteGif | undefined => {
+    const url = safe(embed.url);
+    const media = gif && embed.kind === 'website' ? (embed.video ?? gif) : undefined;
+    const src = safe(media?.url);
+    return url && media && src ? { url, src, video: !!(embed.kind === 'website' && embed.video), width: media.width, height: media.height } : undefined;
+  });
+  /** An image linked straight, which is a GIF by its address, such as media.giphy.com/…/giphy.gif. */
+  function imageGif(url: string, width: number, height: number): FavouriteGif | undefined {
+    const web = safe(url);
+    if (!web) return undefined;
+    try {
+      return /\.gif$/i.test(new URL(web).pathname) ? { url: web, src: web, video: false, width, height } : undefined;
+    } catch {
+      return undefined;
+    }
+  }
 </script>
 
 {#if embed.kind === 'image'}
   {@const size = fit(embed.width, embed.height, 400, 300)}
-  <button class="media" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.viewImage('')}
-    onclick={() => viewer.open({ src: proxied(embed.url), alt: '', width: embed.width, height: embed.height, original: safe(embed.url) })}>
-    <img src={proxied(embed.url)} data-original={embed.url} alt="" loading="lazy" decoding="async" />
-  </button>
+  {@const fav = imageGif(embed.url, embed.width, embed.height)}
+  <!-- A GIF linked straight can be starred: the star sits beside the button, which can't hold another. -->
+  <span class="frame" class:has-star={!!fav} style:width="{size.width}px" data-gif={fav ? JSON.stringify(fav) : undefined}>
+    <button class="media" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.viewImage('')}
+      onclick={() => viewer.open({ src: proxied(embed.url), alt: '', width: embed.width, height: embed.height, original: safe(embed.url) })}>
+      <img src={proxied(embed.url)} data-original={embed.url} alt="" loading="lazy" decoding="async" />
+    </button>
+    {#if fav}<GifStar gif={fav} />{/if}
+  </span>
 {:else if embed.kind === 'video'}
   {@const size = fit(embed.width, embed.height, 400, 300)}
   <!-- svelte-ignore a11y_media_has_caption -->
   <video class="media" controls preload="metadata" src={proxied(embed.url)} width={size.width} style:aspect-ratio="{size.width} / {size.height}"></video>
 {:else if gif && embed.kind === 'website'}
   {@const size = fit(gif.width, gif.height, 400, 300)}
-  <div class="media gif" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}">
+  {@const fav = websiteGif}
+  <div class="media gif" class:has-star={!!fav} style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" data-gif={fav ? JSON.stringify(fav) : undefined}>
     {#if embed.video}
       <video src={proxied(embed.video.url)} autoplay={!still} controls={still} loop muted playsinline aria-label={embed.title ?? m.conversation.gif}></video>
     {:else}
       <img src={proxied(gif.url)} data-original={gif.url} alt={embed.title ?? m.conversation.gif} loading="lazy" decoding="async" />
     {/if}
     <span class="badge" aria-hidden="true">{m.conversation.gif}</span>
+    {#if fav}<GifStar gif={fav} />{/if}
   </div>
 {:else}
   <article class="card" style:--embed={colour}>
@@ -98,6 +124,7 @@
   .play { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; filter: drop-shadow(0 1px 4px #000); }
   video.media { cursor: auto; background: #000; }
   .gif { cursor: auto; }
+  .frame { position: relative; display: block; max-width: 100%; }
   .gif video, .gif img { display: block; width: 100%; height: 100%; object-fit: cover; }
   .badge {
     position: absolute; top: var(--space-3); left: var(--space-3); padding: var(--space-1) var(--space-3); border-radius: var(--radius-xs);

@@ -44,6 +44,18 @@ export interface PendingFile {
 
 
 /** Emoji favourites and use counts, keyed by the Unicode emoji or a custom emoji's ID (client.md section 6.4). */
+/**
+ * A favourite GIF (m4.5 follow-up): the link that is sent, which Stoat's January embeds as the GIF, and the
+ * media to show it with in the picker, through January too.
+ */
+export interface FavouriteGif {
+  url: string;
+  src: string;
+  video: boolean;
+  width: number;
+  height: number;
+}
+
 export interface EmojiPrefs {
   favourites: string[];
   usage: Record<string, number>;
@@ -82,6 +94,8 @@ export class Store {
   /** A clock the session moves on, so timed mutes end on their own. */
   now = $state(Date.now());
   emojiPrefs = $state<EmojiPrefs>({ favourites: [], usage: {} });
+  /** Favourite GIFs, newest first, synced through Stoat's settings as `concord:gifs`. */
+  favouriteGifs = $state<FavouriteGif[]>([]);
   /** DMs this account closed, with the newest message at the time (m2b-plan.md decision 3). */
   closedDms = $state<Record<Id, Id>>({});
   /** The status this account chose in the menu, from `concord:status` (m2b-plan.md decision 2). */
@@ -267,7 +281,12 @@ export class Store {
       case 'messageCreate': {
         if (e.user) this.absorbAuthor(e.user);
         if (e.member) this.upsertMembers([e.member]);
-        const m = e.message;
+        // The same message can come twice: from the socket and as our own send's response. Its link previews and
+        // reactions arrive as later events, which a late send response, which has neither, mustn't undo.
+        const prev = this.messages.get(e.message.id);
+        const m = prev && prev.edited === e.message.edited
+          ? { ...e.message, embeds: prev.embeds.length ? prev.embeds : e.message.embeds, reactions: prev.reactions }
+          : e.message;
         this.messages.set(m.id, m);
         this.settle(m);
         const c = this.channels.get(m.channel);
@@ -287,7 +306,10 @@ export class Store {
       }
       case 'messageAppend': {
         const m = this.messages.get(e.id);
-        if (m) this.messages.set(e.id, { ...m, embeds: [...m.embeds, ...e.embeds] });
+        // An append seen twice, as after a reconnect replays it, adds its previews once.
+        const known = new Set(m?.embeds.map((x) => JSON.stringify(x)));
+        const fresh = e.embeds.filter((x) => !known.has(JSON.stringify(x)));
+        if (m && fresh.length) this.messages.set(e.id, { ...m, embeds: [...m.embeds, ...fresh] });
         return;
       }
       case 'messageDelete':
@@ -723,6 +745,7 @@ export class Store {
     this.deleted.clear();
     this.settings = { notifications: emptyNotifications(), serverOrder: [] };
     this.emojiPrefs = { favourites: [], usage: {} };
+    this.favouriteGifs = [];
     this.closedDms = {};
     this.chosenStatus = null;
   }

@@ -8,7 +8,7 @@ import { SelfQueue } from './selfqueue.ts';
 import { ServerAdmin } from './admin.svelte.ts';
 import { ACTIVE_KEY, IdleTracker } from './idle.ts';
 import { BackendError } from './errors.ts';
-import { Store, memberKey, newer, type EmojiPrefs, type PendingMessage, type Settings } from './store/store.svelte.ts';
+import { Store, memberKey, newer, type EmojiPrefs, type FavouriteGif, type PendingMessage, type Settings } from './store/store.svelte.ts';
 import { parseNotifications, writeNotifications, type NotificationLevel, type NotificationSettings } from './notify.ts';
 import { HOLD_MS, Latest } from './latest.ts';
 import { ulid, ulidTime } from './ulid.ts';
@@ -71,6 +71,27 @@ export function parseClosedDms(raw: string | undefined): Record<Id, Id> {
 export const STATUS_KEY = 'concord:status';
 const PRESENCES: Presence[] = ['Online', 'Idle', 'Focus', 'Busy', 'Invisible'];
 export const parseStatus = (raw: string | undefined): Presence | null => (PRESENCES.includes(raw as Presence) ? (raw as Presence) : null);
+
+/** Synced-settings key for favourite GIFs (m4.5 follow-up). */
+export const GIFS_KEY = 'concord:gifs';
+/** Favourite GIFs kept: the newest this many, to keep the synced setting small. */
+export const GIFS_KEPT = 100;
+
+/** Only web addresses, kept to a sane length: the list comes from synced settings any device may have written. */
+const webUrl = (s: unknown): s is string => typeof s === 'string' && s.length <= 2_000 && /^https?:\/\//i.test(s);
+
+export function parseFavouriteGifs(raw: string | undefined): FavouriteGif[] {
+  try {
+    const v = JSON.parse(raw ?? '[]') as unknown;
+    if (!Array.isArray(v)) return [];
+    return v.filter((g): g is FavouriteGif => !!g && typeof g === 'object' && webUrl(g.url) && webUrl(g.src)
+      && typeof g.video === 'boolean' && Number.isFinite(g.width) && Number.isFinite(g.height))
+      .map((g) => ({ url: g.url, src: g.src, video: g.video, width: g.width, height: g.height }))
+      .slice(0, GIFS_KEPT);
+  } catch {
+    return [];
+  }
+}
 
 /** Use counts kept for at most this many emoji, the most used. */
 const USAGE_KEPT = 60;
@@ -202,7 +223,7 @@ export class Session {
   /** After Ready: settings, the open server's members, and fresh history for the open channel. */
   private async coldStart(): Promise<void> {
     const fetchedAt = Date.now();
-    const fetched = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY]).catch(() => null);
+    const fetched = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY, GIFS_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY]).catch(() => null);
     // A failed fetch keeps what this session has, rather than resetting the chosen status or favourites.
     if (!fetched) return this.coldStartRest();
     const settings: Record<string, { value: string }> = fetched;
@@ -213,6 +234,7 @@ export class Session {
     this.rawSettings = { ...this.rawSettings, ...settings };
     this.store.settings = parseSettings(this.rawSettings);
     if (this.emojiChangedAt < fetchedAt) this.store.emojiPrefs = parseEmojiPrefs(settings[EMOJI_KEY]?.value);
+    if (this.gifsChangedAt < fetchedAt) this.store.favouriteGifs = parseFavouriteGifs(settings[GIFS_KEY]?.value);
     await this.coldStartRest();
   }
 
@@ -482,6 +504,20 @@ export class Session {
     this.saveEmojiPrefs();
   }
 
+  /** Adds a GIF to the favourites, newest first, or removes it if it's there. */
+  toggleFavouriteGif(gif: FavouriteGif): void {
+    const list = this.store.favouriteGifs;
+    this.store.favouriteGifs = list.some((g) => g.url === gif.url) ? list.filter((g) => g.url !== gif.url) : [gif, ...list].slice(0, GIFS_KEPT);
+    this.gifsChangedAt = Date.now();
+    if (this.gifsSave) clearTimeout(this.gifsSave);
+    this.gifsSave = setTimeout(() => {
+      this.gifsSave = null;
+      void this.backend.setSettings({ [GIFS_KEY]: JSON.stringify(this.store.favouriteGifs) }).catch(() => {});
+    }, 2_000);
+  }
+  private gifsChangedAt = 0;
+  private gifsSave: ReturnType<typeof setTimeout> | null = null;
+
   private saveEmojiPrefs(): void {
     this.emojiChangedAt = Date.now();
     if (this.emojiSave) clearTimeout(this.emojiSave);
@@ -672,6 +708,7 @@ export class Session {
       this.store.settings = next;
     }
     if (values[EMOJI_KEY] && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(values[EMOJI_KEY].value);
+    if (values[GIFS_KEY] && !this.gifsSave) this.store.favouriteGifs = parseFavouriteGifs(values[GIFS_KEY].value);
     if (values[CLOSED_DMS_KEY] && !this.closedSaving) this.store.closedDms = parseClosedDms(values[CLOSED_DMS_KEY].value);
     if (values[STATUS_KEY] && !this.statusSaving) this.store.chosenStatus = parseStatus(values[STATUS_KEY].value);
     // Another device was used, or this one's own write came back: either way, someone is here.

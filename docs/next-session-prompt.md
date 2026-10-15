@@ -22,12 +22,11 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
   - the January pull request text,
   - server tags, the layer's first feature.
 
-  **Left: task 7, the GIF picker**, waiting for Jaakko's choice. The results' task 7 section has the options; the recommendation is KLIPY straight from the browser.
+  - favourite GIFs without search, Jaakko's choice for task 7: a star on GIFs in chat, and a GIF button in the composer.
 
 **This session's job:**
 1. **Jaakko's review** of M4.4 and M4.5 on production, and of M4.1 and M4.2 if not given yet.
-2. **Task 7 of M4.5** once Jaakko has chosen a GIF provider.
-3. **Then the next milestone** in `docs/milestones.md`, planned first, or the admin panel's plan if Jaakko wants it sooner (below).
+2. **Then the next milestone** in `docs/milestones.md`, planned first, or the admin panel's plan if Jaakko wants it sooner (below).
 
 ## How to work
 
@@ -41,7 +40,7 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
   - Deploys to `/app` are fine. `deploy:web` runs `routes.ts` afterwards.
 - **Commit and push at the end of each finished task**, after `pnpm verify`, run right before the commit.
 - **Testing stays light**: unit tests for the risky core, and scripted live checks in `tools/live/src/`.
-  - M4 is covered by `voice`, `callview`, `dm-call`, `share` and `voice-restart`, M4.4 by `layer`, and M4.5 by `menus`, `server-read`, `voice-controls`, `voice-channel` and `tags`.
+  - M4 is covered by `voice`, `callview`, `dm-call`, `share` and `voice-restart`, M4.4 by `layer`, and M4.5 by `menus`, `server-read`, `voice-controls`, `voice-channel`, `tags` and `gifs`.
   - The call checks play `media.ts`'s speech-like fake microphone, which Chromium's audio processing still learns to filter within a minute or so, so keep each call check short. New ones share `calls.ts`.
 - **The layer**: a new table is a new numbered file in `apps/web/src/lib/server/layer/migrations/`, imported by name in `migrations.ts`. A unit test fails if one is missing. Every endpoint goes through `endpoint()` in `http.ts`.
 - **Sonnet subagents** (`model: "sonnet"`) do research, the challenger review of each plan, and the review of the session's diff before handing over. Keep synthesis and final writing in the main session. Never run scripts or build tools inside downloaded clones.
@@ -59,11 +58,10 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 
 **Reviews on production**:
 - M4.4: the settings sidebar shows "Can create servers · System admin".
-- M4.5: right-click menus, Mark unread, the dock's chevrons, Watch stream, the user limit, and server tags in server settings and profile settings.
+- M4.5: right-click menus, Mark unread, the dock's chevrons and the keybinds in voice settings, Watch stream, the user limit, server tags in server settings and profile settings, and favourite GIFs.
 - M4.1 and M4.2 if not reviewed yet: the feel with reduced motion on and off, and one Chrome performance recording including the emoji picker's first open.
 
 **Decisions:**
-- **GIFs**: KLIPY from the browser (recommended), asking a provider to approve our proxy, or no picker. See m4.5-results.md task 7.
 - **The admin panel**: Jaakko wants it to do, as a GUI in the web client, what they do over SSH during the beta, with its scope kept small. Some of those tasks need root or Docker, which the layer must never have: changing server creators restarts `api`, restarting LiveKit, and creating accounts by email. The recommendation is a small root-side runner on the VPS that does only a fixed list of actions the panel requests. Its plan, in another session's worktree (`.claude/worktrees/concord-admin-panel-9b4095/docs/admin-panel-plan.md`, uncommitted), predates the layer and reads MongoDB directly; it should move onto `/app/api/v1/admin/*` and the layer's admin gate.
 - **The browser tab icon** is white on transparent, as asked, and may be faint on light tab bars.
 

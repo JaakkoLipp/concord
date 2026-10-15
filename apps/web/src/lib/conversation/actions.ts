@@ -1,4 +1,4 @@
-import type { Message } from '@concord/domain';
+import type { FavouriteGif, Message } from '@concord/domain';
 
 /** What this account may do in the channel, and the handlers the list provides (m2a-plan.md task 3). */
 export interface MessageActions {
@@ -15,4 +15,5 @@ export interface MessageActions {
   markUnread(m: Message): void; copyText(m: Message): void;
   openUrl(url: string): void; copyUrl(url: string): void;
   copyImage(src: string): void; saveImage(src: string, name: string): void;
+  isFavouriteGif(url: string): boolean; toggleFavouriteGif(gif: FavouriteGif): void;
 }

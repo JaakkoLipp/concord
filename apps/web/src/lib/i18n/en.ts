@@ -149,6 +149,15 @@ export const en = {
     call: (by: string) => `${by} started a call.`,
     joinCall: 'Join call',
   },
+  gifs: {
+    button: 'GIFs',
+    picker: 'Favourite GIFs',
+    favourite: 'Add to favourite GIFs',
+    unfavourite: 'Remove from favourite GIFs',
+    empty: 'Star a GIF in chat to keep it here. Hover over one and click its star.',
+    send: 'Send this GIF',
+    unavailable: 'No longer available',
+  },
   tags: {
     label: (tag: string, server: string) => (server ? `Server tag ${tag}, from ${server}` : `Server tag ${tag}`),
     from: (tag: string) => `Server tag ${tag}`,

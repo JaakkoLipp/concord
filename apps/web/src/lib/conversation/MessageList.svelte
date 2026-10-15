@@ -123,6 +123,8 @@
     copyText: (msg) => void copy(msg.content ?? ''),
     openUrl: (url) => void window.open(url, '_blank', 'noopener,noreferrer'),
     copyUrl: (url) => void copy(url),
+    isFavouriteGif: (url) => store.favouriteGifs.some((g) => g.url === url),
+    toggleFavouriteGif: (gif) => session.toggleFavouriteGif(gif),
     copyImage: (src) => void copyImage(src).then(() => toasts.show(m.actions.copied, 'info'), () => toasts.show(m.actions.copyImageFailed)),
     saveImage: (src, name) => void saveImage(src, name).catch(() => toasts.show(m.actions.saveImageFailed)),
   });
