@@ -399,6 +399,8 @@ export class StoatBackend implements Backend {
       ...(change.name !== undefined ? { name: change.name } : {}),
       ...(change.description !== undefined ? { description: change.description } : {}),
       ...(change.remove?.length ? { remove: change.remove.map(() => 'Description') } : {}),
+      // Never removed: in Stoat 0.15 the voice field is what makes a channel a voice channel (m4.5-results.md).
+      ...(change.maxUsers !== undefined ? { voice: { max_users: change.maxUsers } } : {}),
     };
     await this.rest.request('PATCH', `/channels/${channel}`, body);
   }

@@ -164,6 +164,8 @@ export interface ChannelEdit {
   name?: string;
   description?: string;
   remove?: 'description'[];
+  /** A voice channel's user limit, null for none. Only for voice channels: it keeps the channel one. */
+  maxUsers?: number | null;
 }
 
 export interface Capabilities {

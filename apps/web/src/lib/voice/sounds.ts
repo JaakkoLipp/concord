@@ -1,7 +1,9 @@
 /**
  * Voice sounds (client.md section 10.2, m4-plan.md decision 10): short tones generated with Web Audio, so
- * there are no files to license. Proper sounds can come in M7's polish.
+ * there are no files to license. Proper sounds can come in M7's polish. They play through the chosen speaker,
+ * where the browser can choose one, at the chosen output volume (m4.5-plan.md task 8).
  */
+import { loadVoiceSettings, onVoiceSettings } from './settings.ts';
 
 export type Sound = 'join' | 'leave' | 'mute' | 'unmute' | 'deafen' | 'undeafen' | 'peerJoin' | 'peerLeave';
 
@@ -24,10 +26,24 @@ const RING_EVERY_MS = 2_000;
 const LEVEL = 0.12;
 
 let context: AudioContext | null = null;
+/** The speaker the context plays to, as last set: '' for the system default. */
+let sink = '';
+
+/** Chromium's AudioContext can play to a chosen speaker; elsewhere sounds use the default. */
+type SinkContext = AudioContext & { setSinkId?: (id: string) => Promise<void> };
+function useSpeaker(ctx: SinkContext, device: string): void {
+  if (device === sink || !ctx.setSinkId) return;
+  sink = device;
+  void ctx.setSinkId(device).catch(() => (sink = ''));
+}
 
 function audio(): AudioContext | null {
   try {
-    context ??= new AudioContext();
+    if (!context) {
+      context = new AudioContext();
+      onVoiceSettings((s) => { if (context) useSpeaker(context, s.outputDevice); });
+    }
+    useSpeaker(context, loadVoiceSettings().outputDevice);
     if (context.state === 'suspended') void context.resume();
     return context;
   } catch {
@@ -35,10 +51,15 @@ function audio(): AudioContext | null {
   }
 }
 
+/** The tones' level, scaled by the output volume. */
+const level = () => LEVEL * (loadVoiceSettings().outputVolume / 100);
+
 function playNotes(notes: Note[]): void {
   const ctx = audio();
   if (!ctx) return;
   const start = ctx.currentTime + 0.01;
+  const peak = level();
+  if (peak <= 0) return;
   for (const [hz, at, length] of notes) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -46,7 +67,7 @@ function playNotes(notes: Note[]): void {
     osc.frequency.value = hz;
     // A quick attack and an exponential fade, so the tones don't click.
     gain.gain.setValueAtTime(0.0001, start + at);
-    gain.gain.exponentialRampToValueAtTime(LEVEL, start + at + 0.01);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), start + at + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + at + length);
     osc.connect(gain).connect(ctx.destination);
     osc.start(start + at);

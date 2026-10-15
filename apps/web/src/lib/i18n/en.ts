@@ -778,6 +778,9 @@ export const en = {
       name: 'Channel name',
       description: 'Description',
       descriptionHint: 'Shown in the channel header. Up to 1024 characters.',
+      limit: 'User limit',
+      limitHint: 'How many can be in the voice channel at once. 0 means no limit.',
+      limitError: 'Use a number from 0 to 99.',
     },
     roles: {
       title: 'Roles',

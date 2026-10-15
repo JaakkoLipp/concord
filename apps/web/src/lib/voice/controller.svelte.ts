@@ -5,6 +5,7 @@
  * Only `./call.ts` imports livekit-client at runtime, and it is loaded with `import()` on the first join, so
  * the SDK stays out of the main bundle. Everything here imports it as types only.
  */
+import { untrack } from 'svelte';
 import { Permission, has, isFinalJoinFailure, joinFailure, type Id, type JoinFailure, type Session } from '@concord/domain';
 import { permissionsIn } from '$lib/view/channels.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
@@ -82,7 +83,17 @@ export class VoiceController {
 
   constructor(session: Session) {
     this.session = session;
+    // Speak gained or lost mid-call, by a role or an override: the call publishes the microphone once allowed.
+    this.stopWatching = $effect.root(() => {
+      $effect(() => {
+        const channel = this.state.channel;
+        const c = channel ? this.session.store.channels.get(channel) : undefined;
+        const can = !c || has(permissionsIn(this.session.store, c), Permission.Speak);
+        untrack(() => this.call?.setCanSpeak(can));
+      });
+    });
   }
+  private readonly stopWatching: () => void;
 
   /** Join a channel's call, or switch to it. Joining the call already joined does nothing. */
   join(channel: Id): void {
@@ -195,6 +206,7 @@ export class VoiceController {
   /** The session is ending. */
   destroy(): void {
     this.leave();
+    this.stopWatching();
   }
 
   private selfState(): { joinedAt: number } | null {

@@ -96,6 +96,11 @@ export interface Call {
   /** A volume by key: a user's ID for their voice, `streamVolumeKey` for their stream's audio. */
   setVolume(key: string, volume: number): void;
   setMutedForMe(user: string, muted: boolean): void;
+  /**
+   * Stoat's Speak permission in the channel changed. Gaining it publishes the microphone as soon as LiveKit's
+   * permissions for this participant allow it too, without a rejoin (m4.5-plan.md task 8).
+   */
+  setCanSpeak(on: boolean): void;
   setPushToTalk(down: boolean): void;
   /** Publishes the camera, fitted into the tier, or stops it. */
   setCamera(on: boolean, limit: VideoLimit | null): Promise<void>;
@@ -377,7 +382,23 @@ export async function connect(url: string, token: string, options: CallOptions, 
   emitFeeds();
   void room.startAudio().catch(() => {});
   statsTimer = setInterval(() => void readStats(), STATS_EVERY_MS);
-  if (options.canSpeak) void publishMic();
+  let canSpeak = options.canSpeak;
+  /** Whether LiveKit lets this participant publish a microphone: its token's grant, as updated since. */
+  const livekitAllowsMic = () => {
+    const p = room.localParticipant.permissions;
+    return !p || (p.canPublish && (p.canPublishSources.length === 0 || p.canPublishSources.includes(Track.sourceToProto(Track.Source.Microphone))));
+  };
+  let micStarting = false;
+  const publishIfAllowed = () => {
+    if (canSpeak && !mic && !micStarting && room.state === 'connected' && livekitAllowsMic()) {
+      micStarting = true;
+      void publishMic().finally(() => (micStarting = false));
+    }
+  };
+  room.on(RoomEvent.ParticipantPermissionsChanged, (_before, p?: Participant) => {
+    if (!p || p === room.localParticipant) publishIfAllowed();
+  });
+  if (canSpeak) void publishMic();
 
   async function publishMic() {
     try {
@@ -435,6 +456,10 @@ export async function connect(url: string, token: string, options: CallOptions, 
       volumes.set(key, volume);
       const p = room.remoteParticipants.get(userOfVolumeKey(key));
       if (p) applyVolume(p);
+    },
+    setCanSpeak(on) {
+      canSpeak = on;
+      publishIfAllowed();
     },
     setMutedForMe(user, on) {
       if (on) mutedForMe.add(user);

@@ -10,81 +10,20 @@
  *   reload, and a stream tile's menu would offer its own volume (covered by share.ts' tiles, not here).
  * Usage: node tools/live/src/voice-controls.ts [screenshot-dir]
  */
-import type { Browser, Page, Request } from 'playwright-core';
-import { chromium } from 'playwright-core';
-import { loadState } from '../../seed/src/config.ts';
+import type { Page } from 'playwright-core';
 import { assertDevStack } from '../../seed/src/vps.ts';
-import { APP, watch } from './browser.ts';
-import { signIn } from './login.ts';
-import { fakeMediaArgs } from './media.ts';
+import { dock, inChannel, join as joinChannel, passes, seat as newSeat, sending, voiceBrowser, type Seat } from './calls.ts';
 
 // Joins calls as seeded personas: never against production.
 await assertDevStack();
-const st = loadState()!;
 const out = process.argv[2];
 const failures: string[] = [];
 const check = (ok: boolean, what: string) => { console.log(`${ok ? 'ok  ' : 'FAIL'} ${what}`); if (!ok) failures.push(what); };
-const passes = (p: Promise<unknown>) => p.then(() => true, () => false);
-
-const browser: Browser = await chromium.launch({
-  headless: true,
-  args: [...fakeMediaArgs(), '--autoplay-policy=no-user-gesture-required'],
-});
-
-interface Seat { page: Page; joins: number; problems: ReturnType<typeof watch>; rnnoise: string[] }
-let seatCount = 0;
-/** Voice settings stored on the device before the client starts (apps/web/src/lib/voice/settings.ts). */
-async function seat(handle: string, voice?: Record<string, unknown>): Promise<Seat> {
-  const seatNo = seatCount++;
-  const context = await browser.newContext({ viewport: { width: 1400, height: 900 }, permissions: ['microphone'] });
-  if (voice) await context.addInitScript((v) => localStorage.setItem('concord:voice', JSON.stringify({ settings: v })), voice);
-  // Every peer connection, for the bytes the microphone sends.
-  await context.addInitScript(() => {
-    const Original = window.RTCPeerConnection;
-    const all: RTCPeerConnection[] = ((window as unknown as { __pcs: RTCPeerConnection[] }).__pcs = []);
-    window.RTCPeerConnection = function (...args: ConstructorParameters<typeof RTCPeerConnection>) {
-      const pc = new Original(...args);
-      all.push(pc);
-      return pc;
-    } as unknown as typeof RTCPeerConnection;
-    window.RTCPeerConnection.prototype = Original.prototype;
-  });
-  const page = await context.newPage();
-  const s: Seat = { page, joins: 0, problems: watch(page), rnnoise: [] };
-  page.on('response', (r) => { if (/rnnoise.*\.wasm/.test(r.url())) s.rnnoise.push(String(r.status())); });
-  page.on('request', (r: Request) => { if (r.method() === 'POST' && r.url().endsWith('/join_call')) s.joins++; });
-  if (process.env.VOICE_LOG) page.on('console', (m) => console.error(`[${handle}${seatNo}] ${m.type()} ${m.text().slice(0, 300)}`));
-  await signIn(page, handle);
-  await page.goto(`${APP}/channels/${st.serverId}/${st.channels.pelit}`);
-  return s;
-}
-/** The dock and the voice panel: the call view repeats their buttons. */
-const dock = (p: Page) => p.getByRole('region', { name: 'Your account' }).or(p.locator('section[aria-label="Voice call"]'));
-const list = (p: Page) => p.getByRole('list', { name: 'In Pelaamo' });
+const browser = await voiceBrowser();
+const seat = (handle: string, voice?: Record<string, unknown>) => newSeat(browser, handle, voice);
+const list = (p: Page) => inChannel(p, 'Pelaamo');
 const row = (p: Page, name: RegExp) => list(p).getByRole('button', { name });
-async function join(s: Seat) {
-  await s.page.getByRole('link', { name: /^Pelaamo/ }).click();
-  const ok = await passes(s.page.getByText('Voice connected').waitFor({ timeout: 20_000 }));
-  if (!ok) {
-    const panel = await s.page.locator('section[aria-label="Voice call"]').innerText().catch(() => '(no panel)');
-    const toasts = await s.page.getByRole('status').allInnerTexts().catch(() => []);
-    throw new Error(`no "Voice connected" in 20 s; panel: ${JSON.stringify(panel)}; status: ${JSON.stringify(toasts)}; join_call: ${s.joins}`);
-  }
-}
-/** Audio bytes this page sends per second, over two seconds. */
-async function sending(p: Page): Promise<number> {
-  const total = () => p.evaluate(async () => {
-    let bytes = 0;
-    for (const pc of (window as unknown as { __pcs: RTCPeerConnection[] }).__pcs) {
-      if (pc.connectionState === 'closed') continue;
-      (await pc.getStats()).forEach((v: { type: string; kind?: string; bytesSent?: number }) => { if (v.type === 'outbound-rtp' && v.kind === 'audio') bytes += v.bytesSent ?? 0; });
-    }
-    return bytes;
-  });
-  const before = await total();
-  await p.waitForTimeout(2_000);
-  return Math.round(((await total()) - before) / 2);
-}
+const join = (s: Seat) => joinChannel(s, 'Pelaamo');
 const shot = async (p: Page, name: string) => { if (out) await p.screenshot({ path: `${out}/voice-controls-${name}.png` }); };
 
 const seats: Seat[] = [];
