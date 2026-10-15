@@ -316,7 +316,7 @@
 
 <style>
   .scroller { flex: 1; min-height: 0; overflow-y: auto; overflow-anchor: none; }
-  .content { display: flex; flex-direction: column; min-height: 100%; justify-content: flex-end; padding-bottom: var(--space-5); }
+  .content { display: flex; flex-direction: column; min-height: 100%; justify-content: flex-end; padding-bottom: var(--space-7); }
   .start { padding: var(--space-8) var(--space-5) var(--space-5); }
   .start h2 { margin: 0 0 var(--space-2); color: var(--text-strong); font: 700 var(--text-xl) var(--font-sans); }
   .start p { margin: 0; color: var(--text-secondary); }

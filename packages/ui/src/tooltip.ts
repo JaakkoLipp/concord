@@ -60,10 +60,11 @@ export function tooltip(node: HTMLElement, text: string | undefined) {
       el.style.scale = SMALL;
     }
   };
-  const enter = () => show(400);
+  // A mouse only: a tap's compatibility events would leave a tooltip up on a phone.
+  const enter = (e: PointerEvent) => { if (e.pointerType === 'mouse') show(400); };
   const focus = () => { if (node.matches(':focus-visible')) show(0); };
-  node.addEventListener('mouseenter', enter);
-  node.addEventListener('mouseleave', hide);
+  node.addEventListener('pointerenter', enter);
+  node.addEventListener('pointerleave', hide);
   node.addEventListener('focus', focus);
   node.addEventListener('blur', hide);
   node.addEventListener('pointerdown', hide);
@@ -71,8 +72,8 @@ export function tooltip(node: HTMLElement, text: string | undefined) {
     update(next: string | undefined) { current = next; },
     destroy() {
       hide();
-      node.removeEventListener('mouseenter', enter);
-      node.removeEventListener('mouseleave', hide);
+      node.removeEventListener('pointerenter', enter);
+      node.removeEventListener('pointerleave', hide);
       node.removeEventListener('focus', focus);
       node.removeEventListener('blur', hide);
       node.removeEventListener('pointerdown', hide);

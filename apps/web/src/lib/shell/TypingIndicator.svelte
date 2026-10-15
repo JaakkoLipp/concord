@@ -19,18 +19,20 @@
   );
 </script>
 
-<div class="typing" aria-live="polite">
+<div class="typing" class:active={!!text} aria-live="polite">
   {#if text}<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>{text}{/if}
 </div>
 
 <style>
   .typing {
-    /* Its own row below the composer, as tall as the dock's bottom margin. It starts where the composer's text does:
-       the composer's margin, border and padding, the attach button and the gap after it. */
-    height: var(--space-7); padding: 0 var(--space-5) 0 calc(var(--space-5) + 1px + var(--space-3) * 2 + var(--space-8));
+    /* A strip just above the input box, over the messages' bottom padding, as on Discord. It starts where the
+       composer's text does: the composer's margin, border and padding, the attach button and the gap after it. */
+    position: absolute; left: 0; right: 0; bottom: 100%; height: var(--space-7); pointer-events: none;
+    padding: 0 var(--space-3) 0 calc(var(--space-3) * 3 + 1px + var(--space-8));
     display: flex; align-items: center; gap: var(--space-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
     color: var(--text-secondary); font: 500 var(--text-xs) var(--font-sans);
   }
+  .typing.active { background: var(--surface-0); }
   .dots { display: inline-flex; gap: 2px; }
   .dots i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: blink var(--dur-loop) infinite var(--ease-in-out); }
   .dots i:nth-child(2) { animation-delay: calc(var(--dur-loop) / 8); }

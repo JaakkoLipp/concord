@@ -87,9 +87,9 @@
 
 <style>
   .dock {
-    display: flex; align-items: center; gap: var(--space-1); min-height: var(--dock-h); margin: var(--space-3) var(--space-3) var(--dock-bottom, var(--space-3));
+    /* Inside the shell's dock panel, which draws the box. */
+    display: flex; align-items: center; gap: var(--space-1); min-height: calc(var(--dock-h) - 2px);
     padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
-    border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--surface-1);
   }
   .me {
     display: flex; align-items: center; gap: var(--space-3); flex: 1; min-width: 0; padding: var(--space-1) var(--space-2);

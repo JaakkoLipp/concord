@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
-   * The voice panel above the user dock (client.md section 10.3): the call's state, its connection quality,
-   * where it is, and its controls. After a call ends without the user, it says why and offers Rejoin.
+   * The voice panel above the user dock, in one panel with it as on Discord (client.md section 10.3): the call's
+   * state, its connection quality, where it is, and its controls. After a call ends without the user, it says why and offers Rejoin.
    */
   import { Button, IconButton, tooltip } from '@concord/ui';
   import type { Store } from '@concord/domain';
@@ -74,14 +74,11 @@
 <ShareDialog {voice} />
 
 <style>
-  .panel {
-    display: grid; gap: var(--space-2); margin: var(--space-3) var(--space-3) 0; padding: var(--space-2) var(--space-3);
-    border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--surface-1);
-  }
-  .top { display: flex; align-items: center; gap: var(--space-2); }
+  .panel { display: grid; gap: var(--space-3); padding: var(--space-3); border-bottom: 1px solid var(--border-default); }
+  .top { display: flex; align-items: center; gap: var(--space-3); }
   .quality {
-    display: grid; place-items: center; flex: none; width: 2rem; height: 2rem; padding: 0;
-    border: 0; border-radius: var(--radius-md); background: none; color: var(--text-muted); cursor: default;
+    display: grid; place-items: center; flex: none; width: 2.25rem; height: 2.25rem; padding: 0;
+    border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-3); color: var(--text-muted); cursor: default;
   }
   .quality :global(svg) { width: var(--icon-md); height: var(--icon-md); }
   .quality:focus-visible { outline: 2px solid var(--accent); }
@@ -98,5 +95,8 @@
     color: var(--text-secondary); font: var(--text-xs) var(--font-sans); text-decoration: none;
   }
   @media (hover: hover) { .where:hover { color: var(--text-strong); text-decoration: underline; } }
-  .actions { display: flex; gap: var(--space-1); }
+  /* Equal boxed buttons across the panel, as Discord's. */
+  .actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--space-3); }
+  .actions :global(.icon-button) { width: 100%; border: 1px solid var(--border-default); background: var(--surface-3); }
+  @media (hover: hover) { .actions :global(.icon-button:hover:not(:disabled)) { background: var(--surface-5); } }
 </style>

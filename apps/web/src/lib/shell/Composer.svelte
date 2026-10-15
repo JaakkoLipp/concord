@@ -250,7 +250,7 @@
       </span>
     {/if}
   </div>
-  {#if channel}<TypingIndicator {store} channel={channel.id} {server} />{:else}<div class="typing-row"></div>{/if}
+  {#if channel}<TypingIndicator {store} channel={channel.id} {server} />{/if}
   </div>
 {/if}
 
@@ -258,15 +258,14 @@
 
 <style>
   .composer {
-    display: flex; align-items: flex-start; gap: var(--space-3); min-height: var(--composer-h); margin: 0 var(--space-5);
+    display: flex; align-items: flex-start; gap: var(--space-3); min-height: var(--composer-h); margin: 0 var(--space-3) var(--space-3);
     padding: 0 var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-2);
   }
   .blocked { align-items: center; cursor: not-allowed; }
   .wrap { position: relative; display: flow-root; }
   .file-input { display: none; }
-  .typing-row { height: var(--space-7); }
   .tiles {
-    display: flex; gap: var(--space-4); overflow-x: auto; margin: 0 var(--space-5); padding: var(--space-4); list-style: none;
+    display: flex; gap: var(--space-4); overflow-x: auto; margin: 0 var(--space-3); padding: var(--space-4); list-style: none;
     border: 1px solid var(--border-subtle); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface-2);
   }
   .tiles.after-reply { border-radius: 0; }
@@ -280,7 +279,7 @@
   .file-size { color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
   .remove { position: absolute; top: var(--space-1); right: var(--space-1); border-radius: var(--radius-md); background: var(--surface-3); }
   .suggestions {
-    position: absolute; left: var(--space-5); right: var(--space-5); bottom: 100%; z-index: 10; margin: 0 0 var(--space-2); padding: var(--space-2);
+    position: absolute; left: var(--space-3); right: var(--space-3); bottom: 100%; z-index: 10; margin: 0 0 var(--space-2); padding: var(--space-2);
     list-style: none; border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--surface-1); box-shadow: var(--shadow-popover);
   }
   .suggestions li {
@@ -295,7 +294,7 @@
   .detail { margin-left: auto; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); white-space: nowrap; }
   .with-reply { border-top-left-radius: 0; border-top-right-radius: 0; }
   .reply-bar {
-    display: flex; align-items: center; gap: var(--space-3); margin: 0 var(--space-5); padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
+    display: flex; align-items: center; gap: var(--space-3); margin: 0 var(--space-3); padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
     border: 1px solid var(--border-subtle); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface-1);
     color: var(--text-secondary); font: var(--text-sm) var(--font-sans);
   }

@@ -402,7 +402,7 @@ Each is built to the measured sizes above.
 
 - **States**: hover and unread markers, mention badges, disabled and danger states, and empty and error states.
 - **Overlays and popovers**: toasts, context menus, tooltips, the quick switcher, confirm dialogs, the image viewer, and the mention autocomplete.
-- **Message furniture**: the typing indicator, day and "new messages" dividers, the reply bar, upload progress, and the drag-and-drop overlay.
+- **Message furniture**: the typing indicator, in a strip just above the composer over the messages' bottom padding, day and "new messages" dividers, the reply bar, upload progress, and the drag-and-drop overlay.
 - **Voice**: voice participants under channels, the voice status panel, and screen-share tiles.
 - **Content rendering**: code, quote and spoiler blocks.
 - **Account screens**: login, MFA and onboarding.
@@ -479,11 +479,11 @@ Voice code loads only on the first join, through `import()`: `livekit-client` is
 - **A user limit** shows as "2/5".
 - **Clicking a voice channel** joins it and opens the call view. When already in it, the click only opens the call view.
 
-**Voice panel** above the user dock while connected:
+**Voice panel** above the user dock while connected, in one bordered panel with it and a line between, as on Discord. The panel and the composer both sit `--space-3` from the window's bottom, so they end level, and the user row's top is level with the composer's:
 - "Voice connected" in green, or "Reconnecting…" in `--status-idle`,
 - a connection-quality icon whose tooltip gives ping and packet loss,
 - the channel and server name, a link back to the call view,
-- buttons for disconnect, camera and share screen.
+- a disconnect button beside the title, and camera and share screen as equal boxed buttons across the panel.
 
 **User dock**: the microphone and headphones buttons turn into mute and deafen.
 - Deafen also mutes.
