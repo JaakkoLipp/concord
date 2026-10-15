@@ -319,8 +319,9 @@ export async function connect(url: string, token: string, options: CallOptions, 
     .on(RoomEvent.LocalTrackUnpublished, (pub: LocalTrackPublication) => {
       // The browser's own stop button ends the capture, and LiveKit unpublishes it: tidy up the rest.
       if (screen && pub.track === screen.video) void endShare();
-      // The microphone taken away, as when Speak is lost: closed, so gaining Speak again publishes a new one.
-      if (mic && pub.track === mic) dropMic();
+      // The microphone taken away, as when Speak is lost: closed, so gaining Speak again publishes a new one. Not
+      // while reconnecting: LiveKit unpublishes our tracks then to publish them again.
+      if (mic && pub.track === mic && room.state === 'connected') dropMic();
       emitFeeds();
     })
     .on(RoomEvent.ParticipantConnected, (p: RemoteParticipant) => {
