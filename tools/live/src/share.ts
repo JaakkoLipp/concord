@@ -5,11 +5,13 @@
  * - the share reaches the viewer at 1920 x 1080, and at what frame rate,
  * - it arrives as H.264, so a silent fall-back to VP8 fails. If this Chromium can't send H.264 at all, that is
  *   reported as unverifiable instead,
- * - throttled with `tc tbf` at 1.5 Mbit/s in LiveKit's network namespace, the viewer drops to a lower layer while
- *   frames keep arriving, and 1080p comes back once the throttle is lifted. The throttle shapes what LiveKit sends,
- *   so the viewer's downlink rather than the sharer's upload, and every client of the local LiveKit at once: it
- *   stays on for as short a time as the check allows, and is always removed.
- * Review screenshots: the share dialog, the viewer's and the sharer's overlays, and the viewer while throttled.
+ * - the sharer's upload policed to 1.5 Mbit/s (LiveKit's incoming UDP, with `tc` in its network namespace) moves the
+ *   viewer to a lower layer while frames keep arriving, and freeing it brings 1080p back,
+ * - the viewer's downlink shaped to 1.5 Mbit/s (`tbf` on what LiveKit sends) does the same. Whether 1080p comes back
+ *   after that is reported, not failed: LiveKit's receive-side estimate can stay low for minutes (m4-results.md).
+ * Either throttle hits every client of the local LiveKit at once, so each stays on only until the viewer steps
+ * down, and both are always removed.
+ * Review screenshots: the share dialog, the viewer's and the sharer's overlays, and the viewer under each throttle.
  * Usage: node tools/live/src/share.ts [screenshot-dir]
  */
 import { execFileSync } from 'node:child_process';
@@ -32,7 +34,9 @@ const check = (ok: boolean, what: string) => { console.log(`${ok ? 'ok  ' : 'FAI
 function inLivekit(cmd: string): string {
   return execFileSync('docker', ['run', '--rm', '--cap-add', 'NET_ADMIN', '--network', 'container:stoat-livekit-1', 'nicolaka/netshoot:v0.14', 'sh', '-c', cmd], { encoding: 'utf8' });
 }
-const unthrottle = () => { try { inLivekit('tc qdisc del dev eth0 root 2>/dev/null; true'); } catch { /* nothing to remove */ } };
+/** Removes both kinds of throttle. */
+const CLEAR = 'tc qdisc del dev eth0 root 2>/dev/null; tc qdisc del dev eth0 ingress 2>/dev/null; true';
+const unthrottle = () => { try { inLivekit(CLEAR); } catch { /* nothing to remove */ } };
 process.on('SIGINT', () => { unthrottle(); process.exit(130); });
 
 const browser: Browser = await chromium.launch({
@@ -144,10 +148,12 @@ try {
   await overlayOn(eetu.page);
   const full = await until(eetu.page, 45_000, (v) => v.width === 1920 && v.height === 1080 && v.fps > 0);
   check(full.ok, `the viewer receives 1920 x 1080 (${fmt(full.samples.at(-1))})`);
-  // Ten more seconds at full size for the frame rate.
-  const steady = await until(eetu.page, 10_000, () => false);
+  // The frame rate ramps up while the viewer's bandwidth estimate grows: wait for 3 s in a row at 50 fps or more.
+  const started = Date.now();
+  const ramp = await until(eetu.page, 30_000, (_v, all) => all.length >= 3 && all.slice(-3).every((s) => s.height === 1080 && s.fps >= 50));
+  const steady = await until(eetu.page, 5_000, () => false);
   const fps = mean(steady.samples.filter((v) => v.height === 1080).map((v) => v.fps));
-  console.log(`     viewer frame rate at 1080p: ${fps} fps on average over ${steady.samples.length} s (${steady.samples.map((v) => v.fps).join(', ')})`);
+  console.log(`     viewer frame rate at 1080p: ${ramp.ok ? `50+ fps after ${Math.round((Date.now() - started) / 1000) - 5} s` : 'never 50+ for 3 s'}, then ${fps} fps on average (ramp ${ramp.samples.map((v) => v.fps).join(', ')})`);
   check(fps >= 10, `frames keep arriving at 1080p (${fps} fps)`);
   const codec = steady.samples.at(-1)?.codec ?? '';
   if (h264) check(codec === 'H264', `the share arrives as H.264, not a fall-back (${codec || 'none'})`);
@@ -156,33 +162,57 @@ try {
   await screenTile(ben.page).click();
   await overlayOn(ben.page);
   await ben.page.waitForTimeout(2500);
-  const sender = await ben.page.locator('dl[data-role="sharer"]').first().evaluate((el: HTMLElement) => ({ ...el.dataset })).catch(() => null);
-  console.log(`     sharer: codec ${sender?.codec ?? '?'}, encoder ${sender?.encoder ?? '?'}, limited by ${sender?.limit ?? '?'}, CPU limited ${sender?.cpu ?? '?'}`);
+  const sharerData = () => ben.page.locator('dl[data-role="sharer"]').first().evaluate((el: HTMLElement) => ({ ...el.dataset })).catch(() => null);
+  const sharerText = () => ben.page.locator('dl[data-role="sharer"]').first().innerText().then((t) => t.replace(/\s+/g, ' ').replace(/^.*?CPU limited \S+ /, '')).catch(() => '?');
+  const sender = await sharerData();
+  console.log(`     sharer: codec ${sender?.codec ?? '?'}, encoder ${sender?.encoder ?? '?'}, limited by ${sender?.limit ?? '?'}, CPU limited ${sender?.cpu ?? '?'}; ${await sharerText()}`);
   if (h264) check(sender?.codec === 'H264', `the sharer's overlay shows H.264 (${sender?.codec ?? 'none'})`);
   await shot(eetu.page, 'viewer');
   await shot(ben.page, 'sharer');
 
-  // Throttle LiveKit's sending to 1.5 Mbit/s: the viewer should step down a layer and keep getting frames.
-  console.log('     throttling LiveKit to 1500 kbit/s');
-  inLivekit('tc qdisc del dev eth0 root 2>/dev/null; tc qdisc add dev eth0 root tbf rate 1500kbit burst 32kbit latency 400ms');
-  let throttled: { ok: boolean; samples: View[] };
+  const lower = (v: View, all: View[]) => v.height > 0 && v.height < 1080 * 0.85 && all.slice(-3).filter((s) => s.fps > 0).length >= 3;
+  const top = (v: View) => v.width === 1920 && v.height === 1080 && v.fps > 0;
+
+  // 1. The sharer's upload: LiveKit's incoming UDP policed to 1.5 Mbit/s. Signalling, on TCP, is left alone.
+  console.log('     policing what reaches LiveKit over UDP to 1500 kbit/s');
+  inLivekit(`${CLEAR}; tc qdisc add dev eth0 handle ffff: ingress && tc filter add dev eth0 parent ffff: protocol ip prio 1 u32 match ip protocol 17 0xff police rate 1500kbit burst 32k drop flowid :1`);
+  let up: { ok: boolean; samples: View[] };
+  let upSharer: Record<string, string | undefined> | null = null;
   try {
-    throttled = await until(eetu.page, 30_000, (v, all) => v.height > 0 && v.height < 1080 * 0.85 && all.slice(-3).filter((s) => s.fps > 0).length >= 3);
-    await shot(eetu.page, 'throttled');
+    up = await until(eetu.page, 40_000, lower);
+    upSharer = await sharerData();
+    console.log(`     sharer while policed: limited by ${upSharer?.limit ?? '?'}; ${await sharerText()}`);
+    await shot(eetu.page, 'upload-throttled');
   } finally {
     unthrottle();
-    console.log('     throttle removed');
+    console.log('     removed');
   }
-  const low = throttled.samples.at(-1);
-  console.log(`     while throttled: ${throttled.samples.map((v) => `${v.height}p@${v.fps}`).join(', ')}`);
-  check(throttled.ok, `throttled, the viewer drops to a lower layer while frames keep arriving (${fmt(low)})`);
+  console.log(`     viewer while policed: ${up.samples.map((v) => `${v.height}p@${v.fps}`).join(', ')}`);
+  check(up.ok, `with the sharer's upload at 1.5 Mbit/s, the viewer drops to a lower layer while frames keep arriving (${fmt(up.samples.at(-1))})`);
+  const upBack = await until(eetu.page, 90_000, top);
+  if (!upBack.ok) console.log(`     sharer: ${await sharerText()}`);
+  check(upBack.ok, `1080p comes back once the upload is free, after ${upBack.samples.length} s (${fmt(upBack.samples.at(-1))})`);
 
-  const sharerText = () => ben.page.locator('dl[data-role="sharer"]').first().innerText().then((t) => t.replace(/\s+/g, ' ')).catch(() => '?');
-  const back = await until(eetu.page, Number(process.env.SHARE_BACK_MS ?? 90_000), (v, all) => {
-    if (process.env.SHARE_DEBUG && all.length % 10 === 1) void sharerText().then((t) => console.log(`     ${all.length} s: viewer ${fmt(v)}; sharer ${t}`));
-    return v.width === 1920 && v.height === 1080 && v.fps > 0;
-  });
-  check(back.ok, `1080p comes back once the throttle is lifted, after ${back.samples.length} s (${fmt(back.samples.at(-1))})`);
+  // 2. The viewer's downlink: what LiveKit sends, through tbf. Last, because LiveKit's estimate for the viewer
+  // can stay low for minutes afterwards (m4-results.md, task 7).
+  console.log('     shaping what LiveKit sends to 1500 kbit/s');
+  inLivekit(`${CLEAR}; tc qdisc add dev eth0 root tbf rate 1500kbit burst 32kbit latency 400ms`);
+  let down: { ok: boolean; samples: View[] };
+  try {
+    down = await until(eetu.page, 30_000, lower);
+    await shot(eetu.page, 'downlink-throttled');
+  } finally {
+    unthrottle();
+    console.log('     removed');
+  }
+  console.log(`     viewer while shaped: ${down.samples.map((v) => `${v.height}p@${v.fps}`).join(', ')}`);
+  check(down.ok, `with the viewer's downlink at 1.5 Mbit/s, the viewer drops to a lower layer while frames keep arriving (${fmt(down.samples.at(-1))})`);
+  const downBack = await until(eetu.page, Number(process.env.SHARE_BACK_MS ?? 60_000), top);
+  if (downBack.ok) console.log(`ok   1080p comes back once the downlink is free, after ${downBack.samples.length} s`);
+  else {
+    console.log(`known 1080p didn't come back within ${downBack.samples.length} s of freeing the downlink (${fmt(downBack.samples.at(-1))}), while the sharer sends ${await sharerText()}`);
+    notes.push("after a downlink squeeze LiveKit's receive-side estimate for the viewer stays low: see m4-results.md, task 7");
+  }
 
   await call(ben.page).getByRole('toolbar', { name: 'Call controls' }).getByRole('button', { name: 'Stop sharing' }).click();
   const gone = await screenTile(eetu.page).waitFor({ state: 'detached', timeout: 10_000 }).then(() => true, () => false);
