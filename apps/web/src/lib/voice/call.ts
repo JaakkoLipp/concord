@@ -216,9 +216,10 @@ export async function connect(url: string, token: string, options: CallOptions, 
     const source: FeedSource | null = pub.source === Track.Source.Camera ? 'camera' : pub.source === Track.Source.ScreenShare ? 'screen' : null;
     if (!source || pub.isMuted) return null;
     const id = `${user}/${pub.trackSid}`;
-    // Someone's stream before it is watched: a tile to click, with nothing received.
+    // Someone's stream before it is watched, or while its subscription is on its way: a tile to click, with
+    // nothing received. Clicking again while it's on its way asks again, which is harmless.
     if (!track) {
-      if (local || source !== 'screen' || watched.has(user)) return null;
+      if (local || source !== 'screen') return null;
       const cached = feedCache.get(id);
       if (cached && cached.track === null) return cached.feed;
       const waiting: Feed = {
@@ -303,7 +304,13 @@ export async function connect(url: string, token: string, options: CallOptions, 
       emitFeeds();
     })
     .on(RoomEvent.TrackUnpublished, (pub: RemoteTrackPublication, p: RemoteParticipant) => {
-      if (pub.source === Track.Source.ScreenShare) watched.delete(p.identity);
+      // A full restart unpublishes everything while reconnecting: what was watched stays watched through it.
+      if (pub.source === Track.Source.ScreenShare && room.state === 'connected') watched.delete(p.identity);
+      emitFeeds();
+    })
+    .on(RoomEvent.TrackSubscriptionFailed, (_sid: string, p: RemoteParticipant) => {
+      // A stream that couldn't be received goes back to its Watch button.
+      watched.delete(p.identity);
       emitFeeds();
     })
     .on(RoomEvent.TrackMuted, emitFeeds)
@@ -312,6 +319,8 @@ export async function connect(url: string, token: string, options: CallOptions, 
     .on(RoomEvent.LocalTrackUnpublished, (pub: LocalTrackPublication) => {
       // The browser's own stop button ends the capture, and LiveKit unpublishes it: tidy up the rest.
       if (screen && pub.track === screen.video) void endShare();
+      // The microphone taken away, as when Speak is lost: closed, so gaining Speak again publishes a new one.
+      if (mic && pub.track === mic) dropMic();
       emitFeeds();
     })
     .on(RoomEvent.ParticipantConnected, (p: RemoteParticipant) => {
@@ -322,6 +331,7 @@ export async function connect(url: string, token: string, options: CallOptions, 
     .on(RoomEvent.ParticipantDisconnected, (p: RemoteParticipant) => {
       // A full restart tears participants down just before the room says it is reconnecting, so look after it has.
       setTimeout(() => { if (peers.left(p.identity, live())) sink.peer('leave'); });
+      if (live()) watched.delete(p.identity);
       emitFeeds();
     })
     .on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => sink.speaking(speakers.map((s) => s.identity)))
@@ -332,6 +342,11 @@ export async function connect(url: string, token: string, options: CallOptions, 
     .on(RoomEvent.Reconnected, () => {
       // A full restart forgets disabled tracks, and recreates participants with their default volumes.
       if (deafened) setReceiving(remotes(), false);
+      // Streams that ended while the connection was down are forgotten, so their next one starts unwatched.
+      for (const user of watched) {
+        const p = room.remoteParticipants.get(user);
+        if (!p || ![...p.trackPublications.values()].some((pub) => pub.source === Track.Source.ScreenShare)) watched.delete(user);
+      }
       for (const p of remotes()) {
         subscribeWanted(p);
         applyVolume(p);
@@ -389,8 +404,9 @@ export async function connect(url: string, token: string, options: CallOptions, 
     return !p || (p.canPublish && (p.canPublishSources.length === 0 || p.canPublishSources.includes(Track.sourceToProto(Track.Source.Microphone))));
   };
   let micStarting = false;
+  let micUnavailable = false;
   const publishIfAllowed = () => {
-    if (canSpeak && !mic && !micStarting && room.state === 'connected' && livekitAllowsMic()) {
+    if (canSpeak && !mic && !micStarting && !micUnavailable && room.state === 'connected' && livekitAllowsMic()) {
       micStarting = true;
       void publishMic().finally(() => (micStarting = false));
     }
@@ -398,23 +414,46 @@ export async function connect(url: string, token: string, options: CallOptions, 
   room.on(RoomEvent.ParticipantPermissionsChanged, (_before, p?: Participant) => {
     if (!p || p === room.localParticipant) publishIfAllowed();
   });
-  if (canSpeak) void publishMic();
+  publishIfAllowed();
 
   async function publishMic() {
+    let c: MicChain;
     try {
-      const c = await openMic((e) => { if (room.state !== 'disconnected') sink.micFailed(e); });
-      if (room.state === 'disconnected') return c.stop();
-      chain = c;
-      const track = new LocalAudioTrack(c.track, undefined, true);
-      track.source = Track.Source.Microphone;
-      mic = track;
+      c = await openMic((e) => { if (room.state !== 'disconnected') sink.micFailed(e); });
+    } catch (e) {
+      // Refused or missing: said once, and not asked again in this call, however permissions change.
+      micUnavailable = true;
+      if (room.state !== 'disconnected') sink.micFailed(e);
+      return;
+    }
+    if (gone()) return c.stop();
+    chain = c;
+    const track = new LocalAudioTrack(c.track, undefined, true);
+    track.source = Track.Source.Microphone;
+    mic = track;
+    try {
       // Joining muted never sends a moment of audio: the track is muted before it is published.
       if (muted) await track.mute();
       // The cast only bridges the SDK's own types under exactOptionalPropertyTypes (`processor?`).
       await room.localParticipant.publishTrack(track as LocalTrack, { source: Track.Source.Microphone, dtx: true, red: true });
     } catch (e) {
-      if (room.state !== 'disconnected') sink.micFailed(e);
+      // Not published, as with permissions not yet updated: closed again, so a later change can try anew.
+      if (mic === track) dropMic();
+      if (!gone()) sink.micFailed(e);
     }
+  }
+
+  /** Whether the room has ended, read fresh each time: an await can change it. */
+  function gone() {
+    return room.state === 'disconnected';
+  }
+
+  /** Closes our microphone: the capture and its chain. */
+  function dropMic() {
+    mic?.stop();
+    mic = null;
+    chain?.stop();
+    chain = null;
   }
 
   /** Stops our share, whichever way it ended, and says so once. */

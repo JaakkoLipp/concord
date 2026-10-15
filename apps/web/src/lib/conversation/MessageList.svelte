@@ -69,6 +69,10 @@
   });
   // One message at a time is reached by Tab: the last one focused, else the newest. Up and Down move between them.
   let focusId = $state<string | null>(null);
+  const tabbableId = $derived.by(() => {
+    const focusable = messages.filter((x) => !x.system);
+    return focusId && focusable.some((x) => x.id === focusId) ? focusId : focusable.at(-1)?.id;
+  });
   function rove(e: KeyboardEvent) {
     const el = e.target as HTMLElement;
     if ((e.key !== 'ArrowUp' && e.key !== 'ArrowDown') || !el.matches('article.message')) return;
@@ -354,7 +358,7 @@
         <MessageItem message={row.message} pending={row.pending} {store} {server} continuation={row.continuation && row.blocked?.first !== row.message.id} highlighted={highlighted === row.message.id} {onjump}
           onretry={(key) => void session.retry(key)} ondiscard={(key) => session.discard(key)}
           actions={row.pending || row.message.system ? undefined : actions} editing={compose.editing === row.message.id} selected={selected === row.message.id}
-          {quick} tabbable={row.message.id === (focusId && messages.some((x) => x.id === focusId) ? focusId : messages.at(-1)?.id)} />
+          {quick} tabbable={row.message.id === tabbableId} canMarkUnread={row.message.id !== win?.ids[0] || !!win?.atOldest} />
       {/if}
     {/each}
     <div class="end"></div>

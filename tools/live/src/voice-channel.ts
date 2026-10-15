@@ -3,7 +3,7 @@
  * - `dev-admin` sets a user limit of 2 in the channel's settings; `dev` and `aino` join, and `ben` gets
  *   "This voice channel is full",
  * - with Speak denied in the channel, `aino` joins and sends nothing; once it is allowed again her microphone
- *   is published within seconds, without a second join_call.
+ *   is published within seconds, without a second join_call, and the same again after losing Speak mid-call.
  * The channel's limit and permissions are put back afterwards, whatever happens.
  * Usage: node tools/live/src/voice-channel.ts [screenshot-dir]
  */
@@ -73,6 +73,16 @@ try {
   const start = Date.now();
   while (Date.now() - start < 20_000 && talking < 2_000) talking = await sending(aino.page);
   check(talking >= 2_000 && aino.joins === joinsBefore, `once Speak is allowed, her microphone is sent within ${Math.round((Date.now() - start) / 1000)} s (${talking} B/s), with no new join_call`);
+  // Lost and gained again in the same call: the microphone comes back each time.
+  await setDefault(Permission.Speak);
+  let quiet = talking;
+  const lost = Date.now();
+  while (Date.now() - lost < 20_000 && quiet >= 500) quiet = await sending(aino.page);
+  await setDefault(0n);
+  let again = 0;
+  const regained = Date.now();
+  while (Date.now() - regained < 20_000 && again < 2_000) again = await sending(aino.page);
+  check(quiet < 500 && again >= 2_000 && aino.joins === joinsBefore, `Speak lost and gained again: ${quiet} B/s, then ${again} B/s, in the same call`);
   await leave(aino);
 } catch (e) {
   failures.push(String(e));

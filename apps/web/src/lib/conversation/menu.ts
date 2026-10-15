@@ -13,16 +13,25 @@ export interface MenuTarget {
   image?: { src: string; original: string; name: string };
 }
 
+const urlOf = (s: string): URL | null => {
+  try {
+    return new URL(s, location.href);
+  } catch {
+    return null;
+  }
+};
+
 export function targetOf(event: Event | undefined): MenuTarget {
   const el = event?.target instanceof Element ? event.target : null;
   const target: MenuTarget = {};
   const a = el?.closest<HTMLAnchorElement>('a[href]');
   if (a && /^https?:/.test(a.href) && new URL(a.href).origin !== location.origin) target.link = a.href;
   const img = el?.closest<HTMLImageElement>('img[data-original]');
-  if (img) {
-    const original = img.dataset.original!;
-    const name = img.dataset.name ?? (decodeURIComponent(new URL(original, location.href).pathname.split('/').pop() ?? '') || 'image');
-    target.image = { src: img.currentSrc || img.src, original, name };
+  // The original address comes from the message's sender: only a web address is ever opened.
+  const original = img ? urlOf(img.dataset.original ?? '') : null;
+  if (img && original && (original.protocol === 'https:' || original.protocol === 'http:')) {
+    const name = img.dataset.name ?? (decodeURIComponent(original.pathname.split('/').pop() ?? '') || 'image');
+    target.image = { src: img.currentSrc || img.src, original: original.href, name };
   }
   return target;
 }

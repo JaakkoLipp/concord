@@ -56,6 +56,8 @@ export function menuOn(node: HTMLElement, items: (node: HTMLElement, event?: Eve
     cancel();
     // Android sends contextmenu for a long press too: one menu, not two.
     if (opened) {
+      // This element's long press already opened its menu: an outer element mustn't open its own over it.
+      claimed.add(e);
       e.preventDefault();
       return;
     }

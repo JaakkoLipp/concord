@@ -1048,12 +1048,26 @@ export class Session {
       this.store.markRead(id, c.lastMessageId);
       if (ulidTime(c.lastMessageId) > Date.now() - SERVER_ACK_LAG_MS) recent.push([id, c.lastMessageId]);
     }
-    await this.backend.ackServer(server);
-    await Promise.all(recent.map(([id, message]) => {
+    let all = true;
+    try {
+      await this.backend.ackServer(server);
+    } catch {
+      all = false;
+    }
+    // Without the server's acknowledgement every channel goes one by one, through the usual acks and their retries.
+    const one = (id: Id) => {
+      this.acks.delete(id);
+      this.markRead(id);
+    };
+    if (!all) {
+      for (const id of this.store.servers.get(server)?.channels ?? []) if (this.store.channels.get(id)) one(id);
+      return;
+    }
+    await Promise.all(recent.map(async ([id, message]) => {
       const a = this.acks.get(id);
       if (a?.timer) clearTimeout(a.timer);
       this.acks.set(id, { at: Date.now(), sent: message });
-      return this.backend.ack(id, message);
+      await this.backend.ack(id, message).catch(() => one(id));
     }));
   }
 

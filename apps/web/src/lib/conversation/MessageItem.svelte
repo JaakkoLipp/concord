@@ -31,8 +31,10 @@
     quick?: QuickEmoji[];
     /** Whether Tab reaches this message: one message in the list at a time, and the arrow keys move between them. */
     tabbable?: boolean;
+    /** Whether "Mark unread" can be offered: not when the message before it isn't loaded. */
+    canMarkUnread?: boolean;
   }
-  let { message, store, server, continuation, highlighted, onjump, pending, onretry, ondiscard, actions, editing = false, selected = false, quick = [], tabbable = false }: Props = $props();
+  let { message, store, server, continuation, highlighted, onjump, pending, onretry, ondiscard, actions, editing = false, selected = false, quick = [], tabbable = false, canMarkUnread = true }: Props = $props();
   const own = $derived(message.author === store.selfId);
   /** The author's context menu. Webhook messages have no user behind them. */
   const authorMenu = (node: HTMLElement) =>
@@ -43,7 +45,7 @@
     if (!actions || editing) return [];
     const selection = window.getSelection();
     if (selection && !selection.isCollapsed && node.contains(selection.anchorNode)) return [];
-    return messageMenu(message, actions, { own, canMarkUnread: true, quick, target: targetOf(e), anchor: node });
+    return messageMenu(message, actions, { own, canMarkUnread, quick, target: targetOf(e), anchor: node });
   }
   const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   /** On touch screens there is no hover: a tap on the message shows its actions. */
@@ -73,7 +75,7 @@
   <!-- A message is focusable, one at a time, so the keyboard reaches its actions and context menu (m4.5-plan.md task 2). -->
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
   <article class="row message" class:continuation class:mentioned class:highlighted class:sending={pending?.state === 'sending'} class:failed={pending?.state === 'failed'} aria-busy={pending?.state === 'sending' || undefined}
-    class:selected class:menu-open={menuOpen} class:editing onclick={tap} id="message-{message.id}" data-id={message.id} aria-labelledby="author-{message.id}"
+    class:selected class:menu-open={menuOpen} class:editing onclick={tap} id="message-{message.id}" data-id={message.id} aria-labelledby={continuation ? undefined : `author-${message.id}`} aria-label={continuation ? name : undefined} aria-describedby="content-{message.id}"
     tabindex={tabbable ? 0 : -1} use:menuOn={messageContextMenu}>
     {#each message.replies as reply (reply)}
       <ReplyPreview id={reply} {store} {server} {onjump} />
@@ -100,7 +102,7 @@
         {#if editing && actions}
           <EditBox text={message.content ?? ''} {store} {server} onsave={(t) => actions.saveEdit(message, t)} oncancel={() => actions.cancelEdit()} />
         {:else if message.content && !gifOnly}
-          <div class="content"><Markdown source={message.content} />{#if message.edited}<span class="edited" title={fullDate(new Date(message.edited))}>{m.conversation.edited}</span>{/if}</div>
+          <div class="content" id="content-{message.id}"><Markdown source={message.content} />{#if message.edited}<span class="edited" title={fullDate(new Date(message.edited))}>{m.conversation.edited}</span>{/if}</div>
         {/if}
         {#if pending?.files.length}
           <ul class="uploads">

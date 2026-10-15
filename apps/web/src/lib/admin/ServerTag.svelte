@@ -21,12 +21,17 @@
 
   $effect(() => {
     const layer = app.layer;
+    const id = server;
     if (!layer) return;
-    void layer.serverTags([server]).then((r) => {
-      current = r[server] ?? null;
+    let stale = false;
+    loaded = false;
+    void layer.serverTags([id]).then((r) => {
+      if (stale) return;
+      current = r[id] ?? null;
       draft = { tag: current?.tag ?? '', emoji: current?.emoji ?? '' };
       loaded = true;
-    }, () => toasts.show(t.loadFailed));
+    }, () => { if (!stale) toasts.show(t.loadFailed); });
+    return () => { stale = true; };
   });
 
   const error = $derived(draft.tag && !/^[\p{L}\p{N}]{1,4}$/u.test(draft.tag.trim()) ? t.tagError : undefined);

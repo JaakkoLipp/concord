@@ -29,9 +29,21 @@ function check(ok: boolean, what: string, detail = ''): void {
 const shows = (p: Promise<unknown>) => p.then(() => true, () => false);
 
 const [admin, pekka, dev] = await Promise.all(['dev-admin', 'pekka', 'dev'].map(person));
-const layer = (token: string, method: string, path: string, body?: unknown) => fetch(`${api}${path}`, {
-  method, headers: { 'x-session-token': token, ...(body ? { 'content-type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}),
-});
+/**
+ * A layer call. Locally every request shares Docker's one address, so checks run back to back can spend the
+ * per-address limit on new sessions: an address 429 waits as told and asks again.
+ */
+async function layer(token: string, method: string, path: string, body?: unknown): Promise<Response> {
+  const send = () => fetch(`${api}${path}`, {
+    method, headers: { 'x-session-token': token, ...(body ? { 'content-type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const r = await send();
+  if (r.status !== 429) return r;
+  const wait = ((await r.clone().json()) as { retry_after?: number; limit?: string });
+  if (wait.limit !== 'address') return r;
+  await new Promise((done) => setTimeout(done, (wait.retry_after ?? 1_000) + 500));
+  return send();
+}
 
 const browser = await launch();
 async function open(handle: string, path: string) {

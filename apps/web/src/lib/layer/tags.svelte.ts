@@ -10,6 +10,7 @@ import { memberKey, type Id, type Layer, type ServerTag, type Store } from '@con
 const EVERY_MS = 60_000;
 /** The most users one lookup asks about: far more than this community's member lists hold. */
 const MAX_USERS = 1_000;
+const MAX_SERVERS = 200;
 
 export class Tags {
   readonly worn = new SvelteMap<Id, ServerTag>();
@@ -43,7 +44,7 @@ export class Tags {
     const { store, layer } = this;
     if (!store || !layer) return;
     const users = [...new Set([...store.users.keys()])].slice(0, MAX_USERS);
-    const servers = [...store.servers.keys()];
+    const servers = [...store.servers.keys()].slice(0, MAX_SERVERS);
     try {
       const [worn, tags] = await Promise.all([layer.wornTags(users), layer.serverTags(servers)]);
       if (this.layer !== layer) return;
