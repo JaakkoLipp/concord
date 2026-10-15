@@ -331,8 +331,11 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
   --control-h: 40px; --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px;
 
   --shadow-popover: 0 8px 32px rgb(0 0 0 / 0.28);  /* proposal: on black, borders carry most elevation */
-  --dur-hover: 100ms; --dur-press: 60ms; --dur-popover: 140ms; --dur-modal: 200ms;   /* proposals */
-  --ease-out: cubic-bezier(0.2, 0, 0, 1); --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  /* Motion, below */
+  --dur-hover: 120ms; --dur-press: 120ms; --dur-popover: 150ms; --dur-modal: 200ms; --dur-toast: 200ms; --dur-exit: 100ms;
+  --dur-meter: 60ms; --dur-loop: 1.2s; --dur-flash: 2s;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1); --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --motion: 1;   /* 0 under reduced motion: scales and movements collapse, fades stay */
 }
 ```
 
@@ -362,7 +365,22 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
 - **Rail**: server icons are 40 px squircles with a 12 px radius. The selected server has a 4 by 38 px pill on the left edge. The icon does not morph.
 - **Icons**: 20 px by default, 16 px inline and in fields, 24 px for large uses, stroke 2. Lucide's outlines read lighter than the reference's solid glyphs, so active states use the stronger text colour rather than a filled variant.
 - **Numbers**: timestamps and counts use `font-variant-numeric: tabular-nums`.
-- **Motion**: durations are proposals, since screenshots can't show motion. With reduced motion, they are all 0 ms.
+- **Motion**: see below.
+
+**Motion** (M4.2). Discord's style: slight, never in the way, polish only. The rules paraphrase two sources: Emil Kowalski's design-engineering skills, as published in nexu-io/open-design (`skills/emil-design-eng`, `skills/review-animations`), and the Motion and Accessibility pages of Apple's Human Interface Guidelines.
+
+1. **Only `transform` and `opacity` move**, including `translate`, `scale` and `rotate`. Colours may fade on hover, and the level meter's `clip-path` stays. Nothing animates `height`, `width`, `top`, `margin`, `padding` or `inset`, and nothing uses `transition: all`. A lint in `pnpm verify` enforces this and the tokens.
+2. **Frequency decides.**
+   - **Hundreds of times a day**: no motion. This covers anything opened from the keyboard, switching channels, new messages and arrow keys in lists.
+   - **Tens of times a day**: a colour change, or a small press on buttons.
+   - **Occasional**: an enter and an exit. This covers menus, popovers, dialogs, toasts, the voice panel and people joining a call.
+3. **Enter slower than exit.** Every exit takes `--dur-exit`. Pages, such as settings, close instantly.
+4. **Things grow from where they came from.** A menu scales from the corner nearest its trigger, and a tooltip from the side facing its target. Dialogs stay centred.
+5. **Slight.** No enter starts from nothing, and none travels far. Popovers, dialogs and call tiles start at 0.98 scale with opacity 0, rises are `--space-2`, and a pressed button scales to 0.98.
+6. **Two curves.** `--ease-out` covers every enter, exit, press and hover. `--ease-in-out` covers things moving on screen, such as the phone drawer and the typing dots. `linear` is for the level meter only. There is no ease-in and no springs.
+7. **Durations** are the tokens above. Only `--dur-loop` and `--dur-flash` exceed 200 ms.
+8. **Reduced motion keeps the fades.** `--motion` is 0 under `prefers-reduced-motion`. Every scale and movement is written to collapse at 0, such as `scale(calc(1 - 0.02 * var(--motion)))`. Opacity and colour still fade, the drawer and toggle knobs fade into place, and looping pulses stop.
+9. **Exits keep their content.** A closing menu, popover, dialog or toast stays on screen with what it showed while it fades, ignores the pointer, and gives focus back at once.
 
 **Components seen in the reference**:
 
@@ -642,7 +660,7 @@ Discord's input profiles, Krisp, attenuation and its QoS switch are left out.
 - Semantic landmarks for each column. The channel list is a tree. The message list is a log, and new messages are announced politely only when the user is at the bottom.
 - Focus rings appear on keyboard focus only. Every overlay traps focus and returns it on close.
 - Shortcuts: Ctrl+K quick switcher, Alt+Up and Alt+Down for channels, Alt+Shift+Up and Down for unread channels, Escape to mark a channel read, Ctrl+E for the emoji picker.
-- Reduced-motion settings disable animated transitions.
+- Reduced-motion settings leave only fades: nothing moves or scales (section 9, motion).
 - Text scales with the browser's font size. Layout uses rem units for type and spacing.
 
 ## 12. Internationalisation
