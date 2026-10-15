@@ -25,7 +25,9 @@
 
 <style>
   .typing {
-    position: absolute; left: calc(var(--space-5) + var(--space-3)); right: var(--space-5); bottom: 0; height: var(--space-5);
+    /* Its own row below the composer, as tall as the dock's bottom margin. It starts where the composer's text does:
+       the composer's margin, border and padding, the attach button and the gap after it. */
+    height: var(--space-7); padding: 0 var(--space-5) 0 calc(var(--space-5) + 1px + var(--space-3) * 2 + var(--space-8));
     display: flex; align-items: center; gap: var(--space-2); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
     color: var(--text-secondary); font: 500 var(--text-xs) var(--font-sans);
   }

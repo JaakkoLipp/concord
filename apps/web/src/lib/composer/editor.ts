@@ -135,7 +135,8 @@ const theme = EditorView.theme({
   '&': { color: 'var(--text-normal)', font: 'var(--text-md) var(--font-sans)' },
   '&.cm-focused': { outline: 'none' },
   '.cm-scroller': { fontFamily: 'var(--font-sans)', lineHeight: '1.375rem', maxHeight: '50vh', overflowY: 'auto' },
-  '.cm-content': { padding: 'var(--space-4) 0', caretColor: 'var(--text-strong)' },
+  // One line sits in the middle of the composer's box (inside its 1 px border); more lines grow downward from there.
+  '.cm-content': { padding: 'calc((var(--composer-h) - 2px - 1.375rem) / 2) 0', caretColor: 'var(--text-strong)' },
   '.cm-line': { padding: '0' },
   '.cm-placeholder': { color: 'var(--text-muted)' },
   '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground': { background: 'var(--accent-subtle)' },

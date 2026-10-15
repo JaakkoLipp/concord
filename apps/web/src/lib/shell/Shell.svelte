@@ -82,7 +82,8 @@
     grid-area: sidebar; display: flex; flex-direction: column; min-height: 0;
     border: 1px solid var(--border-subtle); border-width: 0 1px 0 1px; border-top-left-radius: var(--radius-lg);
   }
-  .dock { grid-area: dock; }
+  /* The dock ends level with the composer, which has the typing row below it. Not on a phone, where they never sit side by side. */
+  .dock { grid-area: dock; --dock-bottom: var(--space-7); }
   .main { grid-area: main; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   .side-panel { grid-area: panel; min-height: 0; border-left: 1px solid var(--border-subtle); background: var(--surface-0); }
   .scrim { display: none; }
@@ -97,7 +98,7 @@
     .sidebar { translate: calc(-100% - var(--rail-w)) 0; }
     .rail { top: 0; bottom: calc(var(--dock-h) + var(--voice-h)); left: 0; width: var(--rail-w); padding-bottom: var(--space-5); }
     .sidebar { top: 0; bottom: calc(var(--dock-h) + var(--voice-h) + var(--space-5)); left: var(--rail-w); width: min(var(--sidebar-w), calc(100vw - var(--rail-w) - 3rem)); }
-    .dock { bottom: 0; left: 0; width: min(calc(var(--rail-w) + var(--sidebar-w)), calc(100vw - 3rem)); }
+    .dock { --dock-bottom: var(--space-3); bottom: 0; left: 0; width: min(calc(var(--rail-w) + var(--sidebar-w)), calc(100vw - 3rem)); }
     .sidebar-open .rail, .sidebar-open .sidebar, .sidebar-open .dock { translate: 0 0; }
     .scrim { display: block; position: fixed; inset: 0; z-index: 45; border: 0; background: var(--scrim); }
     .side-panel { top: var(--header-h); width: min(var(--panel-w), 85vw); }

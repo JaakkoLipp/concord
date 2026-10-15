@@ -250,7 +250,7 @@
       </span>
     {/if}
   </div>
-  {#if channel}<TypingIndicator {store} channel={channel.id} {server} />{/if}
+  {#if channel}<TypingIndicator {store} channel={channel.id} {server} />{:else}<div class="typing-row"></div>{/if}
   </div>
 {/if}
 
@@ -258,12 +258,13 @@
 
 <style>
   .composer {
-    display: flex; align-items: flex-start; gap: var(--space-3); min-height: var(--composer-h); margin: 0 var(--space-5) var(--space-5);
+    display: flex; align-items: flex-start; gap: var(--space-3); min-height: var(--composer-h); margin: 0 var(--space-5);
     padding: 0 var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-2);
   }
   .blocked { align-items: center; cursor: not-allowed; }
   .wrap { position: relative; display: flow-root; }
   .file-input { display: none; }
+  .typing-row { height: var(--space-7); }
   .tiles {
     display: flex; gap: var(--space-4); overflow-x: auto; margin: 0 var(--space-5); padding: var(--space-4); list-style: none;
     border: 1px solid var(--border-subtle); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface-2);
@@ -304,7 +305,7 @@
   .side { display: grid; place-items: center; min-height: calc(var(--composer-h) - 2px); flex: none; }
   .editor { flex: 1; min-width: 0; align-self: stretch; display: flex; flex-direction: column; justify-content: center; }
   .editor :global(.cm-editor) { flex: 1; }
-  .placeholder { flex: 1; min-width: 0; color: var(--text-muted); font: var(--text-md) var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .placeholder { min-width: 0; color: var(--text-muted); font: var(--text-md) var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .counter { align-self: center; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); font-variant-numeric: tabular-nums; }
   .counter.over { color: var(--danger); font-weight: 700; }
   .editor :global(.cm-token) {
