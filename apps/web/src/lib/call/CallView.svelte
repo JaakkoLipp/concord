@@ -134,7 +134,7 @@
             <li><Avatar src={avatar(v.user)} size={80} /><span>{store.displayName(v.user, server)}</span></li>
           {/each}
         </ul>
-        <p>{m.call.present(participants.length)}</p>
+        <p>{compact ? m.call.presentCall(participants.length) : m.call.present(participants.length)}</p>
       {:else}
         <p>{m.call.empty}</p>
       {/if}

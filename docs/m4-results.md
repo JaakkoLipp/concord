@@ -57,7 +57,7 @@ On the local stack with `dev`, `aino` and a third persona. The probe script is k
 
 **UI bugs, open**: during total loss the quality tooltip says "Ping 0 ms, packet loss 0 %". Missing figures should be left out, and the loss should come from received packets.
 
-**Still to probe**: the members-left check after a LiveKit restart (the third persona couldn't join Pelaamo), H.264 in headless Chromium (task 7's agent), and the AudioContext flake.
+**Still to probe**: the members-left check after a LiveKit restart (the third persona couldn't join Pelaamo) and the AudioContext flake. H.264 in headless Chromium works (task 7).
 
 ## Task 8: DM and group calls, 2026-10-15
 
@@ -77,3 +77,45 @@ On the local stack with `dev`, `aino` and a third persona. The probe script is k
 - `started_at` has whole seconds only, so two calls in the same second look alike. The client tells them apart by the end in between.
 
 A ring for a call this client is rejoining stays silent. A unit test covers it in `rejoin.test.ts`.
+
+## Task 6: call view, participants and camera, 2026-10-15
+
+`tools/live/src/callview.ts`, with `ben`, `eetu` and `emma` in Olohuone:
+- before joining, emma's call view lists the two already in and offers Join,
+- all three see three tiles, and the others see ben's camera playing,
+- a volume set in eetu's participant menu for ben is still there after a reload, read from the sidebar row's menu.
+
+**Headless Chromium caps volumes at 100 %**: its user agent says `HeadlessChrome`, which the controller's Chromium test doesn't match, so it gets no Web Audio mixing. Real Chrome and Edge are matched. The check sets 60 %.
+
+**Bug found and fixed**: a remote camera or share that was turned off stayed as a tile. LiveKit announces the unsubscribe before it lets go of the track.
+
+`dm-call.ts` wasn't rerun after the DM call view was added, because its personas were outside this run's set.
+
+## Task 7: screen share, 2026-10-15
+
+`tools/live/src/share.ts`, with `ben` sharing a 1920 × 1080 canvas at 60 fps through the app's dialog and publish path, and `eetu` watching with the share focused at device scale 2. Figures come from the viewer's stats overlay.
+
+| Check | Result |
+|---|---|
+| Codec | H.264 at both ends. Headless Chromium 156 sends it with `SimulcastEncoderAdapter (OpenH264 ×3)`. |
+| Sharer | `f` 1920 × 1080 at 60 fps and 7.7 Mbps, `h` 1280 × 720 at 30 fps, `q` 640 × 360 at 15 fps. Not CPU-limited. |
+| Viewer | 1920 × 1080 within a few seconds. Frame rate ramps 11, 13, 19, 28, 30, 35 and reaches 60 after about 9 s, while the bandwidth estimate grows. |
+| Sharer's upload policed to 1.5 Mbit/s | `tc` ingress police on LiveKit's incoming UDP. The sharer reports `bandwidth` and keeps only `q`. The viewer stalls for about 3 s, then gets 360p at 15 fps. **1080p is back 6 s after the policing ends.** |
+| Viewer's downlink shaped to 1.5 Mbit/s | `tbf` on what LiveKit sends. The viewer stalls for about 3 s, then gets 360p at 15 fps. **1080p didn't come back in 4 minutes**, although the sharer sent all three layers at full rate throughout. |
+
+**Why the downlink doesn't recover**: LiveKit 1.13.4 estimates each subscriber's bandwidth from the browser's REMB by default. Its log shows:
+- `channel congestion detected`, with the estimate down from 100 Mbps to about 1.17 Mbps,
+- probes every 2 minutes that end `INCONCLUSIVE`, because the estimate stays exactly at 1,168,112 bps,
+- the stream allocator settling into `STABLE` at that estimate.
+
+Chrome's receive-side estimate only grows when traffic approaches it, so a viewer held at 500 kbps never shows more room.
+
+**What it means**: after a Wi-Fi blip, a viewer may stay at 360p for minutes. LiveKit has a send-side (TWCC) estimate, off by default: `rtc.congestion_control.use_send_side_bwe: true` in `livekit.yml`. Turning it on is Jaakko's decision. It should be tried on the local stack with `share.ts` first. The upload case recovers either way.
+
+**Not checked headless**:
+- share audio, because the fake capture has none,
+- Firefox's single VP8 layer,
+- the real 1080p60 on Jaakko's Windows machine.
+
+**Quality menu**: with adaptive streaming, `setVideoQuality` can only lower the layer that the tile's size asks for. So "1080p" behaves like Auto, and a small tile can't be forced up to 1080p.
+
