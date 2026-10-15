@@ -79,15 +79,16 @@
   .add { color: var(--status-online); }
   @media (hover: hover) { .item:hover .add { background: var(--status-online); color: var(--on-accent); } }
   /* The pill on the left edge: a dot for unread, taller on hover, full height when selected. It is always
-     38 px tall and scaled, since animating its height would lay out the rail on every frame. */
+     38 px tall and clipped to size with rounded ends, since animating its height would lay out the rail on
+     every frame, and a scale would flatten its ends. */
   .pill {
-    position: absolute; left: 0; top: 50%; width: 4px; height: 38px; translate: 0 -50%; scale: 1 0;
-    border-radius: 0 var(--radius-xs) var(--radius-xs) 0; background: var(--text-strong);
-    transition: scale calc(var(--dur-popover) * var(--motion)) var(--ease-out);
+    position: absolute; left: 0; top: 50%; width: 4px; height: 38px; translate: 0 -50%;
+    background: var(--text-strong); clip-path: inset(50% 0 round 0 var(--radius-xs) var(--radius-xs) 0);
+    transition: clip-path calc(var(--dur-popover) * var(--motion)) var(--ease-out);
   }
-  .unread .pill { scale: 1 calc(8 / 38); }
-  @media (hover: hover) { .item:hover .pill { scale: 1 calc(20 / 38); } }
-  .active .pill { scale: 1; }
+  .unread .pill { clip-path: inset(15px 0 round 0 var(--radius-xs) var(--radius-xs) 0); }
+  @media (hover: hover) { .item:hover .pill { clip-path: inset(9px 0 round 0 var(--radius-xs) var(--radius-xs) 0); } }
+  .active .pill { clip-path: inset(0 round 0 var(--radius-xs) var(--radius-xs) 0); }
   .badge { position: absolute; right: 12px; bottom: -4px; padding: 2px; border-radius: var(--radius-full); background: var(--surface-0); line-height: 0; }
   .separator { width: 32px; height: 1px; flex: none; background: var(--border-default); margin: var(--space-1) 0; }
   .item:focus-visible { outline: none; }

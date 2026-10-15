@@ -369,7 +369,7 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
 
 **Motion** (M4.2). Discord's style: slight, never in the way, polish only. The rules paraphrase two sources: Emil Kowalski's design-engineering skills, as published in nexu-io/open-design (`skills/emil-design-eng`, `skills/review-animations`), and the Motion and Accessibility pages of Apple's Human Interface Guidelines.
 
-1. **Only `transform` and `opacity` move**, including `translate`, `scale` and `rotate`. Colours may fade on hover, and the level meter's `clip-path` stays. Nothing animates `height`, `width`, `top`, `margin`, `padding` or `inset`, and nothing uses `transition: all`. A lint in `pnpm verify` enforces this and the tokens.
+1. **Only `transform` and `opacity` move**, including `translate`, `scale` and `rotate`. Colours may fade on hover, and `clip-path` sizes the level meter and the rail's pill, which keeps its rounded ends that way. Nothing animates `height`, `width`, `top`, `margin`, `padding` or `inset`, and nothing uses `transition: all`. A lint in `pnpm verify` enforces this and the tokens.
 2. **Frequency decides.**
    - **Hundreds of times a day**: no motion. This covers anything opened from the keyboard, switching channels, new messages and arrow keys in lists.
    - **Tens of times a day**: a colour change, or a small press on buttons.

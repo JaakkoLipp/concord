@@ -9,7 +9,7 @@ import { join, relative } from 'node:path';
 
 const ROOT = join(import.meta.dirname, '..', '..');
 const dirs = process.argv.slice(2).length ? process.argv.slice(2) : ['apps/web/src', 'packages/ui/src'];
-/** What may move. clip-path is the level meter's. */
+/** What may move. clip-path is the level meter's and the rail pill's. */
 const ALLOWED = new Set([
   'opacity', 'transform', 'translate', 'scale', 'rotate',
   'color', 'background-color', 'border-color', 'outline-color', 'fill', 'stroke', 'clip-path',
