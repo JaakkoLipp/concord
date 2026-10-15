@@ -33,7 +33,9 @@
   setMarkdownContext(() => ({ store, server }));
 
   const win = $derived(store.windows.get(channel));
-  const messages = $derived((win?.ids ?? []).map((id) => store.messages.get(id)).filter((x): x is Message => !!x));
+  // Stoat posts a call_started line for every call. A server channel's log leaves it out; a DM keeps it for its Join (client.md section 10.8).
+  const messages = $derived((win?.ids ?? []).map((id) => store.messages.get(id))
+    .filter((x): x is Message => !!x && !(info?.kind === 'text' && x.system?.type === 'call_started')));
 
   // What this account may do with messages here (m2a-plan.md task 3).
   const perms = $derived(info ? permissionsIn(store, info) : 0n);

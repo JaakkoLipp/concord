@@ -626,7 +626,7 @@ Then `createScreenTracks` captures the screen:
   - nothing, if this client is rejoining that call itself: after a LiveKit restart, whoever rejoins first rings the others again,
   - 30 seconds.
 - **Declining** tells the caller nothing, because Stoat has no decline.
-- **`call_started`**: Stoat posts one on the first join of any call, server voice channels included, and again after every empty spell. It renders as the existing system line.
+- **`call_started`**: Stoat posts one on the first join of any call, server voice channels included, and again after every empty spell. In a DM or group it renders as the existing system line. In a server channel the log leaves it out, so a started call isn't a message there.
 
 ### 10.9 Voice and video settings
 
