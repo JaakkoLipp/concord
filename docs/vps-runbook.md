@@ -149,11 +149,18 @@ The test page and the M0 encoder runs are specified in section 7 of [dev-environ
 1. Record memory and CPU per container at idle and during the voice session, using `deploy/dc stats`.
 2. Set up nightly backups with restic, done in M3 by `deploy/backup.sh` to the VPS's own disk. The Storage Box is to be added as a second repository. They cover a MongoDB dump, the object storage data, `secrets.env`, `Revolt.toml`, `livekit.yml`, the LiveKit keys file, `.env.web` and Caddy's data directory. `secrets.env` is critical, because it holds the key that decrypts every stored file. Take the dump and the object-storage copy back to back, because `crond` deletes files from storage on its own schedule.
 3. **Restore drill**: restore last night's backup onto a fresh small VPS or a local machine and start the stack. Log in to an existing account and check that its message history is intact, an image attachment opens, and avatars render. Delete the drill machine afterwards.
-4. **Upgrade drill**, if Stoat releases a new version during M3:
+   - **Concord's own layer** (architecture section 11.5): put the snapshot's `concord/data/layer-backup.db` in place as `concord/data/layer.db`, with no `-wal` or `-shm` beside it, owned by uid 1000, before `dc up -d`. `/app/api/v1/health` then answers 200, and the settings sidebar shows Jaakko's gates.
+4. **Concord's own layer** (architecture section 11.5):
+   - **Its data** is `~/stoat/concord/data/`, made by `pnpm deploy:stack`, owned by uid 1000 and never touched by deploys.
+   - **Backups**: the nightly backup runs `concord/layer-copy.sh` first, a consistent copy in `layer-backup.db`, and saves that, never the live files. `last-backup` ends in `layer copy ok` or `layer copy FAILED`. A failure doesn't stop the rest, so the previous copy is saved instead.
+   - **Health**: `curl -s https://concord.jaalip.com/app/api/v1/health`. A layer that couldn't start answers 503 `LayerUnavailable`, and `dc logs concord-web` says why on its `layer: NOT STARTED` line, while the client is still served.
+   - **Rolling back past a migration**: each migration first copies the file to `layer.db.before-vN`. An older build refuses a newer file, so stop `concord-web`, replace `layer.db` with that copy and delete `layer.db-wal` and `layer.db-shm`, then deploy the older build. Rows written since the migration are lost.
+   - **The admin list** is `ADMIN_USER_IDS=` in `host.env`: user IDs, separated by commas. Apply a change with `concord/dc up -d concord-web`.
+5. **Upgrade drill**, if Stoat releases a new version during M3:
    1. Take a MongoDB dump. Migrations run automatically at startup and there is no downgrade, so rolling back means restoring this dump.
    2. Read the release notes and the self-hosted repo's notices. Diff its `compose.yml`, `Caddyfile` and `generate_config.sh` against our pinned commit, and carry new configuration keys over by hand.
    3. Bump the pinned tags in our compose file, restart, and smoke test.
-5. Note every manual repair you had to do. This feeds decision gate criterion 3.
+6. Note every manual repair you had to do. This feeds decision gate criterion 3.
 
 ## 8. Results and decision
 

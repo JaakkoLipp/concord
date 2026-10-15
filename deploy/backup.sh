@@ -6,7 +6,8 @@
 #
 # Two snapshots a night, taken back to back because crond deletes stored files on its own schedule:
 #   tag db:    a MongoDB dump, made by restic itself, so a failed dump is never saved
-#   tag files: object storage, Caddy's data (certificates) and the server-only configuration
+#   tag files: object storage, Caddy's data (certificates), the server-only configuration and a copy of the
+#              layer's store (layer-copy.sh), never its live files
 # The files in deploy/ are in git and not backed up.
 # There is no email in M3, so the outcome goes to the system log under the tag "concord"; status.sh shows it.
 set -euo pipefail
@@ -35,6 +36,14 @@ cd "$STOAT"
 restic backup --quiet --tag db --stdin-filename mongodb.archive.gz \
   --stdin-from-command -- concord/dc exec -T database mongodump --quiet --archive --gzip
 files=(data/minio data/caddy-data secrets.env Revolt.toml .env .env.web concord/host.env concord/livekit.env)
+# Concord's own layer: a consistent copy of its store. A failure is logged and flagged in the status, and the rest
+# still runs. The previous copy, if any, is saved instead.
+layer=ok
+if ! concord/layer-copy.sh >/dev/null; then
+  layer=FAILED
+  log "WARNING: the layer's store wasn't copied"
+fi
+[ -e concord/data/layer-backup.db ] && files+=(concord/data/layer-backup.db)
 # Only a stack with a floating IP has this; a missing path would fail every night.
 [ -e /etc/netplan/60-floating-ip.yaml ] && files+=(/etc/netplan/60-floating-ip.yaml)
 restic backup --quiet --tag files "${files[@]}"
@@ -44,5 +53,5 @@ restic forget --quiet --prune --keep-daily 7 --keep-weekly 4 --keep-monthly 6
 [ "$(date +%u)" != 7 ] || restic check --quiet
 
 size=$(du -sh "$RESTIC_REPOSITORY" | cut -f1)
-echo "ok $(date -u +%FT%TZ) repository $size" > "$STATUS"
-log "ok, repository $size"
+echo "ok $(date -u +%FT%TZ) repository $size, layer copy $layer" > "$STATUS"
+log "ok, repository $size, layer copy $layer"

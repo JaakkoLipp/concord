@@ -281,6 +281,11 @@ On the local stack, from the repo root in WSL:
 | Client | `pnpm dev` |
 | Record fixtures, then test | `pnpm --filter @concord/stoat record && pnpm test` |
 | Memory | `~/stoat/concord/dc stats --no-stream` |
+| Concord's own layer | `curl -s http://localhost/app/api/v1/health`, then `node tools/live/src/layer.ts` |
+| The layer's store | `~/stoat/concord/data/layer.db`. `pnpm dev` keeps its own in `apps/web/.data/` and reaches Stoat through `http://localhost/api` |
+| A copy of the store, as the backup takes it | `~/stoat/concord/layer-copy.sh` |
+
+`ADMIN_USER_IDS` in the local `host.env` holds the `dev-admin` persona's ID, so the layer's admin gate can be tried locally. After a `pnpm seed --reset`, put the new ID there and run `~/stoat/concord/dc up -d concord-web`.
 
 ## Appendix: setting up the local stack
 

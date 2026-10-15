@@ -1,7 +1,8 @@
 /**
  * `pnpm deploy:stack` (the local stack) or `pnpm deploy:stack:prod`: copy deploy/ to ~/stoat/concord on that stack and apply it.
  *
- * Server-only files there (host.env, livekit.env, .allow-wipe, web/, spike/) are never touched: no --delete.
+ * Server-only files there (host.env, livekit.env, .allow-wipe, web/, spike/, data/) are never touched: no --delete.
+ * data/ holds the layer's store; this makes it, owned by uid 1000, the node user of concord-web's image.
  * Don't run it around 03:30: it rewrites backup.sh in place, which a running backup may still be reading.
  * --inplace matters: compose bind-mounts single files such as the Caddyfile, and a file replaced by rename
  * would leave the container reading the old one. Caddy is reloaded; a changed LiveKit or Revolt config still
@@ -17,7 +18,7 @@ const run = (cmd: string, args: string[]) => execFileSync(cmd, args, { cwd: ROOT
 
 sameHost();
 console.log(`applying deploy/ on ${SSH}`);
-run('rsync', ['-a', '--inplace', '--itemize-changes', '--exclude', 'web/', '--exclude', 'spike/', 'deploy/', `${stackPath('stoat/concord')}/`]);
+run('rsync', ['-a', '--inplace', '--itemize-changes', '--exclude', 'web/', '--exclude', 'spike/', '--exclude', 'data/', 'deploy/', `${stackPath('stoat/concord')}/`]);
 // The local stack runs in Docker Desktop: nothing is installed on the machine itself.
 const host = LOCAL ? [] : [
   // The host-level files: cron jobs, automatic reboots, the sysctl for addresses that aren't up yet.
@@ -29,6 +30,8 @@ const host = LOCAL ? [] : [
 run(...onStack([
   'set -e; cd ~/stoat',
   'concord/dc config -q',
+  // The layer's data folder, before up -d, or Docker would make it as root. Locally jaakko is uid 1000 already.
+  LOCAL ? 'install -d -m 0700 concord/data' : 'sudo install -d -o 1000 -g 1000 -m 0700 concord/data',
   // A broken Caddyfile would put Caddy in a crash loop once up -d recreates it: check it in the running one first.
   'concord/dc exec -T caddy caddy validate --config /etc/caddy/Caddyfile >/dev/null',
   ...host,

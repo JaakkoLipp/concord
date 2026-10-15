@@ -122,8 +122,14 @@ services:
       ADDRESS_HEADER: X-Forwarded-For
       XFF_DEPTH: "1"
       BODY_SIZE_LIMIT: 1M
+      # Concord's own layer (architecture section 11): its store in the read-write data folder, which deploys never
+      # touch, and the admin list from the server-only host.env. Empty means nobody is admin.
+      LAYER_DB: /srv/data/layer.db
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
     volumes:
       - ./concord/web:/srv/web:ro
+      # Made by pnpm deploy:stack, owned by uid 1000, the image's node user. Docker would make it root's.
+      - ./concord/data:/srv/data
 
 # Outbound traffic from every container leaves from the main IPv4. Without this, Docker's NAT takes the first
 # address on eth0, which after a reboot is the floating IPv4: LiveKit then discovered the floating IP as its
