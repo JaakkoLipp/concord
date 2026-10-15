@@ -2,6 +2,8 @@
  * Screen share (m4-plan.md task 7), on the local dev stack: `ben` shares a fake 1080p screen with moving content
  * into Olohuone, and `eetu` watches it. Only two browsers, so a headless software encoder isn't starved of CPU.
  * Checks, read from the viewer's stats overlay:
+ * - the share starts unwatched (m4.5-plan.md task 6): no video arrives for the viewer until "Watch stream" is
+ *   clicked, and "Stop watching" in the tile's menu stops it again,
  * - the share reaches the viewer at 1920 x 1080, and at what frame rate,
  * - it arrives as H.264, so a silent fall-back to VP8 fails. If this Chromium can't send H.264 at all, that is
  *   reported as unverifiable instead,
@@ -78,6 +80,17 @@ interface Seat { page: Page; problems: ReturnType<typeof watch> }
 async function seat(handle: string, scale: number, fakeScreen: boolean): Promise<Seat> {
   const context = await browser.newContext({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: scale, permissions: ['microphone', 'camera'] });
   if (fakeScreen) await context.addInitScript(FAKE_SCREEN);
+  // Every peer connection, for the video bytes that arrive.
+  await context.addInitScript(() => {
+    const Original = window.RTCPeerConnection;
+    const all: RTCPeerConnection[] = ((window as unknown as { __pcs: RTCPeerConnection[] }).__pcs = []);
+    window.RTCPeerConnection = function (...args: ConstructorParameters<typeof RTCPeerConnection>) {
+      const pc = new Original(...args);
+      all.push(pc);
+      return pc;
+    } as unknown as typeof RTCPeerConnection;
+    window.RTCPeerConnection.prototype = Original.prototype;
+  });
   const page = await context.newPage();
   const s: Seat = { page, problems: watch(page) };
   if (process.env.VOICE_LOG) page.on('console', (msg) => console.error(`[${handle}] ${msg.type()} ${msg.text().slice(0, 300)}`));
@@ -98,6 +111,21 @@ async function overlayOn(p: Page) {
   const item = p.getByRole('menu').getByRole('menuitemcheckbox', { name: 'Stats overlay' });
   if ((await item.getAttribute('aria-checked')) !== 'true') await item.click();
   else await p.keyboard.press('Escape');
+}
+
+/** Video bytes this page receives per second, over two seconds. */
+async function videoIn(p: Page): Promise<number> {
+  const total = () => p.evaluate(async () => {
+    let bytes = 0;
+    for (const pc of (window as unknown as { __pcs: RTCPeerConnection[] }).__pcs) {
+      if (pc.connectionState === 'closed') continue;
+      (await pc.getStats()).forEach((v: { type: string; kind?: string; bytesReceived?: number }) => { if (v.type === 'inbound-rtp' && v.kind === 'video') bytes += v.bytesReceived ?? 0; });
+    }
+    return bytes;
+  });
+  const before = await total();
+  await p.waitForTimeout(2_000);
+  return Math.round(((await total()) - before) / 2);
 }
 
 interface View { width: number; height: number; fps: number; codec: string; layer: string; kbps: number }
@@ -142,8 +170,14 @@ try {
   await dialog.getByRole('button', { name: 'Share', exact: true }).click();
   await screenTile(ben.page).waitFor({ timeout: 15_000 });
 
-  // Eetu focuses the share, so adaptive streaming asks for the top layer, and turns the overlay on.
+  // The share starts unwatched: nothing of it arrives until Eetu clicks "Watch stream".
   await screenTile(eetu.page).waitFor({ timeout: 20_000 });
+  await eetu.page.waitForTimeout(3_000);
+  const before = await videoIn(eetu.page);
+  const watchButton = call(eetu.page).getByRole('button', { name: 'Watch stream' });
+  check(before < 1_000 && await watchButton.isVisible(), `the share starts unwatched: ${before} B/s of video arrive before "Watch stream"`);
+  await watchButton.click();
+  // Eetu focuses the share, so adaptive streaming asks for the top layer, and turns the overlay on.
   await screenTile(eetu.page).click();
   await overlayOn(eetu.page);
   const full = await until(eetu.page, 45_000, (v) => v.width === 1920 && v.height === 1080 && v.fps > 0);
@@ -213,6 +247,14 @@ try {
     console.log(`known 1080p didn't come back within ${downBack.samples.length} s of freeing the downlink (${fmt(downBack.samples.at(-1))}), while the sharer sends ${await sharerText()}`);
     notes.push("after a downlink squeeze LiveKit's receive-side estimate for the viewer stays low: see m4-results.md, task 7");
   }
+
+  // "Stop watching" in the tile's menu: the video stops arriving, and the tile offers "Watch stream" again.
+  await screenTile(eetu.page).click({ button: 'right' });
+  await eetu.page.getByRole('menu').getByRole('menuitem', { name: 'Stop watching' }).click();
+  const offered = await call(eetu.page).getByRole('button', { name: 'Watch stream' }).waitFor({ timeout: 5_000 }).then(() => true, () => false);
+  await eetu.page.waitForTimeout(2_000);
+  const after = await videoIn(eetu.page);
+  check(offered && after < 1_000, `"Stop watching" stops the video: ${after} B/s, and the tile offers "Watch stream" again`);
 
   await call(ben.page).getByRole('toolbar', { name: 'Call controls' }).getByRole('button', { name: 'Stop sharing' }).click();
   const gone = await screenTile(eetu.page).waitFor({ state: 'detached', timeout: 10_000 }).then(() => true, () => false);

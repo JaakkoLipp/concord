@@ -85,6 +85,7 @@
     const feed = t.feed;
     if (t.screen && feed) {
       const now = qualities[feed.id] ?? 'auto';
+      if (!feed.watching) return [{ label: m.call.watchStream, onselect: () => feed.watch(true) }];
       return [
         ...(feed.local ? [] : [streamVolumeItem(voice, t.user), 'separator' as const]),
         ...(feed.local ? [] : QUALITIES.map((q): MenuItem => ({
@@ -94,6 +95,7 @@
         { kind: 'check', label: m.call.statsOverlay, checked: overlay, onselect: () => saveVoiceSettings({ statsOverlay: !overlay }) },
         'separator',
         { label: m.call.fullscreen, onselect: fullscreen },
+        ...(feed.local ? [] : ['separator' as const, { label: m.call.stopWatching, onselect: () => feed.watch(false) }]),
       ];
     }
     return [
@@ -116,7 +118,7 @@
     ontoggle={() => (focusedId = focusedId === t.id ? null : t.id)}
     menu={(node, fullscreen) => menu(t, node, fullscreen)}
   >
-    {#if t.screen && t.feed && overlay}<StatsOverlay feed={t.feed} />{/if}
+    {#if t.screen && t.feed?.watching && overlay}<StatsOverlay feed={t.feed} />{/if}
   </CallTile>
 {/snippet}
 

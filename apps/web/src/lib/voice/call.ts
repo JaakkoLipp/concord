@@ -58,6 +58,12 @@ export interface Feed {
    * element and pauses it while hidden.
    */
   attach(el: HTMLVideoElement): void;
+  /**
+   * Someone else's screen share starts unwatched, as on Discord (m4.5-plan.md task 6): nothing of it is received,
+   * video or audio, until `watch(true)`. Cameras and our own feeds are always watched.
+   */
+  watching: boolean;
+  watch(on: boolean): void;
   detach(el: HTMLVideoElement): void;
   setQuality(q: FeedQuality): void;
   /** The stats overlay's figures: a viewer's for a remote feed, the sharer's for our own. */
@@ -182,16 +188,48 @@ export async function connect(url: string, token: string, options: CallOptions, 
     if (s.outputDevice !== before.outputDevice) void room.switchActiveDevice('audiooutput', s.outputDevice || 'default').catch(() => {});
   });
 
+  // Screen shares this device watches, by user. A share that ends is forgotten, so the next one starts unwatched.
+  const watched = new Set<string>();
+  const isStream = (pub: TrackPublication) => pub.source === Track.Source.ScreenShare || pub.source === Track.Source.ScreenShareAudio;
+  /** Subscribes to what this device wants of a participant: voices and cameras always, streams once watched. */
+  const subscribeWanted = (p: RemoteParticipant) => {
+    for (const pub of p.trackPublications.values()) {
+      const want = !isStream(pub) || watched.has(p.identity);
+      if (pub.isSubscribed !== want) pub.setSubscribed(want);
+    }
+  };
+  const watch = (user: string, on: boolean) => {
+    if (on) watched.add(user);
+    else watched.delete(user);
+    const p = room.remoteParticipants.get(user);
+    if (p) subscribeWanted(p);
+    emitFeeds();
+  };
+
   const feedFor = (user: string, pub: TrackPublication, local: boolean): Feed | null => {
     const track = pub.videoTrack;
     const source: FeedSource | null = pub.source === Track.Source.Camera ? 'camera' : pub.source === Track.Source.ScreenShare ? 'screen' : null;
-    if (!track || !source || pub.isMuted) return null;
+    if (!source || pub.isMuted) return null;
     const id = `${user}/${pub.trackSid}`;
+    // Someone's stream before it is watched: a tile to click, with nothing received.
+    if (!track) {
+      if (local || source !== 'screen' || watched.has(user)) return null;
+      const cached = feedCache.get(id);
+      if (cached && cached.track === null) return cached.feed;
+      const waiting: Feed = {
+        id, user, source, local, watching: false, watch: (on) => watch(user, on),
+        attach: () => {}, detach: () => {}, setQuality: () => {}, stats: async () => null,
+      };
+      feedCache.set(id, { track: null, feed: waiting });
+      return waiting;
+    }
     const cached = feedCache.get(id);
     if (cached?.track === track) return cached.feed;
     const counters: Counters = new Map();
     const feed: Feed = {
       id, user, source, local,
+      watching: true,
+      watch: (on) => { if (!local && source === 'screen') watch(user, on); },
       attach: (el) => void track.attach(el),
       detach: (el) => void track.detach(el),
       setQuality: (q) => { if (!local) (pub as RemoteTrackPublication).setVideoQuality(QUALITY[q]); },
@@ -255,7 +293,14 @@ export async function connect(url: string, token: string, options: CallOptions, 
       }
       for (const el of track.detach()) el.remove();
     })
-    .on(RoomEvent.TrackUnpublished, emitFeeds)
+    .on(RoomEvent.TrackPublished, (_pub: RemoteTrackPublication, p: RemoteParticipant) => {
+      subscribeWanted(p);
+      emitFeeds();
+    })
+    .on(RoomEvent.TrackUnpublished, (pub: RemoteTrackPublication, p: RemoteParticipant) => {
+      if (pub.source === Track.Source.ScreenShare) watched.delete(p.identity);
+      emitFeeds();
+    })
     .on(RoomEvent.TrackMuted, emitFeeds)
     .on(RoomEvent.TrackUnmuted, emitFeeds)
     .on(RoomEvent.LocalTrackPublished, emitFeeds)
@@ -265,6 +310,7 @@ export async function connect(url: string, token: string, options: CallOptions, 
       emitFeeds();
     })
     .on(RoomEvent.ParticipantConnected, (p: RemoteParticipant) => {
+      subscribeWanted(p);
       applyVolume(p);
       if (peers.joined(p.identity, live())) sink.peer('join');
     })
@@ -281,7 +327,10 @@ export async function connect(url: string, token: string, options: CallOptions, 
     .on(RoomEvent.Reconnected, () => {
       // A full restart forgets disabled tracks, and recreates participants with their default volumes.
       if (deafened) setReceiving(remotes(), false);
-      for (const p of remotes()) applyVolume(p);
+      for (const p of remotes()) {
+        subscribeWanted(p);
+        applyVolume(p);
+      }
       setTimeout(() => peers.reconcile(room.remoteParticipants.keys()));
       emitFeeds();
       sink.reconnected();
@@ -307,7 +356,8 @@ export async function connect(url: string, token: string, options: CallOptions, 
     });
 
   try {
-    await room.connect(url, token, { autoSubscribe: true });
+    // Subscriptions are chosen here: streams wait until watched (m4.5-plan.md task 6).
+    await room.connect(url, token, { autoSubscribe: false });
   } catch (e) {
     cleanup();
     throw e;
@@ -319,7 +369,10 @@ export async function connect(url: string, token: string, options: CallOptions, 
   }
   up = true;
   peers.seed(room.remoteParticipants.keys());
-  for (const p of remotes()) applyVolume(p);
+  for (const p of remotes()) {
+    subscribeWanted(p);
+    applyVolume(p);
+  }
   if (deafened) setReceiving(remotes(), false);
   emitFeeds();
   void room.startAudio().catch(() => {});

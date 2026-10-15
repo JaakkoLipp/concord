@@ -347,6 +347,8 @@ export const en = {
     controls: 'Call controls',
     volume: 'User volume',
     streamVolume: 'Stream volume',
+    watchStream: 'Watch stream',
+    stopWatching: 'Stop watching',
     volumeMark: (n: number) => `Volume ${n}%`,
     percent: (n: number) => `${n}%`,
     muteForMe: 'Mute for me',
