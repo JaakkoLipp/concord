@@ -185,7 +185,7 @@ Added on 2026-10-15 at Jaakko's request, after M4.1. Plan: [m4.2-plan.md](m4.2-p
 
 ## M4.4: Concord's own layer
 
-Added on 2026-10-15 at Jaakko's request. Designed in architecture section 11, planned in [m4.4-plan.md](m4.4-plan.md).
+Added on 2026-10-15 at Jaakko's request. Designed in architecture section 11, planned in [m4.4-plan.md](m4.4-plan.md). **Built and on production, 2026-10-15**: [m4.4-results.md](m4.4-results.md).
 
 **Scope**: the shared core of a small layer beside Stoat, inside `concord-web`, for what Stoat has no place for. It covers checking the Stoat session, permissions and our own gates, a SQLite store with migrations, the client side of it, backups and docs. Clients poll for now, and a live event stream comes when a feature needs it. No user-facing feature: server tags in M4.5 and the admin panel are its first users.
 
@@ -196,7 +196,7 @@ Added on 2026-10-15 at Jaakko's request. Designed in architecture section 11, pl
 
 ## M4.5: Menus, GIFs and quick voice controls
 
-Added on 2026-10-15 at Jaakko's request, from Discord screenshots. Small, client-only work on what M2 and M4 built. Plan: [m4.5-plan.md](m4.5-plan.md), awaiting sign-off.
+Added on 2026-10-15 at Jaakko's request, from Discord screenshots. Small, client-only work on what M2 and M4 built. Plan: [m4.5-plan.md](m4.5-plan.md), signed off on 2026-10-15. **Tasks 1 to 6 and 8 to 10 built and on production the same day**: [m4.5-results.md](m4.5-results.md). Task 7, the GIF picker, waits for Jaakko's choice of provider.
 
 **Scope**:
 - **Message menu on right-click**, as Discord's:
