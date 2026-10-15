@@ -1,14 +1,17 @@
-# Concord: handoff for the next session (M4.1, then M4.4 and M4.5)
+# Concord: handoff for the next session (M4.4 and M4.5)
 
 You are continuing Concord, a Discord-style chat client on a self-hosted, unmodified Stoat 0.15.5 backend, for a ~200-person community in Finland. Jaakko directs the product, reviews on the live client and tests on real devices. Coding agents do most implementation. Jaakko's pronouns are not stated: use the name or they/them.
 
 **M4 is built and on production** at `https://concord.jaalip.com/app`: voice, the call view, camera, 1080p60 screen share, DM calls with ringing, voice settings with RNNoise and push-to-talk. What's left of M4 needs people and devices (below). Read `docs/m4-results.md` first.
 
+**M4.1 and M4.2 are built and on production** (2026-10-15):
+- **M4.1, alignment**: `docs/m4.1-results.md`. It includes the follow-up from Jaakko's Discord screenshot: the voice panel and user dock in one panel, level with the composer, and "is typing" above the composer.
+- **M4.2, motion**: `docs/m4.2-results.md`. The rules are in client.md section 9, Motion: Discord's style, slight. `tools/lint/motion.ts` in `pnpm verify` enforces them, and `tools/live/src/motion.ts` checks them live. New UI follows them: animate only transform, opacity and colours, timings from tokens, `leave` and `enter` from `@concord/ui`, and hover colours behind `@media (hover: hover)`.
+
 **This session's job, in order:**
-1. **M4.1, UI alignment fixes**: `docs/m4.1-plan.md`. Small. Ask Jaakko for sign-off, then build it.
-2. **M4.2, motion and polish**: in `docs/milestones.md`, not yet planned. Its first step is the motion spec. Read the skills it names, don't install them.
-3. **M4.4, Concord's own layer**: `docs/architecture.md` section 11 and `docs/m4.4-plan.md`. The design is approved and was revised after a challenger review. The plan awaits sign-off.
-4. **M4.5, menus, GIFs, quick voice controls, server tags**: `docs/m4.5-plan.md`, awaiting sign-off. Tasks 1 to 9 don't need M4.4, and task 10, server tags, does.
+1. **Jaakko's review of M4.1 and M4.2** on production, if not given yet: the feel with reduced motion on and off, and one Chrome performance recording on the reference machine.
+2. **M4.4, Concord's own layer**: `docs/architecture.md` section 11 and `docs/m4.4-plan.md`. The design is approved and was revised after a challenger review. The plan awaits sign-off.
+3. **M4.5, menus, GIFs, quick voice controls, server tags**: `docs/m4.5-plan.md`, awaiting sign-off. Tasks 1 to 9 don't need M4.4, and task 10, server tags, does. Its new menus and pickers use M4.2's `Menu`, `Popover` and motion helpers.
 
 ## How to work
 
@@ -30,11 +33,12 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 - Containers never get the end of stdin, so `create-account.sh` mounts its body as a file.
 - A single-file bind mount follows the file it first saw, so scripts edit `Revolt.toml` in place, never with `sed -i`.
 - After a long cut, its UDP forwarding can rewrite ports and leave a call with no audio. This is not expected on production. Jaakko's Wi-Fi switch there decides it.
+- If voice-ingress answers LiveKit's webhooks with 500 and nobody shows in a call, restart the local LiveKit: `~/stoat/concord/dc restart livekit`. It happened during M4.2 after a reloaded page rejoined a call (m4.2-results.md). It isn't understood, so watch for it at the voice evening.
 - Locally `[hosts] january` must be `http://january:14705`, or link previews never arrive.
 
 ## Open with Jaakko
 
-**Sign-offs**: M4.1, M4.4 and M4.5.
+**Sign-offs**: M4.4 and M4.5. **Reviews**: M4.1 and M4.2 on production.
 
 **Decisions pending, each with a recommendation in its plan:**
 - Restart LiveKit only when the TURN certificate is renewed. It's in the repo and not yet on production. A restart leaves Stoat's voice state wrong: m4-results.md task 9.
@@ -55,6 +59,7 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 
 **Carried from M3:**
 - M2's device checks with a tester.
+- Before the 21st, delete `~/stoat/data-dev-2026-10-14/` on the VPS.
 - Save the restic password in a password manager.
 - Remove `/spike/` from production after the voice evening.
 
