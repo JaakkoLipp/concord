@@ -368,6 +368,7 @@ That is why the layer stays small and reviewed, holds no Stoat data, and never m
 | Feature | Milestone |
 |---|---|
 | Server tags | M4.5 |
+| GIF search, keeping the GIPHY key on the server | M4.5 |
 | The admin panel: status, user and server lists, password links | Its own plan, moved onto this layer: `/app/api/v1/admin/*`, 404 for anyone not on the admin list, with the session check and gate from M4.4 |
 | Bookmarks and reminders, if missed | Later |
 | Registration, the invite allowlist and the account pages (section 7) | M6 |
@@ -375,7 +376,7 @@ That is why the layer stays small and reviewed, holds no Stoat data, and never m
 
 ### 11.5 Operations
 
-- **Backups**: `backup.sh` first asks `concord-web` for a `VACUUM INTO` copy in `concord/data/`. A failure there is logged and flagged but doesn't stop the database dump. restic saves the copy, never the live file, its WAL or its shared memory.
+- **Backups**: `backup.sh` first takes a `VACUUM INTO` copy in `concord/data/`, through `docker exec` and a one-off `node` process in `concord-web`, never an HTTP endpoint. A failure there is logged and flagged but doesn't stop the database dump. restic saves the copy, never the live file, its WAL or its shared memory.
 - **The data folder** is a read-write mount next to the read-only build, writable by the container's user, so a deploy never touches the data.
 - **On the local dev stack** it runs the same way, with its own file.
 - **If we ever leave Stoat** (section 10), this layer is the start of our own backend. Its endpoints and storage carry over, and only the session check and permission lookups change.
