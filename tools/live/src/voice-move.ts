@@ -107,8 +107,10 @@ try {
     await move(p.voiceB);
     await sleep(1_500);
     await tuuli.page.context().setOffline(false);
-    const followed = await passes(tuuli.page.getByText('Voice connected').waitFor({ timeout: 25_000 })) && await panelIn(tuuli, 'Beta');
-    check(followed && await listed(dev.page, 'Beta', 15_000), 'a move made while her connection was cut is followed when it returns');
+    let followed = false;
+    for (const end = Date.now() + 25_000; Date.now() < end && !followed; await sleep(500)) followed = (await panelIn(tuuli, 'Beta')) && (await heading(tuuli)).includes('Voice connected');
+    const seen = await listed(dev.page, 'Beta', 15_000);
+    check(followed && seen, `a move made while her connection was cut is followed when it returns (call ${followed ? 'in Beta' : JSON.stringify(await heading(tuuli))}, dev sees her in Beta: ${seen})`);
     check(await sending(tuuli.page) > 3_000, 'and she sends audio again');
   }
 } finally {
