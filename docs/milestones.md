@@ -244,7 +244,7 @@ Added on 2026-10-15 at Jaakko's request, from Discord screenshots. Small, client
 
 ## M4.6: UI motion and design parity
 
-Added on 2026-10-16 at Jaakko's request. The spec is [design/discord-ui-motion-spec.md](design/discord-ui-motion-spec.md): Discord's animations, popups, layout and colours, measured frame by frame from a recording. Its section 9 is the acceptance checklist. A Sonnet agent audited the client against sections 2, 4.1 to 4.16 and 9 on 2026-10-16. Its table, each item's status with file references, goes into `m4.6-plan.md` when the plan is written. The sub-tasks below cover only what it found partial or missing.
+Added on 2026-10-16 at Jaakko's request. The spec is [design/discord-ui-motion-spec.md](design/discord-ui-motion-spec.md): Discord's animations, popups, layout and colours, measured frame by frame from a recording. Its section 9 is the acceptance checklist. A Sonnet agent audited the client against sections 2, 4.1 to 4.16 and 9 on 2026-10-16. Plan: [m4.6-plan.md](m4.6-plan.md), awaiting sign-off, with the audit re-checked against the code. The sub-tasks below cover only what it found partial or missing.
 
 **A guide, not a copy.** Jaakko, 2026-10-16: Concord should feel like Discord while keeping its own identity. So:
 - the spec's behaviour, timings, layout and motion are the target,
