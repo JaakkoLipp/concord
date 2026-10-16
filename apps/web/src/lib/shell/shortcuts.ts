@@ -13,10 +13,16 @@ export interface Shortcut {
   /** What the shortcut does, as the shortcuts dialog names it. */
   label: string;
   run: () => void;
+  /**
+   * Checked before a key press counts as this shortcut. When it says no, the press goes on to the page as if
+   * nothing were registered, and the default isn't prevented. The global Esc uses it (M4.8 task 2).
+   */
+  when?: (e: ShortcutEvent) => boolean;
 }
 
-/** The part of a keyboard event the registry reads. */
-export type ShortcutEvent = Pick<KeyboardEvent, 'code' | 'ctrlKey' | 'shiftKey' | 'altKey' | 'metaKey' | 'repeat' | 'preventDefault'>;
+/** The part of a keyboard event the registry reads. The target and defaultPrevented are optional for callers that have no event. */
+export type ShortcutEvent = Pick<KeyboardEvent, 'code' | 'ctrlKey' | 'shiftKey' | 'altKey' | 'metaKey' | 'repeat' | 'preventDefault'>
+  & Partial<Pick<KeyboardEvent, 'target' | 'defaultPrevented'>>;
 
 const entries = new Map<string, Shortcut>();
 
@@ -53,11 +59,40 @@ export function handle(e: ShortcutEvent): boolean {
   if (recording || e.repeat) return false;
   for (const entry of entries.values()) {
     if (!matches(entry.keys, e)) continue;
+    if (entry.when && !entry.when(e)) continue;
     e.preventDefault();
     entry.run();
     return true;
   }
   return false;
+}
+
+/** Whether something takes the keyboard while open, so the navigation shortcuts and the global Esc wait (M4.8 task 2). */
+const OPEN_SURFACES = [
+  'dialog[open]', // Dialog, ImageViewer, DeleteDialog: native dialogs, open only while shown
+  '[role="menu"]', // Menu, and the message action bar's More menu: rendered only while open
+  '[role="dialog"]', // Popover (the emoji and GIF pickers) and the settings frame
+  '[role="listbox"]', // the composer's autocomplete list
+].join(', ');
+
+export function somethingOpen(): boolean {
+  return typeof document !== 'undefined' && document.querySelector(OPEN_SURFACES) !== null;
+}
+
+/** The element an event was aimed at, when it has one. */
+function targetElement(e: { target?: EventTarget | null | undefined }): Element | null {
+  const t = e.target as Partial<Element> | null | undefined;
+  return t && typeof t.closest === 'function' ? (t as Element) : null;
+}
+
+/** Whether the press is aimed at something a key types into: an input, a textarea, a select or an editor. */
+export function typingTarget(e: { target?: EventTarget | null | undefined }): boolean {
+  return !!targetElement(e)?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])');
+}
+
+/** Whether the press is aimed inside a dialog or a popover. */
+export function insideDialog(e: { target?: EventTarget | null | undefined }): boolean {
+  return !!targetElement(e)?.closest('dialog, [role="dialog"]');
 }
 
 register({

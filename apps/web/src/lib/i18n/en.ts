@@ -1008,6 +1008,16 @@ export const en = {
     reserved: 'Concord already uses that key for a shortcut. Pick another.',
     close: 'Close',
   },
+  // M4.8 task 2: the navigation shortcuts and the global Esc, as the shortcuts dialog names them.
+  shortcutNav: {
+    channelNext: 'Next channel',
+    channelPrevious: 'Previous channel',
+    unreadNext: 'Next unread channel',
+    unreadPrevious: 'Previous unread channel',
+    serverNext: 'Next server',
+    serverPrevious: 'Previous server',
+    markRead: 'Mark the channel as read',
+  },
 };
 
 export type Messages = typeof en;

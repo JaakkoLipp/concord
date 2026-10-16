@@ -11,6 +11,12 @@ import { defaultKeymap, history, historyKeymap, insertNewline } from '@codemirro
 import { drafts } from './drafts.ts';
 import { TOKEN, activeQuery, tokenAt, type QueryKind, type TokenKind } from './text.ts';
 
+/**
+ * CodeMirror's Alt-Arrow keys (move or copy a line, add a cursor). The shortcuts own them (M4.8 task 2), and they must
+ * not act while an autocomplete list or another surface is open, where the shortcuts decline them.
+ */
+const ALT_ARROW_KEYS = new Set(['Alt-ArrowUp', 'Alt-ArrowDown', 'Shift-Alt-ArrowUp', 'Shift-Alt-ArrowDown', 'Mod-Alt-ArrowUp', 'Mod-Alt-ArrowDown']);
+
 /** An autocomplete query under the caret, with the range a pick replaces. */
 export interface Query { kind: QueryKind; query: string; from: number; to: number }
 export type ListKey = 'up' | 'down' | 'pick' | 'close';
@@ -178,7 +184,7 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
       { key: 'Escape', run: () => opts.onEscape() },
       { key: 'ArrowUp', run: (v) => v.state.doc.length === 0 && !!opts.onArrowUp?.() },
       ...historyKeymap,
-      ...defaultKeymap,
+      ...defaultKeymap.filter((b) => !ALT_ARROW_KEYS.has(b.key ?? '')),
     ]),
     EditorView.lineWrapping,
     EditorView.domEventHandlers({

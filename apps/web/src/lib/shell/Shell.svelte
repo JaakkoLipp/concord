@@ -19,6 +19,7 @@
   import ConfirmDialog from './ConfirmDialog.svelte';
   import ShortcutsDialog from './ShortcutsDialog.svelte';
   import { handle as handleShortcut } from './shortcuts.ts';
+  import './navShortcuts.ts';
   import ContextMenuHost from './ContextMenuHost.svelte';
   import EmojiPicker from '$lib/emoji/EmojiPicker.svelte';
   import AdminDialogs from '$lib/admin/AdminDialogs.svelte';

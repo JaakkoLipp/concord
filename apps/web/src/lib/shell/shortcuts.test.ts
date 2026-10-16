@@ -63,4 +63,27 @@ describe('shortcut registry', () => {
     expect(handle(press('KeyF01', { altKey: true, repeat: true }))).toBe(false);
     expect(run).not.toHaveBeenCalled();
   });
+
+  it('runs a match only when its guard says yes, and leaves the press alone when it says no', () => {
+    const run = vi.fn();
+    let allowed = false;
+    register({ id: 'test-guarded', keys: keys('KeyG01', false), label: 'guarded', run, when: () => allowed });
+    const refused = press('KeyG01');
+    expect(handle(refused)).toBe(false);
+    expect(refused.preventDefault).not.toHaveBeenCalled();
+    expect(run).not.toHaveBeenCalled();
+    allowed = true;
+    const accepted = press('KeyG01');
+    expect(handle(accepted)).toBe(true);
+    expect(accepted.preventDefault).toHaveBeenCalledOnce();
+    expect(run).toHaveBeenCalledOnce();
+  });
+
+  it('gives the guard the event, so it can read its target', () => {
+    const seen: unknown[] = [];
+    const target = { closest: () => null };
+    register({ id: 'test-guard-event', keys: keys('KeyH01', false), label: 'event', run: () => {}, when: (e) => { seen.push(e.target); return false; } });
+    handle({ ...press('KeyH01'), target } as never);
+    expect(seen).toEqual([target]);
+  });
 });
