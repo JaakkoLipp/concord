@@ -84,7 +84,7 @@ for (const dir of dirs) {
         for (const item of items(v)) {
           const prop = item.split(/\s+/)[0]!;
           if (prop === 'none' || prop === 'VAR' || /^calc\(/.test(prop)) continue;
-          if (!ALLOWED.has(prop)) report(m.index, `transition of ${prop}: only transform, opacity and colours animate`);
+          if (!ALLOWED.has(prop) && !allowedSettingsNavRows(file, source, m.index, prop)) report(m.index, `transition of ${prop}: only transform, opacity and colours animate`);
         }
       }
     }
@@ -99,6 +99,15 @@ for (const dir of dirs) {
       }
     }
   }
+}
+
+/** The settings accordion alone may animate its grid rows. Keep the exemption tied to the file and selector. */
+function allowedSettingsNavRows(file: string, source: string, index: number, prop: string): boolean {
+  if (prop !== 'grid-template-rows' || relative(ROOT, file) !== 'apps/web/src/lib/settings/SettingsFrame.svelte') return false;
+  const open = source.lastIndexOf('{', index);
+  const close = source.lastIndexOf('}', index);
+  const start = Math.max(close, source.lastIndexOf('{', open - 1));
+  return open > close && source.slice(start + 1, open).trim() === '.subnav';
 }
 
 if (problems.length) {

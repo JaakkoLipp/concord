@@ -73,7 +73,7 @@
 <style>
   .popover {
     position: fixed; z-index: 900;
-    background: var(--surface-1); border: 1px solid var(--border-default); border-radius: var(--radius-lg);
+    background: var(--surface-1); border: 1px solid var(--border-default); border-radius: var(--radius-md);
     box-shadow: var(--shadow-popover);
     animation: pop var(--dur-popover) var(--ease-out);
   }

@@ -16,6 +16,7 @@ const steps: [string, string, string[], string][] = [
   ['lint', bin(ROOT, 'eslint'), ['.'], ROOT],
   ['no literals', process.execPath, ['tools/lint/no-literals.ts'], ROOT],
   ['no personal email', process.execPath, ['tools/lint/no-personal-email.ts'], ROOT],
+  ['colours', process.execPath, ['tools/lint/colours.ts'], ROOT],
   ['motion', process.execPath, ['tools/lint/motion.ts'], ROOT],
   ['tests', bin(ROOT, 'vitest'), ['run'], ROOT],
   ['svelte-check', bin(WEB, 'svelte-check'), ['--tsconfig', './tsconfig.json', '--fail-on-warnings'], WEB],

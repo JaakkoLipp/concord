@@ -76,8 +76,8 @@
   .tri .neutral[aria-checked='true'] { background: var(--surface-5); color: var(--text-strong); }
   .switch { position: relative; flex: none; display: inline-flex; cursor: pointer; }
   .switch input { position: absolute; inset: 0; z-index: 1; opacity: 0; margin: 0; cursor: inherit; }
-  .track { width: 2.5rem; height: 1.5rem; border-radius: var(--radius-full); background: var(--surface-5); position: relative; transition: background-color var(--dur-hover) var(--ease-out); }
-  .track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 1.125rem; height: 1.125rem; border-radius: var(--radius-full); background: var(--text-strong); transition: translate calc(var(--dur-hover) * var(--motion)) var(--ease-out); }
+  .track { width: 2.5rem; height: 1.5rem; border-radius: var(--radius-full); background: var(--surface-5); position: relative; transition: background-color var(--dur-state) var(--ease-out); }
+  .track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 1.125rem; height: 1.125rem; border-radius: var(--radius-full); background: var(--text-strong); transition: translate calc(var(--dur-state) * var(--motion)) var(--ease-out); }
   .switch input:checked + .track { background: var(--status-online); }
   .switch input:checked + .track::after { translate: 1rem 0; }
   .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }

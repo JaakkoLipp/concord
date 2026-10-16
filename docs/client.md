@@ -314,7 +314,7 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
   --status-focus: var(--accent);  --status-offline: #85858a;   /* proposals, each with its own shape */
   --danger: #f2555a;  --danger-fill: #d92f3a;  --on-danger: #ffffff;
 
-  --radius-xs: 0.25rem; --radius-md: 0.5rem; --radius-lg: 0.75rem; --radius-xl: 1rem; --radius-full: 9999px;
+  --radius-xs: 0.25rem; --radius-md: 0.5rem; --radius-lg: 0.75rem; --radius-xl: 1rem; --radius-modal: 0.625rem; --radius-full: 9999px;
   --space-1: 0.125rem; --space-2: 0.25rem; --space-3: 0.5rem; --space-4: 0.75rem; --space-5: 1rem;
   --space-6: 1.25rem; --space-7: 1.5rem; --space-8: 2rem; --space-9: 2.5rem; --space-10: 3rem;
 
@@ -327,14 +327,24 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
   --header-h: 48px; --composer-h: 58px; --dock-h: 58px;
   --rail-icon: 40px; --rail-pitch: 48px; --row-channel: 32px; --row-dm: 42px; --row-member: 42px;
   --avatar-sm: 32px; --avatar-md: 40px; --avatar-panel: 80px; --avatar-popout: 120px;
-  --popout-w: 400px; --picker-w: 500px; --picker-h: 486px; --settings-nav-w: 252px; --settings-col-w: 696px; --settings-col-wide-w: 940px;
+  --profile-w: 300px; --side-panel-w: 456px; --preview-w: 400px;
+  --picker-w: 500px; --picker-h: 486px; --settings-nav-w: 252px; --settings-col-w: 696px; --settings-col-wide-w: 940px;
   --control-h: 40px; --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px;
 
+  --scrollbar-thumb: var(--border-control); --scrollbar-width: 8px;
+  --video-backdrop: #000000; --video-foreground: #ffffff;
+  --syntax-keyword: #c792ea; --syntax-string: #a5d6a7; --syntax-number: #f5b942;
+  --syntax-title: #82aaff; --syntax-type: #4fcbe3; --syntax-meta: #f78c6c;
+
   --shadow-popover: 0 8px 32px rgb(0 0 0 / 0.28);  /* proposal: on black, borders carry most elevation */
-  /* Motion, below */
-  --dur-hover: 120ms; --dur-press: 120ms; --dur-popover: 150ms; --dur-modal: 200ms; --dur-toast: 200ms; --dur-exit: 100ms;
+  /* Motion, client.md section 9: slight, as Discord's. Exits are faster than enters. */
+  --dur-state: 120ms; --dur-press: 120ms; --dur-popover: 150ms; --dur-modal: 200ms; --dur-toast: 200ms; --dur-exit: 100ms;
+  --dur-tooltip: 100ms; --dur-pill-in: 200ms; --dur-pill-out: 100ms; --dur-user-panel: 130ms; --dur-image: 200ms;
+  --dur-backdrop: 100ms; --dur-settings-modal: 150ms; --dur-settings-delay: 60ms;
+  --dur-accordion: 300ms; --dur-active-bar: 150ms; --dur-spinner: 1.8s;
   --dur-meter: 60ms; --dur-loop: 1.2s; --dur-flash: 2s;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1); --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1); --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
   --motion: 1;   /* 0 under reduced motion: scales and movements collapse, fades stay */
 }
 ```
@@ -362,25 +372,22 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
   | Focus | Ring with a centre dot |
   | Offline | Hollow ring |
 
-- **Rail**: server icons are 40 px squircles with a 12 px radius. The selected server has a 4 by 38 px pill on the left edge. The icon does not morph.
+- **Rail**: server icons are 40 px squircles with a 12 px radius. The selected server has a 4 by 40 px pill on the left edge. The icon does not morph.
 - **Icons**: 20 px by default, 16 px inline and in fields, 24 px for large uses, stroke 2. Lucide's outlines read lighter than the reference's solid glyphs, so active states use the stronger text colour rather than a filled variant.
 - **Numbers**: timestamps and counts use `font-variant-numeric: tabular-nums`.
 - **Motion**: see below.
 
-**Motion** (M4.2). Discord's style: slight, never in the way, polish only. The rules paraphrase two sources: Emil Kowalski's design-engineering skills, as published in nexu-io/open-design (`skills/emil-design-eng`, `skills/review-animations`), and the Motion and Accessibility pages of Apple's Human Interface Guidelines.
+**Motion** (M4.6). Follow [the motion spec](design/discord-ui-motion-spec.md), with Concord's colours. These rules replace M4.2 where they differ.
 
-1. **Only `transform` and `opacity` move**, including `translate`, `scale` and `rotate`. Colours may fade on hover, and `clip-path` sizes the level meter and the rail's pill, which keeps its rounded ends that way. Nothing animates `height`, `width`, `top`, `margin`, `padding` or `inset`, and nothing uses `transition: all`. A lint in `pnpm verify` enforces this and the tokens.
-2. **Frequency decides.**
-   - **Hundreds of times a day**: no motion. This covers anything opened from the keyboard, switching channels, new messages and arrow keys in lists.
-   - **Tens of times a day**: a colour change, or a small press on buttons.
-   - **Occasional**: an enter and an exit. This covers menus, popovers, dialogs, toasts, the voice panel and people joining a call.
-3. **Enter slower than exit.** Every exit takes `--dur-exit`. Pages, such as settings, close instantly.
-4. **Things grow from where they came from.** A menu scales from the corner nearest its trigger, and a tooltip from the side facing its target. Dialogs stay centred.
-5. **Slight.** No enter starts from nothing, and none travels far. Popovers, dialogs and call tiles start at 0.98 scale with opacity 0, rises are `--space-2`, and a pressed button scales to 0.98.
-6. **Two curves.** `--ease-out` covers every enter, exit, press and hover. `--ease-in-out` covers things moving on screen, such as the phone drawer and the typing dots. `linear` is for the level meter only. There is no ease-in and no springs.
-7. **Durations** are the tokens above. Only `--dur-loop` and `--dur-flash` exceed 200 ms.
-8. **Reduced motion keeps the fades.** `--motion` is 0 under `prefers-reduced-motion`. Every scale and movement is written to collapse at 0, such as `scale(calc(1 - 0.02 * var(--motion)))`. Opacity and colour still fade. The phone drawer, toggle knobs, category chevrons and the rail's pill snap into place, and looping pulses stop.
-9. **Exits keep their content.** A closing menu, popover, dialog or toast stays on screen with what it showed while it fades, ignores the pointer, and gives focus back at once.
+1. **Only transform and opacity move**, including `translate`, `scale` and `rotate`. `clip-path` sizes the meter and rail pill; only the settings navigation may animate `grid-template-rows`. No animated dimensions, offsets or `transition: all`. The toggle track is the sole colour-transition exception. The lints enforce properties and tokens.
+2. **Hover and frequent changes are instant.** Channel, message, member and settings rows, buttons and rail tiles have no hover fades. Keyboard-opened surfaces, channel switches, new messages and keyboard list movement have no enter motion. Button press scales and toggle knobs remain.
+3. **Enter and exit timings follow the spec.** Menus and general popovers exit at `--dur-exit`. Tooltips crossfade at `--dur-tooltip`, without delay or growth. Profile popouts open, retarget and close instantly. Settings opens and closes with its own fade and scale.
+4. **Origin follows the trigger.** Menus grow from the nearest corner; dialogs and the settings modal stay centred. Tooltips only fade.
+5. **Small movements.** General popovers, dialogs and call tiles start at 0.98 scale; the settings modal starts at 0.97. Rises are `--space-2`, and a pressed button scales to 0.98.
+6. **Curves are tokens.** Use `--ease-out`, `--ease-in-out`, the spec's `--ease-standard` and `--ease-out-cubic`. Linear is for meters. A critically damped spring is allowed for scrolling; it keeps velocity on retarget and stops for wheel or touch input.
+7. **Durations are tokens.** Scrolling reaches 99% in about 520–550 ms, accordion changes take 300 ms, and the loading spinner loops at 1.8 s. Only the spinner, typing/ringing loops and message jump highlight exceed 550 ms.
+8. **Reduced motion makes durations zero**, fades included. CSS and JS read the same tokens. Springs jump. Typing dots and ringing pulses stop. The loading spinner keeps turning; a message jump keeps a static 2 s highlight so its destination remains visible.
+9. **Exits keep their content.** Closing surfaces retain their content, ignore the pointer and return focus. At zero duration they still finish closing and return focus.
 
 **Components seen in the reference**:
 
@@ -660,7 +667,7 @@ Discord's input profiles, Krisp, attenuation and its QoS switch are left out.
 - Semantic landmarks for each column. The channel list is a tree. The message list is a log, and new messages are announced politely only when the user is at the bottom.
 - Focus rings appear on keyboard focus only. Every overlay traps focus and returns it on close.
 - Shortcuts: Ctrl+K quick switcher, Alt+Up and Alt+Down for channels, Alt+Shift+Up and Down for unread channels, Escape to mark a channel read, Ctrl+E for the emoji picker.
-- Reduced-motion settings leave only fades: nothing moves or scales (section 9, motion).
+- Reduced-motion settings make all durations zero, including fades; only the loading spinner keeps turning. Message jumps keep a static highlight (section 9, motion).
 - Text scales with the browser's font size. Layout uses rem units for type and spacing.
 
 ## 12. Internationalisation

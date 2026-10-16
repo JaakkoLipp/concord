@@ -48,13 +48,13 @@
     font: 0.875rem/1.125rem ui-monospace, 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace; white-space: pre;
   }
   /* A small highlight palette on our surfaces. */
-  .code :global(.hljs-keyword), .code :global(.hljs-selector-tag), .code :global(.hljs-built_in) { color: #c792ea; }
-  .code :global(.hljs-string), .code :global(.hljs-attr) { color: #a5d6a7; }
-  .code :global(.hljs-number), .code :global(.hljs-literal) { color: #f5b942; }
+  .code :global(.hljs-keyword), .code :global(.hljs-selector-tag), .code :global(.hljs-built_in) { color: var(--syntax-keyword); }
+  .code :global(.hljs-string), .code :global(.hljs-attr) { color: var(--syntax-string); }
+  .code :global(.hljs-number), .code :global(.hljs-literal) { color: var(--syntax-number); }
   .code :global(.hljs-comment) { color: var(--text-muted); font-style: italic; }
-  .code :global(.hljs-title), .code :global(.hljs-function) { color: #82aaff; }
-  .code :global(.hljs-type), .code :global(.hljs-class) { color: #4fcbe3; }
-  .code :global(.hljs-meta), .code :global(.hljs-symbol) { color: #f78c6c; }
+  .code :global(.hljs-title), .code :global(.hljs-function) { color: var(--syntax-title); }
+  .code :global(.hljs-type), .code :global(.hljs-class) { color: var(--syntax-type); }
+  .code :global(.hljs-meta), .code :global(.hljs-symbol) { color: var(--syntax-meta); }
   .code :global(.hljs-addition) { color: var(--status-online); }
   .code :global(.hljs-deletion) { color: var(--danger); }
 </style>

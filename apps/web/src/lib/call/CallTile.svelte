@@ -95,7 +95,7 @@
   /* The speaking ring sits inside the tile, so the grid's gaps never clip it. */
   .tile::after {
     content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-    box-shadow: inset 0 0 0 3px var(--status-online); opacity: 0; transition: opacity var(--dur-hover) var(--ease-out);
+    box-shadow: inset 0 0 0 3px var(--status-online); opacity: 0; transition: opacity var(--dur-state) var(--ease-out);
   }
   .talking::after { opacity: 1; }
   .tile:fullscreen { border-radius: 0; aspect-ratio: auto; }

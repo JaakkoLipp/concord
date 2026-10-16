@@ -6,7 +6,7 @@ Probe date: 2026-10-16. All app observations used the local stack only.
 
 The checkout at `f83864b` was placed in the throwaway worktree `/tmp/concord-m46-settings-probe` on branch `codex/m46-settings-probe`. An independent Vite server ran at `http://localhost:5174`; its existing dev proxy forwarded app requests to the local backend. I signed into the local stack as seeded `dev`. No production address or deployment was used.
 
-I exercised the current app in Chromium through the local Vite server. A disposable SvelteKit route used `pushState`, `page.state`, `goto`, and Back to isolate router behavior; it was not a full Concord modal implementation. Voice shortcuts were source-audited, not functionally tested during a real call. Firefox, closing the tab with unsaved changes, and actual settings reload fallback were not tested.
+I exercised the current app in Chromium through the local Vite server. A disposable SvelteKit route used `pushState`, `page.state`, `goto`, and Back to isolate router behavior; it was not a full Concord modal implementation. The app route source was isolated, but the probe reused the main checkout’s UI/domain dependency links. Voice shortcuts were source-audited, not functionally tested during a real call. Firefox, closing the tab with unsaved changes, and actual settings reload fallback were not tested.
 
 ## Observed results
 

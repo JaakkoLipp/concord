@@ -38,7 +38,7 @@
     border: 0; border-radius: var(--radius-md); overflow: hidden; background: var(--surface-2) center / cover no-repeat;
     cursor: zoom-in;
   }
-  video.media { cursor: auto; background: #000; }
+  video.media { cursor: auto; background: var(--video-backdrop); }
   .media img { width: 100%; height: 100%; object-fit: cover; }
   .file {
     display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-4); max-width: 26rem; margin-top: var(--space-2);

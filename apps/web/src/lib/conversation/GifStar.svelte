@@ -24,7 +24,7 @@
   .star {
     position: absolute; top: var(--space-2); right: var(--space-2); z-index: 1; display: grid; place-items: center; width: 2rem; height: 2rem; padding: 0;
     border: 0; border-radius: var(--radius-md); background: var(--scrim); color: var(--text-strong); opacity: 0;
-    transition: opacity var(--dur-hover) var(--ease-out), color var(--dur-hover) var(--ease-out);
+    transition: opacity var(--dur-state) var(--ease-out), color var(--dur-state) var(--ease-out);
   }
   .star.on { color: var(--status-idle); }
   .star:focus-visible { opacity: 1; }

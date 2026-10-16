@@ -26,7 +26,7 @@
   --status-focus: var(--accent);  --status-offline: #85858a;   /* proposals, each with its own shape */
   --danger: #f2555a;  --danger-fill: #d92f3a;  --on-danger: #ffffff;
 
-  --radius-xs: 0.25rem; --radius-md: 0.5rem; --radius-lg: 0.75rem; --radius-xl: 1rem; --radius-full: 9999px;
+  --radius-xs: 0.25rem; --radius-md: 0.5rem; --radius-lg: 0.75rem; --radius-xl: 1rem; --radius-modal: 0.625rem; --radius-full: 9999px;
   --space-1: 0.125rem; --space-2: 0.25rem; --space-3: 0.5rem; --space-4: 0.75rem; --space-5: 1rem;
   --space-6: 1.25rem; --space-7: 1.5rem; --space-8: 2rem; --space-9: 2.5rem; --space-10: 3rem;
 
@@ -39,13 +39,23 @@
   --header-h: 48px; --composer-h: 58px; --dock-h: 58px;
   --rail-icon: 40px; --rail-pitch: 48px; --row-channel: 32px; --row-dm: 42px; --row-member: 42px;
   --avatar-sm: 32px; --avatar-md: 40px; --avatar-panel: 80px; --avatar-popout: 120px;
-  --popout-w: 400px; --picker-w: 500px; --picker-h: 486px; --settings-nav-w: 252px; --settings-col-w: 696px; --settings-col-wide-w: 940px;
+  --profile-w: 300px; --side-panel-w: 456px; --preview-w: 400px;
+  --picker-w: 500px; --picker-h: 486px; --settings-nav-w: 252px; --settings-col-w: 696px; --settings-col-wide-w: 940px;
   --control-h: 40px; --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px;
+
+  --scrollbar-thumb: var(--border-control); --scrollbar-width: 8px;
+  --video-backdrop: #000000; --video-foreground: #ffffff;
+  --syntax-keyword: #c792ea; --syntax-string: #a5d6a7; --syntax-number: #f5b942;
+  --syntax-title: #82aaff; --syntax-type: #4fcbe3; --syntax-meta: #f78c6c;
 
   --shadow-popover: 0 8px 32px rgb(0 0 0 / 0.28);  /* proposal: on black, borders carry most elevation */
   /* Motion, client.md section 9: slight, as Discord's. Exits are faster than enters. */
-  --dur-hover: 120ms; --dur-press: 120ms; --dur-popover: 150ms; --dur-modal: 200ms; --dur-toast: 200ms; --dur-exit: 100ms;
+  --dur-state: 120ms; --dur-press: 120ms; --dur-popover: 150ms; --dur-modal: 200ms; --dur-toast: 200ms; --dur-exit: 100ms;
+  --dur-tooltip: 100ms; --dur-pill-in: 200ms; --dur-pill-out: 100ms; --dur-user-panel: 130ms; --dur-image: 200ms;
+  --dur-backdrop: 100ms; --dur-settings-modal: 150ms; --dur-settings-delay: 60ms;
+  --dur-accordion: 300ms; --dur-active-bar: 150ms; --dur-spinner: 1.8s;
   --dur-meter: 60ms; --dur-loop: 1.2s; --dur-flash: 2s;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1); --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1); --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
   --motion: 1;   /* 0 under reduced motion: scales and movements collapse, fades stay */
 }

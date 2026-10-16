@@ -46,7 +46,7 @@
 
 <!-- The one keyboard listener for the registry's shortcuts (shortcuts.ts). Capture phase, so the composer's editor doesn't win. -->
 <svelte:window onkeydowncapture={(e) => handleShortcut(e) || typeToFocus(e)} />
-<div class="shell" style:--voice-h="{voiceHeight}px" class:panel={!!panel && open} class:sidebar-open={shell.sidebarOpen} style:--panel-w={panelWidth === 'profile' ? 'var(--dm-panel-w)' : panelWidth === 'find' || panelWidth === 'chat' ? 'var(--popout-w)' : 'var(--members-w)'}>
+<div class="shell" style:--voice-h="{voiceHeight}px" class:panel={!!panel && open} class:sidebar-open={shell.sidebarOpen} style:--panel-w={panelWidth === 'profile' ? 'var(--dm-panel-w)' : panelWidth === 'find' || panelWidth === 'chat' ? 'var(--side-panel-w)' : 'var(--members-w)'}>
   <div class="rail"><ServerRail {store} active={server} /></div>
   <div class="sidebar">
     {#if server}
@@ -96,7 +96,7 @@
   }
   /* The voice panel and the user dock share one panel, as on Discord. It ends level with the composer. */
   .dock { grid-area: dock; padding: var(--space-3); }
-  .dock-panel { border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--surface-1); overflow: hidden; }
+  .dock-panel { border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-1); overflow: hidden; }
   .main { grid-area: main; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   .side-panel { grid-area: panel; min-height: 0; border-left: 1px solid var(--border-subtle); background: var(--surface-0); }
   .scrim { display: none; }

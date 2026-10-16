@@ -76,7 +76,7 @@
 
 <style>
   .card { position: relative; overflow: hidden; background: var(--surface-1); }
-  .popout { width: var(--popout-w); max-width: calc(100vw - 2rem); border-radius: var(--radius-lg); }
+  .popout { width: var(--profile-w); max-width: calc(100vw - 2rem); border-radius: var(--radius-lg); }
   .panel { height: 100%; overflow-y: auto; background: var(--surface-2); }
   .banner { height: 7.5rem; background: var(--surface-5) center / cover no-repeat; }
   .panel .banner { height: 7.5rem; }

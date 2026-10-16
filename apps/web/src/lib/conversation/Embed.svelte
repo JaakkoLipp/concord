@@ -121,8 +121,8 @@
   .card .large { grid-column: 1 / -1; }
   .thumb { margin-top: 0; }
   .video-link { cursor: pointer; }
-  .play { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; filter: drop-shadow(0 1px 4px #000); }
-  video.media { cursor: auto; background: #000; }
+  .play { position: absolute; inset: 0; display: grid; place-items: center; color: var(--video-foreground); filter: drop-shadow(0 1px 4px var(--video-backdrop)); }
+  video.media { cursor: auto; background: var(--video-backdrop); }
   .gif { cursor: auto; }
   .frame { position: relative; display: block; max-width: 100%; }
   .gif video, .gif img { display: block; width: 100%; height: 100%; object-fit: cover; }
