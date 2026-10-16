@@ -8,6 +8,6 @@ export { default as Popover } from './Popover.svelte';
 export { default as Presence } from './Presence.svelte';
 export { default as Tabs } from './Tabs.svelte';
 export { default as TextField } from './TextField.svelte';
-export type { MenuAction, MenuCheck, MenuItem, MenuRange, MenuRow, PresenceState, Tab } from './types.ts';
+export type { MenuAction, MenuCheck, MenuItem, MenuRange, MenuRow, MenuSub, MenuSubItem, PresenceState, Tab } from './types.ts';
 export { tooltip } from './tooltip.ts';
 export { dialogLeave, duration, enter, fromKeyboard, leave, moving, settle, slide } from './motion.ts';
