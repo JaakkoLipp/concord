@@ -216,11 +216,11 @@ for (const mode of modes) {
 
   const pin = p.getByRole('button', { name: /pinned/i }).first();
   await step(p, mode, 'tooltip shows', async () => { await pin.hover(); await p.waitForTimeout(600); }, { some: true });
-  await step(p, mode, 'tooltip moves to a neighbour without motion', async () => {
+  await step(p, mode, 'tooltips crossfade between neighbours', async () => {
     await p.getByRole('button', { name: /member list/i }).first().hover();
-    await p.waitForTimeout(100);
+    await p.waitForTimeout(140);
   });
-  check(await p.locator('.concord-tooltip').evaluate((e) => getComputedStyle(e).opacity === '1'), `${mode}: the neighbour's tooltip shows at once`);
+  check(await p.locator('.concord-tooltip[data-open="true"]').evaluate((e) => getComputedStyle(e).opacity === '1'), `${mode}: the neighbour's tooltip shows at once`);
   await p.mouse.move(800, 400);
 
   // Dialogs: the custom status dialog, from the dock's menu, closed with Escape.

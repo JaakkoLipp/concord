@@ -717,6 +717,7 @@ export const en = {
     level: 'Notify me about',
     default: (level: string) => `Default (${level})`,
     levels: { all: 'All messages', mention: 'Only mentions', none: 'Nothing' },
+    muted: 'Muted',
     mutedHint: 'While muted, only mentions of you by name, or replies to you, notify you.',
     mute: 'Mute',
     muteFor: { off: 'Not muted', 15: 'For 15 minutes', 60: 'For 1 hour', 480: 'For 8 hours', 1440: 'For 24 hours', forever: 'Until I turn it off' },

@@ -29,7 +29,7 @@
 <section class="chat" aria-labelledby="voice-chat-title">
   <header>
     <h2 id="voice-chat-title">{m.call.chat(name)}</h2>
-    <IconButton size="sm" label={m.call.hideChat} onclick={() => (shell.voiceChat = false)}><X size={18} /></IconButton>
+    <IconButton size="sm" placement="bottom" label={m.call.hideChat} onclick={() => (shell.voiceChat = false)}><X size={18} /></IconButton>
   </header>
   <div class="body"><MessageList {session} {channel} {target} onjump={jump} /></div>
   <Composer placeholder={m.shell.messageChannel(name)} {session} channel={info} />

@@ -1,19 +1,20 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import type { HTMLButtonAttributes } from 'svelte/elements';
-  import { tooltip } from './tooltip.ts';
+  import { tooltip, type TooltipPlacement } from './tooltip.ts';
 
   interface Props extends HTMLButtonAttributes {
     /** Accessible name and tooltip text, from the message catalogue. */
     label: string;
     active?: boolean;
     size?: 'md' | 'sm';
+    placement?: TooltipPlacement;
     children: Snippet;
   }
-  let { label, active = false, size = 'md', children, type = 'button', ...rest }: Props = $props();
+  let { label, active = false, size = 'md', placement = 'top', children, type = 'button', ...rest }: Props = $props();
 </script>
 
-<button {...rest} {type} class="icon-button {size}" class:active aria-label={label} use:tooltip={label}>
+<button {...rest} {type} class="icon-button {size}" class:active aria-label={label} use:tooltip={{ text: label, placement }}>
   {@render children()}
 </button>
 

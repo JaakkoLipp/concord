@@ -58,7 +58,7 @@
 <section class="find" aria-labelledby="find-title">
   <header>
     <h2 id="find-title">{mode === 'pins' ? m.find.pins : m.find.results(shown.length, more)}</h2>
-    <IconButton size="sm" label={m.find.close} onclick={() => (shell.find = null)}><X size={18} /></IconButton>
+    <IconButton size="sm" placement="bottom" label={m.find.close} onclick={() => (shell.find = null)}><X size={18} /></IconButton>
   </header>
   <div class="list">
     {#each shown as msg (msg.id)}

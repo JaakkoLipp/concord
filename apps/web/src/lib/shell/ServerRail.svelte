@@ -28,7 +28,7 @@
 </script>
 
 <nav class="rail" aria-label={m.shell.servers}>
-  <a class="item" class:active={active === null} href={resolve('/app/channels/@me')} aria-current={active === null ? 'page' : undefined} use:tooltip={m.shell.directMessages} aria-label={m.shell.directMessages}>
+  <a class="item" class:active={active === null} href={resolve('/app/channels/@me')} aria-current={active === null ? 'page' : undefined} use:tooltip={{ text: m.shell.directMessages, placement: 'right' }} aria-label={m.shell.directMessages}>
     <span class="pill" aria-hidden="true"></span>
     <span class="tile home"><Logo /></span>
     {#if dmMentions}<span class="badge"><Badge count={dmMentions} label={m.shell.mentions(dmMentions)} /></span>{/if}
@@ -39,7 +39,7 @@
     <a
       class="item" class:active={active === server.id} class:unread={badge.unread}
       href={href(server.id)} aria-current={active === server.id ? 'page' : undefined}
-      use:tooltip={server.name} aria-label={m.shell.serverLabel(server.name, badge.mentions)}
+      use:tooltip={{ name: server.name, detail: store.serverMuted(server.id) ? m.notify.muted : undefined, placement: 'right' }} aria-label={m.shell.serverLabel(server.name, badge.mentions)}
       use:menuOn={() => (app.session ? serverMenu(app.session, server.id) : [])}
     >
       <span class="pill" aria-hidden="true"></span>
@@ -52,7 +52,7 @@
     </a>
   {/each}
   {#if canCreateServers(store) && app.session}
-    <button class="item" onclick={() => (creating = true)} use:tooltip={m.admin.createServer} aria-label={m.admin.createServer}>
+    <button class="item" onclick={() => (creating = true)} use:tooltip={{ text: m.admin.createServer, placement: 'right' }} aria-label={m.admin.createServer}>
       <span class="pill" aria-hidden="true"></span>
       <span class="tile add"><Plus /></span>
     </button>
