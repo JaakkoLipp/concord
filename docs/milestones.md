@@ -24,7 +24,7 @@ Every milestone ends with a demo on Jaakko's real devices. A milestone is done w
 | M4.5 | Discord-style menus, GIFs, quick voice controls, server tags | M4.4 | m4.5 plan |
 | M4.6 | UI motion and design parity with Discord, from a measured spec | M4.5 | [discord-ui-motion-spec.md](design/discord-ui-motion-spec.md) |
 | M4.7 | Moderation, voice and text: moving people between calls, server mute and deafen, permissions that work, timeouts, slow mode, bulk delete, the audit log, reports | M4.5 | m4.7 plan |
-| M4.8 | Everyday usability: quick switcher and shortcuts, opening at the first unread, a mentions inbox, My Account in the app, server folders, drafts that survive a reload, message sounds, an offline banner, appearance settings, saved messages, notes, search filters | M4.5 | m4.8 plan |
+| M4.8 | Everyday usability: quick switcher and shortcuts, opening at the first unread, a mentions inbox, My Account in the app, server folders, drafts that survive a reload, message sounds, an offline banner, appearance settings, notes, search filters | M4.5 | m4.8 plan |
 | M5 | Desktop apps for Windows and Linux | M4 | desktop spec |
 | M6 | Website: invites, registration, account management, downloads | M3 | website spec |
 | M7 | Polish, Finnish locale, PWA with web push, closed beta | M2 to M6 | none new |
@@ -415,7 +415,7 @@ Where the spec's motion and M4.2's rules (client.md section 9) differ, the spec 
 **Deferred**: what Concord doesn't have.
 - **The "more active threads" popout and the hover-intent helper** (spec 4.5, 5.2): Stoat has no threads, so it waits for a backend of our own. The helper has no other user yet.
 - **Server folders and their tooltip** (spec 3, 4.3): M4.8 creates the folders, and the tooltip comes with them.
-- **The Appearance page's theme swatches** (spec 4.15): M4.8's appearance settings.
+- **The Appearance page's theme swatches** (spec 4.15): cut with M4.8's light theme.
 - **"Forward" in the action bar** (spec 4.2): Stoat has no forwarding.
 - **Activity cards and the "now playing" subtext** (spec 4.10, 4.16): Stoat has no activities. The user panel slides between the custom status and the username instead.
 - **Nameplates** (spec 3) and the settings "NEW" badge (spec 2): no such features.
@@ -462,8 +462,7 @@ Added on 2026-10-16 at Jaakko's request, from a Sonnet audit of the client again
 - **Not losing work**: drafts survive a reload, and collapsed categories stay collapsed.
 - **Notifications**: message and mention sounds, and ignoring @everyone and role mentions per server.
 - **Knowing when you're offline**: a banner while the connection is down or reconnecting.
-- **Appearance**: a light theme, a compact message layout, and the font size.
-- **Saved messages**: a "Save message" item and a way to open Stoat's private Saved Messages channel, as Discord's bookmarks.
+- **Appearance**: a compact message layout and the font size. The light theme is cut, decided 2026-10-16.
 - **Private notes** on people, in a synced `concord:` setting.
 - **Search**: before and after dates, "from someone" as a filter on the results, and a member list filter.
 - **Smaller polish**:
