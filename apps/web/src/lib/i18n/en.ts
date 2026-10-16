@@ -1034,6 +1034,16 @@ export const en = {
     serverPrevious: 'Previous server',
     markRead: 'Mark the channel as read',
   },
+  // M4.8 task 3: the quick switcher (Ctrl+K), and the DM list's button that opens it.
+  switcher: {
+    shortcut: 'Quick switcher',
+    title: 'Quick switcher',
+    label: 'Find a channel, server or person',
+    empty: 'Type to find a channel, server or person',
+    none: 'No matches',
+    results: 'Results',
+    kind: { channel: 'Channel', voice: 'Voice channel', server: 'Server', dm: 'Direct message', person: 'Start a conversation' },
+  },
 };
 
 export type Messages = typeof en;

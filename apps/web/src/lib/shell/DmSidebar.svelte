@@ -10,6 +10,7 @@
   import { avatarUrl, presenceOf, statusTextOf } from '$lib/view/users.ts';
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import { app } from '$lib/session/app.svelte.ts';
+  import { switcher } from '$lib/view/switcher.svelte.ts';
   import { notifyItems } from '$lib/notify/dialog.svelte.ts';
   import { participantMenu } from '$lib/call/menu.ts';
   import TagBadge from '$lib/people/TagBadge.svelte';
@@ -35,7 +36,7 @@
 </script>
 
 <header class="search-header">
-  <button class="search" disabled>{m.shell.findConversation}</button>
+  <button class="search" onclick={() => switcher.show(false)}>{m.shell.findConversation}</button>
 </header>
 <nav class="dms" aria-label={m.shell.directMessages}>
   <a class="row friends" class:active={active === null} href={resolve('/app/channels/@me')} aria-current={active === null ? 'page' : undefined}>

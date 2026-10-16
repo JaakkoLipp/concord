@@ -13,6 +13,7 @@ import { VoiceController } from '$lib/voice/controller.svelte.ts';
 import { Rings } from '$lib/voice/rings.svelte.ts';
 import { HttpLayer } from '$lib/layer/client.ts';
 import { tags } from '$lib/layer/tags.svelte.ts';
+import { clearRecent } from '$lib/view/switcher.svelte.ts';
 
 // The (app) group has ssr = false, so this only runs in the browser; the guard keeps server builds importable.
 export const backend = new StoatBackend(new LiveTransport(typeof location === 'undefined' ? 'http://localhost' : location.origin));
@@ -76,6 +77,7 @@ class App {
   }
 
   private async signedOut(): Promise<void> {
+    clearRecent();
     this.rings?.destroy();
     this.rings = null;
     this.voice?.destroy();

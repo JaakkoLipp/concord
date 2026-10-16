@@ -18,8 +18,10 @@
   import Toaster from './Toaster.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import ShortcutsDialog from './ShortcutsDialog.svelte';
+  import QuickSwitcher from './QuickSwitcher.svelte';
   import { handle as handleShortcut } from './shortcuts.ts';
   import './navShortcuts.ts';
+  import './switcherShortcut.ts';
   import { typeToFocus } from './typeToFocus.ts';
   import ContextMenuHost from './ContextMenuHost.svelte';
   import EmojiPicker from '$lib/emoji/EmojiPicker.svelte';
@@ -68,6 +70,7 @@
   <EmojiPicker />
   <ConfirmDialog />
   <ShortcutsDialog />
+  <QuickSwitcher />
   <ContextMenuHost />
   {#if app.session}<AdminDialogs session={app.session} /><MemberRolesDialog session={app.session} /><ModerationDialogs session={app.session} /><NotifySettingsDialog session={app.session} />{/if}
   <NotifyBar />
