@@ -20,13 +20,37 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
   - sounds through the chosen speaker,
   - Speak gained mid-call,
   - the January pull request text,
-  - server tags, the layer's first feature.
+  - server tags, the layer's first feature,
+  - favourite GIFs without search: a star on GIFs in chat, and a GIF button in the composer,
+  - mute and deafen keybinds in Voice and video settings.
+- **Since then**, the server menu has Mute server and Server settings swapped, at Jaakko's request (`b029c05`).
 
-  - favourite GIFs without search, Jaakko's choice for task 7: a star on GIFs in chat, and a GIF button in the composer.
+**Planned next**, all in `docs/milestones.md` (renumbered 2026-10-16):
+- **M4.6, UI motion and design parity.** It follows `docs/design/discord-ui-motion-spec.md`, a measured spec of Discord's motion, popups and layout, whose section 9 is the acceptance checklist.
+  - **A guide, not a copy**: behaviour, timings and layout follow the spec; colours stay Concord's. Cyan stays, text keeps its contrast, and settings becomes a modal over the app. These are decided.
+  - The roadmap entry has 18 sub-tasks in dependency order, a token mapping and a deferred list, from a Sonnet audit against the spec.
+  - **The spec overrides M4.2's motion rules** where they differ, so sub-task 1 changes client.md section 9 and `tools/lint/motion.ts` first.
+  - No plan file yet.
+- **M4.7, moderation, voice and text.** The plan is `docs/m4.7-plan.md`, challenger-reviewed twice and awaiting Jaakko's sign-off. It covers:
+  - moving people between calls,
+  - server mute and deafen, enforced by Concord clients because of Stoat's bug,
+  - menus laid out as Discord's,
+  - permissions that work,
+  - timeouts, slow mode and bulk delete for server admins,
+  - the audit log and reports through the layer,
+  - protecting history: hourly snapshots and a restore tool, permission guardrails, and a guard bot,
+  - the upstream pull request text.
+- **M4.8, everyday usability**: the quick switcher and shortcuts, opening at the first unread, a mentions inbox, My Account in the app, server folders and more. Roadmap entry only.
 
 **This session's job:**
 1. **Jaakko's review** of M4.4 and M4.5 on production, and of M4.1 and M4.2 if not given yet.
-2. **Then the next milestone** in `docs/milestones.md`, planned first, or the admin panel's plan if Jaakko wants it sooner (below).
+2. **The M4.6 plan**, `docs/m4.6-plan.md`, from its roadmap entry:
+   - probes where needed,
+   - tasks with done-checks,
+   - the audit table, re-checked against the code,
+   - a Sonnet challenger review.
+
+   Then stop for sign-off and build. M4.7 follows once Jaakko signs off its plan.
 
 ## How to work
 
@@ -43,6 +67,7 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
   - M4 is covered by `voice`, `callview`, `dm-call`, `share` and `voice-restart`, M4.4 by `layer`, and M4.5 by `menus`, `server-read`, `voice-controls`, `voice-channel`, `tags` and `gifs`.
   - The call checks play `media.ts`'s speech-like fake microphone, which Chromium's audio processing still learns to filter within a minute or so, so keep each call check short. New ones share `calls.ts`.
 - **The layer**: a new table is a new numbered file in `apps/web/src/lib/server/layer/migrations/`, imported by name in `migrations.ts`. A unit test fails if one is missing. Every endpoint goes through `endpoint()` in `http.ts`.
+- **Design direction**: Concord should feel like Discord and keep its own identity. Take structure, ordering, timings and behaviour from Discord references, never their colours or brand. UI checks use "no hard-coded colours, tokens only" in place of "colours match Discord".
 - **Sonnet subagents** (`model: "sonnet"`) do research, the challenger review of each plan, and the review of the session's diff before handing over. Keep synthesis and final writing in the main session. Never run scripts or build tools inside downloaded clones.
 - **Private addresses**: Jaakko's admin email must never appear in files or commit messages. `pnpm verify` fails on personal mail addresses.
 
@@ -85,7 +110,7 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 **Upstream candidates** (architecture section 9):
 - January and the Instagram embed fixers: the pull request text and its tested pattern are in m4.5-results.md task 9, for Jaakko to file.
 - voice-ingress's state after LiveKit restarts.
-- Voice moderation acting on the moderator instead of the target.
+- Voice moderation acting on the moderator instead of the target. M4.7 task 13 writes the pull request text; the source lines are in the m4.7 plan's appendix.
 
 **Known, not fixed**: a screen-share viewer whose downlink was squeezed can stay at 360p for minutes. Send-side estimation didn't help (m4.5-results.md task 1).
 
