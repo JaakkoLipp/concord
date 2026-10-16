@@ -164,3 +164,42 @@ describe('rings during a rejoin', () => {
     expect(ringSuppressed(D, { rejoiningChannel: null, channel: null, status: 'none' })).toBe(false);
   });
 });
+
+describe('a move by a moderator', () => {
+  const D = '01M4WPBMZXD977DMJNR76RZQ99';
+  const E = '01M4WPBMZXD977DMJNR76RZQ98';
+
+  it('connects to the new channel at once, from any live phase, with nothing counted as lost', () => {
+    for (const from of [joined(), run([[0, { type: 'join', channel: C }], [500, { type: 'connected' }], [900, { type: 'reconnecting' }]])[0], run([[0, { type: 'join', channel: C }]])[0]]) {
+      const [s, fx] = step(from, { type: 'moved', channel: D }, 1_000);
+      expect(s).toMatchObject({ phase: 'connecting', channel: D, lostAt: null, attempt: 0 });
+      expect(shown(s)).toBe('connecting');
+      expect(fx).toEqual({ type: 'connect' });
+    }
+  });
+
+  it('follows from a rejoin wait, dropping the countdown', () => {
+    const waiting = run([[0, { type: 'join', channel: C }], [500, { type: 'connected' }], [2_000, { type: 'ended', cause: 'connection' }]])[0];
+    expect(waiting.phase).toBe('waiting');
+    const [s, fx] = step(waiting, { type: 'moved', channel: D }, 3_000);
+    expect(s).toMatchObject({ phase: 'connecting', channel: D, lostAt: null, retryAt: null });
+    expect(fx).toEqual({ type: 'connect' });
+  });
+
+  it('follows when LiveKit’s removal reached us first, and a second move after the first', () => {
+    const removed = run([[0, { type: 'join', channel: C }], [500, { type: 'connected' }], [2_000, { type: 'ended', cause: 'removed' }]])[0];
+    expect(removed).toMatchObject({ phase: 'disconnected', reason: 'removed' });
+    const [first] = step(removed, { type: 'moved', channel: D }, 2_050);
+    expect(first).toMatchObject({ phase: 'connecting', channel: D, reason: null });
+    const [second, fx] = step(first, { type: 'moved', channel: E }, 2_100);
+    expect(second).toMatchObject({ phase: 'connecting', channel: E });
+    expect(fx).toEqual({ type: 'connect' });
+  });
+
+  it('does nothing outside a call, or after an end that was not a removal', () => {
+    expect(step(initial, { type: 'moved', channel: D }, 0)).toEqual([initial, null]);
+    const refused = run([[0, { type: 'join', channel: C }], [500, { type: 'connected' }], [1_000, { type: 'ended', cause: 'connection' }], [11_000, { type: 'retry' }], [11_100, { type: 'failed', final: true }]])[0];
+    expect(refused).toMatchObject({ phase: 'disconnected', reason: 'refused' });
+    expect(step(refused, { type: 'moved', channel: D }, 12_000)).toEqual([refused, null]);
+  });
+});

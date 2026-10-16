@@ -31,6 +31,9 @@ const CLOCK_MS = 15_000;
 /** A DM call rings for this long at most, counted from when this session heard it (m4-plan.md decision 9). */
 export const RING_MS = 30_000;
 
+/** This account moved to another voice channel by a moderator, with the token that joins it (10 s). */
+export type VoiceMoved = Extract<DomainEvent, { type: 'voiceMoved' }>;
+
 /** This account losing a server, and why. `left` covers leaving or deleting it from this session or another. */
 export interface ServerRemoval {
   server: Id;
@@ -530,8 +533,15 @@ export class Session {
   // ---------- events the store can't handle alone ----------
 
   private readonly removalListeners = new Set<(r: ServerRemoval) => void>();
+  private readonly movedListeners = new Set<(m: VoiceMoved) => void>();
   /** Servers this session is leaving or deleting itself, so their removal isn't announced as someone else's doing. */
   readonly ownRemovals = new Set<Id>();
+
+  /** Called when a moderator moves this account to another voice channel. Returns the call that stops it. */
+  onVoiceMoved(listener: (m: VoiceMoved) => void): () => void {
+    this.movedListeners.add(listener);
+    return () => this.movedListeners.delete(listener);
+  }
 
   /** Called whenever this account loses a server. Returns the call that stops it. */
   onServerRemoved(listener: (r: ServerRemoval) => void): () => void {
@@ -595,6 +605,9 @@ export class Session {
       case 'voiceMove':
         // Anyone who can see a channel sees who joins it, including people this session hasn't met.
         return this.meetInVoice(e.state.user, e.state.channel);
+      case 'voiceMoved':
+        for (const listener of this.movedListeners) listener(e);
+        return;
       case 'callUpdate':
         return this.timeRing(e.channel);
     }

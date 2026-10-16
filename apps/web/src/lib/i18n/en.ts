@@ -320,6 +320,7 @@ export const en = {
       network: 'Couldn’t reach the server. Check your connection.',
       unknown: 'Couldn’t join voice. Try again.',
     } satisfies Record<JoinFailure, string>,
+    moved: (channel: string) => `You were moved to ${channel}.`,
     micDenied: 'Microphone access was refused, so you can only listen.',
     micMissing: 'No microphone was found, so you can only listen.',
     micFailed: 'The microphone couldn’t start, so you can only listen.',

@@ -52,6 +52,11 @@ export type DomainEvent =
   | { type: 'voiceLeave'; channel: Id; user: Id }
   /** Moved by a moderator, sent instead of a leave and a join. */
   | { type: 'voiceMove'; from: Id; state: VoiceState }
+  /**
+   * This account was moved to another voice channel, sent to the moved user alone. The token joins `to` and
+   * lives 10 s. Everyone else gets `voiceMove` once the user has connected there.
+   */
+  | { type: 'voiceMoved'; from: Id; to: Id; node: string; token: string }
   /** Only the flags that changed. */
   | { type: 'voiceUpdate'; channel: Id; user: Id; data: Partial<VoiceFlags> }
   /**

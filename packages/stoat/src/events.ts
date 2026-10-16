@@ -135,6 +135,8 @@ export function mapFrame(f: Frame): DomainEvent[] {
       return [{ type: 'voiceLeave', channel: x.id, user: x.user }];
     case 'VoiceChannelMove':
       return [{ type: 'voiceMove', from: x.from, state: mapVoiceState(x.to, x.state as WVoiceState) }];
+    case 'UserMoveVoiceChannel':
+      return [{ type: 'voiceMoved', from: x.from, to: x.to, node: x.node, token: x.token }];
     case 'UserVoiceStateUpdate':
       return [{ type: 'voiceUpdate', channel: x.channel_id, user: x.id, data: mapVoiceFlags(x.data ?? {}) }];
     case 'VoiceCallUpdate': {

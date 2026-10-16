@@ -101,6 +101,14 @@ describe('voice events', () => {
     expect(who(s, 'V2')).toEqual(['A']);
   });
 
+  it('decodes the private move event, which the store leaves to the voice controller', () => {
+    expect(mapFrames({ type: 'UserMoveVoiceChannel', node: 'worldwide', from: 'V1', to: 'V2', token: 'T' })).toEqual([{ type: 'voiceMoved', from: 'V1', to: 'V2', node: 'worldwide', token: 'T' }]);
+    const s = store([{ id: 'V1', participants: [participant('ME', '2026-10-14T18:00:00Z')] }]);
+    apply(s, { type: 'UserMoveVoiceChannel', node: 'worldwide', from: 'V1', to: 'V2', token: 'T' });
+    // The state changes only with the VoiceChannelMove that follows once the user has connected.
+    expect(who(s, 'V1')).toEqual(['ME']);
+  });
+
   it('merges only the flags an update carries', () => {
     const s = store([{ id: 'V1', participants: [participant('A', '2026-10-14T18:00:00Z', { is_publishing: true })] }]);
     apply(s, { type: 'UserVoiceStateUpdate', id: 'A', channel_id: 'V1', data: { screensharing: true } });

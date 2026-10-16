@@ -465,6 +465,8 @@ export class Store {
         if (!old || ringKey(old) !== ringKey(ring)) this.rings.set(ring.channel, ring);
         return;
       }
+      // Private to the moved user: the voice controller follows it, and the state changes with the `voiceMove` that comes after.
+      case 'voiceMoved':
       case 'unknown':
         return;
     }

@@ -84,6 +84,8 @@ export type CallEvent =
   | { type: 'failed'; final: boolean }
   /** The wait before a rejoin is over. */
   | { type: 'retry' }
+  /** A moderator moved us to another channel: join it at once, as a continuation of the call (task 2 of m4.7-plan.md). */
+  | { type: 'moved'; channel: Id }
   | { type: 'leave' };
 
 /** What the controller must do after a step: start a join, or wake the machine with `retry` after `ms`. */
@@ -98,6 +100,11 @@ export function step(s: CallState, e: CallEvent, now: number): [CallState, Effec
       return [{ ...s, phase: 'connecting', channel: e.channel, lostAt: null, attempt: 0, retryAt: null, reason: null }, { type: 'connect' }];
     case 'leave':
       return [{ ...initial, joinedAt: s.joinedAt }, null];
+    case 'moved':
+      // The removal from the old room can reach us first, so a call ended as `removed` is still followed. Nothing else
+      // ended is: an idle call, or one that was kicked, rejoined, given up or refused, is not the one that was moved.
+      if (s.phase === 'idle' || (s.phase === 'disconnected' && s.reason !== 'removed')) return [s, null];
+      return [{ ...s, phase: 'connecting', channel: e.channel, lostAt: null, attempt: 0, retryAt: null, reason: null }, { type: 'connect' }];
     case 'connected':
       if (s.phase !== 'connecting') return [s, null];
       return [{ ...s, phase: 'connected', lostAt: null, attempt: 0, joinedAt: now, retryAt: null }, null];

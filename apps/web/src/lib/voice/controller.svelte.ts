@@ -6,7 +6,7 @@
  * the SDK stays out of the main bundle. Everything here imports it as types only.
  */
 import { untrack } from 'svelte';
-import { Permission, has, isFinalJoinFailure, joinFailure, type Id, type JoinFailure, type Session } from '@concord/domain';
+import { Permission, has, isFinalJoinFailure, joinFailure, type Id, type JoinFailure, type Session, type VoiceMoved } from '@concord/domain';
 import { permissionsIn } from '$lib/view/channels.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 import { m } from '$lib/i18n/index.ts';
@@ -17,6 +17,7 @@ import { VideoLimitError } from './limits.ts';
 import { mutedForMe, setMutedForMe, setUserVolume, userVolumes, type SharePreset } from './settings.ts';
 import { sharePlan, shareBrowser } from './share.ts';
 import { endCause, initial, movedElsewhere, rejoining, shown, step, type CallEvent, type CallState, type Shown } from './rejoin.ts';
+import { movesThisCall, tokenUsable } from './move.ts';
 import { play } from './sounds.ts';
 
 /** Our own LiveKit, behind our origin. Never the URL Stoat returns. Local dev runs on plain http. */
@@ -43,6 +44,11 @@ export class VoiceController {
    * would then look like our own.
    */
   private ownState: { joinedAt: number } | null = null;
+  /** The token of a move being followed, for the join that follows it. Consumed by `connect`. */
+  private pendingMove: { channel: Id; token: string } | null = null;
+  /** The channel left by a followed move that hasn't connected yet: a second move before then still names it as `from`. */
+  private leaving: Id | null = null;
+  private readonly stopMoves: () => void;
   /** Web Audio mixing, for volumes above 100 %, only where it can also play to the chosen speaker (output.ts). */
   readonly webAudioMix = webAudioOutput();
 
@@ -83,6 +89,7 @@ export class VoiceController {
 
   constructor(session: Session) {
     this.session = session;
+    this.stopMoves = session.onVoiceMoved((move) => this.followMove(move));
     // Speak gained or lost mid-call, by a role or an override: the call publishes the microphone once allowed.
     this.stopWatching = $effect.root(() => {
       $effect(() => {
@@ -112,6 +119,7 @@ export class VoiceController {
     if (this.state.phase === 'idle') return;
     const live = this.call !== null;
     this.gen++;
+    this.pendingMove = this.leaving = null;
     this.dispatch({ type: 'leave' });
     void this.drop();
     if (live) play('leave');
@@ -207,6 +215,25 @@ export class VoiceController {
   destroy(): void {
     this.leave();
     this.stopWatching();
+    this.stopMoves();
+  }
+
+  /**
+   * A moderator moved us (m4.7-plan.md task 2). Stoat's event arrives before LiveKit removes us from the old room, which
+   * is what tells a move from a kick: connect to the new room with the token it sent, keeping mute, deafen and volumes. A
+   * token too old to use, or refused, falls back to an ordinary join (in `connect`).
+   */
+  private followMove(move: VoiceMoved): void {
+    if (!movesThisCall(move.from, this.state.channel, this.leaving)) return;
+    const usable = tokenUsable(move.token, Date.now());
+    // A removal that LiveKit delivered first is still a move, but only while its token is fresh: an old one means the call
+    // ended some other way, and a rejoin would undo it.
+    if (!usable && this.state.phase === 'disconnected') return;
+    this.pendingMove = usable ? { channel: move.to, token: move.token } : null;
+    this.leaving = move.from;
+    this.dispatch({ type: 'moved', channel: move.to });
+    const to = this.session.store.channels.get(move.to);
+    if (to && 'name' in to) toasts.show(m.voice.moved(to.name), 'info');
   }
 
   private selfState(): { joinedAt: number } | null {
@@ -248,7 +275,10 @@ export class VoiceController {
     this.ownState = null;
     const channel = this.state.channel;
     if (!channel) return;
-    // A rejoin, or a switch while rejoining, makes no join sound: the call was never left.
+    const moved = this.pendingMove?.channel === channel ? this.pendingMove : null;
+    this.pendingMove = null;
+    // A rejoin, or a switch while rejoining, makes no join sound and fails quietly: the call was never left. A move
+    // makes no sound either, but its failure is told.
     const rejoin = this.state.lostAt !== null;
     // Switching: leave the old call first, so `force_disconnect` doesn't end it as a removal.
     await this.drop();
@@ -261,19 +291,30 @@ export class VoiceController {
       // Load the SDK before asking for the token, which lives 10 s.
       const { connect } = await import('./call.ts');
       if (gen !== this.gen) return;
-      const { token } = await this.session.backend.joinCall(channel, node);
-      if (gen !== this.gen) return;
       const { muted, deafened } = this.controls;
       const options = { current: () => gen === this.gen && this.state.phase === 'connecting', muted, deafened, canSpeak, webAudioMix: this.webAudioMix, volumes: this.volumes, mutedForMe: this.mutedForMe };
-      const call = await connect(livekitUrl(), token, options, this.sink(gen));
+      let call: Call;
+      try {
+        const token = moved ? moved.token : (await this.session.backend.joinCall(channel, node)).token;
+        if (gen !== this.gen) return;
+        call = await connect(livekitUrl(), token, options, this.sink(gen));
+      } catch (e) {
+        if (!moved || gen !== this.gen) throw e;
+        // The move's token was refused or ran out on the way: join as anyone would.
+        const { token } = await this.session.backend.joinCall(channel, node);
+        if (gen !== this.gen) return;
+        call = await connect(livekitUrl(), token, options, this.sink(gen));
+      }
       // Superseded, or the room already ended, which the sink has handled.
       if (gen !== this.gen || this.state.phase !== 'connecting') return void call.disconnect();
       this.call = call;
+      this.leaving = null;
       this.removedAs = null;
       this.dispatch({ type: 'connected' });
-      if (!rejoin) play('join');
+      if (!rejoin && !moved) play('join');
     } catch (e) {
       if (gen !== this.gen) return;
+      this.leaving = null;
       const failure: JoinFailure = e instanceof Unavailable ? 'unavailable' : joinFailure(e);
       this.dispatch({ type: 'failed', final: isFinalJoinFailure(failure) });
       // A rejoin fails quietly: the panel already says it is reconnecting.

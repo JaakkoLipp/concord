@@ -6,7 +6,7 @@ export { BackendError, JoinCallError, joinFailure, isFinalJoinFailure, type Join
 export { ulid, isUlid, ULID_PATTERN } from './ulid.ts';
 export { Store, memberKey, newer, WINDOW_MAX, type EmojiPrefs, type FavouriteGif, type MessageWindow, type PendingFile, type PendingMessage, type Settings } from './store/store.svelte.ts';
 export * from './notify.ts';
-export { Session, parseSettings, type ServerRemoval } from './session.svelte.ts';
+export { Session, parseSettings, type ServerRemoval, type VoiceMoved } from './session.svelte.ts';
 export * from './ranks.ts';
 export * from './layout.ts';
 export { ServerAdmin, ALL_PERMISSIONS, ADMIN_ROLE } from './admin.svelte.ts';
