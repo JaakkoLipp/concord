@@ -97,8 +97,9 @@ export interface Call {
   setVolume(key: string, volume: number): void;
   setMutedForMe(user: string, muted: boolean): void;
   /**
-   * Stoat's Speak permission in the channel changed. Gaining it publishes the microphone as soon as LiveKit's
-   * permissions for this participant allow it too, without a rejoin (m4.5-plan.md task 8).
+   * Stoat's Speak permission in the channel changed, or a moderator server muted us. Gaining it publishes the microphone
+   * as soon as LiveKit's permissions for this participant allow it too, without a rejoin (m4.5-plan.md task 8). Losing it
+   * takes the microphone off the call.
    */
   setCanSpeak(on: boolean): void;
   setPushToTalk(down: boolean): void;
@@ -437,6 +438,8 @@ export async function connect(url: string, token: string, options: CallOptions, 
       if (muted) await track.mute();
       // The cast only bridges the SDK's own types under exactOptionalPropertyTypes (`processor?`).
       await room.localParticipant.publishTrack(track as LocalTrack, { source: Track.Source.Microphone, dtx: true, red: true });
+      // Muted by a moderator while it was starting.
+      if (!canSpeak && mic === track) await room.localParticipant.unpublishTrack(track as LocalTrack).catch(() => dropMic());
     } catch (e) {
       // Not published, as with permissions not yet updated: closed again, so a later change can try anew.
       if (mic === track) dropMic();
@@ -499,6 +502,9 @@ export async function connect(url: string, token: string, options: CallOptions, 
     },
     setCanSpeak(on) {
       canSpeak = on;
+      // Losing Speak in Stoat makes LiveKit revoke the publication. A server mute never reaches LiveKit, so we take the
+      // microphone off the call ourselves, and `LocalTrackUnpublished` closes it.
+      if (!on && mic) void room.localParticipant.unpublishTrack(mic as LocalTrack).catch(() => dropMic());
       publishIfAllowed();
     },
     setMutedForMe(user, on) {
