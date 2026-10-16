@@ -27,6 +27,7 @@
   import { permissionsIn, sendBlock } from '$lib/view/channels.ts';
   import { compose } from '$lib/view/compose.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
+  import { setComposerFocus } from '$lib/view/composerFocus.ts';
 
   let { placeholder, session, channel }: { placeholder: string; session: Session; channel: Channel | undefined } = $props();
 
@@ -142,6 +143,18 @@
 
   $effect(() => {
     if (compose.focusRequest) untrack(() => editor?.focus());
+  });
+
+  // Typing with nothing focused goes here (typeToFocus.ts). Registered only while the editor takes text: on a channel,
+  // with the editor shown rather than the "you can't send" notice.
+  $effect(() => {
+    const ed = editor;
+    if (!ed || !channel || block) return;
+    setComposerFocus(() => {
+      ed.focus();
+      return !!document.activeElement?.closest('.cm-editor');
+    });
+    return () => setComposerFocus(null);
   });
 
   // The emoji picker inserts at the caret: Unicode as itself, custom emoji as a token (client.md section 6.4).

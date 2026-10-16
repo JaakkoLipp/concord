@@ -3,7 +3,9 @@
  * channels with Alt+Up and Alt+Down (wrapping, voice channels opened without a join), through its unread ones with
  * Alt+Shift, and through servers with Ctrl+Alt, a check server it joins. In the composer, Alt+Up changes channel
  * and leaves the text alone. Esc marks the open channel read, but not from the header search, an edit box, an open
- * menu or the settings route. A throwaway server is swept at both ends.
+ * menu or the settings route. Typing with nothing focused lands in the composer, with the first character intact, and
+ * not from the header search, a button, an open menu, picker or dialog, or a channel the persona can't send in. A
+ * throwaway server is swept at both ends.
  */
 import { loadState } from '../../seed/src/config.ts';
 import { assertDevStack } from '../../seed/src/vps.ts';
@@ -11,6 +13,7 @@ import { APP, launch, watch } from './browser.ts';
 import { signIn } from './login.ts';
 import { person, until } from './people.ts';
 import { checkServer, sweep } from './servers.ts';
+import { Permission } from '../../../packages/domain/src/permissions.ts';
 
 await assertDevStack();
 const st = loadState()!;
@@ -27,6 +30,9 @@ const aino = await person('aino');
 await sweep(admin, [dev]);
 const fresh = await checkServer(admin, 'shortcuts', true);
 await dev.call('POST', `/invites/${fresh.invite}`);
+// A channel the persona can see but not send in: SendMessage denied to Everyone, as the overrides check does for #säännöt.
+const noSend = (await admin.call<{ _id: string }>('POST', `/servers/${fresh.id}/channels`, { type: 'Text', name: `nosend-${Date.now().toString(36)}` }))._id;
+await admin.call('PUT', `/channels/${noSend}/permissions/default`, { permissions: { allow: 0, deny: Number(Permission.SendMessage) } });
 
 const tag = Date.now().toString(36);
 const post = (who: typeof dev, channel: string, content: string) => who.call<{ _id: string }>('POST', `/channels/${channel}/messages`, { content });
@@ -188,6 +194,93 @@ await press('Escape');
 await page.waitForURL((u) => !u.pathname.includes('/settings/'), { timeout: 8_000 }).catch(() => {});
 await page.waitForTimeout(3_000);
 check(await unreadPelit(), 'Esc on the settings route doesn’t mark #pelit read');
+
+// Typing starts a message (M4.8 task 2b). The composer's text, without its placeholder.
+const composerText = () => page.evaluate(() => {
+  const content = document.querySelector('.composer .cm-content');
+  if (!content) return null;
+  const copy = content.cloneNode(true) as HTMLElement;
+  copy.querySelectorAll('.cm-placeholder').forEach((n) => n.remove());
+  return copy.textContent ?? '';
+});
+const textIs = (want: string) => until(async () => (await composerText()) === want, 4_000).then(() => true, () => false);
+const composerEmptyAfterPause = async () => { await page.waitForTimeout(800); return (await composerText()) === ''; };
+const clearComposer = async () => { await page.locator('.composer .cm-content').click(); await press('Control+A'); await press('Backspace'); await composerEmptyAfterPause(); };
+
+await page.goto(`${APP}/channels/${st.serverId}/${ch.pelit}`, { waitUntil: 'networkidle' });
+await page.locator('.composer .cm-content').waitFor();
+await blur();
+check(await page.evaluate(() => document.activeElement === document.body), 'nothing is focused before typing');
+await page.keyboard.type('hei');
+check(await textIs('hei'), 'typing with nothing focused lands in the composer, first character intact', JSON.stringify(await composerText()));
+check(await page.evaluate(() => !!document.activeElement?.closest('.cm-editor')), 'the composer has focus after the first key');
+await clearComposer();
+
+// The header search (the `search` box above): typing there doesn't reach the composer.
+await blur();
+await search.click();
+await page.keyboard.type('xyz');
+check((await search.inputValue()) === 'xyz' && (await composerText()) === '', 'typing in the header search does not reach the composer', JSON.stringify([await search.inputValue(), await composerText()]));
+await search.fill('');
+await blur();
+
+// Space on a focused button activates it, and types nothing: the pins button toggles the find panel.
+const pins = page.getByRole('button', { name: 'Pinned messages', exact: true });
+await pins.evaluate((b) => b.addEventListener('click', () => { b.dataset.clicks = String(Number(b.dataset.clicks ?? 0) + 1); }));
+await pins.focus();
+await press('Space');
+const pinsClicked = await until(async () => (await pins.getAttribute('data-clicks')) === '1', 4_000).then(() => true, () => false);
+check(pinsClicked && (await composerEmptyAfterPause()), 'Space on a focused button activates it and types nothing', JSON.stringify(await pins.getAttribute('data-clicks')));
+await pins.click();
+await blur();
+
+// With a message menu open, typing reaches neither the composer nor the menu.
+const menuMessage = page.locator(`#message-${aMsg._id}`);
+await menuMessage.locator('.content, .body, p').first().click({ button: 'right' });
+const menu = page.getByRole('menu');
+await menu.waitFor();
+await page.keyboard.type('hei');
+check((await composerEmptyAfterPause()) && (await menu.isVisible()), 'with a menu open, typing reaches neither the composer nor the menu');
+await press('Escape');
+await page.waitForTimeout(500);
+
+// With the emoji picker open, typing goes to the picker's search or nowhere, never the composer.
+await blur();
+await press('Control+E');
+const emojiSearch = page.getByRole('searchbox', { name: 'Find the perfect emoji' });
+await emojiSearch.waitFor();
+await blur();
+await page.keyboard.type('hei');
+check(await composerEmptyAfterPause(), 'with the emoji picker open, typing does not reach the composer', JSON.stringify(await composerText()));
+await press('Escape');
+await emojiSearch.waitFor({ state: 'detached', timeout: 4_000 }).catch(() => {});
+
+// With the shortcuts dialog open, typing reaches neither the composer nor the dialog's text.
+await blur();
+await press('Control+/');
+await page.locator('dialog[open]').waitFor();
+await page.keyboard.type('hei');
+check(await composerEmptyAfterPause(), 'with a dialog open, typing does not reach the composer');
+await press('Escape');
+await page.locator('dialog[open]').waitFor({ state: 'detached', timeout: 4_000 }).catch(() => {});
+
+// A channel the persona can't send in: the composer shows its notice, and typing does nothing.
+await page.goto(`${APP}/channels/${fresh.id}/${noSend}`, { waitUntil: 'networkidle' });
+await page.locator('.composer.blocked').waitFor();
+await blur();
+await page.keyboard.type('hei');
+await page.waitForTimeout(800);
+check((await page.locator('.composer .cm-content').count()) === 0 && new URL(page.url()).pathname.endsWith(`/${noSend}`), 'in a channel the persona can’t send in, typing does nothing');
+
+// Paste with nothing focused: the clipboard's text lands in the composer, as a real Ctrl+V.
+await page.goto(`${APP}/channels/${st.serverId}/${ch.pelit}`, { waitUntil: 'networkidle' });
+await page.locator('.composer .cm-content').waitFor();
+await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(APP).origin });
+await page.evaluate(() => navigator.clipboard.writeText('liitetty teksti'));
+await blur();
+await press('Control+V');
+check(await textIs('liitetty teksti'), 'Ctrl+V with nothing focused pastes into the composer', JSON.stringify(await composerText()));
+await clearComposer();
 
 check(problems.console.length === 0, 'no console errors', problems.console.slice(0, 3).join(' | '));
 await browser.close();

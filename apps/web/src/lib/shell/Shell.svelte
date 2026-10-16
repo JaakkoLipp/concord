@@ -20,6 +20,7 @@
   import ShortcutsDialog from './ShortcutsDialog.svelte';
   import { handle as handleShortcut } from './shortcuts.ts';
   import './navShortcuts.ts';
+  import { typeToFocus } from './typeToFocus.ts';
   import ContextMenuHost from './ContextMenuHost.svelte';
   import EmojiPicker from '$lib/emoji/EmojiPicker.svelte';
   import AdminDialogs from '$lib/admin/AdminDialogs.svelte';
@@ -42,7 +43,7 @@
 </script>
 
 <!-- The one keyboard listener for the registry's shortcuts (shortcuts.ts). Capture phase, so the composer's editor doesn't win. -->
-<svelte:window onkeydowncapture={(e) => handleShortcut(e)} />
+<svelte:window onkeydowncapture={(e) => handleShortcut(e) || typeToFocus(e)} />
 <div class="shell" style:--voice-h="{voiceHeight}px" class:panel={!!panel && open} class:sidebar-open={shell.sidebarOpen} style:--panel-w={panelWidth === 'profile' ? 'var(--dm-panel-w)' : panelWidth === 'find' || panelWidth === 'chat' ? 'var(--popout-w)' : 'var(--members-w)'}>
   <div class="rail"><ServerRail {store} active={server} /></div>
   <div class="sidebar">
