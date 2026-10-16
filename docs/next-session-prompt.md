@@ -30,7 +30,7 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
   - **A guide, not a copy**: behaviour, timings and layout follow the spec; colours stay Concord's. Cyan stays, text keeps its contrast, and settings becomes a modal over the app. These are decided.
   - The roadmap entry has 18 sub-tasks in dependency order, a token mapping and a deferred list, from a Sonnet audit against the spec.
   - **The spec overrides M4.2's motion rules** where they differ, so sub-task 1 changes client.md section 9 and `tools/lint/motion.ts` first.
-  - No plan file yet.
+  - The plan is `docs/m4.6-plan.md`, challenger-reviewed and awaiting Jaakko's sign-off.
 - **M4.7, moderation, voice and text.** The plan is `docs/m4.7-plan.md`, challenger-reviewed twice and awaiting Jaakko's sign-off. It covers:
   - moving people between calls,
   - server mute and deafen, enforced by Concord clients because of Stoat's bug,
