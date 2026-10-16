@@ -22,7 +22,7 @@
     min-height: var(--control-h); padding: 0 var(--space-5);
     border: 1px solid transparent; border-radius: var(--radius-md);
     font: 500 var(--text-sm) var(--font-sans);
-    transition: background-color var(--dur-state) var(--ease-out), border-color var(--dur-state) var(--ease-out), scale var(--dur-press) var(--ease-out);
+    transition: scale var(--dur-press) var(--ease-out);
   }
   /* A press gives slightly (client.md section 9). */
   .button:active:not(:disabled) { scale: calc(1 - 0.02 * var(--motion)); }

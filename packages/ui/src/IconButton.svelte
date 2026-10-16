@@ -23,7 +23,6 @@
     width: 2rem; height: 2rem; padding: 0;
     border: 0; border-radius: var(--radius-md);
     background: transparent; color: var(--text-secondary);
-    transition: background-color var(--dur-state) var(--ease-out), color var(--dur-state) var(--ease-out);
   }
   .sm { width: 1.5rem; height: 1.5rem; }
   @media (hover: hover) { .icon-button:hover:not(:disabled) { background: var(--hover-overlay); color: var(--text-strong); } }

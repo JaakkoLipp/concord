@@ -180,7 +180,7 @@
   .control {
     display: grid; place-items: center; width: 3rem; height: 3rem; padding: 0; border: 0; border-radius: var(--radius-full);
     background: var(--surface-4); color: var(--text-strong); cursor: pointer;
-    transition: background-color var(--dur-state) var(--ease-out), scale var(--dur-press) var(--ease-out);
+    transition: scale var(--dur-press) var(--ease-out);
   }
   .control:active:not(:disabled) { scale: calc(1 - 0.02 * var(--motion)); }
   @media (hover: hover) { .control:hover:not(:disabled) { background: var(--surface-6); } }

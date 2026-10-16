@@ -7,7 +7,7 @@
  * - a menu or the shortcuts dialog opened from the keyboard doesn't animate,
  * - no frame stalls longer than 50 ms. Headless has no GPU, so frame times are a lower bound.
  */
-import type { Browser, Page } from 'playwright-core';
+import type { Browser, Page, Locator } from 'playwright-core';
 import { chromium } from 'playwright-core';
 import { loadState } from '../../seed/src/config.ts';
 import { assertDevStack } from '../../seed/src/vps.ts';
@@ -131,6 +131,28 @@ async function step(p: Page, mode: string, name: string, act: () => Promise<void
   return seen;
 }
 
+/** Sample the actual hovered subtree: legitimate tooltips live outside it and may still fade. */
+async function hoverStep(p: Page, mode: string, name: string, target: Locator) {
+  await p.mouse.move(1000, 10);
+  await p.waitForTimeout(250);
+  await target.evaluate((node) => {
+    const w = window as unknown as { __hoverTransitions: string[] };
+    w.__hoverTransitions = [];
+    const end = performance.now() + 400;
+    const frame = () => {
+      for (const a of node.getAnimations({ subtree: true })) {
+        if (a instanceof CSSTransition) w.__hoverTransitions.push(a.transitionProperty);
+      }
+      if (performance.now() < end) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+  await target.hover();
+  await p.waitForTimeout(200);
+  const seen = await p.evaluate(() => (window as unknown as { __hoverTransitions: string[] }).__hoverTransitions);
+  check(seen.length === 0, `${mode}: ${name} hover has no transition${seen.length ? ` (${[...new Set(seen)].join(', ')})` : ''}`);
+}
+
 // Joins calls as seeded personas: the local stack only, as assertDevStack checked.
 const browser = await chromium.launch({ headless: true, args: [...fakeMediaArgs(), '--autoplay-policy=no-user-gesture-required'] });
 
@@ -140,6 +162,11 @@ for (const mode of modes) {
   const p = await session(browser, mode);
   const header = p.getByRole('button', { name: /menu$/ }).first();
   const menu = p.getByRole('menu');
+  await hoverStep(p, mode, 'icon button', p.getByRole('button', { name: 'User settings', exact: true }));
+  await hoverStep(p, mode, 'rail tile', p.locator('.rail .tile').first());
+  const gif = p.locator('.has-star').last();
+  check(await gif.count() > 0, `${mode}: a GIF is available for its hover check (run gifs.ts to populate it)`);
+  if (await gif.count()) await hoverStep(p, mode, 'GIF star', gif);
 
   await step(p, mode, 'server menu opens', () => header.click(), { some: true });
   const origin = await menu.evaluate((e) => getComputedStyle(e).transformOrigin);
@@ -200,6 +227,7 @@ for (const mode of modes) {
   await p.locator('section.dock button.me').click();
   await p.waitForTimeout(300);
   await step(p, mode, 'dialog opens', () => p.getByRole('button', { name: /custom status/i }).click(), { some: true });
+  await hoverStep(p, mode, 'button', p.locator('dialog[open] .button').first());
   const title = await p.locator('dialog[open] h2').innerText();
   await step(p, mode, 'dialog closes', async () => {
     await p.keyboard.press('Escape');
@@ -244,6 +272,7 @@ for (const mode of modes) {
     await p.getByText('Voice connected').waitFor({ timeout: 20_000 });
   }, { some: true });
   check(mode === 'reduce' ? panel(joined) === 0 : panel(joined) > 0, `${mode}: the voice panel fades in ${mode === 'reduce' ? '(instant)' : ''}`);
+  await hoverStep(p, mode, 'call control', p.locator('.call button.control').first());
   check(tile(joined) === 0, `${mode}: the call view's first tiles don't animate`);
   // Tiles arriving in the call view's first second are people already there, which don't fade in.
   const aino = await (await browser.newContext({ permissions: ['microphone'] })).newPage();

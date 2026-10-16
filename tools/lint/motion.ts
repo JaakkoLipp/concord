@@ -14,6 +14,7 @@ const ALLOWED = new Set([
   'opacity', 'transform', 'translate', 'scale', 'rotate',
   'color', 'background-color', 'border-color', 'outline-color', 'fill', 'stroke', 'clip-path',
 ]);
+const COLOURS = new Set(['color', 'background-color', 'border-color', 'outline-color', 'fill', 'stroke']);
 const EASINGS = /\b(ease|ease-in|ease-out|ease-in-out|step-start|step-end)\b|steps\(/;
 const DURATION = /(^|[\s(*/,+-])(\d*\.?\d+)(ms|s)\b/g;
 
@@ -84,6 +85,7 @@ for (const dir of dirs) {
         for (const item of items(v)) {
           const prop = item.split(/\s+/)[0]!;
           if (prop === 'none' || prop === 'VAR' || /^calc\(/.test(prop)) continue;
+          if (COLOURS.has(prop) && !allowedToggleTrack(file, source, m.index, prop)) report(m.index, `colour transition of ${prop}: only toggle tracks may fade`);
           if (!ALLOWED.has(prop) && !allowedSettingsNavRows(file, source, m.index, prop)) report(m.index, `transition of ${prop}: only transform, opacity and colours animate`);
         }
       }
@@ -99,6 +101,16 @@ for (const dir of dirs) {
       }
     }
   }
+}
+
+/** Toggle tracks may change colour with state. Keep this exception separate from hover and speaking rings. */
+function allowedToggleTrack(file: string, source: string, index: number, prop: string): boolean {
+  if (prop !== 'background-color') return false;
+  const path = relative(ROOT, file);
+  if (!['packages/ui/src/Toggle.svelte', 'apps/web/src/lib/admin/PermissionList.svelte', 'apps/web/src/lib/settings/VoiceSection.svelte', 'apps/web/src/lib/notify/NotificationsSection.svelte'].includes(path)) return false;
+  const open = source.lastIndexOf('{', index);
+  const start = Math.max(source.lastIndexOf('}', open - 1), source.lastIndexOf('{', open - 1));
+  return source.slice(start + 1, open).trim() === '.track';
 }
 
 /** The settings accordion alone may animate its grid rows. Keep the exemption tied to the file and selector. */
