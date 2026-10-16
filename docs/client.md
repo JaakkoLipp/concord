@@ -342,10 +342,10 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
   --dur-tooltip: 100ms; --dur-pill-in: 200ms; --dur-pill-out: 100ms; --dur-user-panel: 130ms; --dur-image: 200ms;
   --dur-backdrop: 100ms; --dur-settings-modal: 150ms; --dur-settings-delay: 60ms;
   --dur-accordion: 300ms; --dur-active-bar: 150ms; --dur-spinner: 1.8s;
-  --dur-meter: 60ms; --dur-loop: 1.2s; --dur-flash: 2s;
+  --dur-meter: 60ms; --dur-loop: 1.2s; --dur-flash: 2s; --jump-highlight-hold: 2s;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1); --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1); --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
-  --motion: 1;   /* 0 under reduced motion: scales and movements collapse, fades stay */
+  --motion: 1;   /* 0 under reduced motion; duration tokens also become zero in base.css */
 }
 ```
 

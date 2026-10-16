@@ -12,7 +12,7 @@ export function duration(name: string): number {
   return v.endsWith('ms') ? parseFloat(v) : (parseFloat(v) || 0) * 1000;
 }
 
-/** False under reduced motion, when only fades remain. */
+/** False under reduced motion, when every timed effect is removed. */
 export const moving = () => token('--motion') !== '0';
 
 /** The last input was a key rather than a pointer, watched from the start. */
@@ -27,7 +27,7 @@ export const fromKeyboard = () => keyboard;
 
 /**
  * `out:leave`: a closing surface fades and shrinks slightly toward its transform-origin, at --dur-exit.
- * Svelte freezes an outgoing block, so it keeps showing what it showed, and makes it inert. It ignores the pointer as it goes.
+ * Under reduced motion its token is zero. Svelte freezes an outgoing block through the outro and makes it inert.
  * quintOut is the curve --ease-out draws. `in:enter` is its opposite, at --dur-popover unless another token is named.
  */
 export function enter(_node: HTMLElement, { name = '--dur-popover', instant = false }: { name?: string; instant?: boolean } = {}) {
@@ -57,7 +57,7 @@ const exits = new WeakMap<HTMLDialogElement, Animation[]>();
 
 /**
  * `out:dialogLeave={dialog}`, on a native dialog's content: keeps the content while the dialog and its backdrop
- * fade out at --dur-exit. The dialog's owner calls `close()` when the outro ends, and `settle()` before reopening.
+ * fade out at --dur-exit, or finish at once under reduced motion. The dialog's owner calls `close()` when the outro ends, and `settle()` before reopening.
  */
 export function dialogLeave(_node: Element, dialog: HTMLDialogElement | null | undefined) {
   if (!dialog?.open) return { duration: 0 };

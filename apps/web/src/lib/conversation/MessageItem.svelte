@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Message, PendingMessage, Store } from '@concord/domain';
-  import { Avatar } from '@concord/ui';
+  import { Avatar, duration } from '@concord/ui';
   import Markdown from '$lib/markdown/Markdown.svelte';
   import { fullDate, timeOfDay, ulidTime } from '$lib/markdown/time.ts';
   import { m } from '$lib/i18n/index.ts';
@@ -35,6 +35,13 @@
     canMarkUnread?: boolean;
   }
   let { message, store, server, continuation, highlighted, onjump, pending, onretry, ondiscard, actions, editing = false, selected = false, quick = [], tabbable = false, canMarkUnread = true }: Props = $props();
+  let staticHighlight = $state(false);
+  $effect(() => {
+    if (!highlighted) { staticHighlight = false; return; }
+    staticHighlight = true;
+    const timer = setTimeout(() => (staticHighlight = false), duration('--jump-highlight-hold'));
+    return () => clearTimeout(timer);
+  });
   const own = $derived(message.author === store.selfId);
   /** The author's context menu. Webhook messages have no user behind them. */
   const authorMenu = (node: HTMLElement) =>
@@ -68,13 +75,13 @@
 </script>
 
 {#if message.system}
-  <div class="row system" class:highlighted id="message-{message.id}" data-id={message.id}>
+  <div class="row system" class:highlighted class:static-highlight={staticHighlight} id="message-{message.id}" data-id={message.id}>
     <SystemLine {message} {store} {server} {onjump} />
   </div>
 {:else}
   <!-- A message is focusable, one at a time, so the keyboard reaches its actions and context menu (m4.5-plan.md task 2). -->
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
-  <article class="row message" class:continuation class:mentioned class:highlighted class:sending={pending?.state === 'sending'} class:failed={pending?.state === 'failed'} aria-busy={pending?.state === 'sending' || undefined}
+  <article class="row message" class:continuation class:mentioned class:highlighted class:static-highlight={staticHighlight} class:sending={pending?.state === 'sending'} class:failed={pending?.state === 'failed'} aria-busy={pending?.state === 'sending' || undefined}
     class:selected class:menu-open={menuOpen} class:editing onclick={tap} id="message-{message.id}" data-id={message.id} aria-labelledby={continuation ? undefined : `author-${message.id}`} aria-label={continuation ? name : undefined} aria-describedby="content-{message.id}"
     tabindex={tabbable ? 0 : -1} use:menuOn={messageContextMenu}>
     {#each message.replies as reply (reply)}
@@ -152,6 +159,10 @@
   .mentioned { background: var(--accent-wash); box-shadow: inset 2px 0 0 var(--accent); }
   @media (hover: hover) { .mentioned:hover { background: color-mix(in srgb, var(--accent) 16%, transparent); } }
   .highlighted { animation: flash var(--dur-flash) var(--ease-out); }
+  @media (prefers-reduced-motion: reduce) {
+    .highlighted { animation: none; }
+    .highlighted.static-highlight { background: var(--accent-subtle); }
+  }
   @keyframes flash { from { background-color: var(--accent-subtle); } }
   .line { display: flex; gap: var(--space-5); }
   .gutter { width: var(--avatar-md); flex: none; display: flex; justify-content: center; }

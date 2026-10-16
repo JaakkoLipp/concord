@@ -2,8 +2,8 @@
  * M4.2's motion check (m4.2-plan.md task 7), on the local stack: `node tools/live/src/motion.ts [out-dir]`.
  * Opens each animated surface as `dev`, with reduced motion off and then on, and records every animation that
  * runs: CSS transitions and animations, and Svelte's, which use the Web Animations API. It checks that:
- * - only transform, opacity and colours animate, and with reduced motion only opacity and colours,
- * - a closing surface keeps its content while it fades,
+ * - only allowed properties animate in normal mode; reduced mode has no positive animation duration,
+ * - a closing surface keeps its content while it fades in normal mode,
  * - a menu or the shortcuts dialog opened from the keyboard doesn't animate,
  * - no frame stalls longer than 50 ms. Headless has no GPU, so frame times are a lower bound.
  */
@@ -24,7 +24,7 @@ const check = (ok: boolean, what: string) => { console.log(`${ok ? 'ok  ' : 'FAI
 const MOVES = ['transform', 'translate', 'scale', 'rotate'];
 const FADES = ['opacity', 'color', 'background', 'background-color', 'border-color', 'outline-color', 'fill', 'stroke', 'clip-path'];
 
-interface Seen { what: string; props: string[] }
+interface Seen { what: string; props: string[]; duration: number; activeDuration: number }
 
 /** Watches every animation each frame, and the longest gap between frames. */
 function recorder() {
@@ -43,6 +43,9 @@ function recorder() {
       w.__animations.add(a);
       const target = (a.effect as KeyframeEffect | null)?.target as Element | null;
       const what = `${a.constructor.name} on ${target?.tagName.toLowerCase()}.${[...(target?.classList ?? [])].filter((c) => !c.startsWith('s-')).join('.')}`;
+      const timing = a.effect?.getComputedTiming();
+      const duration = typeof timing?.duration === 'number' ? timing.duration : 0;
+      const activeDuration = typeof timing?.activeDuration === 'number' ? timing.activeDuration : 0;
       let props: string[] = [];
       if (a instanceof CSSTransition) props = [a.transitionProperty];
       else {
@@ -73,7 +76,7 @@ function recorder() {
           if (new Set([...values].map(n)).size > 1) props.push(css);
         }
       }
-      w.__seen.push({ what, props });
+      w.__seen.push({ what, props, duration, activeDuration });
     }
     requestAnimationFrame(frame);
   };
@@ -92,6 +95,18 @@ async function session(browser: Browser, reducedMotion: 'no-preference' | 'reduc
   await page.goto(`${APP}/channels/${st.serverId}/${st.channels.botti}`, { waitUntil: 'networkidle' });
   await page.locator('.composer .cm-content').waitFor();
   await page.waitForTimeout(500);
+  if (reducedMotion === 'reduce') {
+    const target = page.locator('article.message').nth(1);
+    const id = await target.getAttribute('data-id');
+    if (id) {
+      await page.goto(`${APP}/channels/${st.serverId}/${st.channels.botti}/${id}`, { waitUntil: 'networkidle' });
+      const highlighted = page.locator(`article.message[data-id="${id}"].static-highlight`);
+      await highlighted.waitFor({ timeout: 5_000 });
+      check(await highlighted.evaluate((el) => getComputedStyle(el).backgroundColor !== 'rgba(0, 0, 0, 0)'), 'reduce: a jumped-to message shows its static highlight');
+      await page.waitForTimeout(2_100);
+      check(await highlighted.count() === 0, 'reduce: the static jump highlight clears after 2 seconds');
+    } else check(false, 'reduce: a loaded message is available to test the jump highlight');
+  }
   return page;
 }
 
@@ -102,12 +117,17 @@ async function step(p: Page, mode: string, name: string, act: () => Promise<void
   await p.waitForTimeout(400);
   const { seen, gap, long } = await take(p);
   const props = [...new Set(seen.flatMap((s) => s.props))];
-  const allowed = expect.moves === false || mode === 'reduce' ? FADES : [...MOVES, ...FADES];
-  const bad = seen.filter((s) => s.props.some((x) => !allowed.includes(x)));
-  check(!bad.length, `${mode}: ${name} animates ${props.join(', ') || 'nothing'}${bad.length ? ` (not allowed: ${JSON.stringify(bad)})` : ''}`);
-  if (expect.some !== undefined) check(expect.some === seen.length > 0, `${mode}: ${name} ${expect.some ? 'animates' : "doesn't animate"}`);
+  if (mode === 'reduce') {
+    const timed = seen.filter((s) => s.duration !== 0 || s.activeDuration !== 0);
+    check(!timed.length, `${mode}: ${name} has no positive duration${timed.length ? ` (${JSON.stringify(timed)})` : ''}`);
+  } else {
+    const allowed = expect.moves === false ? FADES : [...MOVES, ...FADES];
+    const bad = seen.filter((s) => s.props.some((x) => !allowed.includes(x)));
+    check(!bad.length, `${mode}: ${name} animates ${props.join(', ') || 'nothing'}${bad.length ? ` (not allowed: ${JSON.stringify(bad)})` : ''}`);
+    if (expect.some !== undefined) check(expect.some === seen.length > 0, `${mode}: ${name} ${expect.some ? 'animates' : "doesn't animate"}`);
+  }
   // Frames count where something animates: a page change that doesn't animate isn't an animation's dropped frame.
-  if (seen.length) check(gap < 50, `${mode}: ${name} longest frame ${gap.toFixed(0)} ms${long.length ? ` (${long.join('; ')})` : ''}`);
+  if (mode !== 'reduce' && seen.length) check(gap < 50, `${mode}: ${name} longest frame ${gap.toFixed(0)} ms${long.length ? ` (${long.join('; ')})` : ''}`);
   return seen;
 }
 
@@ -130,7 +150,7 @@ for (const mode of modes) {
     await p.keyboard.press('Escape');
     await p.waitForTimeout(30);
     const leaving = await p.locator('.menu').count() ? await p.locator('.menu').innerText() : '';
-    check(mode === 'reduce' || leaving === items, `${mode}: the closing menu keeps its items (${JSON.stringify(leaving.slice(0, 40))})`);
+    if (mode !== 'reduce') check(leaving === items, `${mode}: the closing menu keeps its items (${JSON.stringify(leaving.slice(0, 40))})`);
   }, { some: true });
 
   // From the keyboard: focus the header and press Enter.
@@ -185,7 +205,7 @@ for (const mode of modes) {
     await p.keyboard.press('Escape');
     await p.waitForTimeout(30);
     const leaving = await p.locator('dialog[open] h2').count() ? await p.locator('dialog[open] h2').innerText() : '';
-    check(leaving === title, `${mode}: the closing dialog keeps its content (${JSON.stringify(leaving)})`);
+    if (mode !== 'reduce') check(leaving === title, `${mode}: the closing dialog keeps its content (${JSON.stringify(leaving)})`);
   }, { some: true });
   check(await p.locator('dialog[open]').count() === 0, `${mode}: the dialog has closed`);
 
@@ -197,6 +217,7 @@ for (const mode of modes) {
     await step(p, mode, 'image viewer opens', () => image.click(), { some: true });
     await step(p, mode, 'image viewer closes', () => p.keyboard.press('Escape'), { some: true });
     check(await p.locator('dialog.viewer[open]').count() === 0, `${mode}: the image viewer has closed`);
+    check(await image.evaluate((el) => el === document.activeElement), `${mode}: the image viewer returns focus to its opener`);
     // A click beside the image, inside the dialog's padding box, closes it too.
     await image.click();
     await p.waitForTimeout(400);
@@ -208,7 +229,7 @@ for (const mode of modes) {
   // Settings fades in as a page, a change of section doesn't replay it, and closing is instant.
   const page = (seen: Seen[]) => seen.filter((x) => x.what.includes('.settings')).length;
   const opened = await step(p, mode, 'settings opens', () => p.getByRole('button', { name: 'User settings' }).click(), { some: true });
-  check(page(opened) === 1, `${mode}: settings fades in`);
+  check(page(opened) === (mode === 'reduce' ? 0 : 1), `${mode}: settings ${mode === 'reduce' ? 'opens instantly' : 'fades in'}`);
   const moved = await step(p, mode, 'settings changes section', () => p.getByRole('link', { name: 'Notifications' }).click());
   check(page(moved) === 0, `${mode}: a change of section doesn't fade the page`);
   await step(p, mode, 'settings closes', () => p.keyboard.press('Escape'), { some: false });
@@ -222,7 +243,7 @@ for (const mode of modes) {
     await p.getByRole('link', { name: /^Pelaamo/ }).click();
     await p.getByText('Voice connected').waitFor({ timeout: 20_000 });
   }, { some: true });
-  check(panel(joined) > 0, `${mode}: the voice panel fades in`);
+  check(mode === 'reduce' ? panel(joined) === 0 : panel(joined) > 0, `${mode}: the voice panel fades in ${mode === 'reduce' ? '(instant)' : ''}`);
   check(tile(joined) === 0, `${mode}: the call view's first tiles don't animate`);
   // Tiles arriving in the call view's first second are people already there, which don't fade in.
   const aino = await (await browser.newContext({ permissions: ['microphone'] })).newPage();
@@ -234,7 +255,7 @@ for (const mode of modes) {
     await aino.getByText('Voice connected').waitFor({ timeout: 20_000 });
     await p.locator('.call .tile').nth(1).waitFor();
   });
-  check(tile(added) > 0, `${mode}: a joining tile fades in`);
+  check(mode === 'reduce' ? tile(added) === 0 : tile(added) > 0, `${mode}: a joining tile fades in ${mode === 'reduce' ? '(instant)' : ''}`);
   const focused = await step(p, mode, 'focusing a tile', () => p.locator('.grid .tile').first().click());
   check(tile(focused) === 0, `${mode}: switching to focus doesn't animate the tiles`);
   await p.locator('.main-tile .tile').click();
@@ -243,9 +264,9 @@ for (const mode of modes) {
     await aino.getByRole('button', { name: 'Disconnect' }).first().click();
     await p.waitForFunction(() => document.querySelectorAll('.call .tile').length === 1, null, { timeout: 15_000 });
   });
-  check(tile(removed) > 0, `${mode}: a leaving tile fades out`);
+  check(mode === 'reduce' ? tile(removed) === 0 : tile(removed) > 0, `${mode}: a leaving tile fades out ${mode === 'reduce' ? '(instant)' : ''}`);
   const left = await step(p, mode, 'leaving the call', () => p.getByRole('button', { name: 'Disconnect' }).first().click(), { some: true });
-  check(panel(left) > 0, `${mode}: the voice panel fades out`);
+  check(mode === 'reduce' ? panel(left) === 0 : panel(left) > 0, `${mode}: the voice panel fades out ${mode === 'reduce' ? '(instant)' : ''}`);
   await aino.context().close();
   await p.context().close();
 }

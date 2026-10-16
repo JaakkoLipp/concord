@@ -23,9 +23,16 @@ a { color: var(--link); text-decoration: none; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
-/* Reduced motion keeps the fades: every scale and movement is written to collapse when --motion is 0. */
+/* Reduced motion removes every timed effect. The spinner is the one deliberate exception. */
 @media (prefers-reduced-motion: reduce) {
-  :root { --motion: 0; }
+  :root {
+    --motion: 0;
+    --dur-state: 0ms; --dur-press: 0ms; --dur-popover: 0ms; --dur-modal: 0ms; --dur-toast: 0ms; --dur-exit: 0ms;
+    --dur-tooltip: 0ms; --dur-pill-in: 0ms; --dur-pill-out: 0ms; --dur-user-panel: 0ms; --dur-image: 0ms;
+    --dur-backdrop: 0ms; --dur-settings-modal: 0ms; --dur-settings-delay: 0ms;
+    --dur-accordion: 0ms; --dur-active-bar: 0ms; --dur-meter: 0ms; --dur-loop: 0ms; --dur-flash: 0ms;
+    --dur-spinner: 1.8s;
+  }
 }
 /* Thin scrollbars on the dark surfaces, like the reference. */
 * { scrollbar-width: thin; scrollbar-color: var(--surface-5) transparent; }
