@@ -3,6 +3,8 @@
   import { fileUrl } from '@concord/stoat';
   import type { Store } from '@concord/domain';
   import Logo from '$lib/brand/Logo.svelte';
+  import AtSign from '@lucide/svelte/icons/at-sign';
+  import { shell } from '$lib/view/shell.svelte.ts';
   import Plus from '@lucide/svelte/icons/plus';
   import CreateServerDialog from '$lib/admin/CreateServerDialog.svelte';
   import { serverMenu } from '$lib/admin/menu.ts';
@@ -33,6 +35,9 @@
     <span class="tile home"><Logo /></span>
     {#if dmMentions}<span class="badge"><Badge count={dmMentions} label={m.shell.mentions(dmMentions)} /></span>{/if}
   </a>
+  <button class="item" onclick={() => shell.openMentions()} use:tooltip={m.mentions.title} aria-label={m.mentions.title}>
+    <span class="tile inbox"><AtSign /></span>
+  </button>
   <div class="separator" role="separator"></div>
   {#each servers as server (server.id)}
     {@const badge = store.serverBadge(server.id, (c) => canView(store, c))}
@@ -72,6 +77,7 @@
   }
   .active .home { background: var(--accent); color: var(--on-accent); }
   @media (hover: hover) { .item:hover .home { background: var(--accent); color: var(--on-accent); } }
+  .inbox { color: var(--text-secondary); }
   .initials { color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans); }
   @media (hover: hover) { .item:hover .initials { background: var(--surface-5); } }
   button.item { padding: 0; border: 0; background: none; cursor: pointer; }

@@ -12,6 +12,14 @@ export const en = {
     unreachable: 'unreachable',
     loading: 'Loading…',
   },
+  mentions: {
+    title: 'Mentions',
+    empty: 'You have no unread mentions.',
+    unavailable: 'Could not load this message.',
+    location: (server: string, channel: string) => `${server} / #${channel}`,
+    more: 'Show more',
+    close: 'Close mentions',
+  },
   common: {
     members: (n: number) => plural('en', n, { one: `${n} member`, other: `${n} members` }),
     back: 'Back',
@@ -1086,7 +1094,7 @@ export const en = {
     empty: 'Type to find a channel, server or person',
     none: 'No matches',
     results: 'Results',
-    kind: { channel: 'Channel', voice: 'Voice channel', server: 'Server', dm: 'Direct message', person: 'Start a conversation' },
+    kind: { inbox: 'Inbox', channel: 'Channel', voice: 'Voice channel', server: 'Server', dm: 'Direct message', person: 'Start a conversation' },
   },
 };
 

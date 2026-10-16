@@ -8,7 +8,7 @@ import type { Store } from '@concord/domain';
 import { best } from '../composer/rank.ts';
 import { canView, channelName } from './channels.ts';
 
-export type PlaceKind = 'channel' | 'voice' | 'server' | 'dm' | 'person';
+export type PlaceKind = 'channel' | 'voice' | 'server' | 'dm' | 'person' | 'inbox';
 
 /** One thing the switcher can go to. */
 export interface Place {

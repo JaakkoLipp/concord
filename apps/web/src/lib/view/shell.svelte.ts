@@ -1,4 +1,6 @@
 /** Shell state shared by the header buttons and the panels (client.md section 5). */
+import { fromKeyboard } from '@concord/ui';
+
 const WIDE = '(min-width: 1101px)';
 
 class ShellState {
@@ -10,6 +12,13 @@ class ShellState {
   find = $state<{ channel: string; mode: 'pins' | 'search'; query: string } | null>(null);
   /** A voice channel's text chat, beside the call view (client.md section 10.3). Closed until asked for. */
   voiceChat = $state(false);
+  mentions = $state(false);
+  mentionsStill = $state(false);
+
+  openMentions(): void {
+    this.mentionsStill = fromKeyboard();
+    this.mentions = true;
+  }
 
   openFind(channel: string, mode: 'pins' | 'search', query = ''): void {
     this.find = { channel, mode, query };

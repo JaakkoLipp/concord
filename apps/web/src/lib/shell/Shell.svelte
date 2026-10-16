@@ -18,6 +18,7 @@
   import Toaster from './Toaster.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
   import ShortcutsDialog from './ShortcutsDialog.svelte';
+  import MentionsPanel from './MentionsPanel.svelte';
   import QuickSwitcher from './QuickSwitcher.svelte';
   import { handle as handleShortcut } from './shortcuts.ts';
   import './navShortcuts.ts';
@@ -77,6 +78,7 @@
   <ConfirmDialog />
   <ShortcutsDialog />
   <QuickSwitcher />
+  {#if app.session}<MentionsPanel session={app.session} />{/if}
   <ContextMenuHost />
   {#if app.session}<AdminDialogs session={app.session} /><MemberRolesDialog session={app.session} /><ModerationDialogs session={app.session} /><MemberNicknameDialog session={app.session} /><NotifySettingsDialog session={app.session} /><ServerProfileDialog session={app.session} />{/if}
   <NotifyBar />

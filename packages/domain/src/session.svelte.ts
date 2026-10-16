@@ -220,6 +220,7 @@ export class Session {
     this.selfQueue.clear();
     this.idle.stop();
     this.acks.clear();
+    this.mentionLoads.clear();
     this.openingLoads.clear();
     this.openingChannels.clear();
     this.gateway?.close();
@@ -311,6 +312,28 @@ export class Session {
       atNewest: page.messages.length < PAGE || (c?.kind !== 'saved' && !!c?.lastMessageId && sorted.at(-1)?.id === c.lastMessageId),
       atOldest: !last,
     });
+  }
+
+  /** One inbox fetch at a time per channel; separate channels can load independently. */
+  private readonly mentionLoads = new Map<Id, Promise<Message>>();
+
+  /** Inbox bodies stay with the inbox, outside the store's bounded history windows. */
+  loadMention(channel: Id, id: Id): Promise<Message> {
+    const previous = this.mentionLoads.get(channel) ?? Promise.resolve();
+    const request = previous.catch(() => {}).then(async () => {
+      // Reading or leaving a channel while bodies queue makes the rest unnecessary.
+      if (!this.store.unreads.get(channel)?.mentions.includes(id)) throw new Error('mention no longer unread');
+      const message = this.store.messages.get(id) ?? await this.backend.message(channel, id);
+      if (!this.store.users.has(message.author)) {
+        const user = await this.backend.user(message.author).catch(() => null);
+        if (user) this.store.upsertUsers([user]);
+      }
+      return message;
+    });
+    this.mentionLoads.set(channel, request);
+    const finished = () => { if (this.mentionLoads.get(channel) === request) this.mentionLoads.delete(channel); };
+    void request.then(finished, finished);
+    return request;
   }
 
   async loadMembers(server: Id, force: boolean): Promise<void> {

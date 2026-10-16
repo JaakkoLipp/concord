@@ -205,6 +205,7 @@ export interface Backend {
 
   self(): Promise<User>;
   messages(channel: Id, query: MessageQuery): Promise<MessagePage>;
+  message(channel: Id, message: Id): Promise<Message>;
   members(server: Id): Promise<{ members: Member[]; users: User[] }>;
   user(id: Id): Promise<User>;
   profile(id: Id): Promise<Profile>;

@@ -146,6 +146,10 @@ export class StoatBackend implements Backend {
     return { messages: r.messages.map(mapMessage), users: r.users.map(mapUser), members: (r.members ?? []).map(mapMember) };
   }
 
+  async message(channel: string, message: string): Promise<Message> {
+    return mapMessage(await this.rest.request<WMessage>('GET', `/channels/${channel}/messages/${message}`));
+  }
+
   async members(server: string) {
     const r = await this.rest.request<{ members: WMember[]; users: WUser[] }>('GET', `/servers/${server}/members`);
     return { members: r.members.map(mapMember), users: r.users.map(mapUser) };

@@ -6,6 +6,7 @@
    * open channel as a recent place, here, since this is mounted on every channel route.
    */
   import { Dialog, TextField } from '@concord/ui';
+  import AtSign from '@lucide/svelte/icons/at-sign';
   import Hash from '@lucide/svelte/icons/hash';
   import Server from '@lucide/svelte/icons/server';
   import User from '@lucide/svelte/icons/user';
@@ -13,6 +14,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
+  import { shell } from '$lib/view/shell.svelte.ts';
   import { m } from '$lib/i18n/index.ts';
   import { app } from '$lib/session/app.svelte.ts';
   import { firstChannel, recalled } from '$lib/view/channels.ts';
@@ -35,7 +37,9 @@
   const rows: Row[] = $derived.by(() => {
     const session = app.session;
     if (!session || !switcher.open) return [];
-    return results(switcher.query, placesFrom(session.store), recentPlaces(session.store.selfId ?? ''));
+    const inbox: Row = { kind: 'inbox', id: 'mentions', label: m.mentions.title, title: m.mentions.title };
+    const found = results(switcher.query, [...placesFrom(session.store), inbox], recentPlaces(session.store.selfId ?? ''));
+    return switcher.query.trim() ? found : [...found, inbox];
   });
   const sel = $derived(Math.min(switcher.selected, Math.max(rows.length - 1, 0)));
 
@@ -56,7 +60,9 @@
     const session = app.session;
     switcher.close();
     if (!session) return;
-    if (row.kind === 'channel' || row.kind === 'voice') {
+    if (row.kind === 'inbox') {
+      shell.openMentions();
+    } else if (row.kind === 'channel' || row.kind === 'voice') {
       // A voice channel's route only: the sidebar's click joins a call, this doesn't.
       await goto(resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server: row.server ?? '', channel: row.id }));
     } else if (row.kind === 'dm') {
@@ -124,7 +130,7 @@
         onmousemove={() => (switcher.selected = i)}
       >
         <span class="icon" aria-hidden="true">
-          {#if row.kind === 'voice'}<Volume2 size={20} />{:else if row.kind === 'channel'}<Hash size={20} />{:else if row.kind === 'server'}<Server size={20} />{:else}<User size={20} />{/if}
+          {#if row.kind === 'inbox'}<AtSign size={20} />{:else if row.kind === 'voice'}<Volume2 size={20} />{:else if row.kind === 'channel'}<Hash size={20} />{:else if row.kind === 'server'}<Server size={20} />{:else}<User size={20} />{/if}
         </span>
         <span class="title">{row.title}</span>
         {#if row.detail}<span class="detail">{row.detail}</span>{/if}
