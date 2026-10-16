@@ -999,6 +999,14 @@ export const en = {
       'invalid-session': 'Signed out',
     },
   },
+  // M4.8 task 1: the shortcut registry and its list.
+  shortcuts: {
+    title: 'Keyboard shortcuts',
+    heading: 'Shortcuts',
+    list: 'Show keyboard shortcuts',
+    reserved: 'Concord already uses that key for a shortcut. Pick another.',
+    close: 'Close',
+  },
 };
 
 export type Messages = typeof en;

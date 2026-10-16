@@ -17,6 +17,8 @@
   import ImageViewer from '$lib/conversation/ImageViewer.svelte';
   import Toaster from './Toaster.svelte';
   import ConfirmDialog from './ConfirmDialog.svelte';
+  import ShortcutsDialog from './ShortcutsDialog.svelte';
+  import { handle as handleShortcut } from './shortcuts.ts';
   import ContextMenuHost from './ContextMenuHost.svelte';
   import EmojiPicker from '$lib/emoji/EmojiPicker.svelte';
   import AdminDialogs from '$lib/admin/AdminDialogs.svelte';
@@ -38,6 +40,8 @@
   let voiceHeight = $state(0);
 </script>
 
+<!-- The one keyboard listener for the registry's shortcuts (shortcuts.ts). Capture phase, so the composer's editor doesn't win. -->
+<svelte:window onkeydowncapture={(e) => handleShortcut(e)} />
 <div class="shell" style:--voice-h="{voiceHeight}px" class:panel={!!panel && open} class:sidebar-open={shell.sidebarOpen} style:--panel-w={panelWidth === 'profile' ? 'var(--dm-panel-w)' : panelWidth === 'find' || panelWidth === 'chat' ? 'var(--popout-w)' : 'var(--members-w)'}>
   <div class="rail"><ServerRail {store} active={server} /></div>
   <div class="sidebar">
@@ -61,6 +65,7 @@
   <Toaster />
   <EmojiPicker />
   <ConfirmDialog />
+  <ShortcutsDialog />
   <ContextMenuHost />
   {#if app.session}<AdminDialogs session={app.session} /><MemberRolesDialog session={app.session} /><ModerationDialogs session={app.session} /><NotifySettingsDialog session={app.session} />{/if}
   <NotifyBar />

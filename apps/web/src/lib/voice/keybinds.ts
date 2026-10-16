@@ -53,5 +53,19 @@ export function parseKeybind(raw: unknown): Keybind | null {
   return { code: r.code, key: r.key, ctrl: flag('ctrl'), shift: flag('shift'), alt: flag('alt'), meta: flag('meta') };
 }
 
+/**
+ * Whether a recorded keybind may be saved: `reserved` when the registry owns the key (`owned` is `ownedBy` from
+ * shortcuts.ts, passed in so this file doesn't import the registry it feeds), `taken` when another keybind has it.
+ */
+export function bindError(
+  bind: Keybind,
+  others: readonly (Keybind | null | undefined)[],
+  owned: (bind: Keybind) => unknown,
+): 'taken' | 'reserved' | null {
+  if (owned(bind)) return 'reserved';
+  if (others.some((other) => sameKeybind(bind, other))) return 'taken';
+  return null;
+}
+
 export const DEFAULT_MUTE_KEY: Keybind = { code: 'KeyM', key: 'M', ctrl: true, shift: true, alt: false, meta: false };
 export const DEFAULT_DEAFEN_KEY: Keybind = { code: 'KeyD', key: 'D', ctrl: true, shift: true, alt: false, meta: false };

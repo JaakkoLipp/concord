@@ -13,7 +13,8 @@
   import type { MicChain } from '$lib/voice/audio/chain.ts';
   import { app } from '$lib/session/app.svelte.ts';
   import { deviceOptions } from './devices.ts';
-  import { keybindFrom, keybindLabel, sameKeybind } from '$lib/voice/keybinds.ts';
+  import { bindError, keybindFrom, keybindLabel } from '$lib/voice/keybinds.ts';
+  import { ownedBy, setRecording } from '$lib/shell/shortcuts.ts';
 
   const t = m.settings.voice;
   const PRESETS: SharePreset[] = ['1080p60', '1080p30', '720p30', 'text'];
@@ -132,7 +133,9 @@
     const bind = keybindFrom(e);
     if (!bind) { if (!/^(Control|Shift|Alt|Meta|OS)/.test(e.code)) keyNote = t.keybindNeedsModifier; return; }
     const other = target === 'muteKey' ? 'deafenKey' : 'muteKey';
-    if (sameKeybind(bind, s[other])) { keyNote = t.keybindTaken(other === 'muteKey' ? t.mute : t.deafen); return; }
+    const refused = bindError(bind, [s[other]], ownedBy);
+    if (refused === 'reserved') { keyNote = m.shortcuts.reserved; return; }
+    if (refused === 'taken') { keyNote = t.keybindTaken(other === 'muteKey' ? t.mute : t.deafen); return; }
     set({ [target]: bind });
     recording = null;
   }
@@ -142,7 +145,9 @@
     const stop = () => (recording = null);
     window.addEventListener('keydown', recordKey, true);
     window.addEventListener('blur', stop);
-    return () => { window.removeEventListener('keydown', recordKey, true); window.removeEventListener('blur', stop); };
+    // The registry's shortcuts stay silent meanwhile, so Ctrl+/ can't open its list mid-recording.
+    setRecording(true);
+    return () => { window.removeEventListener('keydown', recordKey, true); window.removeEventListener('blur', stop); setRecording(false); };
   });
 
   // Levels as a share of the -100 to 0 dBFS scale, for the meters and the sensitivity slider.

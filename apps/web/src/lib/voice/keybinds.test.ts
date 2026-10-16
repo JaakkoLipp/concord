@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MUTE_KEY, keybindFrom, keybindLabel, matches, parseKeybind, sameKeybind } from './keybinds.ts';
+import { ownedBy } from '../shell/shortcuts.ts';
+import { bindError, DEFAULT_DEAFEN_KEY, DEFAULT_MUTE_KEY, keybindFrom, keybindLabel, matches, parseKeybind, sameKeybind } from './keybinds.ts';
 
 const press = (code: string, key: string, mods: Partial<Record<'ctrlKey' | 'shiftKey' | 'altKey' | 'metaKey', boolean>> = {}) =>
   ({ code, key, ctrlKey: false, shiftKey: false, altKey: false, metaKey: false, ...mods });
@@ -23,6 +24,20 @@ describe('keybinds', () => {
     expect(matches(DEFAULT_MUTE_KEY, press('KeyM', 'm', { ctrlKey: true }))).toBe(false);
     expect(matches(DEFAULT_MUTE_KEY, press('KeyM', 'M', { ctrlKey: true, shiftKey: true, altKey: true }))).toBe(false);
     expect(matches(null, press('KeyM', 'M', { ctrlKey: true, shiftKey: true }))).toBe(false);
+  });
+
+  it('refuses Ctrl+/ as reserved, since the registry owns it', () => {
+    const slash = keybindFrom(press('Slash', '/', { ctrlKey: true }))!;
+    expect(bindError(slash, [], ownedBy)).toBe('reserved');
+    // Reserved wins over taken, so the reason shown is the one that stops it for good.
+    expect(bindError(slash, [slash], ownedBy)).toBe('reserved');
+  });
+
+  it('refuses a key the other keybind has, and accepts a free one', () => {
+    expect(bindError(DEFAULT_MUTE_KEY, [DEFAULT_MUTE_KEY], ownedBy)).toBe('taken');
+    expect(bindError(DEFAULT_DEAFEN_KEY, [DEFAULT_MUTE_KEY], ownedBy)).toBeNull();
+    const free = keybindFrom(press('KeyN', 'N', { ctrlKey: true, shiftKey: true }))!;
+    expect(bindError(free, [DEFAULT_MUTE_KEY, DEFAULT_DEAFEN_KEY, null], ownedBy)).toBeNull();
   });
 
   it('reads a stored keybind back, and refuses junk', () => {

@@ -4,7 +4,7 @@
  * runs: CSS transitions and animations, and Svelte's, which use the Web Animations API. It checks that:
  * - only transform, opacity and colours animate, and with reduced motion only opacity and colours,
  * - a closing surface keeps its content while it fades,
- * - a menu opened from the keyboard doesn't move,
+ * - a menu or the shortcuts dialog opened from the keyboard doesn't animate,
  * - no frame stalls longer than 50 ms. Headless has no GPU, so frame times are a lower bound.
  */
 import type { Browser, Page } from 'playwright-core';
@@ -139,6 +139,12 @@ for (const mode of modes) {
   await p.keyboard.press('Tab');
   await step(p, mode, 'server menu opened from the keyboard', () => p.keyboard.press('Enter'), { some: false });
   await step(p, mode, 'server menu closed from the keyboard', () => p.keyboard.press('Escape'), { some: false });
+
+  // The shortcuts list opens from the keyboard (M4.8 task 1), so it doesn't animate; closing it does.
+  await p.locator('body').click({ position: { x: 5, y: 5 } }).catch(() => {});
+  await step(p, mode, 'shortcuts dialog opened from the keyboard', () => p.keyboard.press('Control+/'), { some: false });
+  check(await p.getByRole('dialog').count() > 0, `${mode}: Ctrl+/ shows the shortcuts dialog`);
+  await step(p, mode, 'shortcuts dialog closes', () => p.keyboard.press('Escape'), { some: true });
 
   // Authors' names have a context menu. Messages get theirs in M4.5.
   const author = p.locator('article.message button.name').last();
