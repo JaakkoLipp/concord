@@ -18,8 +18,8 @@ export function voiceBrowser(): Promise<Browser> {
 
 export interface Seat { page: Page; joins: number; problems: ReturnType<typeof watch>; rnnoise: string[] }
 let seatCount = 0;
-/** A signed-in persona on the seeded server's #pelit, with voice settings stored before the client starts. */
-export async function seat(browser: Browser, handle: string, voice?: Record<string, unknown>): Promise<Seat> {
+/** A signed-in persona on the seeded server's #pelit, with voice settings stored before the client starts. `onPage` runs before the client loads. */
+export async function seat(browser: Browser, handle: string, voice?: Record<string, unknown>, onPage?: (page: Page) => void): Promise<Seat> {
   const st = loadState()!;
   const seatNo = seatCount++;
   const context = await browser.newContext({ viewport: { width: 1400, height: 900 }, permissions: ['microphone'] });
@@ -36,6 +36,7 @@ export async function seat(browser: Browser, handle: string, voice?: Record<stri
     window.RTCPeerConnection.prototype = Original.prototype;
   });
   const page = await context.newPage();
+  onPage?.(page);
   const s: Seat = { page, joins: 0, problems: watch(page), rnnoise: [] };
   page.on('response', (r) => { if (/rnnoise.*\.wasm/.test(r.url())) s.rnnoise.push(String(r.status())); });
   page.on('request', (r: Request) => { if (r.method() === 'POST' && r.url().endsWith('/join_call')) s.joins++; });
@@ -68,6 +69,21 @@ export async function sending(p: Page): Promise<number> {
     for (const pc of (window as unknown as { __pcs: RTCPeerConnection[] }).__pcs) {
       if (pc.connectionState === 'closed') continue;
       (await pc.getStats()).forEach((v: { type: string; kind?: string; bytesSent?: number }) => { if (v.type === 'outbound-rtp' && v.kind === 'audio') bytes += v.bytesSent ?? 0; });
+    }
+    return bytes;
+  });
+  const before = await total();
+  await p.waitForTimeout(2_000);
+  return Math.round(((await total()) - before) / 2);
+}
+
+/** Audio bytes this page receives per second, over two seconds. */
+export async function receiving(p: Page): Promise<number> {
+  const total = () => p.evaluate(async () => {
+    let bytes = 0;
+    for (const pc of (window as unknown as { __pcs: RTCPeerConnection[] }).__pcs) {
+      if (pc.connectionState === 'closed') continue;
+      (await pc.getStats()).forEach((v: { type: string; kind?: string; bytesReceived?: number }) => { if (v.type === 'inbound-rtp' && v.kind === 'audio') bytes += v.bytesReceived ?? 0; });
     }
     return bytes;
   });
