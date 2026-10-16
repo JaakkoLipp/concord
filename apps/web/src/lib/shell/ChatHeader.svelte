@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ConnectionBanner from '$lib/shell/ConnectionBanner.svelte';
   import { IconButton } from '@concord/ui';
   import type { Channel, Store } from '@concord/domain';
   import AtSign from '@lucide/svelte/icons/at-sign';
@@ -73,6 +74,7 @@
       }} />
   {/if}
 </header>
+<ConnectionBanner {store} />
 
 <style>
   .header {

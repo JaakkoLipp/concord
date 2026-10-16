@@ -4,6 +4,7 @@
  * After coming back, the visible history must match GET history exactly: same IDs, same contents.
  * `node tools/live/src/reconnect.ts [screenshot.png]`
  */
+import assert from 'node:assert/strict';
 import { loadState } from '../../seed/src/config.ts';
 import { api } from '../../seed/src/http.ts';
 import { login, passwordFor } from '../../seed/src/seed.ts';
@@ -19,6 +20,8 @@ const problems = watch(page);
 await signIn(page, 'dev');
 await page.goto(`${APP}/channels/${st.serverId}/${channel}`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(2000);
+// The unread opening is tested separately. Here the reader starts at the present.
+if (await page.locator('.present').count()) await page.locator('.present').click();
 
 const aino = { session: (await login(st.personas.aino!.email, passwordFor('aino'))).token };
 type M = { _id: string; author: string; content?: string };
@@ -29,6 +32,9 @@ const toDelete = mine.at(-2)!;
 
 await context.setOffline(true);
 const offlineAt = Date.now();
+await page.locator('.connection-banner').waitFor({ timeout: 2_000 });
+const bannerShownMs = Date.now() - offlineAt;
+assert(bannerShownMs < 2_000, 'the offline banner appears within two seconds');
 const tag = Date.now().toString(36);
 for (let i = 1; i <= 3; i++) await api('POST', `/channels/${channel}/messages`, { auth: aino, body: { content: `yhteystesti ${tag} ${i}` } });
 await api('PATCH', `/channels/${channel}/messages/${toEdit._id}`, { auth: aino, body: { content: `${toEdit.content} (muokattu offline ${tag})` } });
@@ -36,6 +42,9 @@ await api('DELETE', `/channels/${channel}/messages/${toDelete._id}`, { auth: ain
 await page.waitForTimeout(Math.max(0, 60_000 - (Date.now() - offlineAt)));
 await context.setOffline(false);
 const back = Date.now();
+await page.locator('.connection-banner').waitFor({ state: 'detached', timeout: 2_000 });
+const bannerClearedMs = Date.now() - back;
+assert(bannerClearedMs < 2_000, 'the offline banner clears within two seconds');
 
 // Wait for the cold start: the last message posted while offline appears.
 await page.getByText(`yhteystesti ${tag} 3`).waitFor({ timeout: 45_000 });
@@ -54,6 +63,7 @@ const word = (c: string) => (c.replace(/<[^>]*>|:[0-9A-Z]{26}:|https?:\/\/\S+/g,
 const contentMismatches = server.filter((m) => { const w = m.content ? word(m.content) : undefined; return !!w && !visible.find((v) => v.id === m._id)?.text.includes(w); });
 if (process.argv[2]) await page.screenshot({ path: process.argv[2] });
 console.log(JSON.stringify({
-  recoveredMs, visible: visible.length, sameIds, dupes, editShown, deleteGone, contentMismatches: contentMismatches.map((m) => m._id), ...problems,
+  bannerShownMs, bannerClearedMs, recoveredMs, visible: visible.length, sameIds, dupes, editShown, deleteGone, contentMismatches: contentMismatches.map((m) => m._id), ...problems,
 }, null, 2));
 await browser.close();
+assert(sameIds && dupes === 0 && editShown && deleteGone && contentMismatches.length === 0, 'reconnected history matches the backend');

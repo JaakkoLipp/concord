@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ConnectionBanner from '$lib/shell/ConnectionBanner.svelte';
   /**
    * The friends screen at @me (client.md section 7, m2b-plan.md task 2): online, all, pending and blocked
    * lists with a search box, and "Add friend" by name#1234.
@@ -111,6 +112,7 @@
   ]} />
   <span class="add-tab"><Button size="sm" variant={tab === 'add' ? 'secondary' : 'primary'} aria-pressed={tab === 'add'} onclick={() => (tab = 'add')}>{m.friends.add}</Button></span>
 </header>
+<ConnectionBanner {store} />
 
 <div class="body">
   {#if tab === 'add'}

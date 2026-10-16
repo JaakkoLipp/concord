@@ -12,6 +12,10 @@ export const en = {
     unreachable: 'unreachable',
     loading: 'Loading…',
   },
+  connection: {
+    offline: 'You are offline. Reconnecting when the network returns.',
+    reconnecting: 'Connection lost. Reconnecting...',
+  },
   mentions: {
     title: 'Mentions',
     empty: 'You have no unread mentions.',
