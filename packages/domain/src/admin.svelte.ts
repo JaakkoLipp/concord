@@ -3,7 +3,7 @@
  * write. Writes may wait a while for Stoat's 5-per-10-s server bucket, so `pending` counts those on their
  * way and the web layer asks before the tab closes.
  */
-import type { ChannelEdit, RoleEdit, ServerEdit } from './backend.ts';
+import type { ChannelEdit, MemberEdit, RoleEdit, ServerEdit } from './backend.ts';
 import type { Category, Channel, Id, Override, Role } from './entities.ts';
 import { moveChannelTo } from './layout.ts';
 import { Latest } from './latest.ts';
@@ -215,6 +215,7 @@ export class ServerAdmin {
   createInvite(channel: Id) { return this.run(() => this.backend.createInvite(channel)); }
   invites(server: Id) { return this.backend.invites(server); }
   deleteInvite(code: string) { return this.run(() => this.backend.deleteInvite(code)); }
+  editMember(server: Id, user: Id, edit: MemberEdit, reason?: string) { return this.run(() => this.backend.editMember(server, user, edit, reason)); }
   kick(server: Id, user: Id) { return this.run(() => this.backend.kick(server, user)); }
   ban(server: Id, user: Id, reason?: string) { return this.run(() => this.backend.ban(server, user, reason)); }
   unban(server: Id, user: Id) { return this.run(() => this.backend.unban(server, user)); }

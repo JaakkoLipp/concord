@@ -1,6 +1,6 @@
 /** The Stoat implementation of the domain's Backend interface. */
 import type {
-  Backend, Capabilities, Channel, ChannelEdit, Emoji, Gateway, GatewayHandlers, GroupEdit, Id, Invite, InvitePreview, LoginResult, Member, SelfEdit, SelfField, Message,
+  Backend, Capabilities, Channel, ChannelEdit, Emoji, Gateway, GatewayHandlers, GroupEdit, Id, Invite, InvitePreview, LoginResult, Member, MemberEdit, SelfEdit, SelfField, Message,
   MessagePage, MessageQuery, NodeInfo, OutgoingMessage, Override, Role, RoleEdit, SearchQuery, Server, ServerEdit, User, VideoLimit,
 } from '@concord/domain';
 import { JoinCallError, type JoinFailure } from '@concord/domain/errors';
@@ -449,6 +449,14 @@ export class StoatBackend implements Backend {
 
   async setMemberRoles(server: string, user: string, roles: string[]): Promise<void> {
     await this.rest.request('PATCH', `/servers/${server}/members/${user}`, roles.length ? { roles } : { remove: ['Roles'] });
+  }
+
+  async editMember(server: string, user: string, edit: MemberEdit, reason?: string): Promise<void> {
+    const body: Record<string, unknown> = {};
+    if (edit.voiceChannel !== undefined) body.voice_channel = edit.voiceChannel;
+    if (edit.canPublish !== undefined) body.can_publish = edit.canPublish;
+    if (edit.canReceive !== undefined) body.can_receive = edit.canReceive;
+    await this.rest.request('PATCH', `/servers/${server}/members/${user}`, body, reason ? { 'X-Audit-Log-Reason': reason } : {});
   }
 
   async kick(server: string, user: string): Promise<void> {

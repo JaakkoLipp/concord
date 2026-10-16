@@ -273,12 +273,28 @@ export const en = {
     muted: 'muted',
     serverMuted: 'server muted',
     serverDeafened: 'server deafened',
+    moving: 'being moved',
     camera: 'camera on',
     sharing: 'sharing their screen',
     speaking: 'speaking',
     live: 'Live',
     inVoice: 'In voice',
     inCall: 'Call in progress',
+  },
+  /** Moderating voice: moving people, server mute and deafen (m4.7-plan.md task 3). */
+  voiceMod: {
+    serverMute: 'Server mute',
+    serverDeafen: 'Server deafen',
+    moveTo: (channel: string) => `Move to ${channel}`,
+    moved: (name: string, channel: string) => `Moved ${name} to ${channel}.`,
+    moving: (name: string, channel: string) => `Moving ${name} to ${channel}…`,
+    moveFailed: (name: string) => `Couldn’t move ${name}.`,
+    moveIncomplete: (name: string) => `${name} didn’t follow. They may be on a client that can’t follow moves.`,
+    flagFailed: (name: string) => `Couldn’t change ${name}’s voice. Try again.`,
+    /** Tooltips on your own mute and deafen buttons while a moderator holds them. */
+    youServerMuted: 'Server muted',
+    youServerDeafened: 'Server deafened',
+    movingMark: 'Moving…',
   },
   voice: {
     panel: 'Voice call',

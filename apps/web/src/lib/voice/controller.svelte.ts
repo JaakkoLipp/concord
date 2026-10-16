@@ -6,7 +6,7 @@
  * the SDK stays out of the main bundle. Everything here imports it as types only.
  */
 import { untrack } from 'svelte';
-import { Permission, has, isFinalJoinFailure, joinFailure, type Id, type JoinFailure, type Session, type VoiceMoved } from '@concord/domain';
+import { Permission, has, isFinalJoinFailure, joinFailure, memberKey, type Id, type JoinFailure, type Session, type VoiceMoved } from '@concord/domain';
 import { permissionsIn } from '$lib/view/channels.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 import { m } from '$lib/i18n/index.ts';
@@ -75,6 +75,18 @@ export class VoiceController {
   readonly rejoiningChannel: Id | null = $derived(rejoining(this.state));
   readonly muted = $derived(this.controls.muted);
   readonly deafened = $derived(this.controls.deafened);
+  /**
+   * Whether a moderator has server muted or deafened us in this call's server (m4.7-plan.md task 3). Stoat stores the flags
+   * on the member and enforces nothing, so this client does: a server mute takes the microphone off the call like losing Speak
+   * does, a server deafen stops what we hear, and both lock their buttons. Never true in a DM call.
+   */
+  private readonly selfMember = $derived.by(() => {
+    const c = this.state.channel ? this.session.store.channels.get(this.state.channel) : undefined;
+    const self = this.session.store.selfId;
+    return c?.kind === 'text' && self ? this.session.store.members.get(memberKey(c.server, self)) : undefined;
+  });
+  readonly serverMuted: boolean = $derived(!!this.selfMember && !this.selfMember.canPublish);
+  readonly serverDeafened: boolean = $derived(!!this.selfMember && !this.selfMember.canReceive);
   /** Volumes stop at 200 % with Web Audio mixing, and at 100 % without it. */
   readonly maxVolume = this.webAudioMix ? 2 : 1;
   /**
@@ -95,8 +107,12 @@ export class VoiceController {
       $effect(() => {
         const channel = this.state.channel;
         const c = channel ? this.session.store.channels.get(channel) : undefined;
-        const can = !c || has(permissionsIn(this.session.store, c), Permission.Speak);
+        const can = (!c || has(permissionsIn(this.session.store, c), Permission.Speak)) && !this.serverMuted;
         untrack(() => this.call?.setCanSpeak(can));
+      });
+      $effect(() => {
+        const server = this.serverDeafened;
+        untrack(() => this.call?.setDeafened(this.controls.deafened || server));
       });
     });
   }
@@ -126,12 +142,14 @@ export class VoiceController {
   }
 
   toggleMute(): void {
+    if (this.serverMuted) return;
     this.controls = toggleMute(this.controls);
     play(this.controls.muted ? 'mute' : 'unmute');
     this.applyControls();
   }
 
   toggleDeafen(): void {
+    if (this.serverDeafened) return;
     this.controls = toggleDeafen(this.controls);
     play(this.controls.deafened ? 'deafen' : 'undeafen');
     this.applyControls();
@@ -244,7 +262,7 @@ export class VoiceController {
 
   private applyControls(): void {
     if (!this.call) return;
-    this.call.setDeafened(this.controls.deafened);
+    this.call.setDeafened(this.controls.deafened || this.serverDeafened);
     void this.call.setMuted(this.controls.muted).catch(() => {});
   }
 
@@ -287,11 +305,12 @@ export class VoiceController {
       if (voice && !voice.enabled) throw new Unavailable();
       const node = voice?.nodes[0]?.name ?? DEFAULT_NODE;
       const c = this.session.store.channels.get(channel);
-      const canSpeak = !c || has(permissionsIn(this.session.store, c), Permission.Speak);
+      const canSpeak = (!c || has(permissionsIn(this.session.store, c), Permission.Speak)) && !this.serverMuted;
       // Load the SDK before asking for the token, which lives 10 s.
       const { connect } = await import('./call.ts');
       if (gen !== this.gen) return;
-      const { muted, deafened } = this.controls;
+      const { muted } = this.controls;
+      const deafened = this.controls.deafened || this.serverDeafened;
       const options = { current: () => gen === this.gen && this.state.phase === 'connecting', muted, deafened, canSpeak, webAudioMix: this.webAudioMix, volumes: this.volumes, mutedForMe: this.mutedForMe };
       let call: Call;
       try {

@@ -66,6 +66,16 @@ export type DomainEvent =
   | { type: 'callUpdate'; channel: Id; initiator: Id; startedAt?: number; ended: boolean }
   | { type: 'unknown'; name: string };
 
+/**
+ * What a moderator changes about a member. A move makes Stoat send the member a token (`voiceMoved`). Server mute and
+ * deafen are stored and announced but not enforced by Stoat 0.15.5: Concord's own clients act on them (m4.7-results.md).
+ */
+export interface MemberEdit {
+  voiceChannel?: Id;
+  canPublish?: boolean;
+  canReceive?: boolean;
+}
+
 export type ConnectionState = 'connecting' | 'ready' | 'reconnecting' | 'offline' | 'invalid-session';
 
 export interface Gateway {
@@ -278,6 +288,8 @@ export interface Backend {
   deleteInvite(code: string): Promise<void>;
   /** Replace a member's roles. */
   setMemberRoles(server: Id, user: Id, roles: Id[]): Promise<void>;
+  /** Change a member other than their roles, with an optional reason for the audit log (m4.7-plan.md). */
+  editMember(server: Id, user: Id, edit: MemberEdit, reason?: string): Promise<void>;
   kick(server: Id, user: Id): Promise<void>;
   ban(server: Id, user: Id, reason?: string): Promise<void>;
   unban(server: Id, user: Id): Promise<void>;

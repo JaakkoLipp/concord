@@ -29,6 +29,7 @@
 
   /** `compact`: at the top of a DM or group, above its messages, rather than filling the column. */
   let { session, voice, channel, compact = false }: { session: Session; voice: VoiceController; channel: Id; compact?: boolean } = $props();
+  const muteLabel = $derived(voice.serverMuted ? m.voiceMod.youServerMuted : voice.muted ? m.voice.unmute : m.voice.mute);
   const store = $derived(session.store);
   const info = $derived(store.channels.get(channel));
   const server = $derived(info?.kind === 'text' ? info.server : undefined);
@@ -135,8 +136,8 @@
       </div>
     {/if}
     <div class="bar" role="toolbar" aria-label={m.call.controls}>
-      <button class="control" class:off={voice.muted} aria-label={voice.muted ? m.voice.unmute : m.voice.mute} use:tooltip={voice.muted ? m.voice.unmute : m.voice.mute} onclick={() => voice.toggleMute()}>
-        {#if voice.muted}<MicOff />{:else}<Mic />{/if}
+      <button class="control" class:off={voice.muted || voice.serverMuted} class:locked={voice.serverMuted} aria-label={muteLabel} aria-disabled={voice.serverMuted} use:tooltip={muteLabel} onclick={() => voice.toggleMute()}>
+        {#if voice.muted || voice.serverMuted}<MicOff />{:else}<Mic />{/if}
       </button>
       <button class="control" class:on={voice.camera} aria-label={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} use:tooltip={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} disabled={voice.status !== 'connected'} onclick={() => voice.toggleCamera()}>
         {#if voice.camera}<Video />{:else}<VideoOff />{/if}
@@ -187,6 +188,7 @@
   .control:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .control :global(svg) { width: var(--icon-lg); height: var(--icon-lg); }
   .control.off { color: var(--danger); }
+  .control.locked { cursor: not-allowed; }
   .control.on { background: var(--text-strong); color: var(--surface-0); }
   @media (hover: hover) { .control.on:hover:not(:disabled) { background: var(--text-normal); } }
   .control.leave { background: var(--danger-fill); color: var(--on-danger); }

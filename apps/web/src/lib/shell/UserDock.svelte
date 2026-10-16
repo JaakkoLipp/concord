@@ -84,16 +84,16 @@
     {#if app.voice}
       {@const voice = app.voice}
       <!-- Mute and deafen work outside a call too, and apply at the next join (client.md section 10.3). -->
-      <span class="toggle" class:on={voice.muted}>
-        <IconButton label={voice.muted ? m.voice.unmute : m.voice.mute} onclick={() => voice.toggleMute()}>
-          {#if voice.muted}<MicOff />{:else}<Mic />{/if}
+      <span class="toggle" class:on={voice.muted || voice.serverMuted} class:locked={voice.serverMuted}>
+        <IconButton label={voice.serverMuted ? m.voiceMod.youServerMuted : voice.muted ? m.voice.unmute : m.voice.mute} aria-disabled={voice.serverMuted} onclick={() => voice.toggleMute()}>
+          {#if voice.muted || voice.serverMuted}<MicOff />{:else}<Mic />{/if}
         </IconButton>
         <button class="chevron" aria-label={m.voice.inputOptions} aria-haspopup="menu" aria-expanded={!!options && options.anchor.dataset.kind === 'input'} data-kind="input"
           onclick={(e) => void openOptions('input', e.currentTarget)}><ChevronDown /></button>
       </span>
-      <span class="toggle" class:on={voice.deafened}>
-        <IconButton label={voice.deafened ? m.voice.undeafen : m.voice.deafen} onclick={() => voice.toggleDeafen()}>
-          {#if voice.deafened}<HeadphoneOff />{:else}<Headphones />{/if}
+      <span class="toggle" class:on={voice.deafened || voice.serverDeafened} class:locked={voice.serverDeafened}>
+        <IconButton label={voice.serverDeafened ? m.voiceMod.youServerDeafened : voice.deafened ? m.voice.undeafen : m.voice.deafen} aria-disabled={voice.serverDeafened} onclick={() => voice.toggleDeafen()}>
+          {#if voice.deafened || voice.serverDeafened}<HeadphoneOff />{:else}<Headphones />{/if}
         </IconButton>
         <button class="chevron" aria-label={m.voice.outputOptions} aria-haspopup="menu" aria-expanded={!!options && options.anchor.dataset.kind === 'output'} data-kind="output"
           onclick={(e) => void openOptions('output', e.currentTarget)}><ChevronDown /></button>
@@ -145,6 +145,8 @@
   /* The button and its menu's chevron, side by side as on Discord. */
   .toggle { display: flex; align-items: center; }
   .toggle.on :global(.icon-button) { color: var(--danger); }
+  /* Held by a moderator: still announced and focusable, but it does nothing. */
+  .toggle.locked :global(.icon-button) { cursor: not-allowed; }
   .chevron {
     display: grid; place-items: center; width: 1rem; height: 2rem; margin-left: calc(-1 * var(--space-1)); padding: 0;
     border: 0; border-radius: var(--radius-xs); background: none; color: var(--text-secondary);

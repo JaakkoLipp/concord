@@ -17,26 +17,39 @@
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import { app } from '$lib/session/app.svelte.ts';
   import { participantMenu } from '$lib/call/menu.ts';
+  import { moves } from '$lib/admin/moves.svelte.ts';
   import { voiceMarks } from './voice.ts';
 
   interface Props { store: Store; channel: Id; name: string; server?: Id | undefined; speaking?: ReadonlySet<Id> }
   let { store, channel, name, server, speaking = new Set() }: Props = $props();
   const participants = $derived(store.voiceParticipants(channel));
+  // A touch long-press opens the menu rather than starting a drag, so rows are draggable with a mouse or pen only. Moving
+  // with the menu's "Move to" works everywhere.
+  const fine = typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
 </script>
 
-<ul class="participants" aria-label={m.voiceState.participants(name)}>
+<!-- Dropping on the list counts as dropping on its channel. -->
+<ul
+  class="participants" aria-label={m.voiceState.participants(name)}
+  ondragover={(e) => moves.over(e, channel)} ondragleave={() => moves.leave(channel)} ondrop={(e) => app.session && moves.drop(e, app.session, channel)}
+>
   {#each participants as v (v.user)}
     {@const marks = voiceMarks(store, v, server)}
     {@const display = store.displayName(v.user, server)}
     {@const talking = speaking.has(v.user)}
     {@const member = server ? store.members.get(memberKey(server, v.user)) : undefined}
     {@const volume = app.voice && v.user !== store.selfId ? Math.round(app.voice.volumeOf(v.user) * 100) : 100}
-    <li>
+    {@const moving = moves.isPending(v.user)}
+    <!-- draggable sits on the item: Firefox won't start a drag from a button. -->
+    <li
+      draggable={fine && app.session && moves.canDrag(app.session, v.user) ? 'true' : undefined}
+      ondragstart={(e) => app.session && moves.startDrag(app.session, v.user, e)} ondragend={() => moves.endDrag()}
+    >
       <button
-        class="participant" class:talking
+        class="participant" class:talking class:moving
         aria-label={m.voiceState.participant(display, [
           talking ? m.voiceState.speaking : '', marks.serverMuted ? m.voiceState.serverMuted : '', marks.muted ? m.voiceState.muted : '',
-          marks.serverDeafened ? m.voiceState.serverDeafened : '', marks.camera ? m.voiceState.camera : '', marks.live ? m.voiceState.sharing : '',
+          marks.serverDeafened ? m.voiceState.serverDeafened : '', moving ? m.voiceState.moving : '', marks.camera ? m.voiceState.camera : '', marks.live ? m.voiceState.sharing : '',
           volume !== 100 ? m.call.volumeMark(volume) : '',
         ].filter(Boolean))}
         onclick={(e) => popout.open(v.user, server, e.currentTarget)}
@@ -45,6 +58,7 @@
         <span class="avatar"><Avatar src={avatarUrl(store.users.get(v.user) ?? { id: v.user }, member?.avatar)} size={24} /></span>
         <span class="name">{display}</span>
         <span class="marks" aria-hidden="true">
+          {#if moving}<span class="moving-mark">{m.voiceMod.movingMark}</span>{/if}
           {#if volume !== 100}<span class="volume" use:tooltip={m.call.volumeMark(volume)}>{#if volume === 0}<VolumeX size={16} />{:else}<Volume1 size={16} />{/if}</span>{/if}
           {#if marks.live}<span class="live">{m.voiceState.live}</span>{/if}
           {#if marks.camera}<Video size={16} />{/if}
@@ -80,4 +94,6 @@
     font: 700 var(--text-xs) var(--font-sans); text-transform: uppercase;
   }
   .volume { display: inline-grid; color: var(--text-muted); }
+  .participant.moving { opacity: 0.6; }
+  .moving-mark { color: var(--text-muted); font: 500 var(--text-xs) var(--font-sans); }
 </style>

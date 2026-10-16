@@ -15,6 +15,7 @@
   import { fileUrl } from '@concord/stoat';
   import { app } from '$lib/session/app.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
+  import { moves } from '$lib/admin/moves.svelte.ts';
   import VoiceParticipants from './VoiceParticipants.svelte';
   import VoiceTimer from './VoiceTimer.svelte';
 
@@ -84,6 +85,10 @@
         {@const max = maxUsers(channel)}
         <a
           class="channel" class:active={channel.id === active} class:unread class:muted class:occupied={since !== undefined}
+          class:drop-ok={moves.dragging?.to.has(channel.id)} class:drop-over={moves.hover === channel.id}
+          ondragover={isVoice(channel) ? (e) => moves.over(e, channel.id) : undefined}
+          ondragleave={isVoice(channel) ? () => moves.leave(channel.id) : undefined}
+          ondrop={isVoice(channel) ? (e) => app.session && moves.drop(e, app.session, channel.id) : undefined}
           href={resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server, channel: channel.id })}
           aria-current={channel.id === active ? 'page' : undefined}
           aria-label={[m.shell.channelLabel(name, isVoice(channel), unread, mentions), occupants || max ? m.voiceState.occupied(occupants, max) : ''].filter(Boolean).join(', ')}
@@ -142,6 +147,9 @@
   @media (hover: hover) { .channel:hover { background: var(--hover-overlay); color: var(--text-normal); text-decoration: none; } }
   .channel.active { background: var(--surface-5); color: var(--text-strong); }
   .channel.unread { color: var(--text-strong); }
+  /* While a person is dragged, the channels they may be dropped on. */
+  .channel.drop-ok { outline: 1px dashed var(--accent); outline-offset: -1px; }
+  .channel.drop-over { background: var(--accent-wash); color: var(--text-strong); }
   .channel.muted { color: var(--text-muted); font-weight: 400; }
   .channel.muted.active { color: var(--text-secondary); }
   @media (hover: hover) { .channel.muted:hover { color: var(--text-secondary); } }

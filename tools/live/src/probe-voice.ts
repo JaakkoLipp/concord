@@ -8,10 +8,12 @@ import type { Page } from 'playwright-core';
 import { APP } from './browser.ts';
 import { join, receiving, seat, sending, voiceBrowser, type Seat } from './calls.ts';
 import { answer, cleanup, setup } from './probe-moderation.ts';
+import { Permission as P } from '../../../packages/domain/src/permissions.ts';
 import { ApiError } from '../../seed/src/http.ts';
 import { describe } from './livekit-admin.ts';
 
 const which = process.argv[2] ?? 'all';
+
 const SHOWN = /Voice|Move|Member|Call/;
 const p = await setup();
 let browser = await voiceBrowser();
@@ -76,6 +78,38 @@ async function fresh(): Promise<void> {
 const mark = now;
 
 try {
+  if (which === 'moverules') {
+    // Which moves Stoat accepts: the moderator in a call, a destination the target or the moderator can't connect to, a full one.
+    const channel = (id: string, body: unknown) => p.owner.call('PATCH', `/channels/${id}`, body);
+    const override = (id: string, role: string, allow: bigint, deny: bigint) => p.owner.call('PUT', `/channels/${id}/permissions/${role}`, { permissions: { allow: Number(allow), deny: Number(deny) } });
+    const where = async (w: Watched) => `${await who(w.seat.page)}`;
+    const attempt = async (label: string, setupFn: () => Promise<void>) => {
+      await fresh();
+      await setupFn();
+      log(`MOVE RULES: ${label}`);
+      const from = mark();
+      log('  PATCH voice_channel=Beta:', await edit({ voice_channel: p.voiceB }));
+      await sleep(5_000);
+      log('  LiveKit after:', await lk());
+      log('  sidebar:', await where(onni), '; tuuli panel:', tuuli.panel.filter((x) => x.at >= from).map((x) => x.text.slice(0, 50)).join(' > ') || '(unchanged)', '; onni panel:', onni.panel.filter((x) => x.at >= from).map((x) => x.text.slice(0, 50)).join(' > ') || '(unchanged)');
+    };
+    await attempt('the moderator is in the same call as the target', async () => { await join(tuuli.seat, 'Alpha'); await join(onni.seat, 'Alpha'); await sleep(1_500); });
+    await attempt('the moderator is in the destination', async () => { await join(tuuli.seat, 'Alpha'); await join(onni.seat, 'Beta'); await sleep(1_500); });
+    await attempt('the target lacks Connect on the destination, the moderator has it', async () => {
+      await override(p.voiceB, 'default', 0n, P.Connect); await override(p.voiceB, p.modRole, P.Connect, 0n);
+      await join(tuuli.seat, 'Alpha'); await sleep(1_500);
+    });
+    await attempt('the moderator lacks Connect on the destination, the target has it', async () => {
+      await override(p.voiceB, 'default', 0n, 0n); await override(p.voiceB, p.modRole, 0n, P.Connect);
+      await join(tuuli.seat, 'Alpha'); await sleep(1_500);
+    });
+    await attempt('the destination is full (limit 1, dev is in it)', async () => {
+      await override(p.voiceB, p.modRole, 0n, 0n); await channel(p.voiceB, { voice: { max_users: 1 } });
+      const dev = await watched('dev'); all.push(dev);
+      await join(dev.seat, 'Beta'); await join(tuuli.seat, 'Alpha'); await sleep(1_500);
+    });
+  }
+
   if (which === 'move' || which === 'all') {
     await fresh();
     log('MOVE: tuuli in Alpha, onni (Moderator, in no call) moves her to Beta over the API');
