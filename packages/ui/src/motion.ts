@@ -3,6 +3,7 @@
  */
 import { flip } from 'svelte/animate';
 import { quintOut } from 'svelte/easing';
+import { springAt, springSettled, type SpringState } from './spring.ts';
 
 const token = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
@@ -51,6 +52,111 @@ export function leave(_node: HTMLElement, { instant = false }: { instant?: boole
     easing: quintOut,
     css: (t: number) => `opacity: ${t}; scale: ${1 - shrink * (1 - t)}; pointer-events: none;`,
   };
+}
+
+interface ScrollSpring {
+  start: SpringState;
+  target: number;
+  startedAt: number;
+  frame: number;
+  onInput: () => void;
+}
+
+const scrollSprings = new WeakMap<HTMLElement, ScrollSpring>();
+
+function maxScrollTop(element: HTMLElement): number {
+  return Math.max(0, element.scrollHeight - element.clientHeight);
+}
+
+function boundedTarget(element: HTMLElement, target: number): number {
+  return Math.min(maxScrollTop(element), Math.max(0, Number.isFinite(target) ? target : 0));
+}
+
+/** Whether this element currently has an active spring scroll, for scroll-spy suppression. */
+export function springScrolling(element: HTMLElement): boolean {
+  return scrollSprings.has(element);
+}
+
+/** Cancels a spring and removes its input listeners. */
+export function cancelSpringScroll(element: HTMLElement): void {
+  const run = scrollSprings.get(element);
+  if (!run) return;
+  cancelAnimationFrame(run.frame);
+  element.removeEventListener('wheel', run.onInput);
+  element.removeEventListener('touchstart', run.onInput);
+  scrollSprings.delete(element);
+}
+
+/**
+ * Scrolls vertically with a critically damped spring at 12.75 rad/s. Retargeting starts from the analytic
+ * position and velocity at the current time, so missed frames do not stretch the animation and velocity is kept.
+ */
+export function springScrollTo(element: HTMLElement, target: number): void {
+  const nextTarget = boundedTarget(element, target);
+  if (typeof window === 'undefined' || !moving()) {
+    cancelSpringScroll(element);
+    element.scrollTop = nextTarget;
+    return;
+  }
+
+  const now = performance.now();
+  const existing = scrollSprings.get(element);
+  let start: SpringState;
+  let onInput: () => void;
+  if (existing) {
+    start = springAt(existing.start, existing.target, now - existing.startedAt);
+    cancelAnimationFrame(existing.frame);
+    existing.start = start;
+    existing.target = nextTarget;
+    existing.startedAt = now;
+    onInput = existing.onInput;
+  } else {
+    start = { position: Math.min(maxScrollTop(element), Math.max(0, element.scrollTop)), velocity: 0 };
+    if (springSettled(start, nextTarget)) {
+      element.scrollTop = nextTarget;
+      return;
+    }
+    onInput = () => cancelSpringScroll(element);
+    element.addEventListener('wheel', onInput, { passive: true });
+    element.addEventListener('touchstart', onInput, { passive: true });
+    scrollSprings.set(element, { start, target: nextTarget, startedAt: now, frame: 0, onInput });
+  }
+
+  const run = scrollSprings.get(element)!;
+  run.start = start;
+  run.target = nextTarget;
+  run.startedAt = now;
+
+  const tick = (at: number) => {
+    if (scrollSprings.get(element) !== run) return;
+    if (!moving()) {
+      element.scrollTop = boundedTarget(element, run.target);
+      cancelSpringScroll(element);
+      return;
+    }
+    const currentTarget = boundedTarget(element, run.target);
+    if (currentTarget !== run.target) {
+      run.start = springAt(run.start, run.target, at - run.startedAt);
+      run.target = currentTarget;
+      run.startedAt = at;
+    }
+    const state = springAt(run.start, run.target, at - run.startedAt);
+    const limit = maxScrollTop(element);
+    const position = Math.min(limit, Math.max(0, state.position));
+    if (position !== state.position) {
+      const hitsBoundaryOutward = (position === 0 && state.velocity < 0) || (position === limit && state.velocity > 0);
+      run.start = { position, velocity: hitsBoundaryOutward ? 0 : state.velocity };
+      run.startedAt = at;
+    }
+    element.scrollTop = position;
+    if (springSettled({ position, velocity: state.velocity }, run.target)) {
+      element.scrollTop = run.target;
+      cancelSpringScroll(element);
+      return;
+    }
+    run.frame = requestAnimationFrame(tick);
+  };
+  run.frame = requestAnimationFrame(tick);
 }
 
 const exits = new WeakMap<HTMLDialogElement, Animation[]>();
