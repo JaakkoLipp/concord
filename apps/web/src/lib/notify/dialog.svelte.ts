@@ -1,5 +1,6 @@
 /** Which server or conversation the notification settings dialog shows, if any. */
 import type { Id, Session } from '@concord/domain';
+import type { NotificationLevel } from '@concord/domain';
 import type { MenuItem } from '@concord/ui';
 import { m } from '$lib/i18n/index.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
@@ -15,6 +16,19 @@ export const notifyDialog = new NotifyDialog();
 /** Notification settings, for any menu. */
 export function notifySettingsItem(scope: 'server' | 'channel', id: Id): MenuItem {
   return { label: m.notify.settings, onselect: () => notifyDialog.open(scope, id) };
+}
+
+/** Server notification level picker, with the current level shown on its parent row. */
+export function serverNotificationSettingsItem(session: Session, id: Id): MenuItem {
+  const current = session.store.settings.notifications.server[id] ?? 'mention';
+  const levels: NotificationLevel[] = ['all', 'mention', 'none'];
+  return {
+    kind: 'submenu', label: m.notify.settings, detail: m.notify.levels[current],
+    items: levels.map((level) => ({
+      kind: 'check', label: m.notify.levels[level], checked: current === level,
+      onselect: () => void session.setNotificationLevel('server', id, level).catch(() => toasts.show(m.notify.failed)),
+    })),
+  };
 }
 
 /** A quick mute until turned off, or an unmute, for any menu. */

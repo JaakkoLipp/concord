@@ -44,12 +44,19 @@ export interface ServerRemoval {
 const oldestFirst = (list: Message[]) => [...list].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
 export function parseSettings(raw: Record<string, { value: string }>): Settings {
-  const out: Settings = { notifications: parseNotifications(raw.notifications?.value), serverOrder: [] };
+  const out: Settings = { notifications: parseNotifications(raw.notifications?.value), serverOrder: [], hiddenMutedChannels: {} };
   try {
     const o = JSON.parse(raw.ordering?.value ?? '{}') as { servers?: Id[] };
     if (Array.isArray(o.servers)) out.serverOrder = o.servers.filter((s) => typeof s === 'string');
   } catch {
     // As above.
+  }
+  try {
+    const value = JSON.parse(raw['concord:hiddenMutedChannels']?.value ?? '{}') as unknown;
+    const o = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+    out.hiddenMutedChannels = Object.fromEntries(Object.entries(o).filter((e): e is [string, true] => e[1] === true));
+  } catch {
+    // Corrupt or older settings mean no servers are hidden.
   }
   return out;
 }
@@ -226,7 +233,7 @@ export class Session {
   /** After Ready: settings, the open server's members, and fresh history for the open channel. */
   private async coldStart(): Promise<void> {
     const fetchedAt = Date.now();
-    const fetched = await this.backend.settings(['notifications', 'ordering', EMOJI_KEY, GIFS_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY]).catch(() => null);
+    const fetched = await this.backend.settings(['notifications', 'ordering', 'concord:hiddenMutedChannels', EMOJI_KEY, GIFS_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY]).catch(() => null);
     // A failed fetch keeps what this session has, rather than resetting the chosen status or favourites.
     if (!fetched) return this.coldStartRest();
     const settings: Record<string, { value: string }> = fetched;
@@ -708,7 +715,7 @@ export class Session {
    */
   private settingsChanged(values: Record<string, { value: string }>): void {
     this.rawSettings = { ...this.rawSettings, ...values };
-    if ('notifications' in values || 'ordering' in values) {
+    if ('notifications' in values || 'ordering' in values || 'concord:hiddenMutedChannels' in values) {
       const next = parseSettings(this.rawSettings);
       // A change of ours still on its way, or just written, is newer than this echo. Look again once the
       // hold ends, in case a change from another device came in meanwhile.
@@ -716,6 +723,12 @@ export class Session {
         next.notifications = this.store.settings.notifications;
         setTimeout(() => {
           if (!this.notificationWrites.holding) this.store.settings = { ...this.store.settings, notifications: parseSettings(this.rawSettings).notifications };
+        }, HOLD_MS + 100);
+      }
+      if (this.hiddenMutedWrites.holding) {
+        next.hiddenMutedChannels = this.store.settings.hiddenMutedChannels;
+        setTimeout(() => {
+          if (!this.hiddenMutedWrites.holding) this.store.settings = { ...this.store.settings, hiddenMutedChannels: parseSettings(this.rawSettings).hiddenMutedChannels };
         }, HOLD_MS + 100);
       }
       this.store.settings = next;
@@ -741,6 +754,26 @@ export class Session {
     await this.backend.setSettings({ notifications: value });
     this.rawSettings = { ...this.rawSettings, notifications: { value } };
   });
+
+  private readonly hiddenMutedWrites = new Latest<Record<Id, boolean>>(async (next) => {
+    const value = JSON.stringify(next);
+    await this.backend.setSettings({ 'concord:hiddenMutedChannels': value });
+    this.rawSettings = { ...this.rawSettings, 'concord:hiddenMutedChannels': { value } };
+  });
+  private hiddenMutedChangedAt = 0;
+
+  /** Hide or show muted channels in one server's sidebar, synced across this account's devices. */
+  setHideMutedChannels(server: Id, hidden: boolean): Promise<void> {
+    const changedAt = ++this.hiddenMutedChangedAt;
+    const next = { ...this.store.settings.hiddenMutedChannels };
+    if (hidden) next[server] = true;
+    else delete next[server];
+    this.store.settings = { ...this.store.settings, hiddenMutedChannels: next };
+    return this.hiddenMutedWrites.set(next).catch((e: unknown) => {
+      if (changedAt === this.hiddenMutedChangedAt) this.store.settings = { ...this.store.settings, hiddenMutedChannels: parseSettings(this.rawSettings).hiddenMutedChannels };
+      throw e;
+    });
+  }
 
   private changeNotifications(change: (n: NotificationSettings) => void): Promise<void> {
     // From the newest local value, so two quick changes both survive.

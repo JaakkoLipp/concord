@@ -71,6 +71,10 @@ export type DomainEvent =
  * deafen are stored and announced but not enforced by Stoat 0.15.5: Concord's own clients act on them (m4.7-results.md).
  */
 export interface MemberEdit {
+  nickname?: string;
+  /** An uploaded image ID from `upload(…, 'avatars')`. */
+  avatar?: Id;
+  remove?: ('Nickname' | 'Avatar')[];
   voiceChannel?: Id;
   canPublish?: boolean;
   canReceive?: boolean;

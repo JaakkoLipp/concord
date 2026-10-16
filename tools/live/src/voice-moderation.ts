@@ -66,8 +66,11 @@ try {
     await mod.page.keyboard.press('ContextMenu');
     await menu(mod.page).waitFor({ timeout: 3_000 });
     const listed = await items(mod.page);
-    check(listed.includes('Move to Alpha') && !listed.includes('Move to Beta'), `"Move to" lists the other voice channel only: ${JSON.stringify(listed.filter((i) => /Move/.test(i)))}`);
-    await menu(mod.page).getByRole('menuitem', { name: 'Move to Alpha' }).focus();
+    check(listed.includes('Move to') && !listed.includes('Move to Alpha'), `"Move to" is a submenu in the root menu: ${JSON.stringify(listed.filter((i) => /Move/.test(i)))}`);
+    await menu(mod.page).getByRole('menuitem', { name: 'Move to', exact: true }).focus();
+    await mod.page.keyboard.press('ArrowRight');
+    const destinations = mod.page.getByRole('menu', { name: 'Move to' });
+    await destinations.getByRole('menuitem', { name: 'Alpha', exact: true }).focus();
     await mod.page.keyboard.press('Enter');
     check(await panelHas(tuuli, 'Alpha') && await passes(row(dev.page, 'Alpha').waitFor({ timeout: 10_000 })), '"Move to Alpha" from the keyboard moves her back');
     check(tuuli.joins === joins, `still no join_call (${tuuli.joins - joins})`);
@@ -87,6 +90,12 @@ try {
     const dev = await open('dev');
     await join(tuuli, 'Alpha');
     await join(dev, 'Alpha');
+    // The shared-call controls follow the first person group, rather than preceding Profile.
+    await row(dev.page, 'Alpha').click({ button: 'right' });
+    const sharedText = await menu(dev.page).innerText();
+    check(sharedText.indexOf('Profile') < sharedText.indexOf('User volume') && sharedText.includes('Mute for me'),
+      'shared-call volume and local mute follow Profile and the main actions');
+    await dev.page.keyboard.press('Escape');
     await sleep(1_500);
     const hearing = await receiving(tuuli.page);
     const toggle = async (item: string) => {

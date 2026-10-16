@@ -4,9 +4,15 @@
  */
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import { BackendError, type Id, type Session } from '@concord/domain';
+import { BackendError, Permission, type Id, type Session } from '@concord/domain';
 import type { MenuItem } from '@concord/ui';
-import { memberItems } from '$lib/admin/members.ts';
+import { nicknameItem, roleItem, moderationPanelItem, kickBanItems } from '$lib/admin/members.ts';
+import { editServerProfileItem } from '$lib/admin/menu.ts';
+import { moderationItems } from '$lib/call/moderation.ts';
+import { channelsWith } from '$lib/view/admin.ts';
+import { orderedServers } from '$lib/view/channels.ts';
+import { compose } from '$lib/view/compose.svelte.ts';
+import type { VoiceController } from '$lib/voice/controller.svelte.ts';
 import { m } from '$lib/i18n/index.ts';
 import { confirm } from '$lib/view/confirm.svelte.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
@@ -79,43 +85,101 @@ async function copy(text: string): Promise<void> {
   }
 }
 
-/**
- * Everything you can do about a person, for context menus. With `primary: false`, the actions a profile
- * card already shows as buttons are left out.
- */
-export function personMenu(session: Session, user: Id, opts: { profile?: () => void; primary?: boolean; inDm?: boolean; server?: Id | undefined } = {}): MenuItem[] {
-  const u = session.store.users.get(user);
+/** Open the DM and start its call; Stoat rings the other person when we join. */
+export async function startCall(session: Session, voice: VoiceController, user: Id): Promise<void> {
+  try {
+    const channel = await session.openDm(user);
+    await goto(resolve('/(app)/app/channels/@me/[channel]/[[message]]', { channel }));
+    voice.join(channel);
+  } catch {
+    failed();
+  }
+}
+
+/** Send an invite to this person in their DM. The invite is created only after choosing a server. */
+async function invitePerson(session: Session, user: Id, server: Id): Promise<void> {
+  const channel = channelsWith(session.store, server, Permission.InviteOthers)[0];
+  if (!channel) return;
+  try {
+    const dm = await session.openDm(user);
+    const invite = await session.admin.createInvite(channel);
+    await session.backend.sendMessage(dm, { content: location.origin + '/invite/' + invite.code, replies: [], attachments: [] }, crypto.randomUUID());
+    toasts.show(m.people.inviteSent(session.store.servers.get(server)?.name ?? ''), 'info');
+  } catch {
+    toasts.show(m.people.inviteFailed);
+  }
+}
+
+export interface PersonMenuOptions {
+  profile?: (() => void) | undefined;
+  primary?: boolean;
+  inDm?: boolean;
+  server?: Id | undefined;
+  voice?: MenuItem[];
+  startCall?: (() => void) | undefined;
+}
+
+/** The person menu, grouped as in m4.7-plan.md task 4. Empty groups never leave stray separators. */
+export function personMenu(session: Session, user: Id, opts: PersonMenuOptions = {}): MenuItem[] {
+  const store = session.store;
+  const u = store.users.get(user);
+  const own = user === store.selfId;
   const primary = opts.primary ?? true;
   const items: MenuItem[] = [];
-  if (opts.profile) items.push({ label: m.people.viewProfile, onselect: opts.profile });
-  if (u && user !== session.store.selfId && !u.bot) {
-    const rel = u.relationship;
-    if (primary) {
-      if (rel === 'Friend' && !opts.inDm) items.push({ label: m.friends.actions.message, onselect: () => void message(session, user) });
-      if (rel === 'None') items.push({ label: m.people.addFriend, onselect: () => request(session, user) });
-      if (rel === 'Incoming') {
-        items.push({ label: m.friends.actions.accept, onselect: () => accept(session, user) });
-        items.push({ label: m.friends.actions.ignore, onselect: () => dropRequest(session, user) });
-      }
-      if (rel === 'Outgoing') items.push({ label: m.friends.actions.cancel, onselect: () => dropRequest(session, user) });
-    }
+  const group = (...entries: (MenuItem | null | undefined)[]) => {
+    const present = entries.filter((item): item is MenuItem => !!item);
+    if (!present.length) return;
     if (items.length) items.push('separator');
-    if (rel === 'Friend') items.push({ label: m.friends.actions.remove, danger: true, onselect: () => void removeFriend(session, user) });
-    if (rel === 'Blocked') {
-      if (primary) items.push({ label: m.friends.actions.unblock, onselect: () => unblock(session, user) });
-    } else {
-      items.push({ label: m.friends.actions.block, danger: true, onselect: () => void block(session, user) });
+    items.push(...present);
+  };
+  const first: MenuItem[] = [];
+  if (opts.profile) first.push({ label: m.people.viewProfile, onselect: opts.profile });
+  first.push({ label: m.people.mention, onselect: () => compose.mention(user) });
+  if (!own && u && !u.bot && primary) {
+    first.push({ label: m.friends.actions.message, onselect: () => void message(session, user) });
+    if (opts.startCall) first.push({ label: m.people.startCall, disabled: u.relationship !== 'Friend', onselect: opts.startCall });
+  }
+  group(...first);
+  if (own) {
+    if (opts.server) {
+      group(editServerProfileItem(session, opts.server));
+      group(roleItem(session, opts.server, user));
+      group(moderationPanelItem(session, opts.server, user));
+    }
+  } else {
+    group(...(opts.voice ?? []));
+    const social: MenuItem[] = [];
+    if (opts.server) {
+      const nickname = nicknameItem(session, opts.server, user);
+      if (nickname) social.push(nickname);
+    }
+    if (u && !u.bot) {
+      const rel = u.relationship;
+      const servers = orderedServers(store).filter((s) => channelsWith(store, s.id, Permission.InviteOthers).length);
+      if (servers.length && rel === 'Friend') social.push({
+        kind: 'submenu', label: m.people.inviteToServer,
+        items: servers.map((s) => ({ label: s.name, onselect: () => void invitePerson(session, user, s.id) })),
+      });
+      if (primary) {
+        if (rel === 'None') social.push({ label: m.people.addFriend, onselect: () => request(session, user) });
+        if (rel === 'Incoming') social.push(
+          { label: m.friends.actions.accept, onselect: () => accept(session, user) },
+          { label: m.friends.actions.ignore, onselect: () => dropRequest(session, user) },
+        );
+        if (rel === 'Outgoing') social.push({ label: m.friends.actions.cancel, onselect: () => dropRequest(session, user) });
+      }
+      if (rel === 'Friend') social.push({ label: m.friends.actions.remove, danger: true, onselect: () => void removeFriend(session, user) });
+      if (rel === 'Blocked') {
+        if (primary) social.push({ label: m.friends.actions.unblock, onselect: () => unblock(session, user) });
+      } else social.push({ label: m.friends.actions.block, danger: true, onselect: () => void block(session, user) });
+    }
+    group(...social);
+    if (opts.server) {
+      group(roleItem(session, opts.server, user));
+      group(moderationPanelItem(session, opts.server, user), ...moderationItems(session, user, opts.server), ...kickBanItems(session, opts.server, user));
     }
   }
-  // In a server: what an admin can do about this member.
-  const admin = opts.server ? memberItems(session, opts.server, user) : [];
-  if (admin.length) {
-    if (items.length && items.at(-1) !== 'separator') items.push('separator');
-    items.push(...admin);
-  }
-  if (items.length && items.at(-1) !== 'separator') items.push('separator');
-  if (u) items.push({ label: m.people.copyUsername, onselect: () => void copy(`${u.username}#${u.discriminator}`) });
-  items.push({ label: m.people.copyId, onselect: () => void copy(user) });
+  group({ label: m.people.copyId, onselect: () => void copy(user) });
   return items;
 }
 

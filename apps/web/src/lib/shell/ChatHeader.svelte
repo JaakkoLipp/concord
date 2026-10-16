@@ -14,6 +14,7 @@
   import { channelName } from '$lib/view/channels.ts';
   import { shell } from '$lib/view/shell.svelte.ts';
   import { app } from '$lib/session/app.svelte.ts';
+  import { popout } from '$lib/view/popout.svelte.ts';
   import { participantMenu } from '$lib/call/menu.ts';
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import { dmPartner } from '$lib/view/channels.ts';
@@ -39,7 +40,7 @@
     {#if channel.kind === 'dm' && partner && app.session}
       {@const session = app.session}
       <!-- The DM's person: their menu, with their volume, on the name as on Discord (m4.5-plan.md task 5). -->
-      <h1><span class="person" use:menuOn={() => participantMenu(session, app.voice, partner, { inDm: true })}>{channelName(store, channel)}</span></h1>
+      <h1><span class="person" use:menuOn={(node) => participantMenu(session, app.voice, partner, { inDm: true, profile: () => popout.open(partner, undefined, node, 'left') })}>{channelName(store, channel)}</span></h1>
     {:else}
       <h1>{channelName(store, channel)}</h1>
     {/if}

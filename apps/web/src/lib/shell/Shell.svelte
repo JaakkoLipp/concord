@@ -28,9 +28,13 @@
   import AdminDialogs from '$lib/admin/AdminDialogs.svelte';
   import MemberRolesDialog from '$lib/admin/MemberRolesDialog.svelte';
   import ModerationDialogs from '$lib/admin/ModerationDialogs.svelte';
+  import MemberNicknameDialog from '$lib/admin/MemberNicknameDialog.svelte';
+  import ModerationPanel from '$lib/admin/ModerationPanel.svelte';
   import NotifySettingsDialog from '$lib/notify/NotifySettingsDialog.svelte';
+  import ServerProfileDialog from '$lib/admin/ServerProfileDialog.svelte';
   import NotifyBar from '$lib/notify/NotifyBar.svelte';
   import { app } from '$lib/session/app.svelte.ts';
+  import { moderationView } from '$lib/admin/moderation.svelte.ts';
 
   interface Props {
     store: Store; server: string | null; channel: string | null; children: Snippet; panel?: Snippet | undefined; panelWidth?: 'members' | 'profile' | 'find' | 'chat';
@@ -46,7 +50,7 @@
 
 <!-- The one keyboard listener for the registry's shortcuts (shortcuts.ts). Capture phase, so the composer's editor doesn't win. -->
 <svelte:window onkeydowncapture={(e) => handleShortcut(e) || typeToFocus(e)} />
-<div class="shell" style:--voice-h="{voiceHeight}px" class:panel={!!panel && open} class:sidebar-open={shell.sidebarOpen} style:--panel-w={panelWidth === 'profile' ? 'var(--dm-panel-w)' : panelWidth === 'find' || panelWidth === 'chat' ? 'var(--side-panel-w)' : 'var(--members-w)'}>
+<div class="shell" style:--voice-h="{voiceHeight}px" class:panel={!!(panel || moderationView.current) && open} class:sidebar-open={shell.sidebarOpen} style:--panel-w={moderationView.current ? 'var(--members-w)' : panelWidth === 'profile' ? 'var(--dm-panel-w)' : panelWidth === 'find' || panelWidth === 'chat' ? 'var(--side-panel-w)' : 'var(--members-w)'}>
   <div class="rail"><ServerRail {store} active={server} /></div>
   <div class="sidebar">
     {#if server}
@@ -62,7 +66,9 @@
     </div>
   </div>
   <main class="main">{@render children()}</main>
-  {#if panel && open}
+  {#if moderationView.current && open && app.session}
+    <div class="side-panel"><ModerationPanel session={app.session} {store} /></div>
+  {:else if panel && open}
     <div class="side-panel">{@render panel()}</div>
   {/if}
   <ImageViewer />
@@ -72,7 +78,7 @@
   <ShortcutsDialog />
   <QuickSwitcher />
   <ContextMenuHost />
-  {#if app.session}<AdminDialogs session={app.session} /><MemberRolesDialog session={app.session} /><ModerationDialogs session={app.session} /><NotifySettingsDialog session={app.session} />{/if}
+  {#if app.session}<AdminDialogs session={app.session} /><MemberRolesDialog session={app.session} /><ModerationDialogs session={app.session} /><MemberNicknameDialog session={app.session} /><NotifySettingsDialog session={app.session} /><ServerProfileDialog session={app.session} />{/if}
   <NotifyBar />
   {#if app.rings}<IncomingCalls {store} rings={app.rings} />{/if}
   {#if shell.sidebarOpen}

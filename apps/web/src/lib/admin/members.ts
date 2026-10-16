@@ -1,9 +1,12 @@
-/** Member administration for the people menu, when it opens in a server (m2c-plan.md): roles, kicks and bans. */
-import { Permission, canActOnMember, canActOnRole, has, memberKey, rolesByRank, type Id, type Session } from '@concord/domain';
+/** Member actions shared by the people menu and moderation view. */
+import { Permission, canActOnMember, canActOnRole, has, memberKey, nextRoles, rolesByRank, type Id, type Session } from '@concord/domain';
 import type { MenuItem } from '@concord/ui';
 import { m } from '$lib/i18n/index.ts';
 import { myRank, serverPerms } from '$lib/view/admin.ts';
+import { toasts } from '$lib/view/toast.svelte.ts';
 import { adminDialogs } from './dialogs.svelte.ts';
+import { moderationView } from './moderation.svelte.ts';
+import { shell } from '$lib/view/shell.svelte.ts';
 
 /** Roles this account may give or take away in a server: those below its own. */
 export function assignable(session: Session, server: Id) {
@@ -12,18 +15,143 @@ export function assignable(session: Session, server: Id) {
   return s ? rolesByRank(s).filter((r) => canActOnRole(rank, r)) : [];
 }
 
-export function memberItems(session: Session, server: Id, user: Id): MenuItem[] {
-  const store = session.store;
+type RoleQueue = { desired: Map<Id, boolean>; tail: Promise<void>; generation: number };
+const roleQueues = new Map<string, RoleQueue>();
+
+function mayManageTarget(session: Session, server: Id, user: Id): boolean {
+  const { store } = session;
+  const s = store.servers.get(server);
+  const self = store.selfId;
+  if (!s || !self || !store.members.has(memberKey(server, user))) return false;
+  if (user === self) return s.owner === self;
+  return canActOnMember(s, self, myRank(store, server), user, store.members.get(memberKey(server, user)));
+}
+
+/** Live Roles submenu. Each checkbox writes a rank-checked role list and leaves the submenu open. */
+export function roleItem(session: Session, server: Id, user: Id): MenuItem | null {
+  const { store } = session;
+  const s = store.servers.get(server);
+  const self = store.selfId;
+  if (!s || !self || !store.members.has(memberKey(server, user))) return null;
+  const mine = serverPerms(store, server);
+  if (!has(mine, Permission.AssignRoles) || !mayManageTarget(session, server, user)) return null;
+  const roles = assignable(session, server);
+  if (!roles.length) return null;
+  const member = store.members.get(memberKey(server, user));
+  return {
+    kind: 'submenu', label: m.people.roles,
+    items: roles.map((role) => ({
+      kind: 'check' as const,
+      label: role.name,
+      checked: member?.roles.includes(role.id) ?? false,
+      stay: true,
+      onselect: () => toggleRole(session, server, user, role.id),
+    })),
+  };
+}
+
+function toggleRole(session: Session, server: Id, user: Id, role: Id): Promise<void> {
+  const { store } = session;
+  const s = store.servers.get(server);
+  const self = store.selfId;
+  const member = store.members.get(memberKey(server, user));
+  const denied = () => {
+    toasts.show(m.people.rolesFailed);
+    return Promise.reject(new Error(m.people.rolesFailed));
+  };
+  if (!s || !self || !member || !has(serverPerms(store, server), Permission.AssignRoles) || !mayManageTarget(session, server, user)) return denied();
+  const rank = myRank(store, server);
+  const assignableRole = s.roles[role];
+  if (!assignableRole || !canActOnRole(rank, assignableRole)) return denied();
+  const key = `${server}:${user}`;
+  let queue = roleQueues.get(key);
+  if (!queue) {
+    queue = { desired: new Map(), tail: Promise.resolve(), generation: 0 };
+    roleQueues.set(key, queue);
+  }
+  const currentlyDesired = queue.desired.get(role) ?? member.roles.includes(role);
+  const wanted = !currentlyDesired;
+  queue.desired.set(role, wanted);
+  const generation = ++queue.generation;
+  const operation = queue.tail.then(async () => {
+    const latestServer = store.servers.get(server);
+    const latestMember = store.members.get(memberKey(server, user));
+    if (!latestServer || !latestMember || !has(serverPerms(store, server), Permission.AssignRoles) || !mayManageTarget(session, server, user)) {
+      throw new Error('Role assignment is no longer allowed.');
+    }
+    const latestRank = myRank(store, server);
+    const latestRole = latestServer.roles[role];
+    if (!latestRole || !canActOnRole(latestRank, latestRole)) throw new Error('Role rank changed.');
+    const selected = new Set(latestMember.roles.filter((id) => latestServer.roles[id] && canActOnRole(latestRank, latestServer.roles[id]!)));
+    if (wanted) selected.add(role);
+    else selected.delete(role);
+    const updatedRoles = nextRoles(latestServer, latestRank, latestMember.roles, [...selected]);
+    await session.admin.setMemberRoles(server, user, updatedRoles);
+    // The gateway echo can trail the HTTP response. Keep the next rapid click based on the accepted role list.
+    const after = store.members.get(memberKey(server, user));
+    if (after) store.apply({ type: 'memberUpdate', server, user, data: { roles: updatedRoles }, clear: [] });
+  });
+  queue.tail = operation.catch(() => {});
+  void queue.tail.finally(() => {
+    if (roleQueues.get(key) === queue && queue!.generation === generation) roleQueues.delete(key);
+  });
+  return operation.catch((error: unknown) => {
+    toasts.show(m.people.rolesFailed);
+    throw error;
+  });
+}
+
+/** Change your own nickname with Change nickname, or another lower-ranked member's with Manage nicknames. */
+export function nicknameItem(session: Session, server: Id, user: Id): MenuItem | null {
+  const { store } = session;
+  const self = store.selfId;
+  if (!self || !store.servers.has(server) || !store.members.has(memberKey(server, user))) return null;
+  const mine = serverPerms(store, server);
+  const own = user === self;
+  const permitted = own ? has(mine, Permission.ChangeNickname) : has(mine, Permission.ManageNicknames) && mayManageTarget(session, server, user);
+  if (!permitted) return null;
+  return {
+    label: m.admin.member.nickname,
+    onselect: () => adminDialogs.open({ kind: 'nickname', server, user }),
+  };
+}
+
+/** Open the moderation panel for members when this account has at least one moderation permission. */
+export function moderationPanelItem(session: Session, server: Id, user: Id): MenuItem | null {
+  const { store } = session;
+  if (!store.servers.has(server) || !store.members.has(memberKey(server, user))) return null;
+  const mine = serverPerms(store, server);
+  const permissions = [
+    Permission.KickMembers, Permission.BanMembers, Permission.TimeoutMembers, Permission.AssignRoles,
+    Permission.ManageNicknames, Permission.RemoveAvatars, Permission.MuteMembers, Permission.DeafenMembers,
+    Permission.MoveMembers, Permission.ManageMessages, Permission.ViewAuditLogs,
+  ];
+  if (!permissions.some((permission) => has(mine, permission))) return null;
+  return { label: m.people.moderationView, onselect: () => { moderationView.open(server, user); shell.panelOpen = true; } };
+}
+
+/** Kick and ban actions, offered only for a target below this account. */
+export function kickBanItems(session: Session, server: Id, user: Id): MenuItem[] {
+  const { store } = session;
   const s = store.servers.get(server);
   const self = store.selfId;
   if (!s || !self || !store.members.has(memberKey(server, user))) return [];
+  const below = canActOnMember(s, self, myRank(store, server), user, store.members.get(memberKey(server, user)));
   const mine = serverPerms(store, server);
   const items: MenuItem[] = [];
-  const below = canActOnMember(s, self, myRank(store, server), user, store.members.get(memberKey(server, user)));
-  if (has(mine, Permission.AssignRoles) && assignable(session, server).length && (user === self ? s.owner === self : below)) {
-    items.push({ label: m.admin.roles.memberRoles, onselect: () => adminDialogs.open({ kind: 'memberRoles', server, user }) });
-  }
   if (below && has(mine, Permission.KickMembers)) items.push({ label: m.admin.kick.item, danger: true, onselect: () => adminDialogs.open({ kind: 'kick', server, user }) });
   if (below && has(mine, Permission.BanMembers)) items.push({ label: m.admin.ban.item, danger: true, onselect: () => adminDialogs.open({ kind: 'ban', server, user }) });
   return items;
+}
+
+/** The moderation section in menu order: panel first, then kick and ban. */
+export function moderationItems(session: Session, server: Id, user: Id): MenuItem[] {
+  const panel = moderationPanelItem(session, server, user);
+  return [...(panel ? [panel] : []), ...kickBanItems(session, server, user)];
+}
+
+/** Compatibility helper for settings screens that still expect the old flat administration list. */
+export function memberItems(session: Session, server: Id, user: Id): MenuItem[] {
+  const roles = roleItem(session, server, user);
+  return [...(roles ? [roles] : []), ...kickBanItems(session, server, user)];
 }

@@ -1,7 +1,9 @@
 /** Admin events as the M2c probes recorded them on Stoat 0.15.5 (m2c-plan.md). */
-import { Store } from '@concord/domain';
+import { Store, type Id } from '@concord/domain';
 import { describe, expect, it } from 'vitest';
 import { mapFrames } from './events.ts';
+import { StoatBackend } from './backend.ts';
+import type { HttpRequest, Transport } from './transport.ts';
 
 const S = '01M4WPBMZWYQ9GB009CG8FDEZA';
 const G = '01M4WPBMZW1D977DMJNR76RZQE';
@@ -27,5 +29,26 @@ describe('admin events', () => {
     expect(store.servers.get(S)?.systemMessages).toBeUndefined();
     for (const e of mapFrames({ type: 'EmojiUpdate', id: E, data: { name: 'uusi' } })) store.apply(e);
     expect(store.emojis.get(E)?.name).toBe('uusi');
+  });
+});
+
+describe('member profile edits', () => {
+  it('maps nickname, avatar, and removals to Stoat member PATCH fields', async () => {
+    const requests: HttpRequest[] = [];
+    const transport = {
+      request: async (request: HttpRequest) => {
+        requests.push(request);
+        return { status: 200, headers: {}, body: {} };
+      },
+    } as unknown as Transport;
+    const backend = new StoatBackend(transport);
+
+    await backend.editMember(S, 'u', { nickname: 'Aino', avatar: 'avatar-id' as Id, canPublish: false, canReceive: true, voiceChannel: 'voice-id' as Id });
+    await backend.editMember(S, 'u', { remove: ['Nickname', 'Avatar'] });
+
+    expect(requests.map(({ method, path, body }) => ({ method, path, body }))).toEqual([
+      { method: 'PATCH', path: `/servers/${S}/members/u`, body: { nickname: 'Aino', avatar: 'avatar-id', can_publish: false, can_receive: true, voice_channel: 'voice-id' } },
+      { method: 'PATCH', path: `/servers/${S}/members/u`, body: { remove: ['Nickname', 'Avatar'] } },
+    ]);
   });
 });

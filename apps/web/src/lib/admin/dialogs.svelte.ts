@@ -6,6 +6,8 @@ export type AdminDialog =
   | { kind: 'category'; server: Id; id: string | null }
   | { kind: 'moveChannel'; server: Id; channel: Id }
   | { kind: 'memberRoles'; server: Id; user: Id }
+  | { kind: 'nickname'; server: Id; user: Id }
+  | { kind: 'serverProfile'; server: Id }
   | { kind: 'kick' | 'ban'; server: Id; user: Id }
   | { kind: 'invite'; server: Id; channel: Id | null };
 

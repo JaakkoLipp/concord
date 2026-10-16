@@ -12,7 +12,7 @@ export interface MenuAction { kind?: 'action'; label: string; onselect: () => vo
  * A setting that is on or off. Picking it toggles it and closes the menu, unless `stay` is set: then the menu stays open
  * and the box flips at once, as for the checkboxes of a person's roles.
  */
-export interface MenuCheck { kind: 'check'; label: string; checked: boolean; onselect: () => void; stay?: boolean }
+export interface MenuCheck { kind: 'check'; label: string; checked: boolean; onselect: () => unknown; stay?: boolean }
 /**
  * An item that opens a menu of its own, to the side: by hover, click or the Right arrow. One level deep. `detail` is a
  * second line under the label, such as the current setting.

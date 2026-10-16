@@ -7,7 +7,9 @@ import type { MenuItem } from '@concord/ui';
 import { m } from '$lib/i18n/index.ts';
 import { confirm } from '$lib/view/confirm.svelte.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
-import { message, personMenu } from './actions.ts';
+import { message } from './actions.ts';
+import { participantMenu } from '$lib/call/menu.ts';
+import { app } from '$lib/session/app.svelte.ts';
 
 const failed = () => toasts.show(m.groups.failed);
 const open = (channel: Id) => goto(resolve('/(app)/app/channels/@me/[channel]/[[message]]', { channel }));
@@ -58,7 +60,7 @@ export function closeDm(session: Session, channel: Id): void {
 
 /** A member's menu inside a group: the person's actions, then what the owner may do to them. */
 export function memberMenu(session: Session, group: Id, user: Id, profile?: () => void): MenuItem[] {
-  const items = personMenu(session, user, profile ? { profile } : {});
+  const items = participantMenu(session, app.voice, user, profile ? { profile } : {});
   const c = session.store.channels.get(group);
   const self = session.store.selfId;
   if (c?.kind !== 'group' || c.owner !== self || user === self) return items;

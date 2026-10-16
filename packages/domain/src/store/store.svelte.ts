@@ -64,6 +64,8 @@ export interface EmojiPrefs {
 export interface Settings {
   notifications: NotificationSettings;
   serverOrder: Id[];
+  /** Servers whose muted channels are hidden, synced as `concord:hiddenMutedChannels`. */
+  hiddenMutedChannels: Record<Id, boolean>;
 }
 
 export const memberKey = (server: Id, user: Id) => `${server}:${user}`;
@@ -90,7 +92,7 @@ export class Store {
   self = $state<User | null>(null);
   node = $state<NodeInfo | null>(null);
   connection = $state<ConnectionState>('offline');
-  settings = $state<Settings>({ notifications: emptyNotifications(), serverOrder: [] });
+  settings = $state<Settings>({ notifications: emptyNotifications(), serverOrder: [], hiddenMutedChannels: {} });
   /** A clock the session moves on, so timed mutes end on their own. */
   now = $state(Date.now());
   emojiPrefs = $state<EmojiPrefs>({ favourites: [], usage: {} });
@@ -745,7 +747,7 @@ export class Store {
     this.stoppedRings.clear();
     this.readFloor.clear();
     this.deleted.clear();
-    this.settings = { notifications: emptyNotifications(), serverOrder: [] };
+    this.settings = { notifications: emptyNotifications(), serverOrder: [], hiddenMutedChannels: {} };
     this.emojiPrefs = { favourites: [], usage: {} };
     this.favouriteGifs = [];
     this.closedDms = {};

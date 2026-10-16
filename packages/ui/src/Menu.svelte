@@ -32,6 +32,8 @@
   let subPos = $state({ top: 0, left: 0 });
   /** Checkboxes that `stay` flip here at once, since the items are a snapshot taken when the menu opened. */
   let flipped = $state<Record<string, boolean>>({});
+  let checking = $state<Record<string, boolean>>({});
+  let epoch = 0;
   let subTimer: ReturnType<typeof setTimeout> | undefined;
   /** Time the pointer needs to rest on a submenu item before it opens, and to stay away from one before it closes. */
   const OPEN_MS = 120;
@@ -72,6 +74,7 @@
     const next = e.key === 'ArrowDown' ? i + 1 : e.key === 'ArrowUp' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? list.length - 1 : null;
     if (next !== null) {
       e.preventDefault();
+      if (!inSub) closeSub(false);
       list[(next + list.length) % list.length]?.focus();
     } else if (e.key === 'Tab') {
       e.preventDefault();
@@ -89,15 +92,21 @@
     }
   }
 
-  function pick(item: { onselect: () => void }) {
+  function pick(item: { onselect: () => unknown }) {
     onclose();
     item.onselect();
   }
 
   function pickCheck(item: Extract<MenuSubItem, { kind: 'check' }>, id: string) {
     if (!item.stay) return pick(item);
-    flipped[id] = !(flipped[id] ?? item.checked);
-    item.onselect();
+    if (checking[id]) return;
+    const before = flipped[id] ?? item.checked;
+    const selectedAt = epoch;
+    flipped[id] = !before;
+    checking[id] = true;
+    void Promise.resolve().then(() => item.onselect()).catch(() => {
+      if (epoch === selectedAt) flipped[id] = before;
+    }).finally(() => { if (epoch === selectedAt) checking[id] = false; });
   }
 
   function openSub(index: number, anchor: HTMLElement, focus: boolean) {
@@ -136,16 +145,19 @@
   function hover(e: PointerEvent, index: number, isSub: boolean) {
     if (e.pointerType !== 'mouse') return;
     clearTimeout(subTimer);
-    if (isSub) subTimer = setTimeout(() => openSub(index, e.currentTarget as HTMLElement, false), sub ? 0 : OPEN_MS);
+    const anchor = e.currentTarget as HTMLElement;
+    if (isSub) subTimer = setTimeout(() => openSub(index, anchor, false), sub ? 0 : OPEN_MS);
     else if (sub) subTimer = setTimeout(() => closeSub(false), CLOSE_MS);
   }
 
   $effect(() => {
     if (!open) return;
+    epoch++;
     const returnTo = document.activeElement as HTMLElement | null;
     still = fromKeyboard();
     sub = null;
     flipped = {};
+    checking = {};
     void tick().then(() => {
       place();
       buttons()[0]?.focus();
@@ -165,6 +177,7 @@
     window.addEventListener('pointerdown', down, true);
     window.addEventListener('resize', onclose);
     return () => {
+      epoch++;
       window.removeEventListener('keydown', esc, true);
       window.removeEventListener('pointerdown', down, true);
       window.removeEventListener('resize', onclose);
@@ -191,7 +204,7 @@
     {:else if item.kind === 'check'}
       {@const id = `${scope}:${i}`}
       {@const on = flipped[id] ?? item.checked}
-      <button role="menuitemcheckbox" aria-checked={on} class="check" onclick={() => pickCheck(item, id)}>
+      <button role="menuitemcheckbox" aria-checked={on} aria-disabled={checking[id] || undefined} class="check" onclick={() => pickCheck(item, id)}>
         <span>{item.label}</span><span class="box" class:on aria-hidden="true"></span>
       </button>
     {:else if item.kind === 'submenu'}
@@ -225,7 +238,7 @@
 
 <style>
   .menu {
-    position: fixed; z-index: 950; display: grid; min-width: 11rem; padding: var(--space-3);
+    position: fixed; z-index: 950; display: grid; min-width: 11rem; max-height: calc(100dvh - 16px); overflow-y: auto; padding: var(--space-3);
     background: var(--surface-1); border: 1px solid var(--border-default); border-radius: var(--radius-md);
     box-shadow: var(--shadow-popover); animation: pop var(--dur-popover) var(--ease-out);
   }

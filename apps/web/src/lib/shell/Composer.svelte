@@ -145,6 +145,20 @@
     if (compose.focusRequest) untrack(() => editor?.focus());
   });
 
+  // Text asked for from elsewhere, such as Mention in a person's menu. Each request is applied once.
+  // Starting from the current request, so one made before this composer existed isn't applied to it.
+  let inserted = compose.insertRequest?.n ?? 0;
+  $effect(() => {
+    const r = compose.insertRequest;
+    if (!r || r.n === inserted) return;
+    inserted = r.n;
+    untrack(() => {
+      if (!editor || !channel || block) return;
+      editor.focus();
+      editor.insert(r.text);
+    });
+  });
+
   // Typing with nothing focused goes here (typeToFocus.ts). Registered only while the editor takes text: on a channel,
   // with the editor shown rather than the "you can't send" notice.
   $effect(() => {

@@ -26,7 +26,8 @@
   const info = $derived(store.servers.get(server));
   const manager = $derived(!!app.session && canManageChannels(app.session, server));
   // Managers see empty categories, so a new one can be filled.
-  const tree = $derived(store.channelTree(server).map((g) => ({ ...g, channels: g.channels.filter((c) => canView(store, c)) })).filter((g) => g.channels.length || (manager && g.id)));
+  const tree = $derived(store.channelTree(server).map((g) => ({ ...g, channels: g.channels.filter((c) => canView(store, c)
+    && (!store.settings.hiddenMutedChannels[server] || !store.notificationsMuted(c.id))) })).filter((g) => g.channels.length || (manager && g.id)));
   let collapsed = $state<Record<string, boolean>>({});
   let menuOpen = $state(false);
   let menuButton = $state<HTMLButtonElement | null>(null);

@@ -41,6 +41,19 @@ class Compose {
     this.focusRequest++;
   }
 
+  /** Text for the composer to insert at the caret, such as a mention, with a counter so the same text can be asked twice. */
+  insertRequest = $state<{ text: string; n: number } | null>(null);
+
+  /** Insert text into the composer on the open channel and focus it. Does nothing when no composer takes text. */
+  insert(text: string): void {
+    this.insertRequest = { text, n: (this.insertRequest?.n ?? 0) + 1 };
+  }
+
+  /** `@name` for a person: their mention token, followed by a space. */
+  mention(user: Id): void {
+    this.insert(`<@${user}> `);
+  }
+
   reply(channel: Id, id: Id): void {
     this.replies = { ...this.replies, [channel]: { id, mention: true } };
   }

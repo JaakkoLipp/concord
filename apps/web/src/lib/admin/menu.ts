@@ -4,10 +4,11 @@ import { resolve } from '$app/paths';
 import { Permission, deleteCategory, has, moveCategory, moveChannel, type Category, type Id, type Session } from '@concord/domain';
 import type { MenuItem } from '@concord/ui';
 import { m } from '$lib/i18n/index.ts';
+import { app } from '$lib/session/app.svelte.ts';
 import { channelsWith, isOwner, serverPerms, serverSections } from '$lib/view/admin.ts';
 import { canView, permissionsIn } from '$lib/view/channels.ts';
 import { adminDialogs } from './dialogs.svelte.ts';
-import { notifyItems, notifyMuteItem, notifySettingsItem } from '$lib/notify/dialog.svelte.ts';
+import { notifyItems, notifyMuteItem, serverNotificationSettingsItem } from '$lib/notify/dialog.svelte.ts';
 import { confirm } from '$lib/view/confirm.svelte.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 
@@ -33,26 +34,49 @@ function writeCategories(session: Session, server: Id, next: Category[] | null):
 
 export const canManageChannels = (session: Session, server: Id) => has(serverPerms(session.store, server), Permission.ManageChannel);
 
+/** Open the server profile editor if the account may change its nickname or avatar. */
+export function editServerProfileItem(session: Session, server: Id): MenuItem | null {
+  const mine = serverPerms(session.store, server);
+  if (!has(mine, Permission.ChangeNickname) && !has(mine, Permission.ChangeAvatar)) return null;
+  return { label: m.admin.editServerProfile, onselect: () => adminDialogs.open({ kind: 'serverProfile', server }) };
+}
+
 export function serverMenu(session: Session, server: Id): MenuItem[] {
   const store = session.store;
   const items: MenuItem[] = [];
-  const sections = serverSections(store, server);
-  if (channelsWith(store, server, Permission.InviteOthers).length) items.push({ label: m.admin.invite.people, onselect: () => adminDialogs.open({ kind: 'invite', server, channel: null }) });
-  items.push(notifyMuteItem(session, 'server', server, 'server'));
+  const sections: (ReturnType<typeof serverSections>[number] | 'tag')[] = serverSections(store, server);
+  if (app.layerMe?.gates.serverCreator && has(serverPerms(store, server), Permission.ManageServer)) sections.push('tag');
+  const badge = store.serverBadge(server, (c) => canView(store, c));
+  items.push({ label: m.notify.markRead, disabled: !badge.unread && !badge.mentions, onselect: () => void session.markServerRead(server).catch(() => toasts.show(m.notify.markReadFailed)) });
+  if (channelsWith(store, server, Permission.InviteOthers).length) {
+    if (items.length) items.push('separator');
+    items.push({ label: m.people.inviteToServer, onselect: () => adminDialogs.open({ kind: 'invite', server, channel: null }) });
+  }
+  if (items.length) items.push('separator');
+  items.push(
+    notifyMuteItem(session, 'server', server, 'server'),
+    serverNotificationSettingsItem(session, server),
+    { kind: 'check', label: m.admin.hideMutedChannels, checked: !!store.settings.hiddenMutedChannels[server], onselect: () => void session.setHideMutedChannels(server, !store.settings.hiddenMutedChannels[server]).catch(() => toasts.show(m.notify.failed)) },
+  );
+  if (sections.length || editServerProfileItem(session, server)) {
+    const settings: MenuItem[] = [];
+    if (sections.length) settings.push({
+      kind: 'submenu', label: m.admin.serverSettings,
+      items: sections.map((section) => ({ label: m.admin.sections[section], onselect: () => void openServerSettings(server, section) })),
+    });
+    const profile = editServerProfileItem(session, server);
+    if (profile) settings.push(profile);
+    items.push('separator', ...settings);
+  }
   if (canManageChannels(session, server)) {
+    if (items.length) items.push('separator');
     items.push({ label: m.admin.createChannel, onselect: () => adminDialogs.open({ kind: 'createChannel', server, category: null }) });
     items.push({ label: m.admin.createCategory, onselect: () => adminDialogs.open({ kind: 'category', server, id: null }) });
   }
-  items.push('separator', notifySettingsItem('server', server));
-  if (sections.length) items.push({ label: m.admin.serverSettings, onselect: () => void openServerSettings(server, sections[0]!) });
+  if (items.length) items.push('separator');
+  items.push({ label: m.admin.copyServerId, onselect: () => void copy(server) });
   if (!isOwner(store, server)) {
-    items.push('separator');
-    items.push({ label: m.admin.leaveServer, danger: true, onselect: () => void leaveServer(session, server) });
-  }
-  // First, as on Discord, while anything in the server is unread (m4.5-plan.md task 3).
-  const badge = store.serverBadge(server, (c) => canView(store, c));
-  if (badge.unread || badge.mentions) {
-    items.unshift({ label: m.notify.markRead, onselect: () => void session.markServerRead(server).catch(() => toasts.show(m.notify.markReadFailed)) }, 'separator');
+    items.push('separator', { label: m.admin.leaveServer, danger: true, onselect: () => void leaveServer(session, server) });
   }
   return items;
 }

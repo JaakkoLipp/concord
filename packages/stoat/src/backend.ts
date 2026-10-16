@@ -453,6 +453,9 @@ export class StoatBackend implements Backend {
 
   async editMember(server: string, user: string, edit: MemberEdit, reason?: string): Promise<void> {
     const body: Record<string, unknown> = {};
+    if (edit.nickname !== undefined) body.nickname = edit.nickname;
+    if (edit.avatar !== undefined) body.avatar = edit.avatar;
+    if (edit.remove?.length) body.remove = edit.remove;
     if (edit.voiceChannel !== undefined) body.voice_channel = edit.voiceChannel;
     if (edit.canPublish !== undefined) body.can_publish = edit.canPublish;
     if (edit.canReceive !== undefined) body.can_receive = edit.canReceive;
