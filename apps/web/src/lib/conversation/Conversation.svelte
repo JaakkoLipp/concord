@@ -17,17 +17,22 @@
   const session = $derived(app.session!);
   const store = $derived(session.store);
   const info = $derived(store.channels.get(channel));
+  let opened = $state<string | null>(null);
   let target = $state<string | undefined>(undefined);
 
   $effect(() => {
+    if (store.connection !== 'ready') return;
     target = message;
+    opened = null;
     // A channel that is gone, or never was, shows an empty conversation rather than an error. untrack:
     // these read the store, and dropping the window of a group just left must not load it again.
     const [c, msg] = [channel, message];
+    let cancelled = false;
     untrack(() => {
-      if (msg) void session.jumpTo(c, msg).catch(() => {});
-      else void session.openChannel(c).catch(() => {});
+      const load = msg ? session.jumpTo(c, msg) : session.openChannel(c);
+      void load.catch(() => {}).finally(() => { if (!cancelled) opened = c; });
     });
+    return () => { cancelled = true; };
   });
   // Left, removed, deleted or hidden while open: to the server's first channel if the server is still
   // there, else the friends screen.
@@ -80,7 +85,7 @@
   {:else}
     {#if dmCall && app.voice}<CallView {session} voice={app.voice} {channel} compact />{/if}
     <div class="body">
-      <MessageList {session} {channel} {target} onjump={jump} />
+      <MessageList {session} {channel} {target} opening={opened !== channel} onjump={jump} />
     </div>
     <Composer {placeholder} {session} channel={info} />
   {/if}

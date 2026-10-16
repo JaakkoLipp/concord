@@ -20,13 +20,13 @@
   import { SvelteSet } from 'svelte/reactivity';
   import ArrowDown from '@lucide/svelte/icons/arrow-down';
   import { setMarkdownContext } from '$lib/markdown/context.ts';
-  import { dayLabel, sameDay, ulidTime } from '$lib/markdown/time.ts';
+  import { dayLabel, sameDay, shortDate, ulidTime } from '$lib/markdown/time.ts';
   import { m } from '$lib/i18n/index.ts';
   import MessageItem from './MessageItem.svelte';
   import { copyImage, saveImage } from './images.ts';
 
-  interface Props { session: Session; channel: string; target?: string | undefined; onjump: (id: string) => void }
-  let { session, channel, target, onjump }: Props = $props();
+  interface Props { session: Session; channel: string; target?: string | undefined; opening?: boolean; onjump: (id: string) => void }
+  let { session, channel, target, opening = false, onjump }: Props = $props();
   const store = $derived(session.store);
   const info = $derived(store.channels.get(channel));
   const server = $derived(info?.kind === 'text' ? info.server : undefined);
@@ -141,17 +141,32 @@
   // The "new messages" line sits after the last acknowledged message as it was when the channel opened,
   // once the connection is up. Reading the channel afterwards doesn't move or remove it.
   let unreadFrom = $state<string | undefined>(undefined);
+  let unreadStart = $state<string | undefined>(undefined);
   let dividerFor: string | null = null;
   $effect.pre(() => {
     const c = channel;
     const ready = store.connection === 'ready';
+    const waiting = opening || session.openingChannels.has(c) || !win;
     untrack(() => {
       if (dividerFor === c) return;
       unreadFrom = undefined;
-      if (!ready) return;
+      if (!ready || waiting) return;
       dividerFor = c;
       unreadFrom = store.isUnread(c) ? (store.unreads.get(c)?.lastId ?? '0') : undefined;
     });
+  });
+
+  const firstUnread = $derived(messages.find((msg) => !!unreadFrom && msg.id > unreadFrom && msg.author !== store.selfId)?.id);
+  const unreadLabel = $derived.by(() => {
+    if (!store.isUnread(channel)) return null;
+    const from = store.unreads.get(channel)?.lastId ?? '0';
+    const sinceId = from === '0' ? firstUnread ?? messages[0]?.id : from;
+    if (!sinceId) return null;
+    const since = shortDate(ulidTime(sinceId));
+    const complete = win?.atNewest && (win.atOldest || win.ids.includes(from)
+      || (from === unreadFrom && !!unreadStart && win.ids.includes(unreadStart)));
+    const count = messages.filter((msg) => msg.id > from && msg.author !== store.selfId).length;
+    return complete ? m.conversation.unreadCount(count, since) : m.conversation.unreadSince(since);
   });
 
   /** A run of consecutive messages from blocked users, collapsed until shown (m2b-plan.md decision 5). */
@@ -194,7 +209,11 @@
 
   let scroller = $state<HTMLDivElement | null>(null);
   let content = $state<HTMLDivElement | null>(null);
-  let stuck = $state(true);
+  let stuck = $state(false);
+  let positioned = $state(false);
+  let readAtBottom = $state(false);
+  let positioning = false;
+  let programmaticTop: number | null = null;
   let anchor: { id: string; top: number } | null = null;
   let highlighted = $state<string | null>(null);
   let loadingOlder = false;
@@ -210,22 +229,34 @@
     anchor = null;
   }
 
+  function setScrollTop(top: number) {
+    if (!scroller) return;
+    scroller.scrollTop = top;
+    programmaticTop = scroller.scrollTop;
+  }
+
   function restore() {
     if (!scroller || !content) return;
     if (stuck && win?.atNewest) {
-      scroller.scrollTop = scroller.scrollHeight;
+      setScrollTop(scroller.scrollHeight);
       return;
     }
     if (!anchor) return;
     const el = content.querySelector<HTMLElement>(`[data-id="${anchor.id}"]`);
     if (!el) return;
     const delta = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - anchor.top;
-    if (Math.abs(delta) > 0.5) scroller.scrollTop += delta;
+    if (Math.abs(delta) > 0.5) setScrollTop(scroller.scrollTop + delta);
   }
 
   function onscroll() {
-    if (!scroller) return;
+    if (!scroller || !positioned || positioning) return;
+    // Scroll events may arrive after the placement frame or a ResizeObserver adjustment. They are not reading.
+    if (programmaticTop !== null) {
+      if (Math.abs(scroller.scrollTop - programmaticTop) < 0.5) return;
+      programmaticTop = null;
+    }
     stuck = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 8;
+    readAtBottom = stuck;
     measureAnchor();
     if (scroller.scrollTop < 800) void older();
     if (scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 800) void newer();
@@ -259,9 +290,11 @@
 
   async function present() {
     stuck = true;
+    readAtBottom = true;
     if (!win?.atNewest) await session.jumpToPresent(channel);
+    else session.markRead(channel);
     await tick();
-    if (scroller) scroller.scrollTop = scroller.scrollHeight;
+    if (scroller) setScrollTop(scroller.scrollHeight);
   }
 
   // Sending takes the list to the present, as the session takes the window there (m2a-plan.md task 2).
@@ -269,30 +302,46 @@
     if (!compose.presentRequest) return;
     untrack(() => {
       stuck = true;
-      void tick().then(() => { if (scroller) scroller.scrollTop = scroller.scrollHeight; });
+      readAtBottom = true;
+      void tick().then(() => { if (scroller) setScrollTop(scroller.scrollHeight); });
     });
   });
 
 
-  // Opening a channel starts at the bottom; a jump starts at the target, centred and briefly highlighted.
-  // Each target is scrolled to once: later messages, edits and reactions must not pull the view back.
+  // Initial placement finishes before auto-ack is allowed. Explicit jumps and held unread win.
   let scrolledTo: string | null = null;
-  $effect(() => {
+  $effect.pre(() => {
     void channel;
-    stuck = !target;
+    void target;
+    unreadStart = undefined;
+    positioned = false;
+    readAtBottom = false;
+    stuck = false;
     anchor = null;
+    programmaticTop = null;
     scrolledTo = null;
   });
   $effect(() => {
-    if (!target || !content || target === scrolledTo || !messages.some((x) => x.id === target)) return;
-    scrolledTo = target;
+    if (opening || session.openingChannels.has(channel) || !win || !content || positioned) return;
+    const c = channel;
+    const destination = target ?? (store.isUnread(channel) && !session.heldUnread.has(channel) ? firstUnread : undefined);
+    if (destination && !messages.some((msg) => msg.id === destination)) return;
+    if (scrolledTo === (destination ?? c)) return;
+    scrolledTo = destination ?? c;
+    positioning = true;
     void tick().then(() => {
-      const el = content?.querySelector<HTMLElement>(`[data-id="${target}"]`);
-      if (!el || !scroller) return;
-      scroller.scrollTop += el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - scroller.clientHeight / 3;
-      highlighted = target;
-      stuck = false;
+      if (channel !== c || opening || !scroller) return;
+      const el = destination ? content?.querySelector<HTMLElement>(`[data-id="${destination}"]`) : null;
+      if (el) {
+        setScrollTop(scroller.scrollTop + el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - (target ? scroller.clientHeight / 3 : 0));
+        highlighted = target ?? null;
+      } else setScrollTop(scroller.scrollHeight);
+      if (!target && !session.heldUnread.has(c)) unreadStart = firstUnread;
+      stuck = !destination;
+      readAtBottom = !destination && !unreadFrom;
+      positioned = true;
       measureAnchor();
+      requestAnimationFrame(() => { positioning = false; });
     });
   });
 
@@ -311,7 +360,7 @@
     };
   });
   $effect(() => {
-    if (active && stuck && win?.atNewest && store.connection === 'ready' && store.isUnread(channel) && !session.heldUnread.has(channel)) session.markRead(channel);
+    if (active && !session.openingChannels.has(channel) && positioned && readAtBottom && stuck && win?.atNewest && store.connection === 'ready' && store.isUnread(channel) && !session.heldUnread.has(channel)) session.markRead(channel);
   });
   // "Mark unread" holds while the channel stays open; leaving it lets the next visit read it.
   $effect(() => {
@@ -332,6 +381,12 @@
   });
 </script>
 
+{#if unreadLabel && store.isUnread(channel)}
+  <div class="unread-bar">
+    <button class="unread-jump" onclick={present}>{unreadLabel}<ArrowDown size={16} /></button>
+    <button onclick={() => session.markRead(channel)}>{m.notify.markRead}</button>
+  </div>
+{/if}
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div class="scroller" bind:this={scroller} {onscroll} onkeydown={rove} onfocusin={focused} role="log" aria-live={stuck ? 'polite' : 'off'} aria-label={m.conversation.messages} tabindex="-1">
   <div class="content" bind:this={content}>
@@ -375,6 +430,9 @@
 {/if}
 
 <style>
+  .unread-bar { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-5); background: var(--accent); color: var(--on-accent); }
+  .unread-bar button { border: 0; padding: 0; background: none; color: inherit; font: 500 var(--text-sm) var(--font-sans); }
+  .unread-jump { display: flex; align-items: center; gap: var(--space-3); flex: 1; text-align: start; }
   .scroller { flex: 1; min-height: 0; overflow-y: auto; overflow-anchor: none; }
   .content { display: flex; flex-direction: column; min-height: 100%; justify-content: flex-end; padding-bottom: var(--space-7); }
   .start { padding: var(--space-8) var(--space-5) var(--space-5); }

@@ -113,6 +113,8 @@ export const en = {
     welcomeGroup: (name: string) => `Welcome to ${name}`,
     start: 'This is the beginning of the history.',
     newMessages: 'New',
+    unreadCount: (n: number, since: string) => plural('en', n, { one: `1 new message since ${since}`, other: `${n} new messages since ${since}` }),
+    unreadSince: (since: string) => `New messages since ${since}`,
     blockedRun: (n: number) => plural('en', n, { one: '1 blocked message', other: `${n} blocked messages` }),
     showBlocked: 'Show',
     hideBlocked: 'Hide',

@@ -8,7 +8,7 @@ import { SelfQueue } from './selfqueue.ts';
 import { ServerAdmin } from './admin.svelte.ts';
 import { ACTIVE_KEY, IdleTracker } from './idle.ts';
 import { BackendError } from './errors.ts';
-import { Store, memberKey, newer, type EmojiPrefs, type FavouriteGif, type PendingMessage, type Settings } from './store/store.svelte.ts';
+import { Store, memberKey, newer, type EmojiPrefs, type FavouriteGif, type MessageWindow, type PendingMessage, type Settings } from './store/store.svelte.ts';
 import { parseNotifications, writeNotifications, type NotificationLevel, type NotificationSettings } from './notify.ts';
 import { HOLD_MS, Latest } from './latest.ts';
 import { ulid, ulidTime } from './ulid.ts';
@@ -220,6 +220,8 @@ export class Session {
     this.selfQueue.clear();
     this.idle.stop();
     this.acks.clear();
+    this.openingLoads.clear();
+    this.openingChannels.clear();
     this.gateway?.close();
     this.gateway = null;
     this.store.clear();
@@ -232,10 +234,11 @@ export class Session {
 
   /** After Ready: settings, the open server's members, and fresh history for the open channel. */
   private async coldStart(): Promise<void> {
+    const windowAtReady = this.openChannelId ? this.store.windows.get(this.openChannelId) : undefined;
     const fetchedAt = Date.now();
     const fetched = await this.backend.settings(['notifications', 'ordering', 'concord:hiddenMutedChannels', EMOJI_KEY, GIFS_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY]).catch(() => null);
     // A failed fetch keeps what this session has, rather than resetting the chosen status or favourites.
-    if (!fetched) return this.coldStartRest();
+    if (!fetched) return this.coldStartRest(windowAtReady);
     const settings: Record<string, { value: string }> = fetched;
     const active = Number(settings[ACTIVE_KEY]?.value);
     if (active) this.idle.remote(active);
@@ -245,11 +248,11 @@ export class Session {
     this.store.settings = parseSettings(this.rawSettings);
     if (this.emojiChangedAt < fetchedAt) this.store.emojiPrefs = parseEmojiPrefs(settings[EMOJI_KEY]?.value);
     if (this.gifsChangedAt < fetchedAt) this.store.favouriteGifs = parseFavouriteGifs(settings[GIFS_KEY]?.value);
-    await this.coldStartRest();
+    await this.coldStartRest(windowAtReady);
   }
 
   /** The open server's members and fresh history for the open channel. */
-  private async coldStartRest(): Promise<void> {
+  private async coldStartRest(windowAtReady: MessageWindow | undefined): Promise<void> {
     this.lastMemberFetch.clear();
     if (this.openServerId) {
       this.gateway?.subscribe(this.openServerId);
@@ -258,7 +261,9 @@ export class Session {
     // Windows held across a disconnect may miss edits and deletes. Reload the open one where it was,
     // and drop the rest so they reload when opened.
     for (const channel of [...this.store.windows.keys()]) if (channel !== this.openChannelId) this.store.dropWindow(channel);
-    if (this.openChannelId) await this.reloadWindow(this.openChannelId);
+    // Only refresh a window held across Ready. A fresh opening (possibly at unread) owns its load.
+    if (this.openChannelId && windowAtReady && this.store.windows.get(this.openChannelId) === windowAtReady
+      && !this.openingChannels.has(this.openChannelId)) await this.reloadWindow(this.openChannelId);
   }
 
   openServer(server: Id | null): void {
@@ -268,9 +273,44 @@ export class Session {
     void this.loadMembers(server, false);
   }
 
+  private readonly openingLoads = new Map<Id, symbol>();
+  /** Includes the intermediate latest page while an unread opening is still finding its boundary. */
+  readonly openingChannels = new SvelteSet<Id>();
+
   async openChannel(channel: Id): Promise<void> {
     this.openChannelId = channel;
-    if (!this.store.windows.has(channel)) await this.loadLatest(channel);
+    const request = Symbol();
+    this.openingLoads.set(channel, request);
+    this.openingChannels.add(channel);
+    try {
+      if (this.heldUnread.has(channel)) {
+        if (!this.store.windows.has(channel)) await this.loadLatest(channel, () => this.openingLoads.get(channel) === request);
+      } else await this.loadUnread(channel, request);
+    } finally {
+      if (this.openingLoads.get(channel) === request) {
+        this.openingChannels.delete(channel);
+        this.openingLoads.delete(channel);
+      }
+    }
+  }
+
+  /** Load the first unread page, or keep a cached window that already contains the read boundary. */
+  private async loadUnread(channel: Id, request: symbol): Promise<void> {
+    const last = this.store.unreads.get(channel)?.lastId;
+    if (!this.store.windows.has(channel)) await this.loadLatest(channel, () => this.openingLoads.get(channel) === request);
+    if (!this.store.isUnread(channel) || this.heldUnread.has(channel) || this.openingLoads.get(channel) !== request) return;
+    const w = this.store.windows.get(channel);
+    if (last ? w?.ids.includes(last) : w?.atOldest) return;
+    // A deleted read marker still works as an exclusive cursor. With no marker, start at the beginning.
+    const page = await this.backend.messages(channel, { limit: PAGE, ...(last ? { after: last } : {}), sort: 'Oldest' });
+    if (this.openingLoads.get(channel) !== request || this.heldUnread.has(channel) || !this.store.isUnread(channel)) return;
+    this.absorb(page);
+    const sorted = oldestFirst(page.messages);
+    const c = this.store.channels.get(channel);
+    this.store.setWindow(channel, sorted, {
+      atNewest: page.messages.length < PAGE || (c?.kind !== 'saved' && !!c?.lastMessageId && sorted.at(-1)?.id === c.lastMessageId),
+      atOldest: !last,
+    });
   }
 
   async loadMembers(server: Id, force: boolean): Promise<void> {
@@ -287,11 +327,17 @@ export class Session {
     if (this.openServerId) await this.loadMembers(this.openServerId, force).catch(() => {});
   }
 
-  async loadLatest(channel: Id): Promise<void> {
+  async loadLatest(channel: Id, current: () => boolean = () => true): Promise<void> {
     const page = await this.backend.messages(channel, { limit: PAGE });
+    if (!current()) return;
     this.absorb(page);
     const sorted = oldestFirst(page.messages);
     const newest = sorted.at(-1)?.id;
+    // Stoat's channel metadata can trail a message by several seconds; the latest history is authoritative.
+    const c = this.store.channels.get(channel);
+    if (newest && c && c.kind !== 'saved' && (!c.lastMessageId || newest > c.lastMessageId)) {
+      this.store.channels.set(channel, { ...c, lastMessageId: newest });
+    }
     // Messages that arrived over the socket while the page was in flight are newer than it: keep them.
     const w = this.store.windows.get(channel);
     const later = w?.atNewest
@@ -319,16 +365,27 @@ export class Session {
 
   /** Replace the window with the history around one message. */
   async jumpTo(channel: Id, message: Id): Promise<void> {
+    const request = Symbol();
+    this.openingLoads.set(channel, request);
+    this.openingChannels.add(channel);
     this.openChannelId = channel;
-    const page = await this.backend.messages(channel, { limit: PAGE, nearby: message });
-    this.absorb(page);
-    const sorted = oldestFirst(page.messages);
-    const c = this.store.channels.get(channel);
-    const last = c && c.kind !== 'saved' ? c.lastMessageId : undefined;
-    this.store.setWindow(channel, sorted, {
-      atNewest: !!last && sorted.some((m) => m.id === last),
-      atOldest: sorted.filter((m) => m.id < message).length < PAGE / 2 - 1,
-    });
+    try {
+      const page = await this.backend.messages(channel, { limit: PAGE, nearby: message });
+      if (this.openingLoads.get(channel) !== request) return;
+      this.absorb(page);
+      const sorted = oldestFirst(page.messages);
+      const c = this.store.channels.get(channel);
+      const last = c && c.kind !== 'saved' ? c.lastMessageId : undefined;
+      this.store.setWindow(channel, sorted, {
+        atNewest: !!last && sorted.some((m) => m.id === last),
+        atOldest: sorted.filter((m) => m.id < message).length < PAGE / 2 - 1,
+      });
+    } finally {
+      if (this.openingLoads.get(channel) === request) {
+        this.openingChannels.delete(channel);
+        this.openingLoads.delete(channel);
+      }
+    }
   }
 
   /** Profile fetches on their way, so callers asking at once share one request. */
