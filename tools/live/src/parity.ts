@@ -251,6 +251,46 @@ try {
   check(avatar.fade.some((a) => a.property === 'opacity' && a.duration === 200), `then fades in over 200 ms (${JSON.stringify(avatar.fade)})`);
   await slow.close();
 
+  // Task 11: with message and member fetches slowed, a static skeleton and the member list's headers, then the
+  // content swapped in without a fade. The "Loading…" marker shows only while older history loads.
+  const cold = await browser.newContext({ viewport: { width: 1600, height: 900 }, reducedMotion: 'no-preference' });
+  const cp = await cold.newPage();
+  await signIn(cp, 'dev');
+  await cp.goto(`${APP}/channels/@me`, { waitUntil: 'networkidle' });
+  await cp.route(/\/api\/(channels\/[0-9A-Z]{26}\/messages\?|servers\/[0-9A-Z]{26}\/members)/, async (route) => {
+    await new Promise((r) => setTimeout(r, 1_500));
+    await route.continue();
+  });
+  await cp.evaluate(() => {
+    const w = window as unknown as { __swap: { skeleton: boolean; headersOnly: boolean; fades: string[]; done: boolean } };
+    w.__swap = { skeleton: false, headersOnly: false, fades: [], done: false };
+    const frame = () => {
+      const s = w.__swap;
+      if (document.querySelector('.main .skeleton')) s.skeleton = true;
+      if (document.querySelector('.members[aria-busy] h3') && !document.querySelector('.members .member')) s.headersOnly = true;
+      for (const a of document.getAnimations()) {
+        const t = (a.effect as KeyframeEffect | null)?.target as Element | null;
+        if (t?.closest('.main .scroller, .members') && !t.matches('img')) s.fades.push(t.className);
+      }
+      if (document.querySelector('.main article.message') && document.querySelector('.members .member')) s.done = true;
+      else requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+  await cp.locator(`.rail a.item[href*="/channels/${st.serverId}/"]`).click();
+  await cp.locator('.main article.message').first().waitFor({ timeout: 15_000 });
+  await cp.locator('.members .member').first().waitFor({ timeout: 15_000 });
+  const swap = await cp.evaluate(() => (window as unknown as { __swap: { skeleton: boolean; headersOnly: boolean; fades: string[]; done: boolean } }).__swap);
+  check(swap.skeleton && swap.headersOnly, `a first visit shows the message skeleton and the member list's headers alone (${JSON.stringify(swap)})`);
+  check(swap.done && !swap.fades.length, `messages and members swap in without a fade (${swap.fades.join(', ') || 'none'})`);
+  await cp.unroute(/\/api\//);
+  await cp.waitForTimeout(500);
+  check(await cp.locator('.main .loading').count() === 0, 'no "Loading…" marker while older history isn’t loading');
+  await cp.goto(`${APP}/channels/${st.serverId}/${st.channels.saannot}`, { waitUntil: 'networkidle' });
+  await cp.locator('.main .start').waitFor({ timeout: 10_000 });
+  check(await cp.locator('.main .loading').count() === 0, 'and none once history is at its start');
+  await cold.close();
+
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.getByRole('button', { name: 'User settings', exact: true }).hover();
   const reduced = page.locator('.concord-tooltip[data-open="true"]');

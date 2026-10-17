@@ -262,6 +262,8 @@ for (const mode of modes) {
   check(page(moved) === 0, `${mode}: a change of section doesn't fade the page`);
   // Settings is over the shell now (m4.6-plan.md task 16a): Esc puts keyboard focus back on the gear, whose
   // tooltip shows, so only that tooltip's fade may run. Task 16b gives the close its own motion.
+  // The pointer leaves the section links first: over the rail below them, the shell's hover would come back on close.
+  await p.mouse.move(900, 450);
   const closing = await step(p, mode, 'settings closes', () => p.keyboard.press('Escape'));
   if (mode !== 'reduce') {
     const others = closing.filter((x) => !x.what.includes('.concord-tooltip'));

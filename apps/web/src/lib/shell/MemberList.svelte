@@ -12,10 +12,19 @@
 
   let { store, server }: { store: Store; server: string } = $props();
   const groups = $derived(store.memberGroups(server));
+  // Until the list loads, its group headers stand in for it, from the server's hoisted roles, without rows (motion spec 4.7).
+  const loaded = $derived(store.memberListLoaded.has(server));
+  const headers = $derived.by(() => {
+    const roles = store.servers.get(server)?.roles ?? {};
+    return [...Object.values(roles).filter((r) => r.hoist).sort((a, b) => a.rank - b.rank).map((r) => r.name), m.shell.group.online];
+  });
 </script>
 
-<aside class="members" aria-label={m.shell.memberList}>
-  {#each groups as group (group.role ?? group.title)}
+<aside class="members" aria-label={m.shell.memberList} aria-busy={!loaded || undefined}>
+  {#if !loaded}
+    {#each headers as title, i (i)}<h3 class="skeleton">{title}</h3>{/each}
+  {/if}
+  {#each loaded ? groups : [] as group (group.role ?? group.title)}
     <h3>{group.role ? group.title : m.shell.group[group.title as 'online' | 'offline']} — {group.members.length}</h3>
     <ul>
       {#each group.members as member (member.user)}

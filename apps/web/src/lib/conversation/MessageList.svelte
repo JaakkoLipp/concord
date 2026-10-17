@@ -70,6 +70,11 @@
     actions.toggleReaction(current, reactionKey(Object.keys(current.reactions), emoji));
   });
   // The context menu's quick reactions: the most used, then Discord's usual four (m4.5-plan.md task 2).
+  /** The loading skeleton's rows: name bars of 80 to 140 px, one to three lines of 40 to 80 %, and now and then an image block. */
+  const SKELETON = [
+    { name: 112, lines: [72, 48], block: false }, { name: 84, lines: [56], block: true }, { name: 136, lines: [78, 64, 42], block: false },
+    { name: 96, lines: [44], block: false }, { name: 124, lines: [68, 52], block: false }, { name: 90, lines: [60, 76, 40], block: false },
+  ];
   const DEFAULT_QUICK = ['👍', '❤️', '😂', '😮'];
   const CUSTOM = new RegExp(`^${ULID_PATTERN}$`);
   const quick = $derived.by((): QuickEmoji[] => {
@@ -226,7 +231,8 @@
   let programmaticTop: number | null = null;
   let anchor: { id: string; top: number } | null = null;
   let highlighted = $state<string | null>(null);
-  let loadingOlder = false;
+  // Reactive, so the "Loading…" marker at the top shows only while older messages really load.
+  let loadingOlder = $state(false);
   let loadingNewer = false;
 
   function measureAnchor() {
@@ -410,8 +416,23 @@
         <h2>{info?.kind === 'group' ? m.conversation.welcomeGroup(info.name) : m.conversation.welcome(info?.kind === 'text' ? info.name : '')}</h2>
         <p>{m.conversation.start}</p>
       </div>
-    {:else if win}
+    {:else if win && loadingOlder}
       <div class="loading" aria-hidden="true">{m.app.loading}</div>
+    {:else if !win}
+      <!-- A channel's first window, or one dropped by a reconnect: a static skeleton, swapped for the messages
+           without a fade (motion spec 4.7). Bar widths vary by row; there is no shimmer. -->
+      <div class="skeleton" aria-hidden="true">
+        {#each SKELETON as row, i (i)}
+          <div class="ghost">
+            <span class="ghost-avatar"></span>
+            <span class="ghost-text">
+              <span class="ghost-name" style:width="{row.name}px"></span>
+              {#each row.lines as line, j (j)}<span class="ghost-line" style:width="{line}%"></span>{/each}
+              {#if row.block}<span class="ghost-block"></span>{/if}
+            </span>
+          </div>
+        {/each}
+      </div>
     {/if}
     {#each rows as row (row.key)}
       {#if row.day}
@@ -453,6 +474,13 @@
   .start { padding: var(--space-8) var(--space-5) var(--space-5); }
   .start h2 { margin: 0 0 var(--space-2); color: var(--text-strong); font: 700 var(--text-xl) var(--font-sans); }
   .start p { margin: 0; color: var(--text-secondary); }
+  .skeleton { display: flex; flex-direction: column; gap: var(--space-7); padding: var(--space-5) var(--space-5) 0; overflow: hidden; }
+  .ghost { display: flex; gap: var(--space-5); }
+  .ghost-avatar { flex: none; width: var(--avatar-md); height: var(--avatar-md); border-radius: 50%; background: var(--surface-3); }
+  .ghost-text { flex: 1; display: flex; flex-direction: column; gap: var(--space-3); padding-top: var(--space-2); }
+  .ghost-name { height: 0.5rem; border-radius: var(--radius-full); background: var(--surface-4); }
+  .ghost-line { height: 0.5rem; border-radius: var(--radius-full); background: var(--surface-2); }
+  .ghost-block { width: min(20rem, 100%); height: 12.5rem; border-radius: var(--radius-md); background: var(--surface-1); }
   .loading { padding: var(--space-6); text-align: center; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
   .divider { display: flex; align-items: center; margin: var(--space-6) var(--space-5) 0; height: 0; border-top: 1px solid var(--border-default); }
   .divider span { margin: 0 auto; padding: 0 var(--space-2); background: var(--surface-0); color: var(--text-secondary); font: 500 var(--text-xs) var(--font-sans); translate: 0 -50%; }
