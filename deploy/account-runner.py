@@ -50,6 +50,8 @@ DC = str(CONCORD / "dc")
 
 ULID = re.compile(r"^[0-9A-HJKMNP-TV-Z]{26}$")
 REQUEST_NAME = re.compile(r"^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.req\.json$")
+TMP_NAME = re.compile(r"^\.[0-9a-f-]{36}\.tmp$")
+TMP_GRACE_SECONDS = 60
 NOBODY = "00000000000000000000000000"
 ACTIONS = {"moderator:add", "moderator:remove", "admin:add", "admin:remove", "password-link", "suspend", "unsuspend"}
 MAX_REQUEST_BYTES = 2048
@@ -126,8 +128,19 @@ def set_admins(ids: list[str]) -> None:
         lines = [value if line.startswith("ADMIN_USER_IDS=") else line for line in lines]
     else:
         lines.append(value)
-    # In place, like the other scripts: compose reads the file again on the next up.
-    path.write_text("\n".join(lines) + "\n")
+    # host.env holds the server's other settings too, so a crash must never leave half of it: write a private copy
+    # with the same owner and mode, then rename it over the file. Compose reads the file again on the next up.
+    info = path.stat()
+    tmp = path.with_name(".host.env.new")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as handle:
+        handle.write("\n".join(lines) + "\n")
+    try:
+        os.chown(tmp, info.st_uid, info.st_gid)
+    except PermissionError:
+        pass
+    tmp.chmod(stat.S_IMODE(info.st_mode))
+    os.replace(tmp, path)
     run([DC, "up", "-d", "concord-web"], timeout=180)
 
 
@@ -252,11 +265,20 @@ def read_request(dir_fd: int, name: str) -> dict | None:
 
 
 def write_result(name: str, body: dict) -> None:
-    """Atomic, in a folder only this process writes: the container can read it and can't plant a link there."""
+    """
+    Atomic, in a folder only this process writes: the container can't plant a link there. Private to the web user,
+    who owns `in`, since an answer may hold a one-time password link.
+    """
     tmp = OUT / f".{name}.tmp"
-    tmp.write_text(json.dumps(body))
-    tmp.chmod(0o644)
-    tmp.replace(OUT / name)
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as handle:
+        handle.write(json.dumps(body))
+    owner = IN.stat()
+    try:
+        os.chown(tmp, owner.st_uid, owner.st_gid)
+    except PermissionError:
+        pass
+    os.replace(tmp, OUT / name)
 
 
 def handle_requests() -> bool:
@@ -264,6 +286,13 @@ def handle_requests() -> bool:
     dir_fd = os.open(IN, os.O_RDONLY | os.O_DIRECTORY)
     try:
         for entry in sorted(os.listdir(dir_fd))[:MAX_PER_PASS * 5]:
+            if TMP_NAME.match(entry):
+                # The layer writes a request under this name and then renames it: leave it a moment, not for good.
+                try:
+                    if time.time() - os.stat(entry, dir_fd=dir_fd, follow_symlinks=False).st_mtime < TMP_GRACE_SECONDS:
+                        continue
+                except OSError:
+                    continue
             match = REQUEST_NAME.match(entry)
             request = read_request(dir_fd, entry) if match else None
             try:
@@ -326,9 +355,14 @@ def main() -> int:
         print(__doc__)
         return 2
     for folder in (IN, OUT):
-        if not folder.is_dir():
-            print(f"missing {folder}: run pnpm deploy:stack", file=sys.stderr)
+        if folder.is_symlink() or not folder.is_dir():
+            print(f"missing {folder}, or it is a link: run pnpm deploy:stack", file=sys.stderr)
             return 1
+    # Answers are trusted by the layer because only this process can write them: refuse if anyone else could.
+    out = OUT.stat()
+    if out.st_uid != os.getuid() or out.st_mode & 0o022:
+        print(f"{OUT} must belong to the runner and not be writable by others", file=sys.stderr)
+        return 1
     lock = open(SPOOL / "runner.lock", "w")
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
