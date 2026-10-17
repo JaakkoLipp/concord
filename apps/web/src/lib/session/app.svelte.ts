@@ -42,7 +42,11 @@ class App {
     this.sessionId = (await loadSessionId()) ?? null;
     await this.start(token).catch(async (e: unknown) => {
       // A rejected token means signed out. Anything else (offline, server down) keeps the token for a retry.
-      if (e instanceof StoatError && e.status === 401) await clearToken();
+      // Its drafts go too, as on logout: the device may have been logged out from another one.
+      if (e instanceof StoatError && e.status === 401) {
+        await clearToken();
+        drafts.clear();
+      }
       this.status = 'signed-out';
     });
   }
