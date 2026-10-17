@@ -7,8 +7,8 @@
   import * as act from './actions.ts';
   import { openSettings } from '$lib/settings/modal.svelte.ts';
 
-  interface Props { session: Session; user: string; inDm?: boolean }
-  let { session, user, inDm = false }: Props = $props();
+  interface Props { session: Session; user: string; server?: string | undefined; inDm?: boolean }
+  let { session, user, server, inDm = false }: Props = $props();
   const u = $derived(session.store.users.get(user));
   const rel = $derived(u?.relationship);
   let anchor = $state<HTMLElement | null>(null);
@@ -37,7 +37,7 @@
     {/if}
     <span bind:this={anchor}><IconButton label={m.friends.actions.more} aria-haspopup="menu" onclick={() => (open = !open)}><EllipsisVertical size={18} /></IconButton></span>
   </div>
-  <Menu {open} onclose={() => (open = false)} {anchor} label={m.people.menu} items={act.personMenu(session, user, { primary: false, inDm })} />
+  <Menu {open} onclose={() => (open = false)} {anchor} label={m.people.menu} items={act.personMenu(session, user, { primary: false, inDm, server })} />
 {/if}
 
 <style>

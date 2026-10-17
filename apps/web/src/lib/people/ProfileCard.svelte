@@ -1,7 +1,9 @@
 <script lang="ts">
   /** Profile contents for the popout and the DM profile panel (client.md section 7, reference screenshots). */
   import TagBadge from './TagBadge.svelte';
-  import { Avatar } from '@concord/ui';
+  import { Avatar, IconButton, Menu } from '@concord/ui';
+  import Plus from '@lucide/svelte/icons/plus';
+  import { roleItem } from '$lib/admin/members.ts';
   import { fileUrl } from '@concord/stoat';
   import { memberKey, type Session, type Store } from '@concord/domain';
   import PersonActions from './PersonActions.svelte';
@@ -17,6 +19,9 @@
   setMarkdownContext(() => ({ store, server }));
 
   const u = $derived(store.users.get(user));
+  const roleMenu = $derived(session && server && !preview ? roleItem(session, server, user) : null);
+  let roleAnchor = $state<HTMLElement | null>(null);
+  let rolesOpen = $state(false);
   const member = $derived(server ? store.members.get(memberKey(server, user)) : undefined);
   const profile = $derived(store.profiles.get(user));
   const mutual = $derived(store.mutuals.get(user));
@@ -34,7 +39,7 @@
 
 <div class="card {variant}">
   <div class="banner" style:background-image={banner ? `url(${banner})` : undefined}></div>
-  {#if session}<div class="actions"><PersonActions {session} {user} {inDm} /></div>{/if}
+  {#if session}<div class="actions"><PersonActions {session} {user} {server} {inDm} /></div>{/if}
   <div class="avatar-wrap">
     <span class="avatar-ring"><Avatar src={preview?.avatar ?? avatarUrl(u ?? { id: user }, member?.avatar)} size={variant === 'popout' ? 80 : 80} {presence} presenceLabel={m.presence[presence]} /></span>
   </div>
@@ -63,16 +68,20 @@
       <div><h3>{m.people.accountCreated}</h3><p>{dayLabel(ulidTime(user))}</p></div>
     </section>
 
-    {#if roles.length}
+    {#if roles.length || roleMenu}
       <section>
         <h3>{m.people.roles}</h3>
         <ul class="roles">
           {#each roles as role (role!.id)}<li><span class="swatch" style:--role={role!.colour ?? 'var(--text-muted)'}></span>{role!.name}</li>{/each}
+          {#if roleMenu}<li><span bind:this={roleAnchor}><IconButton size="sm" label={m.admin.roles.memberRoles} aria-haspopup="menu" onclick={() => (rolesOpen = !rolesOpen)}><Plus size={16} /></IconButton></span></li>{/if}
         </ul>
       </section>
     {/if}
   </div>
 </div>
+{#if roleMenu && roleMenu !== 'separator' && 'kind' in roleMenu && roleMenu.kind === 'submenu'}
+  <Menu open={rolesOpen} onclose={() => (rolesOpen = false)} anchor={roleAnchor} label={m.people.roles} items={roleMenu.items} />
+{/if}
 
 <style>
   .card { position: relative; overflow: hidden; background: var(--surface-1); }

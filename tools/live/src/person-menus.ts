@@ -99,6 +99,24 @@ try {
   check(lostRole && await menu(owner).isVisible(), 'Roles takes a role and leaves both menus open');
   await closeMenu(owner);
 
+  // The profile card's Roles row has a "+" opening the same list, without closing the card.
+  await row(owner, p.target.handle).click();
+  const card = owner.locator('.card');
+  await card.getByRole('button', { name: 'Roles…' }).click();
+  const cardRole = owner.getByRole('menu', { name: 'Roles' }).getByRole('menuitemcheckbox', { name: 'Moderator', exact: true });
+  await cardRole.click();
+  const cardGave = await until(async () => (await p.owner.call<{ roles?: string[] }>('GET', `/servers/${p.server}/members/${p.target.id}`)).roles?.includes(p.modRole) ?? false).then(() => true, () => false);
+  check(cardGave && await card.isVisible(), 'the profile card’s + gives a role and the card stays open');
+  await cardRole.click();
+  // Stoat's per-server bucket (5 per 10 s) may still be spent by the toggles above.
+  const cardTook = await until(async () => !(await p.owner.call<{ roles?: string[] }>('GET', `/servers/${p.server}/members/${p.target.id}`)).roles?.includes(p.modRole), 25_000).then(() => true, () => false);
+  check(cardTook, 'and the + takes it away again');
+  await closeMenu(owner);
+  await owner.keyboard.press('Escape');
+  await row(plain, p.target.handle).click();
+  check(await plain.locator('.card').getByRole('button', { name: 'Roles…' }).count() === 0, 'a plain member’s profile card has no +');
+  await plain.keyboard.press('Escape');
+
   // Open Invite to server by hover, then check the submenu contents and close it with Left.
   await openPerson(owner, p.target.handle);
   const probeServerName = (await serversOf(p.owner)).find((server) => server._id === p.server)?.name ?? '';
