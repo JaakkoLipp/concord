@@ -1,9 +1,8 @@
 <script lang="ts">
   /**
    * User settings at /app/settings/<section> (m2b-plan.md task 7): the profile editor, notifications, voice
-   * and video, and Log out, in the shared settings frame.
+   * and video, and Log out, in the shared settings frame. A new section is a name in USER_SECTIONS and a branch here.
    */
-  import { resolve } from '$app/paths';
   import { Button } from '@concord/ui';
   import type { Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
@@ -13,11 +12,10 @@
   import SettingsFrame from './SettingsFrame.svelte';
   import VoiceSection from './VoiceSection.svelte';
   import TagChooser from './TagChooser.svelte';
+  import { USER_SECTIONS, type UserSection } from './modal.svelte.ts';
 
-  type Section = 'profile' | 'notifications' | 'voice';
-  let { session, section }: { session: Session; section: Section } = $props();
-  const SECTIONS: Section[] = ['profile', 'notifications', 'voice'];
-  const items = $derived(SECTIONS.map((s) => ({ id: s, label: m.settings.sections[s], href: resolve('/(app)/app/settings/[section]', { section: s }) })));
+  let { session, section }: { session: Session; section: UserSection } = $props();
+  const items = $derived(USER_SECTIONS.map((s) => ({ id: s, label: m.settings.sections[s], target: { kind: 'user' as const, section: s } })));
 </script>
 
 <SettingsFrame title={m.settings.title} {items} active={section} heading={m.settings.sections[section]} wide={section === 'profile'}>

@@ -16,8 +16,7 @@
   import { toasts } from '$lib/view/toast.svelte.ts';
   import { avatarUrl, presenceOf } from '$lib/view/users.ts';
   import CustomStatus from './CustomStatus.svelte';
-  import { goto } from '$app/navigation';
-  import { resolve } from '$app/paths';
+  import { openSettings, settingsModal } from '$lib/settings/modal.svelte.ts';
 
   let { store }: { store: Store } = $props();
   const self = $derived(store.self);
@@ -51,14 +50,15 @@
     items.push(kind === 'input'
       ? { kind: 'range', label: t.inputVolume, value: s.inputVolume, min: 0, max: 200, format: t.percent, oninput: (v) => saveVoiceSettings({ inputVolume: v }) }
       : { kind: 'range', label: t.outputVolume, value: s.outputVolume, min: 0, max: maxOutputVolume(), format: t.percent, oninput: (v) => saveVoiceSettings({ outputVolume: v }) });
-    items.push('separator', { label: m.voice.voiceSettings, onselect: () => void goto(resolve('/(app)/app/settings/[section]', { section: 'voice' })) });
+    items.push('separator', { label: m.voice.voiceSettings, onselect: () => openSettings({ kind: 'user', section: 'voice' }) });
     options = { items, anchor };
   }
 
   /** The mute and deafen keybinds from Voice and video settings, Ctrl+Shift+M and Ctrl+Shift+D unless changed. */
   function shortcut(e: KeyboardEvent) {
     const voice = app.voice;
-    if (!voice || e.repeat) return;
+    // Not under settings, where Voice and video's recorder takes keys (m4.6-plan.md task 16a).
+    if (!voice || e.repeat || settingsModal.shown) return;
     const s = loadVoiceSettings();
     if (matches(s.muteKey, e)) voice.toggleMute();
     else if (matches(s.deafenKey, e)) voice.toggleDeafen();
@@ -99,7 +99,7 @@
           onclick={(e) => void openOptions('output', e.currentTarget)}><ChevronDown /></button>
       </span>
     {/if}
-    <IconButton label={m.settings.open} onclick={() => void goto(resolve('/(app)/app/settings/[section]', { section: 'profile' }))}><Settings /></IconButton>
+    <IconButton label={m.settings.open} onclick={() => openSettings({ kind: 'user', section: 'profile' })}><Settings /></IconButton>
   </section>
   <Popover {anchor} {open} onclose={() => (open = false)} side="top" label={m.shell.you}>
     <div class="menu">

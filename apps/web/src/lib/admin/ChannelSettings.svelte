@@ -24,7 +24,7 @@
   const NEEDS: Record<Section, bigint> = { overview: Permission.ManageChannel, permissions: Permission.ManagePermissions };
   const sections = $derived((['overview', 'permissions'] as Section[]).filter((s) => has(mine, NEEDS[s])));
   const current = $derived(sections.find((s) => s === section) ?? sections[0]);
-  const items = $derived(sections.map((s) => ({ id: s, label: m.admin.channelSections[s], href: resolve('/(app)/app/channel-settings/[channel]/[section]', { channel, section: s }) })));
+  const items = $derived(sections.map((s) => ({ id: s, label: m.admin.channelSections[s], target: { kind: 'channel' as const, channel, section: s } })));
   const name = $derived(info?.kind === 'text' ? info.name : '');
 
   // Gone, or nothing here for this account: back to its server's first channel, else the app, once connected

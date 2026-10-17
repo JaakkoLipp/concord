@@ -40,8 +40,9 @@
 </div>
 
 <style>
+  /* Above the settings modal, so a call can be answered from settings. */
   .rings {
-    position: fixed; top: calc(var(--header-h) + var(--space-4)); right: var(--space-5); z-index: 800;
+    position: fixed; top: calc(var(--header-h) + var(--space-4)); right: var(--space-5); z-index: 850;
     display: grid; gap: var(--space-3); width: min(22rem, calc(100vw - 2 * var(--space-5)));
   }
   .card {

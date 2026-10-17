@@ -28,6 +28,7 @@
   import { compose } from '$lib/view/compose.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
   import { setComposerFocus } from '$lib/view/composerFocus.ts';
+  import { settingsModal } from '$lib/settings/modal.svelte.ts';
 
   let { placeholder, session, channel }: { placeholder: string; session: Session; channel: Channel | undefined } = $props();
 
@@ -182,7 +183,8 @@
     picker.open(emojiButton, 'insert', (e) => editor?.insert(e.kind === 'custom' ? serialise.emoji(e.value) : e.value));
   }
   function onkeydown(e: KeyboardEvent) {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e' && !e.shiftKey && !e.altKey) {
+    // Not under settings, where the composer is inert (m4.6-plan.md task 16a).
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e' && !e.shiftKey && !e.altKey && !settingsModal.shown) {
       e.preventDefault();
       openPicker();
     }

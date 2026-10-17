@@ -9,6 +9,7 @@
   import UserPopout from '$lib/people/UserPopout.svelte';
   import GroupPanel from '$lib/people/GroupPanel.svelte';
   import VoiceChat from '$lib/call/VoiceChat.svelte';
+  import SettingsHost from '$lib/settings/SettingsHost.svelte';
   import { shell } from '$lib/view/shell.svelte.ts';
 
   let { children }: { children: Snippet } = $props();
@@ -36,6 +37,8 @@
     {@render children()}
   </Shell>
   <UserPopout {session} />
+  <!-- Settings opens over the mounted shell, so a call and the conversation stay as they were (m4.6-plan.md task 16a). -->
+  <SettingsHost {session} />
 {/if}
 
 {#snippet profile()}

@@ -1,7 +1,8 @@
 /**
  * The navigation shortcuts and the global Esc (M4.8 task 2). Each registers with shortcuts.ts, whose one listener
  * Shell.svelte mounts; Shell imports this file for that side effect. Each run reads the session and the route at
- * the time of the press. The shell only mounts on the channel routes, so settings and invites never reach these.
+ * the time of the press. The shell only mounts on the channel routes, and its listener waits while settings is
+ * open over it, so settings and invites never reach these.
  */
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';

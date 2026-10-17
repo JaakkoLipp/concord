@@ -1,18 +1,15 @@
 <script lang="ts">
   /**
    * The settings layout shared by user, server and channel settings: sections on the left, the section on
-   * the right, closed with Escape or the close button. Opened from inside the app, closing goes back.
+   * the right, closed with Escape, Back or the close button. It is a modal over the mounted shell (modal.svelte.ts).
    */
-  import { afterNavigate, goto } from '$app/navigation';
-  import { resolve } from '$app/paths';
   import { IconButton } from '@concord/ui';
   import type { Snippet } from 'svelte';
   import X from '@lucide/svelte/icons/x';
   import { m } from '$lib/i18n/index.ts';
-  import ConfirmDialog from '$lib/shell/ConfirmDialog.svelte';
-  import Toaster from '$lib/shell/Toaster.svelte';
+  import { settingsModal, settingsUrl, type SettingsTarget } from './modal.svelte.ts';
 
-  export interface FrameItem { id: string; label: string; href: string }
+  export interface FrameItem { id: string; label: string; target: SettingsTarget }
   interface Props {
     title: string;
     items: FrameItem[];
@@ -25,34 +22,35 @@
     wide?: boolean;
   }
   let { title, items, active, heading, children, footer, wide = false }: Props = $props();
+  let root = $state<HTMLElement | null>(null);
 
-  // Opened from inside the app, history can go back to it. Opened from a link or a reload, it can't.
-  let fromApp = false;
-  afterNavigate((nav) => {
-    const from = nav.from?.url.pathname ?? '';
-    if (from.startsWith('/app') && !/^\/app\/(settings|server-settings|channel-settings)/.test(from)) fromApp = true;
+  // Focus moves into settings as it opens, onto the open section's item.
+  $effect(() => {
+    root?.querySelector<HTMLElement>('.item.active')?.focus({ preventScroll: true });
   });
 
-  /** Back to where settings were opened from, or the app. */
-  function close() {
-    if (fromApp) history.back();
-    else void goto(resolve('/app'));
+  /** A section is a link, so it can open in a new tab, but a plain click switches in place. */
+  function pick(e: MouseEvent, item: FrameItem) {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    void settingsModal.go(item.target);
   }
+
+  // Menus and popovers take their Escape in capture phase and stop it. A native dialog's cancel comes after this.
   function key(e: KeyboardEvent) {
-    if (e.key === 'Escape' && !document.querySelector('dialog[open]')) close();
+    if (e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('dialog[open]')) void settingsModal.close();
   }
 </script>
 
 <svelte:window onkeydown={key} />
 
-<div class="settings" role="dialog" aria-modal="true" aria-label={title}>
+<div class="settings" bind:this={root} role="dialog" aria-modal="true" aria-label={title}>
   <nav class="nav" aria-label={title}>
     <div class="nav-inner">
       <h2>{title}</h2>
       {#each items as item (item.id)}
-        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- callers pass resolved hrefs -->
-        <!-- Sections replace each other in history, so Close and Back leave settings in one step. -->
-        <a class="item" class:active={item.id === active} href={item.href} data-sveltekit-replacestate aria-current={item.id === active ? 'page' : undefined}>{item.label}</a>
+        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- settingsUrl() resolves -->
+        <a class="item" class:active={item.id === active} href={settingsUrl(item.target)} onclick={(e) => pick(e, item)} aria-current={item.id === active ? 'page' : undefined}>{item.label}</a>
       {/each}
       {#if footer}
         <div class="separator" role="separator"></div>
@@ -65,14 +63,12 @@
       <h1>{heading}</h1>
       {@render children()}
     </div>
-    <div class="close"><IconButton label={m.settings.close} onclick={close}><X /></IconButton></div>
+    <div class="close"><IconButton label={m.settings.close} onclick={() => void settingsModal.close()}><X /></IconButton></div>
   </main>
 </div>
-<ConfirmDialog />
-<Toaster />
 
 <style>
-  /* Settings is a page: it fades in when opened, without a scale, and closes at once (client.md section 9). */
+  /* Full-screen over the mounted shell until task 16b insets it. It fades in when opened, without a scale, and closes at once. */
   .settings { position: fixed; inset: 0; z-index: 800; display: flex; background: var(--surface-0); animation: page-in var(--dur-modal) var(--ease-out); }
   @keyframes page-in { from { opacity: 0; } }
   .nav { flex: 1 0 auto; display: flex; justify-content: flex-end; background: var(--surface-1); overflow-y: auto; }

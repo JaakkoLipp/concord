@@ -1,10 +1,11 @@
 <script lang="ts">
+  /** A reload or link at a channel settings URL: settings opens over a channel of its server (modal.svelte.ts). */
   import { page } from '$app/state';
   import { app } from '$lib/session/app.svelte.ts';
-  import ChannelSettings from '$lib/admin/ChannelSettings.svelte';
+  import { reopen } from '$lib/settings/modal.svelte.ts';
 
-  const channel = $derived(page.params.channel!);
-  const section = $derived(page.params.section!);
+  let done = false;
+  $effect(() => {
+    if (!done && app.session) done = reopen(app.session.store, { kind: 'channel', channel: page.params.channel!, section: page.params.section! });
+  });
 </script>
-
-{#if app.session}<ChannelSettings session={app.session} {channel} {section} />{/if}

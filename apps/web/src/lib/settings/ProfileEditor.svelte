@@ -4,14 +4,13 @@
    * PATCH /users/@me through the session's queue, with removals for cleared fields.
    */
   import { untrack } from 'svelte';
-  import { beforeNavigate, goto } from '$app/navigation';
+  import { guardUnsaved } from '$lib/admin/unsaved.ts';
   import { Button, TextField } from '@concord/ui';
   import { fileUrl } from '@concord/stoat';
   import type { SelfEdit, SelfField, Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
   import ProfileCard from '$lib/people/ProfileCard.svelte';
   import { avatarUrl } from '$lib/view/users.ts';
-  import { confirm } from '$lib/view/confirm.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
 
   let { session }: { session: Session } = $props();
@@ -122,18 +121,7 @@
   }
 
   // Leaving with unsaved changes asks first. Closing the tab gets the browser's own question.
-  beforeNavigate((nav) => {
-    if (!dirty) return;
-    if (nav.type === 'leave') return nav.cancel();
-    const to = nav.to?.url;
-    nav.cancel();
-    void confirm.ask({ title: m.settings.profile.leaveTitle, body: m.settings.profile.leaveBody, confirm: m.settings.profile.leave, danger: true }).then((ok) => {
-      if (!ok || !to) return;
-      reset();
-      // eslint-disable-next-line svelte/no-navigation-without-resolve -- the URL came from a navigation already resolved
-      void goto(to);
-    });
-  });
+  guardUnsaved(() => dirty, reset, { title: m.settings.profile.leaveTitle, body: m.settings.profile.leaveBody, confirm: m.settings.profile.leave });
 </script>
 
 <div class="editor">

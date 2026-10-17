@@ -11,9 +11,10 @@ import { adminDialogs } from './dialogs.svelte.ts';
 import { notifyItems, notifyMuteItem, serverNotificationSettingsItem } from '$lib/notify/dialog.svelte.ts';
 import { confirm } from '$lib/view/confirm.svelte.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
+import { openSettings } from '$lib/settings/modal.svelte.ts';
 
-export function openServerSettings(server: Id, section: string): Promise<void> {
-  return goto(resolve('/(app)/app/server-settings/[server]/[section]', { server, section }));
+export function openServerSettings(server: Id, section: string): void {
+  openSettings({ kind: 'server', server, section });
 }
 
 export async function leaveServer(session: Session, server: Id): Promise<void> {
@@ -62,7 +63,7 @@ export function serverMenu(session: Session, server: Id): MenuItem[] {
     const settings: MenuItem[] = [];
     if (sections.length) settings.push({
       kind: 'submenu', label: m.admin.serverSettings,
-      items: sections.map((section) => ({ label: m.admin.sections[section], onselect: () => void openServerSettings(server, section) })),
+      items: sections.map((section) => ({ label: m.admin.sections[section], onselect: () => openServerSettings(server, section) })),
     });
     const profile = editServerProfileItem(session, server);
     if (profile) settings.push(profile);
@@ -101,8 +102,8 @@ export function categoryMenu(session: Session, server: Id, category: string): Me
   ];
 }
 
-export function openChannelSettings(channel: Id, section: string): Promise<void> {
-  return goto(resolve('/(app)/app/channel-settings/[channel]/[section]', { channel, section }));
+export function openChannelSettings(channel: Id, section: string): void {
+  openSettings({ kind: 'channel', channel, section });
 }
 
 async function copy(text: string): Promise<void> {
@@ -125,7 +126,7 @@ export function channelMenu(session: Session, channel: Id): MenuItem[] {
   const mine = permissionsIn(store, c);
   if (has(mine, Permission.InviteOthers)) items.push({ label: m.admin.invite.people, onselect: () => adminDialogs.open({ kind: 'invite', server, channel }) });
   if (has(mine, Permission.ManageChannel) || has(mine, Permission.ManagePermissions)) {
-    items.push({ label: m.admin.editChannel, onselect: () => void openChannelSettings(channel, has(mine, Permission.ManageChannel) ? 'overview' : 'permissions') });
+    items.push({ label: m.admin.editChannel, onselect: () => openChannelSettings(channel, has(mine, Permission.ManageChannel) ? 'overview' : 'permissions') });
   }
   if (canManageChannels(session, server)) {
     const s = store.servers.get(server)!;

@@ -111,7 +111,7 @@ Typing events are sent at most every 2.5 seconds, as Stoat's own client does.
 
 **Until M6**, Caddy gives our app only `/app`, and every other path, including Stoat's email links, goes to Stoat's own client. Our login and account pages are therefore served at `/app/login` and `/app/account` until M6 moves them to the top-level paths above. Verification links open in Stoat's client until then.
 
-Settings, profile popouts, the emoji picker and image viewers are overlays, not routes. Settings uses SvelteKit shallow routing, so the browser's back button closes it.
+Settings, profile popouts, the emoji picker and image viewers are overlays, not routes. Settings uses SvelteKit shallow routing over the mounted shell, so a call and the conversation stay as they were, and the browser's back button closes it. Its URLs, `/app/settings/<section>`, `/app/server-settings/<server>/<section>` and `/app/channel-settings/<channel>/<section>`, still work from a link or a reload: they open the last channel, or one in that server, and settings over it (`settings/modal.svelte.ts`).
 
 **Desktop layout**: a CSS grid with four columns, sized from the design tokens in section 9: server rail, channel or DM sidebar, conversation, and member list or DM profile panel. The user dock sits at the bottom and spans the rail and sidebar columns, 336 px wide, as in the reference.
 
