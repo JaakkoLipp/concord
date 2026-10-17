@@ -59,3 +59,52 @@ class NotifyPrefs {
 }
 
 export const notifyPrefs = new NotifyPrefs();
+
+/**
+ * Message sounds, per browser (M4.8 task 11): on by default, at their own volume. Independent of desktop
+ * notifications and their permission.
+ */
+const SOUNDS_KEY = 'concord:message-sounds';
+interface SoundChoice { on: boolean; volume: number }
+const SOUND_DEFAULTS: SoundChoice = { on: true, volume: 60 };
+
+function readSounds(): SoundChoice {
+  try {
+    const v = JSON.parse(localStorage.getItem(SOUNDS_KEY) ?? 'null') as Partial<SoundChoice> | null;
+    return {
+      on: typeof v?.on === 'boolean' ? v.on : SOUND_DEFAULTS.on,
+      volume: typeof v?.volume === 'number' && v.volume >= 0 && v.volume <= 100 ? Math.round(v.volume) : SOUND_DEFAULTS.volume,
+    };
+  } catch {
+    return { ...SOUND_DEFAULTS };
+  }
+}
+
+class SoundPrefs {
+  on = $state(SOUND_DEFAULTS.on);
+  volume = $state(SOUND_DEFAULTS.volume);
+
+  constructor() {
+    if (typeof localStorage !== 'undefined') this.refresh();
+  }
+
+  set(change: Partial<SoundChoice>): void {
+    if (change.on !== undefined) this.on = change.on;
+    if (change.volume !== undefined) this.volume = Math.max(0, Math.min(100, Math.round(change.volume)));
+    try {
+      localStorage.setItem(SOUNDS_KEY, JSON.stringify({ on: this.on, volume: this.volume }));
+    } catch {
+      // Storage blocked: the choice lasts until the tab closes.
+    }
+  }
+
+  /** Another tab changed it. */
+  refresh(): void {
+    const v = readSounds();
+    this.on = v.on;
+    this.volume = v.volume;
+  }
+}
+
+export const soundPrefs = new SoundPrefs();
+export const SOUND_PREFS_KEY = SOUNDS_KEY;

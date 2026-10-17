@@ -61,6 +61,15 @@
     </select>
   </label>
   <p class="note">{m.notify.mutedHint}</p>
+  {#if t?.scope === 'server'}
+    {@const server = t.id}
+    <label class="check">
+      <input type="checkbox" checked={!!store.ignoredMentions[server]}
+        onchange={(e) => void session.setIgnoreBroadMentions(server, e.currentTarget.checked).catch(() => toasts.show(m.notify.failed))} />
+      <span>{m.notify.ignoreBroad}</span>
+    </label>
+    <p class="note">{m.notify.ignoreBroadHelp}</p>
+  {/if}
   {#snippet actions()}<Button onclick={() => notifyDialog.close()}>{m.admin.invite.done}</Button>{/snippet}
 </Dialog>
 
@@ -70,4 +79,7 @@
   .option { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); cursor: pointer; }
   select { padding: var(--space-3) var(--space-4); background: var(--surface-0); color: var(--text-strong); border: 1px solid var(--border-control); border-radius: var(--radius-md); font: var(--text-md) var(--font-sans); }
   .note { margin: 0; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
+  .check { display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-5); padding: var(--space-2) 0; color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); cursor: pointer; }
+  .check input { accent-color: var(--accent); }
+  .check + .note { margin-top: var(--space-1); }
 </style>

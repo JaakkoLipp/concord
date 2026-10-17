@@ -9,7 +9,7 @@ import { ServerAdmin } from './admin.svelte.ts';
 import { ACTIVE_KEY, IdleTracker } from './idle.ts';
 import { BackendError } from './errors.ts';
 import { Store, memberKey, newer, type EmojiPrefs, type FavouriteGif, type MessageWindow, type PendingMessage, type Settings } from './store/store.svelte.ts';
-import { parseNotifications, writeNotifications, type NotificationLevel, type NotificationSettings } from './notify.ts';
+import { MENTIONS_KEY, parseIgnoredMentions, parseNotifications, writeIgnoredMentions, writeNotifications, type NotificationLevel, type NotificationSettings } from './notify.ts';
 import { HOLD_MS, Latest } from './latest.ts';
 import { orderingFor, writeOrdering } from './layout.ts';
 import { FOLDERS_KEY, flatten, foldersOf, parseFolders, writeFolders, type Folder, type RailItem } from './folders.ts';
@@ -240,7 +240,7 @@ export class Session {
   private async coldStart(): Promise<void> {
     const windowAtReady = this.openChannelId ? this.store.windows.get(this.openChannelId) : undefined;
     const fetchedAt = Date.now();
-    const fetched = await this.backend.settings(['notifications', 'ordering', 'concord:hiddenMutedChannels', EMOJI_KEY, GIFS_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY, FOLDERS_KEY]).catch(() => null);
+    const fetched = await this.backend.settings(['notifications', 'ordering', 'concord:hiddenMutedChannels', EMOJI_KEY, GIFS_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY, FOLDERS_KEY, MENTIONS_KEY]).catch(() => null);
     // A failed fetch keeps what this session has, rather than resetting the chosen status or favourites.
     if (!fetched) return this.coldStartRest(windowAtReady);
     const settings: Record<string, { value: string }> = fetched;
@@ -253,6 +253,7 @@ export class Session {
     if (this.emojiChangedAt < fetchedAt) this.store.emojiPrefs = parseEmojiPrefs(settings[EMOJI_KEY]?.value);
     if (this.gifsChangedAt < fetchedAt) this.store.favouriteGifs = parseFavouriteGifs(settings[GIFS_KEY]?.value);
     if (!this.folderWrites.holding) this.store.folders = parseFolders(settings[FOLDERS_KEY]?.value);
+    if (!this.ignoredWrites.holding) this.store.ignoredMentions = parseIgnoredMentions(settings[MENTIONS_KEY]?.value);
     await this.coldStartRest(windowAtReady);
   }
 
@@ -852,6 +853,10 @@ export class Session {
     }
     if (values[EMOJI_KEY] && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(values[EMOJI_KEY].value);
     if (values[GIFS_KEY] && !this.gifsSave) this.store.favouriteGifs = parseFavouriteGifs(values[GIFS_KEY].value);
+    if (values[MENTIONS_KEY]) {
+      if (!this.ignoredWrites.holding) this.store.ignoredMentions = parseIgnoredMentions(values[MENTIONS_KEY].value);
+      else setTimeout(() => { if (!this.ignoredWrites.holding) this.store.ignoredMentions = parseIgnoredMentions(this.rawSettings[MENTIONS_KEY]?.value); }, HOLD_MS + 100);
+    }
     if (values[FOLDERS_KEY]) {
       // As with the order: a change of ours on its way is newer. Look again once the hold ends.
       if (!this.folderWrites.holding) this.store.folders = parseFolders(values[FOLDERS_KEY].value);
@@ -891,6 +896,29 @@ export class Session {
     this.rawSettings = { ...this.rawSettings, ordering: { value } };
   });
   private serverOrderChangedAt = 0;
+
+  private readonly ignoredWrites = new Latest<Record<Id, boolean>>(async (next) => {
+    const value = writeIgnoredMentions(next);
+    await this.backend.setSettings({ [MENTIONS_KEY]: value });
+    this.rawSettings = { ...this.rawSettings, [MENTIONS_KEY]: { value } };
+  });
+  private ignoredChangedAt = 0;
+
+  /**
+   * Ignore @everyone and role mentions in a server (M4.8 task 11), synced as `concord:mentions`. They then neither
+   * notify, sound, nor count as mentions; only a mention of this account does.
+   */
+  setIgnoreBroadMentions(server: Id, ignore: boolean): Promise<void> {
+    const changedAt = ++this.ignoredChangedAt;
+    const next = { ...this.store.ignoredMentions };
+    if (ignore) next[server] = true;
+    else delete next[server];
+    this.store.ignoredMentions = next;
+    return this.ignoredWrites.set(next).catch((e: unknown) => {
+      if (changedAt === this.ignoredChangedAt) this.store.ignoredMentions = parseIgnoredMentions(this.rawSettings[MENTIONS_KEY]?.value);
+      throw e;
+    });
+  }
 
   private readonly folderWrites = new Latest<Folder[]>(async (next) => {
     const value = writeFolders(next);

@@ -84,11 +84,15 @@ export function nextMuteEnd(s: NotificationSettings, now: number): number | unde
 /** Message flags, as Stoat sets them on the wire: bit indices 1, 2 and 3 (m2c-plan.md). */
 export const Flags = { SuppressNotifications: 2, MentionsEveryone: 4, MentionsOnline: 8 } as const;
 
-/** A user mention, a reply that mentions you, one of your roles, `@everyone` or `@online`. */
-export function mentionsYou(m: Message, self: Id, roles: Id[]): boolean {
+/**
+ * A user mention, a reply that mentions you, one of your roles, `@everyone` or `@online`. With `ignoreBroad`, for a
+ * server set to ignore @everyone and role mentions (M4.8 task 11), only a mention of you.
+ */
+export function mentionsYou(m: Message, self: Id, roles: Id[], ignoreBroad = false): boolean {
+  if (m.mentions.includes(self)) return true;
+  if (ignoreBroad) return false;
   const flags = m.flags ?? 0;
-  return m.mentions.includes(self) || m.roleMentions.some((r) => roles.includes(r))
-    || (flags & Flags.MentionsEveryone) !== 0 || (flags & Flags.MentionsOnline) !== 0;
+  return m.roleMentions.some((r) => roles.includes(r)) || (flags & Flags.MentionsEveryone) !== 0 || (flags & Flags.MentionsOnline) !== 0;
 }
 
 /** Only your own ID: a user mention or a reply with mention on (decision 2). */
@@ -107,6 +111,8 @@ export interface NotifyContext {
   blocked: boolean;
   /** The channel a focused window of this browser shows, if any. */
   focusedChannel: Id | null;
+  /** The message's server ignores @everyone and role mentions. */
+  ignoreBroad?: boolean;
 }
 
 export function shouldNotify(m: Message, c: NotifyContext): boolean {
@@ -115,7 +121,7 @@ export function shouldNotify(m: Message, c: NotifyContext): boolean {
   if (c.focusedChannel === m.channel) return false;
   if (c.presence === 'Busy') return false;
   if (c.muted) return c.level !== 'none' && mentionsYouPersonally(m, c.self);
-  const mention = mentionsYou(m, c.self, c.roles);
+  const mention = mentionsYou(m, c.self, c.roles, c.ignoreBroad);
   if (c.level === 'none' || (c.level === 'mention' && !mention)) return false;
   if (c.presence === 'Focus' && !mention) return false;
   return true;
@@ -133,3 +139,21 @@ export interface RingContext {
  * 10.8). A muted conversation, its level set to nothing, or Busy keeps it quiet. The ringing card shows either way.
  */
 export const ringAlerts = (c: RingContext) => c.presence !== 'Busy' && !c.muted && c.level !== 'none';
+
+/** Synced-settings key for the servers whose @everyone and role mentions are ignored (M4.8 task 11). */
+export const MENTIONS_KEY = 'concord:mentions';
+/** Servers kept at most, so a setting any device may write stays small. */
+export const IGNORED_MAX = 500;
+
+/** `{ignore: {server: true}}`, tolerating bad data. */
+export function parseIgnoredMentions(raw: string | undefined): Record<Id, boolean> {
+  try {
+    const v = (JSON.parse(raw ?? '{}') as { ignore?: unknown } | null)?.ignore;
+    if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+    return Object.fromEntries(Object.entries(v).filter((e): e is [string, true] => e[1] === true).slice(0, IGNORED_MAX));
+  } catch {
+    return {};
+  }
+}
+
+export const writeIgnoredMentions = (ignore: Record<Id, boolean>): string => JSON.stringify({ ignore });

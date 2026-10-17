@@ -20,6 +20,14 @@ const SOUNDS: Record<Sound, Note[]> = {
   peerJoin: [[587, 0, 0.08], [880, 0.08, 0.12]],
   peerLeave: [[880, 0, 0.08], [587, 0.08, 0.12]],
 };
+/**
+ * Message sounds (M4.8 task 11): a short rise for a message, a brighter three-note one for a mention. They have their
+ * own volume, so turning calls down doesn't silence them.
+ */
+const MESSAGE_SOUNDS = {
+  message: [[880, 0, 0.07], [1175, 0.07, 0.1]],
+  mention: [[988, 0, 0.06], [1319, 0.06, 0.06], [1568, 0.12, 0.12]],
+} satisfies Record<string, Note[]>;
 /** The ring: two short bursts, repeated every 2 s. */
 const RING: Note[] = [[880, 0, 0.18], [660, 0.22, 0.18], [880, 0.5, 0.18], [660, 0.72, 0.18]];
 const RING_EVERY_MS = 2_000;
@@ -54,11 +62,10 @@ function audio(): AudioContext | null {
 /** The tones' level, scaled by the output volume. */
 const level = () => LEVEL * (loadVoiceSettings().outputVolume / 100);
 
-function playNotes(notes: Note[]): void {
+function playNotes(notes: Note[], peak = level()): void {
   const ctx = audio();
   if (!ctx) return;
   const start = ctx.currentTime + 0.01;
-  const peak = level();
   if (peak <= 0) return;
   for (const [hz, at, length] of notes) {
     const osc = ctx.createOscillator();
@@ -77,6 +84,13 @@ function playNotes(notes: Note[]): void {
 
 export function play(sound: Sound): void {
   playNotes(SOUNDS[sound]);
+}
+
+/** A message or mention sound at `volume` (0 to 100), through the chosen speaker like the rest. */
+export function playMessageSound(kind: keyof typeof MESSAGE_SOUNDS, volume: number): void {
+  // Before the first click or key on the page, browsers won't start audio, and say so in the console.
+  if (typeof navigator !== 'undefined' && navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+  playNotes(MESSAGE_SOUNDS[kind], LEVEL * (Math.max(0, Math.min(100, volume)) / 100));
 }
 
 /** Loop the ring tone until the returned function is called (DM calls, client.md section 10.8). */

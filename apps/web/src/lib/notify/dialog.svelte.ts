@@ -1,7 +1,7 @@
 /** Which server or conversation the notification settings dialog shows, if any. */
 import type { Id, Session } from '@concord/domain';
 import type { NotificationLevel } from '@concord/domain';
-import type { MenuItem } from '@concord/ui';
+import type { MenuItem, MenuSubItem } from '@concord/ui';
 import { m } from '$lib/i18n/index.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 
@@ -24,10 +24,18 @@ export function serverNotificationSettingsItem(session: Session, id: Id): MenuIt
   const levels: NotificationLevel[] = ['all', 'mention', 'none'];
   return {
     kind: 'submenu', label: m.notify.settings, detail: m.notify.levels[current],
-    items: levels.map((level) => ({
-      kind: 'check', label: m.notify.levels[level], checked: current === level,
-      onselect: () => void session.setNotificationLevel('server', id, level).catch(() => toasts.show(m.notify.failed)),
-    })),
+    items: [
+      ...levels.map((level): MenuSubItem => ({
+        kind: 'check', label: m.notify.levels[level], checked: current === level,
+        onselect: () => void session.setNotificationLevel('server', id, level).catch(() => toasts.show(m.notify.failed)),
+      })),
+      'separator',
+      // M4.8 task 11: synced as concord:mentions; Notifications settings explain what it can't undo.
+      {
+        kind: 'check', label: m.notify.ignoreBroad, checked: !!session.store.ignoredMentions[id],
+        onselect: () => void session.setIgnoreBroadMentions(id, !session.store.ignoredMentions[id]).catch(() => toasts.show(m.notify.failed)),
+      },
+    ],
   };
 }
 

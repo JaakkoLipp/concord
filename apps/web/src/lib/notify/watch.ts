@@ -9,12 +9,15 @@ import { resolve } from '$app/paths';
 import { memberKey, mentionsYou, shouldNotify, type Message, type Session } from '@concord/domain';
 import { avatarUrl } from '$lib/view/users.ts';
 import { notificationBody, notificationTitle } from './text.ts';
-import { notifyPrefs } from './prefs.svelte.ts';
+import { SOUND_PREFS_KEY, notifyPrefs, soundPrefs } from './prefs.svelte.ts';
+import { playMessageSound } from '$lib/voice/sounds.ts';
 
 const LOCK = 'concord:notify';
 const FOCUS_KEY = 'concord:focus';
 const SHARE_EVERY_MS = 30_000;
 const FOCUS_FRESH_MS = 60_000;
+/** A burst of messages makes one sound. */
+const SOUND_GAP_MS = 1_000;
 
 /** The channel this tab shows, from its address. */
 function shownChannel(): string | null {
@@ -55,10 +58,12 @@ export function watchNotifications(session: Session): () => void {
     }
   };
 
+  let lastSound = 0;
   const show = (message: Message) => {
     const store = session.store;
     const self = store.self;
-    if (!leader || !notifyPrefs.active || !self) return;
+    // The leader tab alone, for sounds as for notifications, so one browser makes one sound.
+    if (!leader || !self || (!notifyPrefs.active && !soundPrefs.on)) return;
     const c = store.channels.get(message.channel);
     if (!c || c.kind === 'saved') return;
     const server = c.kind === 'text' ? c.server : undefined;
@@ -71,8 +76,15 @@ export function watchNotifications(session: Session): () => void {
       muted: store.notificationsMuted(message.channel),
       blocked: store.users.get(message.author)?.relationship === 'Blocked',
       focusedChannel: focusedChannel(),
+      ignoreBroad: !!server && !!store.ignoredMentions[server],
     });
     if (!ok) return;
+    const mention = mentionsYou(message, self.id, roles, !!server && !!store.ignoredMentions[server]);
+    if (soundPrefs.on && Date.now() - lastSound > SOUND_GAP_MS) {
+      lastSound = Date.now();
+      playMessageSound(mention ? 'mention' : 'message', soundPrefs.volume);
+    }
+    if (!notifyPrefs.active) return;
     const author = store.users.get(message.author);
     let n: Notification;
     try {
@@ -81,7 +93,7 @@ export function watchNotifications(session: Session): () => void {
         icon: new URL(avatarUrl(author ?? { id: message.author }), location.origin).href,
         // One per channel, so a burst shows as one; a mention still alerts when it replaces another.
         tag: message.channel,
-        renotify: mentionsYou(message, self.id, roles),
+        renotify: mention,
         data: { channel: message.channel, message: message.id },
       } as NotificationOptions);
     } catch {
@@ -97,7 +109,10 @@ export function watchNotifications(session: Session): () => void {
     };
   };
 
-  const onStorage = (e: StorageEvent) => { if (e.key === 'concord:notifications') notifyPrefs.refresh(); };
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === 'concord:notifications') notifyPrefs.refresh();
+    if (e.key === SOUND_PREFS_KEY) soundPrefs.refresh();
+  };
   const timer = setInterval(share, SHARE_EVERY_MS);
   const events = ['focus', 'blur', 'popstate'] as const;
   for (const e of events) window.addEventListener(e, share);

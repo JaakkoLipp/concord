@@ -1,7 +1,8 @@
 /** The notification rule and the settings round trip (m2c-plan.md task 8). */
 import { describe, expect, it } from 'vitest';
 import type { Message } from './entities.ts';
-import { Flags, muteActive, nextMuteEnd, parseNotifications, ringAlerts, shouldNotify, writeNotifications, type NotifyContext } from './notify.ts';
+import { Flags, muteActive, nextMuteEnd, parseIgnoredMentions, parseNotifications, ringAlerts, shouldNotify, writeIgnoredMentions, writeNotifications, type NotifyContext } from './notify.ts';
+import { Store } from './store/store.svelte.ts';
 
 const msg = (over: Partial<Message> = {}): Message => ({
   id: 'm', channel: 'c', author: 'tuuli', content: 'moi', attachments: [], embeds: [], mentions: [], roleMentions: [], replies: [], reactions: {}, pinned: false, ...over,
@@ -86,5 +87,42 @@ describe('ringAlerts', () => {
     expect(ringAlerts({ presence: 'Online', level: 'all', muted: true })).toBe(false);
     expect(ringAlerts({ presence: 'Online', level: 'none', muted: false })).toBe(false);
     expect(ringAlerts({ presence: 'Busy', level: 'all', muted: false })).toBe(false);
+  });
+});
+
+describe('ignoring @everyone and role mentions (M4.8 task 11)', () => {
+  it('lets only a mention of you count as one', () => {
+    const ignoring = ctx({ level: 'mention', ignoreBroad: true });
+    expect(shouldNotify(msg({ flags: Flags.MentionsEveryone }), ignoring)).toBe(false);
+    expect(shouldNotify(msg({ flags: Flags.MentionsOnline }), ignoring)).toBe(false);
+    expect(shouldNotify(msg({ roleMentions: ['pelaajat'] }), ignoring)).toBe(false);
+    expect(shouldNotify(msg({ mentions: ['dev'], flags: Flags.MentionsEveryone }), ignoring)).toBe(true);
+    // At the level "all" such a message still notifies, as a message.
+    expect(shouldNotify(msg({ flags: Flags.MentionsEveryone }), ctx({ ignoreBroad: true }))).toBe(true);
+    // In Focus, it is no longer a mention.
+    expect(shouldNotify(msg({ flags: Flags.MentionsEveryone }), ctx({ presence: 'Focus', ignoreBroad: true }))).toBe(false);
+  });
+
+  it('reads and writes the setting, dropping anything but true', () => {
+    expect(parseIgnoredMentions(writeIgnoredMentions({ s1: true }))).toEqual({ s1: true });
+    expect(parseIgnoredMentions(JSON.stringify({ ignore: { s1: true, s2: false, s3: 'yes' } }))).toEqual({ s1: true });
+    expect(parseIgnoredMentions('nope')).toEqual({});
+    expect(parseIgnoredMentions(JSON.stringify({ ignore: [true] }))).toEqual({});
+  });
+
+  it('decides what counts for badges and the inbox', () => {
+    const store = new Store();
+    store.self = { id: 'dev', username: 'dev', discriminator: '0001', badges: 0, flags: 0, online: true, relationship: 'User' };
+    store.channels.set('c', { kind: 'text', id: 'c', server: 's', name: 'yleinen' } as never);
+    store.members.set('s:dev', { server: 's', user: 'dev', roles: ['pelaajat'] } as never);
+    const everyone = msg({ flags: Flags.MentionsEveryone });
+    const role = msg({ roleMentions: ['pelaajat'] });
+    expect(store.mentionsSelf(everyone)).toBe(true);
+    expect(store.mentionsSelf(role)).toBe(true);
+    expect(store.mentionsSelf(msg())).toBe(false);
+    store.ignoredMentions = { s: true };
+    expect(store.mentionsSelf(everyone)).toBe(false);
+    expect(store.mentionsSelf(role)).toBe(false);
+    expect(store.mentionsSelf(msg({ mentions: ['dev'] }))).toBe(true);
   });
 });

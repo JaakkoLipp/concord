@@ -4,7 +4,7 @@
  * Entries are replaced, never mutated, so a component reading one key re-renders only when that key changes.
  */
 import type { Folder } from '../folders.ts';
-import { emptyNotifications, muteActive, type NotificationLevel, type NotificationSettings } from '../notify.ts';
+import { emptyNotifications, mentionsYou, muteActive, type NotificationLevel, type NotificationSettings } from '../notify.ts';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { ConnectionState, DomainEvent } from '../backend.ts';
 import type { Channel, Emoji, Id, Member, Message, NodeInfo, Presence, Profile, Relationship, Ring, Server, Unread, User, VoiceState } from '../entities.ts';
@@ -107,6 +107,8 @@ export class Store {
   chosenStatus = $state<Presence | null>(null);
   /** Server folders on the rail, from `concord:folders` (M4.8 task 10b), as stored: folders.ts reads them against the servers. */
   folders = $state<Folder[]>([]);
+  /** Servers whose @everyone and role mentions this account ignores, from `concord:mentions` (M4.8 task 11). */
+  ignoredMentions = $state<Record<Id, boolean>>({});
 
   readonly users = new SvelteMap<Id, User>();
   readonly servers = new SvelteMap<Id, Server>();
@@ -596,17 +598,19 @@ export class Store {
   }
 
   /** Mentions as Stoat counts them: direct, by role, and every message in a DM or group. */
+  /**
+   * Whether a message counts as a mention of this account, for badges and the inbox: anything in a DM or group, a
+   * mention of you, and in a server one of your roles, `@everyone` or `@online`, unless the server ignores those.
+   */
   mentionsSelf(m: Message): boolean {
     const self = this.selfId;
     if (!self) return false;
     const c = this.channels.get(m.channel);
     if (c?.kind === 'dm' || c?.kind === 'group') return true;
     if (m.mentions.includes(self)) return true;
-    if (c?.kind === 'text' && m.roleMentions.length) {
-      const roles = this.members.get(memberKey(c.server, self))?.roles ?? [];
-      if (m.roleMentions.some((r) => roles.includes(r))) return true;
-    }
-    return false;
+    if (c?.kind !== 'text' || this.ignoredMentions[c.server]) return false;
+    const roles = this.members.get(memberKey(c.server, self))?.roles ?? [];
+    return mentionsYou(m, self, roles);
   }
 
   // ---------- reads ----------
@@ -763,5 +767,6 @@ export class Store {
     this.closedDms = {};
     this.chosenStatus = null;
     this.folders = [];
+    this.ignoredMentions = {};
   }
 }

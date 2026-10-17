@@ -888,6 +888,13 @@ export const en = {
     markRead: 'Mark as read',
     markReadFailed: "Couldn't mark the server as read.",
     failed: 'Couldn’t save the notification settings.',
+    sounds: 'Message sounds',
+    soundsHelp: 'For this browser only. A sound for each message that would notify you, and a brighter one for mentions, even with desktop notifications off.',
+    soundsVolume: 'Message sound volume',
+    percent: (n: number) => `${n}%`,
+    ignoreBroad: 'Ignore @everyone and role mentions',
+    ignoreBroadHelp: 'They won’t notify you, make a sound or count as mentions here. Mentions counted before you turned this on stay until the channel is read, and after a reload Concord can’t tell them apart.',
+    ignoreBroadSettings: 'To ignore @everyone and role mentions in a server, use Notification settings in its menu. They then won’t notify you, make a sound or count as mentions. Mentions counted before that stay until the channel is read, and after a reload Concord can’t tell them apart.',
   },
   moderation: {
     noRoles: 'No roles',
