@@ -175,7 +175,7 @@ export const en = {
       short: 'Use at least 8 characters.',
       compromised: 'That password has appeared in a data breach. Choose another one.',
       email: 'Use the email address the invitation was sent to.',
-      invalid: 'This invitation link is invalid, has expired or was already used. Ask for a new one.',
+      invalid: 'This invitation link is invalid, has expired or was already used, or the email isn’t the one it was made for. Check the address, or ask for a new link.',
       exists: 'An account with this email already exists. Log in instead.',
       rate: 'Too many attempts. Wait a minute and try again.',
       network: 'Can’t reach the server. Check your connection.',
