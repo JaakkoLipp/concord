@@ -1,14 +1,15 @@
 <script lang="ts">
   /**
-   * Closed-beta invitations (admins and moderators), from the DM sidebar under Mentions: create an invitation
-   * for a friend's email and copy the link that creates their account. Admins and moderators are approved at
-   * once; admins also see every invitation and review requests that came in from other accounts.
+   * Closed-beta invitations, from the DM sidebar under Mentions. `invite` (everyone): ask for an invitation for a
+   * friend's email and copy the link that creates their account; a member's request waits for an admin, while
+   * admins' and moderators' are approved at once. `review` (admins): every request, to approve or decline.
    */
   import { Button, IconButton, TextField } from '@concord/ui';
   import type { BetaInvitation } from '@concord/domain';
   import { BackendError } from '@concord/domain/errors';
   import MailPlus from '@lucide/svelte/icons/mail-plus';
   import MenuIcon from '@lucide/svelte/icons/menu';
+  import ShieldCheck from '@lucide/svelte/icons/shield-check';
   import { resolve } from '$app/paths';
   import { m } from '$lib/i18n/index.ts';
   import { app } from '$lib/session/app.svelte.ts';
@@ -16,9 +17,12 @@
   import { shortDate } from '$lib/markdown/time.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
 
+  let { mode }: { mode: 'invite' | 'review' } = $props();
+  const review = $derived(mode === 'review');
   const gate = $derived(app.layerMe?.gates);
   const admin = $derived(gate?.admin === true);
-  const allowed = $derived(gate?.admin === true || gate?.serverCreator === true);
+  const privileged = $derived(gate?.admin === true || gate?.serverCreator === true);
+  const refused = $derived(review && !!app.layerMe && !admin);
   let rows = $state<BetaInvitation[] | null>(null);
   let loadFailed = $state(false);
   let email = $state('');
@@ -27,12 +31,13 @@
 
   const pending = $derived((rows ?? []).filter((r) => r.status === 'pending'));
   const rest = $derived((rows ?? []).filter((r) => r.status !== 'pending'));
+  const title = $derived(review ? m.beta.adminTitle : m.beta.title);
 
   async function load(): Promise<void> {
     const layer = app.layer;
     if (!layer) return;
     try {
-      rows = await layer.betaInvitations(admin);
+      rows = await layer.betaInvitations(review);
       loadFailed = false;
     } catch {
       loadFailed = true;
@@ -40,7 +45,7 @@
   }
 
   $effect(() => {
-    if (allowed) void load();
+    if (!review || admin) void load();
   });
 
   const link = (token: string) => `${location.origin}${resolve('/(app)/app/beta/[token]', { token })}`;
@@ -88,14 +93,14 @@
         toasts.show(m.beta.pendingCreated, 'info');
       }
       await load();
-    } catch (e) {
-      toasts.show(reason(e));
+    } catch (err) {
+      toasts.show(reason(err));
     } finally {
       busy = false;
     }
   }
 
-  async function review(id: string, action: 'approve' | 'decline'): Promise<void> {
+  async function decide(id: string, action: 'approve' | 'decline'): Promise<void> {
     const layer = app.layer;
     if (!layer || working) return;
     working = id;
@@ -120,9 +125,9 @@
       </span>
     </span>
     <span class="actions">
-      {#if row.status === 'pending' && admin}
-        <Button size="sm" variant="secondary" busy={working === row.id} onclick={() => void review(row.id, 'approve')}>{m.beta.approve}</Button>
-        <Button size="sm" variant="ghost" disabled={working === row.id} onclick={() => void review(row.id, 'decline')}>{m.beta.decline}</Button>
+      {#if row.status === 'pending' && review}
+        <Button size="sm" variant="secondary" busy={working === row.id} onclick={() => void decide(row.id, 'approve')}>{m.beta.approve}</Button>
+        <Button size="sm" variant="ghost" disabled={working === row.id} onclick={() => void decide(row.id, 'decline')}>{m.beta.decline}</Button>
       {:else if row.status === 'approved'}
         <Button size="sm" variant="secondary" onclick={() => void copy(row.id)}>{m.beta.copy}</Button>
       {/if}
@@ -132,44 +137,53 @@
 
 <header class="header">
   <span class="narrow-only"><IconButton label={m.shell.openSidebar} onclick={() => (shell.sidebarOpen = true)}><MenuIcon /></IconButton></span>
-  <span class="icon" aria-hidden="true"><MailPlus size={22} /></span>
-  <h1>{m.beta.title}</h1>
+  <span class="icon" aria-hidden="true">{#if review}<ShieldCheck size={22} />{:else}<MailPlus size={22} />{/if}</span>
+  <h1>{title}</h1>
 </header>
 
 <div class="body">
   <div class="content">
     {#if !app.layer}
       <p class="empty">{m.beta.loadFailed}</p>
-    {:else if app.layerMe && !allowed}
+    {:else if refused}
       <p class="empty">{m.beta.notAllowed}</p>
     {:else}
-      <section class="new" aria-labelledby="beta-new">
-        <h2 id="beta-new">{m.beta.newTitle}</h2>
-        <p class="help">{m.beta.help}</p>
-        <form onsubmit={create}>
-          <TextField label={m.beta.email} hideLabel type="email" name="email" autocomplete="off" placeholder={m.beta.emailPlaceholder} bind:value={email} disabled={busy}>
-            {#snippet trailing()}
-              <Button type="submit" size="sm" busy={busy} disabled={!email.trim()}>{m.beta.create}</Button>
-            {/snippet}
-          </TextField>
-        </form>
-      </section>
+      {#if review}
+        <p class="help">{m.beta.adminHelp}</p>
+      {:else}
+        <section class="new" aria-labelledby="beta-new">
+          <h2 id="beta-new">{m.beta.newTitle}</h2>
+          <p class="help">{privileged ? m.beta.help : m.beta.helpMember}</p>
+          <form onsubmit={create}>
+            <TextField label={m.beta.email} hideLabel type="email" name="email" autocomplete="off" placeholder={m.beta.emailPlaceholder} bind:value={email} disabled={busy}>
+              {#snippet trailing()}
+                <Button type="submit" size="sm" busy={busy} disabled={!email.trim()}>{m.beta.create}</Button>
+              {/snippet}
+            </TextField>
+          </form>
+        </section>
+      {/if}
 
       {#if loadFailed}
         <p class="empty">{m.beta.loadFailed}</p>
       {:else if rows === null}
         <p class="empty" aria-live="polite">{m.app.loading}</p>
-      {:else if !rows.length}
-        <p class="empty">{m.beta.empty}</p>
-      {:else}
-        {#if admin && pending.length}
-          <h2 class="heading" id="beta-review">{m.beta.review}</h2>
+      {:else if review}
+        <h2 class="heading" id="beta-review">{m.beta.review}</h2>
+        {#if pending.length}
           <ul aria-labelledby="beta-review">{#each pending as row (row.id)}{@render invitation(row)}{/each}</ul>
+        {:else}
+          <p class="none">{m.beta.reviewEmpty}</p>
         {/if}
         {#if rest.length}
           <h2 class="heading" id="beta-all">{m.beta.all}</h2>
           <ul aria-labelledby="beta-all">{#each rest as row (row.id)}{@render invitation(row)}{/each}</ul>
         {/if}
+      {:else if !rows.length}
+        <p class="empty">{m.beta.empty}</p>
+      {:else}
+        <h2 class="heading" id="beta-mine">{m.beta.mine}</h2>
+        <ul aria-labelledby="beta-mine">{#each rows as row (row.id)}{@render invitation(row)}{/each}</ul>
       {/if}
     {/if}
   </div>
@@ -187,6 +201,7 @@
   .new h2 { margin: 0 0 var(--space-2); color: var(--text-strong); font: 700 var(--text-lg) var(--font-sans); }
   .help { margin: 0 0 var(--space-4); color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
   .heading { margin: var(--space-8) 0 var(--space-3); color: var(--text-secondary); font: 500 var(--text-xs) var(--font-sans); letter-spacing: 0.02em; text-transform: uppercase; }
+  .none { margin: 0; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
   ul { margin: 0; padding: 0; list-style: none; }
   .row { display: flex; align-items: center; gap: var(--space-4); min-height: 3.75rem; padding: 0 var(--space-3); border-top: 1px solid var(--border-subtle); border-radius: var(--radius-md); }
   .row:hover { background: var(--hover-overlay); border-top-color: transparent; }

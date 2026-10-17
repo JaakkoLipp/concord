@@ -1,7 +1,7 @@
 <script lang="ts">
-  /** Beta invitations for admins and moderators, from the DM sidebar under Mentions. */
+  /** Ask for a beta invitation, from the DM sidebar under Mentions: everyone, with approval for members. */
   import Invitations from '$lib/beta/Invitations.svelte';
   import { app } from '$lib/session/app.svelte.ts';
 </script>
 
-{#if app.session}<Invitations />{/if}
+{#if app.session}<Invitations mode="invite" />{/if}

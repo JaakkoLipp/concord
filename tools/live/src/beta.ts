@@ -4,9 +4,10 @@
  * - a moderator's (dev-admin) own invitation is approved at once, a week out, and the link rotates,
  * - redeem refuses a wrong email and a short password, creates the account once, and burns the link,
  * - reviewing a row that already moved on is refused,
- * - in the client, dev-admin sees Beta invitations under Mentions, creates one and copies its link;
- *   `dev` doesn't see the row; the copied link opens signed out and creates the account.
- * The throwaway addresses and their accounts stay on the local stack; nothing is touched beyond that.
+ * - in the client, `dev` (a plain member) asks under Invite to beta and waits, dev-admin approves it in
+ *   Administration, `dev` copies the link, and the link opens signed out and creates the account.
+ * Each run spends 2 of dev's 10 invitation requests a day. The throwaway addresses and their accounts stay on
+ * the local stack; nothing is touched beyond that.
  * `node tools/live/src/beta.ts [screenshot-dir]`
  */
 import { join } from 'node:path';
@@ -98,27 +99,38 @@ try {
   const owner = await json<{ invitations: Invitation[] }>(await layer(admin!.token, 'GET', '/beta/invitations?review=true'));
   check(owner.invitations.find((i) => i.id === direct.id)?.status === 'used', 'the invitation reads used', owner.invitations.find((i) => i.id === direct.id)?.status ?? '');
 
-  // 5. The client: dev-admin’s row under Mentions, creating, copying; dev has no row.
-  const a = await open('dev-admin', '/channels/@me');
-  const row = a.page.getByRole('link', { name: 'Beta invitations' });
-  check(await shows(row.waitFor({ timeout: 10_000 })), 'dev-admin sees Beta invitations under Mentions');
-  await row.click();
-  check(await shows(a.page.getByRole('heading', { name: 'Beta invitations' }).waitFor({ timeout: 8_000 })), 'it opens the invitations view in place of the DMs');
-  const uiAddress = address('from-ui');
-  await a.page.getByLabel('Email address').fill(uiAddress);
-  await a.page.getByRole('button', { name: 'Create invitation' }).click();
-  check(await shows(a.page.getByText(/Invitation created/).waitFor({ timeout: 8_000 })), 'creating one copies its link');
-  const uiRow = a.page.locator('li', { hasText: uiAddress });
-  check(await shows(uiRow.getByText('Approved').waitFor({ timeout: 8_000 })), 'the invitation is approved at once and listed');
-  await uiRow.getByRole('button', { name: 'Copy link' }).click();
-  check(await shows(a.page.getByText('Invitation link copied.').waitFor({ timeout: 8_000 })), 'Copy link mints a fresh one');
-  const link = await a.page.evaluate(() => navigator.clipboard.readText());
-  check(/\/app\/beta\/[A-Za-z0-9_-]{43}$/.test(link), 'the clipboard holds the invite link', link);
-  if (out) await a.page.screenshot({ path: join(out, 'beta-invitations.png') });
-
+  // 5. The client. dev, a plain member, asks for an invitation and waits; dev-admin approves it under Administration.
   const d = await open('dev', '/channels/@me');
-  check((await d.page.getByRole('link', { name: 'Beta invitations' }).count()) === 0, 'dev sees no invitations row');
+  const inviteRow = d.page.getByRole('link', { name: 'Invite to beta' });
+  check(await shows(inviteRow.waitFor({ timeout: 10_000 })), 'a plain member sees Invite to beta under Mentions');
+  check((await d.page.getByRole('link', { name: 'Administration' }).count()) === 0, 'and no Administration row');
+  await inviteRow.click();
+  check(await shows(d.page.getByRole('heading', { name: 'Invite to the beta' }).waitFor({ timeout: 8_000 })), 'it opens the invite view in place of the DMs');
+  const uiAddress = address('from-ui');
+  await d.page.getByLabel('Email address').fill(uiAddress);
+  await d.page.getByRole('button', { name: 'Create invitation' }).click();
+  check(await shows(d.page.getByText(/Request sent/).waitFor({ timeout: 8_000 })), 'the member’s request is sent for approval');
+  const memberRow = d.page.locator('li', { hasText: uiAddress });
+  check(await shows(memberRow.getByText('Awaiting review').waitFor({ timeout: 8_000 })) && (await memberRow.getByRole('button', { name: 'Copy link' }).count()) === 0, 'it waits, with no link yet');
+
+  const a = await open('dev-admin', '/channels/@me');
+  check((await a.page.getByRole('link', { name: 'Invite to beta' }).count()) === 1, 'dev-admin sees Invite to beta too');
+  await a.page.getByRole('link', { name: 'Administration' }).click();
+  check(await shows(a.page.getByRole('heading', { name: 'Administration' }).waitFor({ timeout: 8_000 })), 'dev-admin opens Administration');
+  const queued = a.page.locator('li', { hasText: uiAddress });
+  await queued.getByRole('button', { name: 'Approve' }).click();
+  check(await shows(queued.getByText('Approved').waitFor({ timeout: 8_000 })), 'the admin approves the request');
+  if (out) await a.page.screenshot({ path: join(out, 'beta-administration.png') });
+
+  await d.page.reload({ waitUntil: 'networkidle' });
+  const approvedRow = d.page.locator('li', { hasText: uiAddress });
+  await approvedRow.getByRole('button', { name: 'Copy link' }).click();
+  check(await shows(d.page.getByText('Invitation link copied.').waitFor({ timeout: 8_000 })), 'the member can now copy the link');
+  const link = await d.page.evaluate(() => navigator.clipboard.readText());
+  check(/\/app\/beta\/[A-Za-z0-9_-]{43}$/.test(link), 'the clipboard holds the invite link', link);
+  if (out) await d.page.screenshot({ path: join(out, 'beta-invitations.png') });
   await d.page.context().close();
+  await a.page.context().close();
 
   // 6. The link opens signed out and creates the account through the page.
   const anonContext = await browser.newContext({ viewport: { width: 1400, height: 900 } });
