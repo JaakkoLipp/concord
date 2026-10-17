@@ -56,6 +56,7 @@
   const channelHref = (channel: string) => resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server, channel });
   /** A voice channel with its chat beside the call, without joining it. */
   async function openChat(channel: string) {
+    // eslint-disable-next-line svelte/no-navigation-without-resolve -- channelHref() resolves
     await goto(channelHref(channel));
     shell.voiceChat = true;
   }
