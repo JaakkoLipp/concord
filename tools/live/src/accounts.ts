@@ -19,7 +19,8 @@ import { randomUUID } from 'node:crypto';
 import { loadState } from '../../seed/src/config.ts';
 import { api } from '../../seed/src/http.ts';
 import { login, makeAccount, passwordFor } from '../../seed/src/seed.ts';
-import { APP } from './browser.ts';
+import { APP, launch, watch } from './browser.ts';
+import { signIn } from './login.ts';
 import { person, until } from './people.ts';
 
 const st = loadState()!;
@@ -78,6 +79,7 @@ async function ask(token: string, action: string, user: string): Promise<Answer>
 }
 const creators = async () => ((await (await fetch(`${origin}/api/`)).json()) as { features: { limits: { global: { restrict_server_creation: string[] } } } }).features.limits.global.restrict_server_creation;
 const gates = async (token: string) => ((await (await layer(token, 'GET', '/me')).json()) as { gates: { admin: boolean; serverCreator: boolean } }).gates;
+const browser = await launch();
 const stoatLogin = (pw: string) => login(email, pw).then(() => 'ok', (e: Error) => e.message);
 
 try {
@@ -173,10 +175,38 @@ try {
   writeFileSync(join(spool, 'in', 'notes.txt'), 'hello');
   await until(async () => readdirSync(join(spool, 'in')).length === junk, 10_000).catch(() => {});
   check(readdirSync(join(spool, 'in')).length === junk, 'a stray file in the folder is deleted');
+
+  // 7. The client: Administration → Users.
+  const page = await (await browser.newContext({ viewport: { width: 1400, height: 900 }, permissions: ['clipboard-read', 'clipboard-write'] })).newPage();
+  const problems = watch(page);
+  await signIn(page, 'dev-admin');
+  await page.goto(`${APP}/channels/@me/administration`, { waitUntil: 'networkidle' });
+  await page.getByLabel('Search people').fill(handle);
+  const personRow = page.locator('li', { hasText: handle });
+  check(await personRow.waitFor({ timeout: 10_000 }).then(() => true, () => false), 'Administration lists the person, searchable');
+  const menuOf = async (item: string) => {
+    await personRow.getByRole('button', { name: `Actions for ${handle}` }).click();
+    await page.getByRole('menuitem', { name: item, exact: true }).click();
+  };
+  await menuOf('Make moderator');
+  check(await personRow.getByText('Moderator').waitFor({ timeout: 20_000 }).then(() => true, () => false), 'Make moderator shows their Moderator badge');
+  await menuOf('Remove moderator');
+  check(await personRow.getByText('Moderator').waitFor({ state: 'detached', timeout: 20_000 }).then(() => true, () => false), 'Remove moderator takes it away');
+  await menuOf('Password link…');
+  const dialog = page.getByRole('dialog', { name: `Password link for ${handle}` });
+  check(await dialog.waitFor({ timeout: 20_000 }).then(() => true, () => false) && /\/app\/welcome\/[A-Za-z0-9_-]{32}$/.test(await dialog.locator('input').inputValue()), 'Password link shows a welcome link in a dialog');
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await menuOf('Suspend…');
+  await page.getByRole('dialog').getByRole('button', { name: 'Suspend', exact: true }).click();
+  check(await personRow.getByText('Suspended').waitFor({ timeout: 20_000 }).then(() => true, () => false), 'Suspend asks first, then shows Suspended');
+  await menuOf('Unsuspend');
+  check(await personRow.getByText('Suspended').waitFor({ state: 'detached', timeout: 20_000 }).then(() => true, () => false), 'Unsuspend lifts it');
+  check(problems.failed.filter((f) => !/\b(401|404)\b/.test(f)).length === 0, 'no failed requests', problems.failed.join(', '));
 } catch (e) {
   failed++;
   console.log(`FAIL ${String(e).split('\n')[0]}`);
 } finally {
+  await browser.close();
   // As found: not a moderator, not an admin, not suspended.
   for (const action of ['unsuspend', 'moderator:remove', 'admin:remove']) await ask(owner!.token, action, targetId).catch(() => {});
 }

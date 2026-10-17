@@ -1,0 +1,59 @@
+<script lang="ts">
+  /**
+   * The admins' view, from the DM sidebar under Mentions: the platform's people with their roles and account
+   * actions, and the requests members have made for beta invitations and server invites.
+   */
+  import { IconButton, Tabs } from '@concord/ui';
+  import MenuIcon from '@lucide/svelte/icons/menu';
+  import ShieldCheck from '@lucide/svelte/icons/shield-check';
+  import { m } from '$lib/i18n/index.ts';
+  import { app } from '$lib/session/app.svelte.ts';
+  import { shell } from '$lib/view/shell.svelte.ts';
+  import Invitations from './Invitations.svelte';
+  import Users from './Users.svelte';
+
+  let tab = $state<'users' | 'requests'>('users');
+  const refused = $derived(!!app.layerMe && !app.layerMe.gates.admin);
+</script>
+
+<header class="header">
+  <span class="narrow-only"><IconButton label={m.shell.openSidebar} onclick={() => (shell.sidebarOpen = true)}><MenuIcon /></IconButton></span>
+  <span class="icon" aria-hidden="true"><ShieldCheck size={22} /></span>
+  <h1>{m.beta.adminTitle}</h1>
+  <span class="divider" aria-hidden="true"></span>
+  <Tabs label={m.accounts.tabs.label} selected={tab} onselect={(id) => (tab = id as 'users' | 'requests')} tabs={[
+    { id: 'users', label: m.accounts.tabs.users },
+    { id: 'requests', label: m.accounts.tabs.requests },
+  ]} />
+</header>
+
+<div class="body">
+  <div class="content">
+    {#if refused}
+      <p class="empty">{m.beta.notAllowed}</p>
+    {:else if tab === 'users'}
+      <Users />
+    {:else}
+      <Invitations mode="review" embedded />
+    {/if}
+  </div>
+</div>
+
+<style>
+  .header {
+    display: flex; align-items: center; gap: var(--space-4); min-height: var(--header-h); padding: 0 var(--space-4) 0 var(--space-5);
+    border-bottom: 1px solid var(--border-subtle); min-width: 0; overflow-x: auto; scrollbar-width: none;
+  }
+  .icon { display: grid; color: var(--text-muted); flex: none; }
+  h1 { margin: 0; color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); flex: none; }
+  .divider { width: 1px; height: 1.5rem; background: var(--border-default); flex: none; }
+  .body { flex: 1; min-height: 0; overflow-y: auto; padding: var(--space-5) var(--space-6); }
+  .content { max-width: 46rem; }
+  .empty { margin: var(--space-10) 0; text-align: center; color: var(--text-secondary); }
+  .narrow-only { display: none; }
+  @media (max-width: 700px) {
+    .narrow-only { display: contents; }
+    .divider, .icon { display: none; }
+    .body { padding: var(--space-4); }
+  }
+</style>

@@ -117,6 +117,7 @@ try {
   check((await a.page.getByRole('link', { name: 'Invite to beta' }).count()) === 1, 'dev-admin sees Invite to beta too');
   await a.page.getByRole('link', { name: 'Administration' }).click();
   check(await shows(a.page.getByRole('heading', { name: 'Administration' }).waitFor({ timeout: 8_000 })), 'dev-admin opens Administration');
+  await a.page.getByRole('tab', { name: 'Requests' }).click();
   const queued = a.page.locator('li', { hasText: uiAddress });
   await queued.getByRole('button', { name: 'Approve' }).click();
   check(await shows(queued.getByText('Approved').waitFor({ timeout: 8_000 })), 'the admin approves the request');

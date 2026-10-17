@@ -18,7 +18,7 @@
   import { toasts } from '$lib/view/toast.svelte.ts';
   import ServerInvites from './ServerInvites.svelte';
 
-  let { mode }: { mode: 'invite' | 'review' } = $props();
+  let { mode, embedded = false }: { mode: 'invite' | 'review'; embedded?: boolean } = $props();
   const review = $derived(mode === 'review');
   const gate = $derived(app.layerMe?.gates);
   const admin = $derived(gate?.admin === true);
@@ -136,13 +136,15 @@
   </li>
 {/snippet}
 
-<header class="header">
-  <span class="narrow-only"><IconButton label={m.shell.openSidebar} onclick={() => (shell.sidebarOpen = true)}><MenuIcon /></IconButton></span>
-  <span class="icon" aria-hidden="true">{#if review}<ShieldCheck size={22} />{:else}<MailPlus size={22} />{/if}</span>
-  <h1>{title}</h1>
-</header>
+{#if !embedded}
+  <header class="header">
+    <span class="narrow-only"><IconButton label={m.shell.openSidebar} onclick={() => (shell.sidebarOpen = true)}><MenuIcon /></IconButton></span>
+    <span class="icon" aria-hidden="true">{#if review}<ShieldCheck size={22} />{:else}<MailPlus size={22} />{/if}</span>
+    <h1>{title}</h1>
+  </header>
+{/if}
 
-<div class="body">
+<div class:body={!embedded}>
   <div class="content">
     {#if !app.layer}
       <p class="empty">{m.beta.loadFailed}</p>

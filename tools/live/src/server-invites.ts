@@ -89,6 +89,7 @@ try {
   check(await shows(waiting.getByText('Awaiting review').waitFor({ timeout: 8_000 })) && (await waiting.getByRole('button', { name: 'Copy invite link' }).count()) === 0, 'it waits, with no link');
 
   const a = await open('dev-admin', '/channels/@me/administration');
+  await a.page.getByRole('tab', { name: 'Requests' }).click();
   const queued = a.page.locator('li', { hasText: `ui ${note}` });
   check(await shows(queued.waitFor({ timeout: 8_000 })), 'the admin sees it under Administration');
   if (out) await a.page.screenshot({ path: join(out, 'server-invites-administration.png') });

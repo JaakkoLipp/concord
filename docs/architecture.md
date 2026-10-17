@@ -375,6 +375,7 @@ That is why the layer stays small and reviewed, holds no Stoat data, and never m
 | GIF search, keeping the GIPHY key on the server | M4.5 |
 | Closed-beta invitations: `POST /beta/redeem` is its only public endpoint; requests, review and links are behind the session check | M4.8 (early) |
 | Server invites on request: `/server-invites`, member requests, admin approval, no call to Stoat | M4.8 (early) |
+| The admin view's people and roles: `/admin/users` and `/admin/actions`, through the account runner (section 11.5) | M4.8 (early) |
 | The admin panel | Its own plan, moved onto this layer: `/app/api/v1/admin/*`, 404 for anyone not on the admin list, with the session check and gate from M4.4. Jaakko's direction, 2026-10-15: a view in the web client that does what they do over SSH during the beta, with its scope kept small |
 | Bookmarks and reminders, if missed | Later |
 | Registration, the invite allowlist and the account pages (section 7) | M6 |
@@ -384,5 +385,11 @@ That is why the layer stays small and reviewed, holds no Stoat data, and never m
 
 - **Backups**: `backup.sh` first takes a `VACUUM INTO` copy in `concord/data/`, through `docker exec` and a one-off `node` process in `concord-web`, never an HTTP endpoint. A failure there is logged and flagged but doesn't stop the database dump. restic saves the copy, never the live file, its WAL or its shared memory.
 - **The data folder** is a read-write mount next to the read-only build, writable by the container's user, so a deploy never touches the data.
+- **The account runner** (`deploy/account-runner.py`) is what lets the admin view change accounts and the two global roles. The layer holds no root and no Docker, so it only asks: one small JSON file per request in `concord/spool/in`, the one folder it may write, and the runner on the host answers in `spool/out`, which the container mounts read-only. The runner is a systemd service on the VPS and a background process of the user on the local stack, started by `pnpm deploy:stack`. It checks every request again and trusts nothing but its shape:
+  - **Fixed actions**: add or remove a moderator (Stoat's server-creator list, which restarts `api` for seconds), add or remove an admin (`ADMIN_USER_IDS` in `host.env`, which restarts `concord-web`), a one-time password link (like `account-link.sh --reset`, by user ID, shown once to the admin who asked) and suspend or unsuspend (the account is disabled and its sessions end).
+  - **Rules, enforced in the runner**: only an admin may ask; the first admin in `ADMIN_USER_IDS` is the owner and can't be demoted, suspended or have their password reset by anyone else; nobody removes or suspends themself; an admin can't be suspended, or have their password reset by another admin who isn't the owner; the admin list is never empty.
+  - **Handling files from a container that might be compromised**: requests are opened with `O_NOFOLLOW` and must be small regular files with an exact shape and a UUID name, or they are deleted unread. Nothing from a request reaches a shell; values go to MongoDB as environment variables. Answers go to a folder only the runner writes, so there are no links to plant.
+  - **What a compromised `concord-web` can still do**: ask for any of these actions as an admin, such as making itself an admin or suspending people. It can't touch the owner, take the admin list to empty or run anything else. Every action is logged to the journal under the tag `concord`, with who asked and for whom.
+  - **The user list**: the runner refreshes `spool/out/users.json` every 30 seconds and after each action: ID, name and whether disabled, with no emails. The layer adds the roles and serves it to admins only.
 - **On the local dev stack** it runs the same way, with its own file.
 - **If we ever leave Stoat** (section 10), this layer is the start of our own backend. Its endpoints and storage carry over, and only the session check and permission lookups change.
