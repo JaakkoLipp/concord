@@ -289,18 +289,26 @@ On the local stack, from the repo root in WSL:
 
 ## Appendix: setting up the local stack
 
-Done once on 2026-10-14. Nothing is installed in WSL itself: Docker Desktop's WSL integration, which Jaakko turned on, is the only requirement.
+Done on 2026-10-14, and again on 2026-10-17 on a fresh WSL distro (Ubuntu 26.04). Docker Desktop's WSL integration, turned on for the distro, is the main requirement.
 
-1. **Stoat's files**: clone `stoatchat/self-hosted` at `9af5e90` into a scratch folder and copy `compose.yml` and `Caddyfile` to `~/stoat`. Nothing in the clone is run, including `generate_config.sh`.
-2. **Config**, written by hand as `generate_config.sh` would for `localhost`, with `http://` and `ws://`:
-   - `.env` with `STOAT_DOMAIN=localhost`, `.env.web` with `HOSTNAME=http://localhost`, and `stoat.json`,
-   - `secrets.env` with fresh VAPID, file and LiveKit secrets, the LiveKit key id being `2c2e5918ca20` as in `deploy/livekit.yml`,
-   - `Revolt.toml` with the hosts, both video tiers at 2560 × 1440, Mailpit as SMTP, and the `restrict_server_creation` placeholder. `january` is `http://january:14705`: the API fetches link previews from it inside Docker, where `localhost` is the API's own container. Our client uses the relative `/january` path anyway.
-3. **Our files**: `deploy/` copied to `~/stoat/concord/`, with:
-   - `host.env` holding `MAIN_IPV4=127.0.0.1`, `MAIN_IPV6=::1`, `TURN=off` and `LOCAL=on`,
-   - `livekit.env` holding the same key pair,
-   - an empty `.allow-wipe`.
-4. **Start**: `~/stoat/concord/dc up -d`, then `pnpm deploy:web:dev`, `pnpm deploy:spike:dev` and `pnpm seed --reset`.
+0. **On a fresh distro**:
+   - **Node 26 and pnpm** go in the home folder: the official tarball unpacked to `~/.local/node`, its `bin` on `PATH`, then `corepack enable`.
+   - **The seed and the live checks need three system packages**, which Jaakko installs: `sudo apt install ffmpeg libnss3 libnspr4 libasound2t64`. ffmpeg needs libx264, aac and libvorbis, which Ubuntu's build has. Without the libraries, Playwright's Chromium won't start.
+   - **The `docker` group**: a shell opened before the integration was turned on can't reach the socket. Open a new terminal.
+1. **Stoat's files**: clone `stoatchat/self-hosted` at `9af5e90` into a scratch folder and copy `compose.yml` and `Caddyfile` to `~/stoat`. Nothing in the clone is run, including `generate_config.sh`. Read it for the shapes below.
+2. **Config**, written by hand as `generate_config.sh` would for `localhost`, with `http://` and `ws://`. All files must be readable by the containers (mode 644), whatever the umask:
+   - `.env` with `STOAT_DOMAIN=localhost`,
+   - `.env.web` with `HOSTNAME=http://localhost`, `VITE_HOST=localhost`, `VITE_API_URL=http://localhost/api` and `VITE_DEV_GIFBOX_URL=http://localhost/gifbox`,
+   - `stoat.json` as `{"api":"http://localhost/api"}`,
+   - `secrets.env`: `secrets.env.example` plus `REVOLT__PUSHD__VAPID__PRIVATE_KEY`, `REVOLT__PUSHD__VAPID__PUBLIC_KEY`, `REVOLT__FILES__ENCRYPTION_KEY`, `REVOLT__API__LIVEKIT__NODES__WORLDWIDE__KEY` and `REVOLT__API__LIVEKIT__NODES__WORLDWIDE__SECRET`, all single-quoted. Make the VAPID pair with the generator's openssl commands, the file key with `openssl rand -base64 32`, and the LiveKit secret with `openssl rand -hex 24`. The key id is `2c2e5918ca20`, as in `deploy/livekit.yml`.
+   - `Revolt.toml` with the hosts, `[hosts.livekit] worldwide = "ws://localhost/livekit"`, both video tiers at 2560 × 1440, Mailpit as SMTP, and the `restrict_server_creation` placeholder. `january` is `http://january:14705`: the API fetches link previews from it inside Docker, where `localhost` is the API's own container. Our client uses the relative `/january` path anyway.
+3. **Our files**: `rsync -a --inplace --exclude web/ --exclude spike/ --exclude data/ deploy/ ~/stoat/concord/`. `pnpm deploy:stack` can't be the first step, because it runs `docker compose exec caddy` on a running stack. Add:
+   - `host.env` holding `MAIN_IPV4=127.0.0.1`, `MAIN_IPV6=::1`, `TURN=off`, `LOCAL=on` and an empty `ADMIN_USER_IDS=`,
+   - `livekit.env` holding `LIVEKIT_KEYS="2c2e5918ca20: <secret>"`,
+   - an empty `.allow-wipe`,
+   - the bind-mount folders, made before the first start, or Docker makes them as root and later rsyncs fail: `mkdir -p ~/stoat/concord/web ~/stoat/concord/spike` and `install -d -m 0700 ~/stoat/concord/data`.
+4. **Start**: `~/stoat/concord/dc up -d`, then `pnpm deploy:web:dev`, `pnpm deploy:spike:dev`, `pnpm seed --reset`, `pnpm seed account tuuli` and `pnpm seed account onni`. Then put `dev-admin`'s ID in `host.env`'s `ADMIN_USER_IDS` and run `~/stoat/concord/dc up -d concord-web`.
+5. **Check**: `pnpm seed check`, `node tools/live/src/routes.ts`, `node tools/live/src/layer.ts`, then `voice.ts` a few minutes later. Run straight after the layer check's flood test, it gets 429s on `/me`.
 
 **Docker Desktop quirks**, both handled in `deploy/`:
 - It never passes on the end of a container's stdin, so `create-account.sh` mounts its request body as a file.
