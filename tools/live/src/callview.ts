@@ -87,7 +87,9 @@ try {
   await shot(eetu.page, 'focused');
   await tile(eetu.page, /^Ben Carter/).first().click();
 
-  await eetu.page.getByRole('button', { name: 'Show chat' }).click();
+  // Above 1,360 px the chat opens with the stage (m4.6-plan.md task 12); narrower, it waits to be asked for.
+  const showChat = eetu.page.getByRole('button', { name: 'Show chat' });
+  if (await showChat.count()) await showChat.click();
   await eetu.page.getByRole('region', { name: 'Chat in Olohuone' }).or(eetu.page.getByRole('heading', { name: 'Chat in Olohuone' })).first().waitFor({ timeout: 5_000 });
   await eetu.page.waitForTimeout(800);
   await shot(eetu.page, 'chat');

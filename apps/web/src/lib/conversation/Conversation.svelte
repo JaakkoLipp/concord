@@ -11,7 +11,7 @@
   import Upload from '@lucide/svelte/icons/upload';
   import { attachFiles } from '$lib/composer/files.ts';
   import CallView from '$lib/call/CallView.svelte';
-  import { shell } from '$lib/view/shell.svelte.ts';
+  import { shell, WIDE_STAGE } from '$lib/view/shell.svelte.ts';
 
   let { channel, message }: { channel: string; message?: string | undefined } = $props();
   const session = $derived(app.session!);
@@ -64,6 +64,15 @@
   // A link to a message in a voice channel opens its chat, where the message is.
   $effect(() => {
     if (voice && message) shell.voiceChat = true;
+  });
+  // Entering a voice channel, its chat opens with the stage where there is room beside it, and once closed stays
+  // closed until the next voice channel (m4.6-plan.md decision 11).
+  let chatFor: string | null = null;
+  $effect(() => {
+    if (!voice) { chatFor = null; return; }
+    if (chatFor === channel) return;
+    chatFor = channel;
+    untrack(() => { if (!message) shell.voiceChat = matchMedia(WIDE_STAGE).matches; });
   });
   /** A DM or group shows its call at the top while one runs, or while we're calling (client.md section 10.3). */
   const dmCall = $derived(

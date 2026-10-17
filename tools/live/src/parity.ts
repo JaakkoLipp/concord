@@ -5,13 +5,15 @@ import { assertDevStack } from '../../seed/src/vps.ts';
 import { APP } from './browser.ts';
 import { signIn } from './login.ts';
 import { person } from './people.ts';
+import { fakeMediaArgs } from './media.ts';
 
 await assertDevStack();
 const st = loadState()!;
 const failures: string[] = [];
 function check(ok: boolean, name: string) { console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}`); if (!ok) failures.push(name); }
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, reducedMotion: 'no-preference' });
+// The fake microphone, since opening a voice channel joins its call (task 12).
+const browser = await chromium.launch({ headless: true, args: fakeMediaArgs() });
+const context = await browser.newContext({ viewport: { width: 1600, height: 900 }, reducedMotion: 'no-preference', permissions: ['microphone'] });
 const page = await context.newPage();
 interface Tip { id: string; text: string; opacity: number; side: string | undefined; x: number; y: number; width: number; height: number }
 interface Frame { at: number; tips: Tip[] }
@@ -78,7 +80,7 @@ try {
   const showChat = page.getByRole('button', { name: 'Show chat', exact: true });
   if (await showChat.count()) await showChat.click();
   const chatClose = page.locator('.chat header .icon-button');
-  await tooltip(chatClose, 'bottom', 'Hide chat');
+  await tooltip(chatClose, 'bottom', 'Close');
   await chatClose.click();
 
   // Task 6: the rail pill, 8, 20 and 40 px, growing with a slide in 200 ms and shrinking in 100 ms.
@@ -290,6 +292,47 @@ try {
   await cp.locator('.main .start').waitFor({ timeout: 10_000 });
   check(await cp.locator('.main .loading').count() === 0, 'and none once history is at its start');
   await cold.close();
+
+  // Task 12: the stage and the 456 px side chat in the click's frame, the count in the stage's header, Close
+  // below the chat's X, and the X removing the panel at once.
+  await page.goto(`${APP}/channels/${st.serverId}/${st.channels.botti}`, { waitUntil: 'networkidle' });
+  const voiceRow = page.getByRole('link', { name: /^Olohuone/ });
+  await voiceRow.evaluate((link) => {
+    const w = window as unknown as { __open: { at: number; stage: boolean; chat: number }[]; __clicked: number };
+    w.__open = [];
+    w.__clicked = Infinity;
+    link.addEventListener('click', () => { w.__clicked = performance.now(); }, { once: true });
+    const end = performance.now() + 3_000;
+    const frame = (at: number) => {
+      if (at >= w.__clicked) w.__open.push({ at, stage: !!document.querySelector('.main section.call:not(.compact)'), chat: Math.round(document.querySelector('.side-panel:has(.chat)')?.getBoundingClientRect().width ?? 0) });
+      if (at < end && !w.__open.some((f) => f.stage)) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+  });
+  await voiceRow.click();
+  await page.waitForTimeout(500);
+  const opening = await page.evaluate(() => (window as unknown as { __open: { at: number; stage: boolean; chat: number }[] }).__open);
+  // The click starts a navigation, which renders a frame or two later: the stage and the chat arrive together then.
+  const shown = opening.find((f) => f.stage);
+  check(!!shown && shown.chat === 456 && opening.indexOf(shown) <= 2, `the stage and the 456 px chat arrive in the same frame, ${opening.length - 1} frame(s) after the click (${JSON.stringify(shown)})`);
+  const count = await page.locator('.stage-head .count').innerText().catch(() => '');
+  check(/^\d+$/.test(count.trim()), `the stage's header has the participant count (${count.trim()})`);
+  const stageBox = await page.locator('.main section.call').boundingBox();
+  const mainBox = await page.locator('.main').boundingBox();
+  check(!!stageBox && !!mainBox && stageBox.x - mainBox.x === 8 && await page.locator('.main section.call').evaluate((el) => getComputedStyle(el).borderTopLeftRadius === '8px'),
+    'the stage is rounded and inset 8 px inside the black');
+  const x = page.locator('.side-panel .chat header .icon-button');
+  await x.hover();
+  await page.waitForTimeout(200);
+  const below = page.locator('.concord-tooltip[data-open="true"]');
+  check(await below.getAttribute('data-side') === 'bottom' && (await below.innerText()).trim() === 'Close', '"Close" shows below the X');
+  const gone = await x.evaluate(async (button) => {
+    (button as HTMLButtonElement).click();
+    await new Promise(requestAnimationFrame);
+    return { panel: !!document.querySelector('.side-panel .chat'), moving: document.getAnimations().filter((a) => ((a.effect as KeyframeEffect | null)?.target as Element | null)?.closest?.('.side-panel')).length };
+  });
+  check(!gone.panel && !gone.moving, `the X removes the chat in the next frame, without motion (${JSON.stringify(gone)})`);
+  await page.getByRole('button', { name: 'Disconnect' }).first().click().catch(() => {});
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.getByRole('button', { name: 'User settings', exact: true }).hover();

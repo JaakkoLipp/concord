@@ -53,7 +53,7 @@
 <!-- The one keyboard listener for the registry's shortcuts (shortcuts.ts). Capture phase, so the composer's editor doesn't win. -->
 <!-- Under settings the shell is inert, and its shortcuts and type-to-focus wait (m4.6-plan.md task 16a). -->
 <svelte:window onkeydowncapture={(e) => !settingsModal.shown && (handleShortcut(e) || typeToFocus(e))} />
-<div class="shell" inert={!!settingsModal.shown} style:--voice-h="{voiceHeight}px" class:panel={!!(panel || moderationView.current) && open} class:sidebar-open={shell.sidebarOpen} style:--panel-w={moderationView.current ? 'var(--members-w)' : panelWidth === 'profile' ? 'var(--dm-panel-w)' : panelWidth === 'find' || panelWidth === 'chat' ? 'var(--side-panel-w)' : 'var(--members-w)'}>
+<div class="shell" inert={!!settingsModal.shown} style:--voice-h="{voiceHeight}px" class:panel={!!(panel || moderationView.current) && open} class:sidebar-open={shell.sidebarOpen} class:chat-panel={panelWidth === 'chat' && !moderationView.current} style:--panel-w={moderationView.current ? 'var(--members-w)' : panelWidth === 'profile' ? 'var(--dm-panel-w)' : panelWidth === 'find' || panelWidth === 'chat' ? 'var(--side-panel-w)' : 'var(--members-w)'}>
   <div class="rail"><ServerRail {store} active={server} /></div>
   <div class="sidebar">
     {#if server}
@@ -112,6 +112,11 @@
   .side-panel { grid-area: panel; min-height: 0; border-left: 1px solid var(--border-subtle); background: var(--surface-0); }
   .scrim { display: none; }
 
+  /* A voice channel's chat sits beside the stage only where that leaves the stage about 560 px; narrower, it overlays it. */
+  @media (max-width: 1360px) {
+    .shell.panel.chat-panel { grid-template-columns: var(--rail-w) var(--sidebar-w) minmax(0, 1fr); grid-template-areas: 'rail sidebar main' 'dock dock main'; }
+    .chat-panel .side-panel { position: fixed; z-index: 40; top: var(--header-h); right: 0; bottom: 0; width: min(var(--panel-w), 85vw); box-shadow: var(--shadow-popover); }
+  }
   @media (max-width: 1100px) {
     .shell.panel { grid-template-columns: var(--rail-w) var(--sidebar-w) minmax(0, 1fr); grid-template-areas: 'rail sidebar main' 'dock dock main'; }
     .side-panel { position: fixed; z-index: 40; top: var(--header-h); right: 0; bottom: 0; width: var(--panel-w); box-shadow: var(--shadow-popover); }

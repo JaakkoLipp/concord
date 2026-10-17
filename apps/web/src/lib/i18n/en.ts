@@ -435,7 +435,9 @@ export const en = {
   /** The call view and its menus (client.md section 10.3). */
   call: {
     view: (channel: string) => `Call in ${channel}`,
-    empty: 'No one is in this channel yet.',
+    empty: 'No one is currently in voice',
+    count: (n: number) => plural('en', n, { one: '1 person in voice', other: `${n} people in voice` }),
+    closeChat: 'Close',
     present: (n: number) => plural('en', n, { one: '1 person is in this channel.', other: `${n} people are in this channel.` }),
     presentCall: (n: number) => plural('en', n, { one: '1 person is in this call.', other: `${n} people are in this call.` }),
     join: 'Join voice',

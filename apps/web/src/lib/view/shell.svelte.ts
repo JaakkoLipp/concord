@@ -2,6 +2,8 @@
 import { fromKeyboard } from '@concord/ui';
 
 const WIDE = '(min-width: 1101px)';
+/** Wide enough for a voice channel's chat beside a stage of about 560 px (m4.6-plan.md task 12). */
+export const WIDE_STAGE = '(min-width: 1361px)';
 
 class ShellState {
   /** The member list or DM profile panel: open by default on wide screens, where it has its own column. */
@@ -10,7 +12,7 @@ class ShellState {
   sidebarOpen = $state(false);
   /** The pins or search panel, which takes the side column while open (m2a-plan.md task 8). */
   find = $state<{ channel: string; mode: 'pins' | 'search'; query: string } | null>(null);
-  /** A voice channel's text chat, beside the call view (client.md section 10.3). Closed until asked for. */
+  /** A voice channel's text chat, beside the call view (client.md section 10.3). Conversation opens it on entering a voice channel where there is room. */
   voiceChat = $state(false);
   mentions = $state(false);
   mentionsStill = $state(false);

@@ -505,7 +505,7 @@ Voice code loads only on the first join, through `import()`: `livekit-client` is
   - an audio tile shows the avatar, name, speaking ring and mute icon,
   - clicking a tile focuses it, and double-clicking makes it fullscreen.
 - **Bottom bar**: microphone, camera, share screen and disconnect.
-- **The channel's text chat** opens as a side panel from the header's chat button, where the member list would be.
+- **The channel's text chat** is a 456 px side panel where the member list would be. Above 1,360 px it opens with the stage, beside it; narrower it overlays the stage and waits for the header's chat button. Closed, it stays closed until the next voice channel (M4.6).
 - **Not yet in the call**: the view shows who is in it, with a Join button.
 
 **Participant menu**, by right-click or long press on a tile or sidebar row:

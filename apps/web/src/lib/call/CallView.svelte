@@ -5,12 +5,15 @@
    * Before joining, it shows who is in the channel and a Join button. Video comes from LiveKit through the voice
    * controller's feeds; who is in the channel comes from Stoat, as in the sidebar.
    */
-  import { Avatar, Button, tooltip, type MenuItem } from '@concord/ui';
+  import { Avatar, Button, fadeIn, tooltip, type MenuItem } from '@concord/ui';
+  import { fileUrl } from '@concord/stoat';
   import { memberKey, type Id, type Session } from '@concord/domain';
   import Mic from '@lucide/svelte/icons/mic';
   import MicOff from '@lucide/svelte/icons/mic-off';
   import PhoneOff from '@lucide/svelte/icons/phone-off';
   import ScreenShare from '@lucide/svelte/icons/screen-share';
+  import Users from '@lucide/svelte/icons/users';
+  import Volume2 from '@lucide/svelte/icons/volume-2';
   import Video from '@lucide/svelte/icons/video';
   import VideoOff from '@lucide/svelte/icons/video-off';
   import { m } from '$lib/i18n/index.ts';
@@ -128,6 +131,10 @@
 {/snippet}
 
 <section class="call" class:compact aria-label={info ? m.call.view(channelName(store, info)) : undefined}>
+  {#if !compact}
+    <!-- The stage's own header row: how many are in the channel (motion spec 4.9). -->
+    <div class="stage-head"><span class="count" aria-label={m.call.count(participants.length)} use:tooltip={{ text: m.call.count(participants.length), placement: 'bottom' }}><Users size={18} aria-hidden="true" />{participants.length}</span></div>
+  {/if}
   {#if here}
     {#if focused}
       <div class="stage">
@@ -162,7 +169,15 @@
           {/each}
         </ul>
         <p>{compact ? m.call.presentCall(participants.length) : m.call.present(participants.length)}</p>
+      {:else if compact}
+        <p>{m.call.empty}</p>
       {:else}
+        <!-- The empty stage: the channel's icon, a bar, its name, and who's there, which is no one (motion spec 4.9). -->
+        <div class="empty-title">
+          {#if info?.kind === 'text' && info.icon}<img use:fadeIn class="channel-icon" src={fileUrl(info.icon, { maxSide: 64 })} alt="" width="32" height="32" />{:else}<Volume2 size={28} aria-hidden="true" />{/if}
+          <span class="bar-mark" aria-hidden="true"></span>
+          <h2>{info ? channelName(store, info) : ''}</h2>
+        </div>
         <p>{m.call.empty}</p>
       {/if}
       {#if rights.connect}
@@ -175,8 +190,23 @@
 </section>
 
 <style>
-  .call { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--surface-0); }
-  .compact { flex: none; height: min(26rem, 45%); border-bottom: 1px solid var(--border-subtle); }
+  /* The stage (motion spec 4.9): rounded inside the black, dark at the top and light at the bottom, with a glow at
+     its foot, all mixed from the accent so it stays Concord's. */
+  .call {
+    position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; margin: 0 var(--space-3) var(--space-3);
+    border-radius: var(--radius-md); overflow: hidden;
+    background:
+      radial-gradient(45% 30% at 50% 100%, color-mix(in srgb, var(--accent) 45%, transparent), transparent),
+      linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, var(--surface-0)) 0%, color-mix(in srgb, var(--accent) 12%, var(--surface-0)) 30%,
+        color-mix(in srgb, var(--accent) 24%, var(--surface-0)) 60%, color-mix(in srgb, var(--accent) 38%, var(--surface-0)) 85%, color-mix(in srgb, var(--accent) 42%, var(--surface-0)) 100%);
+  }
+  .compact { flex: none; height: min(26rem, 45%); margin: 0; border-radius: 0; border-bottom: 1px solid var(--border-subtle); background: var(--surface-0); }
+  .stage-head { display: flex; justify-content: flex-end; padding: var(--space-4) var(--space-5) 0; }
+  .count { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text-strong); font: 600 var(--text-sm) var(--font-sans); font-variant-numeric: tabular-nums; }
+  .empty-title { display: flex; align-items: center; gap: var(--space-4); color: var(--text-strong); }
+  .empty-title h2 { margin: 0; font: 700 var(--text-xl) var(--font-sans); }
+  .channel-icon { width: 2rem; height: 2rem; border-radius: var(--radius-md); }
+  .bar-mark { width: 1px; height: 1.5rem; background: var(--border-control); }
   .compact .lobby { gap: var(--space-4); padding: var(--space-5); }
   .grid {
     flex: 1; min-height: 0; overflow-y: auto; display: grid; align-content: center; gap: var(--space-3); padding: var(--space-5);
