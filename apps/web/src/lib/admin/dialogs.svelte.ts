@@ -9,6 +9,8 @@ export type AdminDialog =
   | { kind: 'nickname'; server: Id; user: Id }
   | { kind: 'serverProfile'; server: Id }
   | { kind: 'kick' | 'ban'; server: Id; user: Id }
+  /** Time someone out for this many seconds, with a reason (m4.7-plan.md task 6). */
+  | { kind: 'timeout'; server: Id; user: Id; seconds: number }
   | { kind: 'invite'; server: Id; channel: Id | null };
 
 class AdminDialogs {

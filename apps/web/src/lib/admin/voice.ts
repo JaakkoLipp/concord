@@ -43,10 +43,10 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
  * Server mute or deafen: sets the member's flag. Stoat answers 500 when the moderator is in another call, though the flag
  * was stored (m4.7-results.md), so a 500 waits briefly for the member update that follows before it counts as a failure.
  */
-export async function setServerFlag(session: Session, server: Id, user: Id, flag: 'canPublish' | 'canReceive', value: boolean): Promise<void> {
+export async function setServerFlag(session: Session, server: Id, user: Id, flag: 'canPublish' | 'canReceive', value: boolean, reason?: string): Promise<void> {
   const holds = () => session.store.members.get(memberKey(server, user))?.[flag] === value;
   try {
-    await session.admin.editMember(server, user, { [flag]: value });
+    await session.admin.editMember(server, user, { [flag]: value }, reason);
   } catch (e) {
     if (e instanceof BackendError && e.status === 500) {
       for (let waited = 0; waited < SETTLE_MS && !holds(); waited += 100) await sleep(100);

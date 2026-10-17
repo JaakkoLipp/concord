@@ -6,7 +6,7 @@ import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { BackendError, Permission, type Id, type Session } from '@concord/domain';
 import type { MenuItem } from '@concord/ui';
-import { nicknameItem, roleItem, moderationPanelItem, kickBanItems } from '$lib/admin/members.ts';
+import { nicknameItem, roleItem, moderationPanelItem, kickBanItems, removeAvatarItem, timeoutItem } from '$lib/admin/members.ts';
 import { editServerProfileItem } from '$lib/admin/menu.ts';
 import { moderationItems } from '$lib/call/moderation.ts';
 import { channelsWith } from '$lib/view/admin.ts';
@@ -152,6 +152,8 @@ export function personMenu(session: Session, user: Id, opts: PersonMenuOptions =
     if (opts.server) {
       const nickname = nicknameItem(session, opts.server, user);
       if (nickname) social.push(nickname);
+      const avatar = removeAvatarItem(session, opts.server, user);
+      if (avatar) social.push(avatar);
     }
     if (u && !u.bot) {
       const rel = u.relationship;
@@ -176,7 +178,7 @@ export function personMenu(session: Session, user: Id, opts: PersonMenuOptions =
     group(...social);
     if (opts.server) {
       group(roleItem(session, opts.server, user));
-      group(moderationPanelItem(session, opts.server, user), ...moderationItems(session, user, opts.server), ...kickBanItems(session, opts.server, user));
+      group(moderationPanelItem(session, opts.server, user), timeoutItem(session, opts.server, user), ...moderationItems(session, user, opts.server), ...kickBanItems(session, opts.server, user));
     }
   }
   group({ label: m.people.copyId, onselect: () => void copy(user) });

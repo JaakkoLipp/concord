@@ -473,6 +473,7 @@ export class StoatBackend implements Backend {
       ...(change.remove?.length ? { remove: change.remove.map(() => 'Description') } : {}),
       // Never removed: in Stoat 0.15 the voice field is what makes a channel a voice channel (m4.5-results.md).
       ...(change.maxUsers !== undefined ? { voice: { max_users: change.maxUsers } } : {}),
+      ...(change.slowmode !== undefined ? { slowmode: change.slowmode } : {}),
     };
     await this.rest.request('PATCH', `/channels/${channel}`, body);
   }
@@ -531,15 +532,17 @@ export class StoatBackend implements Backend {
     if (edit.voiceChannel !== undefined) body.voice_channel = edit.voiceChannel;
     if (edit.canPublish !== undefined) body.can_publish = edit.canPublish;
     if (edit.canReceive !== undefined) body.can_receive = edit.canReceive;
+    if (edit.timeout !== undefined) body.timeout = edit.timeout;
     await this.rest.request('PATCH', `/servers/${server}/members/${user}`, body, reason ? { 'X-Audit-Log-Reason': reason } : {});
   }
 
-  async kick(server: string, user: string): Promise<void> {
-    await this.rest.request('DELETE', `/servers/${server}/members/${user}`);
+  async kick(server: string, user: string, reason?: string): Promise<void> {
+    await this.rest.request('DELETE', `/servers/${server}/members/${user}`, undefined, reason ? { 'X-Audit-Log-Reason': reason } : {});
   }
 
-  async ban(server: string, user: string, reason?: string): Promise<void> {
-    await this.rest.request('PUT', `/servers/${server}/bans/${user}`, reason ? { reason } : {});
+  async ban(server: string, user: string, reason?: string, deleteSeconds?: number): Promise<void> {
+    const body = { ...(reason ? { reason } : {}), ...(deleteSeconds ? { delete_message_seconds: deleteSeconds } : {}) };
+    await this.rest.request('PUT', `/servers/${server}/bans/${user}`, body, reason ? { 'X-Audit-Log-Reason': reason } : {});
   }
 
   async unban(server: string, user: string): Promise<void> {

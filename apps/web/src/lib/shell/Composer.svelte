@@ -15,7 +15,8 @@
   import TypingIndicator from './TypingIndicator.svelte';
   import SendHorizontal from '@lucide/svelte/icons/send-horizontal';
   import Smile from '@lucide/svelte/icons/smile';
-  import { IconButton } from '@concord/ui';
+  import Timer from '@lucide/svelte/icons/timer';
+  import { IconButton, tooltip } from '@concord/ui';
   import { Permission, has, type Channel, type FavouriteGif, type Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
   import { COUNTER_FROM, byteLength, outgoing, serialise } from '$lib/composer/text.ts';
@@ -38,6 +39,24 @@
   // Comes back by itself when a timeout ends (clock.svelte.ts).
   const block = $derived(channel ? sendBlock(store, channel) : null);
 
+  // Slow mode (m4.7-plan.md task 6): Stoat tells this account its wait after each message, and the composer counts it down.
+  const slow = $derived(channel?.kind === 'text' && channel.slowmode && !has(permissionsIn(store, channel), Permission.BypassSlowmode) ? channel.slowmode : 0);
+  const slowUntil = $derived(slow && channel ? (store.slowUntil.get(channel.id) ?? 0) : 0);
+  let clock = $state(Date.now());
+  $effect(() => {
+    const until = slowUntil;
+    const now = Date.now();
+    clock = now;
+    if (until <= now) return;
+    const t = setInterval(() => { const at = Date.now(); clock = at; if (at >= until) clearInterval(t); }, 250);
+    return () => clearInterval(t);
+  });
+  const wait = $derived(slowUntil > clock ? Math.ceil((slowUntil - clock) / 1000) : 0);
+  /** Starts the wait at once, before Stoat's own event confirms it, so a quick second message isn't sent to be refused. */
+  function startWait() {
+    if (slow && channel) store.slowUntil.set(channel.id, Date.now() + slow * 1000);
+  }
+
   let host = $state<HTMLDivElement>();
   let editor = $state<ComposerEditor | null>(null);
   let text = $state('');
@@ -56,12 +75,13 @@
   const addFiles = (files: File[]) => channel && attachFiles(store, channel, files);
 
   function send() {
-    if (!editor || !channel || block) return;
+    if (!editor || !channel || block || wait) return;
     const out = outgoing(editor.text());
     if ((!out && !chosen.length) || byteLength(out) > limit) return;
     const files = compose.takeFiles(channel.id).map((c) => ({ file: c.file, name: c.file.name, preview: c.preview }));
     session.stopTyping(channel.id);
     compose.presentRequest++;
+    startWait();
     void session.send(channel.id, out, reply ? [reply] : [], files);
     compose.clearReply(channel.id);
     editor.clear();
@@ -173,7 +193,8 @@
   let gifsOpen = $state(false);
   function sendGif(gif: FavouriteGif) {
     gifsOpen = false;
-    if (!channel || block) return;
+    if (!channel || block || wait) return;
+    startWait();
     void session.send(channel.id, gif.url, reply ? [reply] : []);
     compose.clearReply(channel.id);
     editor?.focus();
@@ -274,6 +295,11 @@
     <div class="editor" bind:this={host}>
       {#if !editor}<span class="placeholder">{placeholder}</span>{/if}
     </div>
+    {#if slow}
+      {@const tip = wait ? m.composer.slowWait(wait) : m.composer.slowmode(slow)}
+      <!-- The wait is in its name rather than announced every second. -->
+      <span class="slow" class:waiting={wait > 0} role="img" aria-label={tip} use:tooltip={tip}><Timer size={16} />{#if wait}<span>{wait}</span>{/if}</span>
+    {/if}
     {#if left <= COUNTER_FROM}
       <span class="counter" class:over={left < 0} aria-label={m.composer.bytesLeftLabel(left)}>{left}</span>
     {/if}
@@ -344,6 +370,11 @@
   .editor { flex: 1; min-width: 0; align-self: stretch; display: flex; flex-direction: column; justify-content: center; }
   .editor :global(.cm-editor) { flex: 1; }
   .placeholder { min-width: 0; color: var(--text-muted); font: var(--text-md) var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slow {
+    align-self: center; display: inline-flex; align-items: center; gap: var(--space-1); color: var(--text-secondary);
+    font: 500 var(--text-xs) var(--font-sans); font-variant-numeric: tabular-nums;
+  }
+  .slow.waiting { color: var(--text-strong); }
   .counter { align-self: center; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); font-variant-numeric: tabular-nums; }
   .counter.over { color: var(--danger); font-weight: 700; }
   .editor :global(.cm-token) {

@@ -118,6 +118,8 @@ export interface TextChannel {
   /** Present on voice channels. Stoat 0.15 has no separate voice channel type. */
   voice?: { maxUsers?: number };
   nsfw: boolean;
+  /** Seconds between one member's messages, 0 to 21,600. Bypass slow mode is the exception. */
+  slowmode?: number;
 }
 
 export interface DmChannel {

@@ -8,6 +8,7 @@
 import { untrack } from 'svelte';
 import { isFinalJoinFailure, joinFailure, memberKey, type Id, type JoinFailure, type Session, type VoiceMoved } from '@concord/domain';
 import { callRights, type CallRights } from '$lib/view/channels.ts';
+import { permissionTime } from '$lib/view/clock.svelte.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 import { m } from '$lib/i18n/index.ts';
 import { webAudioOutput } from './audio/output.ts';
@@ -117,6 +118,16 @@ export class VoiceController {
       $effect(() => {
         const can = this.rights.speak && !this.serverMuted;
         untrack(() => this.call?.setCanSpeak(can));
+      });
+      // A timeout doesn't end a call in Stoat (m4.7-results.md task 1); "can only read" means leaving it (task 6).
+      $effect(() => {
+        const until = this.selfMember?.timeout;
+        if (!until || Date.parse(until) <= permissionTime(until).getTime()) return;
+        untrack(() => {
+          if (this.state.phase === 'idle' || this.state.phase === 'disconnected') return;
+          this.leave();
+          toasts.show(m.moderation.selfTimedOut, 'info');
+        });
       });
       $effect(() => {
         if (this.rights.video) return;

@@ -2,7 +2,6 @@
  * m4.7-plan.md task 4 on a throwaway local server. Compares the person and server menus for the owner on another
  * member, the owner on themself, and a plain member on that same target. It also exercises Roles, keyboard and
  * hover submenus, Mention, the moderation panel, and synced hide-muted channels.
- * Task 6's Timeout item is still pending, so it is explicitly omitted from the expected menu.
  * Usage: node tools/live/src/person-menus.ts
  */
 import type { Browser, Page } from 'playwright-core';
@@ -84,10 +83,10 @@ try {
   const targetExpected = [
     'Profile', 'Mention', 'Message', 'Start call', '|',
     'Change nickname', 'Invite to server', 'Remove friend', 'Block', '|',
-    'Roles', '|', 'Open in moderation view', 'Kick', 'Ban', '|', 'Copy user ID',
+    'Roles', '|', 'Open in moderation view', 'Time out', 'Kick', 'Ban', '|', 'Copy user ID',
   ];
   const targetLabels = await openPerson(owner, p.target.handle);
-  check(JSON.stringify(targetLabels) === JSON.stringify(targetExpected), 'owner on target: visible labels, separators and order match task 4 (Timeout pending task 6)', targetLabels);
+  check(JSON.stringify(targetLabels) === JSON.stringify(targetExpected), 'owner on target: visible labels, separators and order match task 4, with task 6’s Time out', targetLabels);
 
   // Give and take the one assignable role, with the keyboard, and verify the menu stays open after each check.
   const roles = await openSubmenu(owner, 'Roles', 'keyboard');

@@ -65,7 +65,7 @@ class Moves {
   }
 
   /** Move someone to a server voice channel. Does nothing while they already have a move pending. */
-  async move(session: Session, user: Id, to: Id): Promise<void> {
+  async move(session: Session, user: Id, to: Id, reason?: string): Promise<void> {
     const store = session.store;
     const dest = store.channels.get(to);
     if (this.pending.has(user) || !dest || dest.kind !== 'text') return;
@@ -73,7 +73,7 @@ class Moves {
     const name = store.displayName(user, dest.server);
     this.pending.set(user, to);
     try {
-      await session.admin.editMember(dest.server, user, { voiceChannel: to });
+      await session.admin.editMember(dest.server, user, { voiceChannel: to }, reason);
     } catch {
       this.pending.delete(user);
       toasts.show(m.voiceMod.moveFailed(name));

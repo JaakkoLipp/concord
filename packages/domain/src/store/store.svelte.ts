@@ -121,6 +121,8 @@ export class Store {
   readonly voice = new SvelteMap<Id, Record<Id, VoiceState>>();
   /** DM and group calls ringing this account, by channel (client.md section 10.8). */
   readonly rings = new SvelteMap<Id, Ring>();
+  /** When this account may send again in a slow channel, as Date.now() time, from Stoat's own events (m4.7-plan.md task 6). */
+  readonly slowUntil = new SvelteMap<Id, number>();
   /** Per channel, the `ringKey` of a ring stopped while its call runs, so a repeat of Stoat's event doesn't ring again. */
   private readonly stoppedRings = new Map<Id, string>();
   /** Servers whose full member list has been fetched. */
@@ -469,6 +471,9 @@ export class Store {
         if (!old || ringKey(old) !== ringKey(ring)) this.rings.set(ring.channel, ring);
         return;
       }
+      case 'slowmode':
+        for (const w of e.waits) this.slowUntil.set(w.channel, Date.now() + w.seconds * 1000);
+        return;
       // Private to the moved user: the voice controller follows it, and the state changes with the `voiceMove` that comes after.
       case 'voiceMoved':
       case 'unknown':
@@ -742,7 +747,7 @@ export class Store {
 
   clear(): void {
     this.self = null;
-    for (const map of [this.users, this.servers, this.channels, this.members, this.emojis, this.unreads, this.messages, this.windows, this.profiles, this.mutuals, this.typing, this.voice, this.rings, this.memberListLoaded, this.pending]) {
+    for (const map of [this.users, this.servers, this.channels, this.members, this.emojis, this.unreads, this.messages, this.windows, this.profiles, this.mutuals, this.typing, this.voice, this.rings, this.slowUntil, this.memberListLoaded, this.pending]) {
       (map as SvelteMap<unknown, unknown>).clear();
     }
     this.ownNonces.clear();

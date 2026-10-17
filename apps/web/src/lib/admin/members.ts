@@ -1,6 +1,6 @@
 /** Member actions shared by the people menu and moderation view. */
-import { Permission, canActOnMember, canActOnRole, has, memberKey, nextRoles, rolesByRank, type Id, type Session } from '@concord/domain';
-import type { MenuItem } from '@concord/ui';
+import { Permission, canActOnMember, canActOnRole, has, memberKey, nextRoles, rolesByRank, serverPermissions, type Id, type Session } from '@concord/domain';
+import type { MenuItem, MenuSubItem } from '@concord/ui';
 import { m } from '$lib/i18n/index.ts';
 import { myRank, serverPerms } from '$lib/view/admin.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
@@ -116,6 +116,51 @@ export function nicknameItem(session: Session, server: Id, user: Id): MenuItem |
   };
 }
 
+/** Remove another lower-ranked member's server avatar, with Remove avatars, when they have one. */
+export function removeAvatarItem(session: Session, server: Id, user: Id): MenuItem | null {
+  const { store } = session;
+  if (user === store.selfId || !store.members.get(memberKey(server, user))?.avatar) return null;
+  if (!has(serverPerms(store, server), Permission.RemoveAvatars) || !mayManageTarget(session, server, user)) return null;
+  return {
+    label: m.admin.member.removeAvatar,
+    onselect: () => void session.admin.editMember(server, user, { remove: ['Avatar'] }).catch(() => toasts.show(m.admin.member.removeAvatarFailed)),
+  };
+}
+
+/** Discord's timeout lengths, in seconds (m4.7-plan.md decision 8). */
+export const TIMEOUTS = [60, 5 * 60, 10 * 60, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60] as const;
+
+/** The member's timeout end while it lasts. */
+export function timeoutEnd(session: Session, server: Id, user: Id): Date | null {
+  const t = session.store.members.get(memberKey(server, user))?.timeout;
+  return t && Date.parse(t) > Date.now() ? new Date(t) : null;
+}
+
+/**
+ * Time out › with each length, then Remove timeout while one runs. Only over someone below you, and never someone who
+ * holds Time out members, whom Stoat refuses with IsElevated, the owner included (m4.7-results.md task 1).
+ */
+export function timeoutItem(session: Session, server: Id, user: Id, reason: () => string | undefined = () => undefined): MenuItem | null {
+  const { store } = session;
+  const s = store.servers.get(server);
+  const member = store.members.get(memberKey(server, user));
+  const target = store.users.get(user);
+  if (!s || !member || !target || !has(serverPerms(store, server), Permission.TimeoutMembers) || !mayManageTarget(session, server, user)) return null;
+  // Their permissions as if any timeout of their own had ended, since a timeout would hide the one that matters.
+  if (has(serverPermissions(s, member, { self: target, now: new Date(8.64e15) }), Permission.TimeoutMembers)) return null;
+  const items: MenuSubItem[] = TIMEOUTS.map((seconds) => ({
+    label: m.moderation.timeoutFor(seconds),
+    onselect: () => adminDialogs.open({ kind: 'timeout', server, user, seconds }),
+  }));
+  if (timeoutEnd(session, server, user)) {
+    items.push('separator', {
+      label: m.moderation.removeTimeout,
+      onselect: () => void session.admin.editMember(server, user, { remove: ['Timeout'] }, reason()).catch(() => toasts.show(m.moderation.timeoutFailed)),
+    });
+  }
+  return { kind: 'submenu', label: m.moderation.timeOut, items };
+}
+
 /** Open the moderation panel for members when this account has at least one moderation permission. */
 export function moderationPanelItem(session: Session, server: Id, user: Id): MenuItem | null {
   const { store } = session;
@@ -130,7 +175,7 @@ export function moderationPanelItem(session: Session, server: Id, user: Id): Men
   return { label: m.people.moderationView, onselect: () => { moderationView.open(server, user); shell.panelOpen = true; } };
 }
 
-/** Kick and ban actions, offered only for a target below this account. */
+/** Kick and ban actions, offered only for a target below this account. Their dialogs ask for the reason. */
 export function kickBanItems(session: Session, server: Id, user: Id): MenuItem[] {
   const { store } = session;
   const s = store.servers.get(server);

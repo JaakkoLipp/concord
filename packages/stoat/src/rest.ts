@@ -95,7 +95,8 @@ export class Rest {
         bucket.inFlight--;
         this.wake(bucket);
       }
-      if (res.status === 429) {
+      // Slow mode also answers 429, with its wait in seconds. Retrying wouldn't help the composer, which counts it down.
+      if (res.status === 429 && (res.body as { type?: string } | null)?.type !== 'InSlowmode') {
         const after = Number((res.body as { retry_after?: number } | null)?.retry_after ?? res.headers['x-ratelimit-reset-after'] ?? 1000);
         const b = this.bucketOf(key);
         b.remaining = 0;

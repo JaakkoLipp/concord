@@ -5,6 +5,14 @@
 import type { JoinFailure } from '@concord/domain';
 import { plural } from './plural.ts';
 
+/** A length of time in its largest whole unit: "5 seconds", "1 hour", "1 week" (timeouts, slow mode, ban deletion). */
+function length(seconds: number): string {
+  const units: [number, string, string][] = [[604_800, 'week', 'weeks'], [86_400, 'day', 'days'], [3_600, 'hour', 'hours'], [60, 'minute', 'minutes'], [1, 'second', 'seconds']];
+  const [size, one, other] = units.find(([u]) => seconds >= u && seconds % u === 0) ?? units.at(-1)!;
+  const n = seconds / size;
+  return plural('en', n, { one: `1 ${one}`, other: `${n} ${other}` });
+}
+
 export const en = {
   app: {
     name: 'Concord',
@@ -230,6 +238,8 @@ export const en = {
       other: 'The server refused the message.',
     },
     cantUpload: 'You can’t upload files here',
+    slowmode: (seconds: number) => `Slow mode is on: one message every ${length(seconds)}.`,
+    slowWait: (seconds: number) => plural('en', seconds, { one: 'Slow mode: you can send again in 1 second.', other: `Slow mode: you can send again in ${seconds} seconds.` }),
     mass: { everyone: 'Notify everyone who can see this channel', online: 'Notify everyone online who can see this channel' },
     notSent: 'Not sent.',
     retry: 'Retry',
@@ -866,6 +876,19 @@ export const en = {
     timeout: 'Timed out until',
     serverMute: 'Server muted',
     serverDeafen: 'Server deafened',
+    /** Timeouts (m4.7-plan.md task 6). */
+    timeOut: 'Time out',
+    timeoutFor: (seconds: number) => length(seconds),
+    removeTimeout: 'Remove timeout',
+    timeoutFailed: 'Couldn’t change the timeout.',
+    timeoutTitle: (name: string, seconds: number) => `Time out ${name} for ${length(seconds)}?`,
+    timeoutBody: 'Until it ends they can read, but not send, react or join a call. On Concord a call they’re in ends for them.',
+    timeoutConfirm: 'Time out',
+    timedOutUntil: (date: string) => `Timed out until ${date}`,
+    reason: 'Reason',
+    reasonHint: 'For the audit log. Optional.',
+    panelReason: 'Reason for what you do here',
+    selfTimedOut: 'You’re timed out, so you left the call.',
   },
   admin: {
     member: {
@@ -874,6 +897,8 @@ export const en = {
       nicknameLabel: 'Nickname',
       nicknameClear: 'Use account name',
       nicknameFailed: 'Couldn’t change nickname.',
+      removeAvatar: 'Remove server avatar',
+      removeAvatarFailed: 'Couldn’t remove the server avatar.',
     },
     createServer: 'Create a server',
     createTitle: 'Create a server',
@@ -1008,6 +1033,10 @@ export const en = {
       limit: 'User limit',
       limitHint: 'How many can be in the voice channel at once. 0 means no limit.',
       limitError: 'Use a number from 0 to 99.',
+      slowmode: 'Slow mode',
+      slowmodeOff: 'Off',
+      slowmodeEvery: (seconds: number) => length(seconds),
+      slowmodeHint: 'How long each member waits between messages. Members with Bypass slow mode don’t wait.',
     },
     roles: {
       title: 'Roles',
@@ -1121,13 +1150,19 @@ export const en = {
       body: 'They leave the server, and can come back with an invite.',
       confirm: 'Kick',
       failed: 'Couldn’t kick them.',
+      reason: 'Reason',
+      reasonHint: 'For the audit log. Optional.',
     },
     ban: {
       item: 'Ban',
       title: (name: string) => `Ban ${name}?`,
       body: 'They leave the server and can’t come back until the ban is lifted.',
       reason: 'Reason',
-      reasonHint: 'Shown in the ban list. Up to 1024 characters.',
+      reasonHint: 'Shown in the ban list and the audit log. Up to 1024 characters.',
+      deleteMessages: 'Delete their messages from the last',
+      deleteNone: 'Don’t delete any',
+      deleteFor: (seconds: number) => length(seconds),
+      deleteHint: 'From every channel, for good.',
       confirm: 'Ban',
       failed: 'Couldn’t ban them.',
     },

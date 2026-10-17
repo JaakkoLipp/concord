@@ -22,6 +22,7 @@ export function mapChannel(c: WChannel): Channel {
         rolePermissions: Object.fromEntries(Object.entries(c.role_permissions ?? {}).map(([id, o]) => [id, override(o as WOverride)])),
         voice: c.voice ? clean({ maxUsers: c.voice.max_users ?? undefined }) : undefined,
         nsfw: c.nsfw ?? false,
+        slowmode: c.slowmode ?? undefined,
       }) as Channel;
   }
 }
@@ -36,6 +37,7 @@ export function mapChannelPatch(d: Record<string, unknown>): Record<string, unkn
   if (Array.isArray(d.recipients)) out.recipients = d.recipients;
   if (typeof d.active === 'boolean') out.active = d.active;
   if (typeof d.nsfw === 'boolean') out.nsfw = d.nsfw;
+  if (typeof d.slowmode === 'number') out.slowmode = d.slowmode;
   if (typeof d.owner === 'string') out.owner = d.owner;
   if (d.default_permissions) out.defaultPermissions = override(d.default_permissions as WOverride);
   if (d.role_permissions) {

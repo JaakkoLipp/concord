@@ -8,6 +8,7 @@
   import { app } from '$lib/session/app.svelte.ts';
   import { participantMenu } from '$lib/call/menu.ts';
   import TagBadge from '$lib/people/TagBadge.svelte';
+  import TimeoutMark from '$lib/people/TimeoutMark.svelte';
 
   let { store, server }: { store: Store; server: string } = $props();
   const groups = $derived(store.memberGroups(server));
@@ -27,6 +28,7 @@
             <span class="top">
               <span class="name" style:--role={store.roleColour(member.user, server)}>{store.displayName(member.user, server)}</span>
               <TagBadge {store} user={member.user} plain />
+              <TimeoutMark {store} {server} user={member.user} />
             </span>
             {#if user?.statusText && !offline}<span class="sub">{user.statusText}</span>{/if}
           </span>

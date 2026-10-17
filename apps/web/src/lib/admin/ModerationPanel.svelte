@@ -6,7 +6,7 @@
   import { fullDate, ulidTime } from '$lib/markdown/time.ts';
   import { serverPerms } from '$lib/view/admin.ts';
   import { moderationView } from './moderation.svelte.ts';
-  import { kickBanItems, nicknameItem, roleItem } from './members.ts';
+  import { kickBanItems, nicknameItem, removeAvatarItem, roleItem, timeoutItem } from './members.ts';
   import { moderationItems as voiceModerationItems } from '$lib/call/moderation.ts';
 
   let { session, store }: { session: Session; store: Store } = $props();
@@ -29,14 +29,21 @@
   });
   const timeout = $derived(member?.timeout && new Date(member.timeout).getTime() > now ? new Date(member.timeout) : null);
   const roles = $derived.by(() => (member?.roles ?? []).map((id) => server?.roles[id]).filter((role) => !!role).sort((a, b) => a!.rank - b!.rank));
+  /** Sent with the timeout and voice actions taken from here, for the audit log (m4.7-plan.md task 6). Kick and ban ask in their dialogs. */
+  let reason = $state('');
+  $effect(() => { void current; reason = ''; });
+  const why = () => reason.trim() || undefined;
   const actions = $derived.by(() => {
     if (!current) return [];
     const items: MenuItem[] = [];
     const nickname = nicknameItem(session, current.server, current.user);
+    const avatar = removeAvatarItem(session, current.server, current.user);
     const roles = roleItem(session, current.server, current.user);
     if (nickname) items.push(nickname);
+    if (avatar) items.push(avatar);
     if (roles) items.push(roles);
-    const voice = voiceModerationItems(session, current.user, current.server);
+    const timeout = timeoutItem(session, current.server, current.user, why);
+    const voice = [...(timeout ? [timeout] : []), ...voiceModerationItems(session, current.user, current.server, why)];
     const kickBan = kickBanItems(session, current.server, current.user);
     if (voice.length) { if (items.length) items.push('separator'); items.push(...voice); }
     if (kickBan.length) { if (items.length) items.push('separator'); items.push(...kickBan); }
@@ -57,6 +64,10 @@
         <Menu open={menuOpen} onclose={() => (menuOpen = false)} items={actions} label={m.people.menu} anchor={menuButton} />
       </div>
     </header>
+    <label class="reason">
+      <span>{m.moderation.panelReason}</span>
+      <input type="text" maxlength={1024} bind:value={reason} />
+    </label>
     <section class="dates">
       <div><h3>{m.moderation.joined}</h3><p>{fullDate(new Date(member.joinedAt))}</p></div>
       <div><h3>{m.moderation.created}</h3><p>{fullDate(ulidTime(current.user))}</p></div>
@@ -99,4 +110,11 @@
   .swatch { width: 10px; height: 10px; border-radius: 50%; background: var(--role); }
   .status li { color: var(--text-normal); font: var(--text-sm) var(--font-sans); }
   .empty { margin: 0; }
+  .reason { display: grid; gap: var(--space-2); }
+  .reason span { color: var(--text-secondary); font: 700 var(--text-xs) var(--font-sans); }
+  .reason input {
+    padding: var(--space-2) var(--space-3); border: 1px solid var(--border-control); border-radius: var(--radius-md);
+    background: var(--surface-0); color: var(--text-strong); font: var(--text-sm) var(--font-sans);
+  }
+  .reason input:focus-visible { outline: none; border-color: var(--accent); }
 </style>

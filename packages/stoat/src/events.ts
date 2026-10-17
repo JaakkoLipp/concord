@@ -137,6 +137,8 @@ export function mapFrame(f: Frame): DomainEvent[] {
       return [{ type: 'voiceMove', from: x.from, state: mapVoiceState(x.to, x.state as WVoiceState) }];
     case 'UserMoveVoiceChannel':
       return [{ type: 'voiceMoved', from: x.from, to: x.to, node: x.node, token: x.token }];
+    case 'UserSlowmodes':
+      return [{ type: 'slowmode', waits: ((x.slowmodes ?? []) as { channel_id: string; retry_after: number }[]).map((s) => ({ channel: s.channel_id, seconds: s.retry_after })) }];
     case 'UserVoiceStateUpdate':
       return [{ type: 'voiceUpdate', channel: x.channel_id, user: x.id, data: mapVoiceFlags(x.data ?? {}) }];
     case 'VoiceCallUpdate': {

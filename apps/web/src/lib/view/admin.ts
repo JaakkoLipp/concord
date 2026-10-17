@@ -20,6 +20,14 @@ export function myRank(store: Store, server: Id): number {
 
 export const isOwner = (store: Store, server: Id) => store.servers.get(server)?.owner === store.selfId;
 
+/**
+ * A server admin, who alone is offered bulk deletion in Concord (m4.7-plan.md decision 6): the owner, or someone with both
+ * Manage server and Manage messages. Stoat doesn't know this rule, so it binds this client only.
+ */
+export function isServerAdmin(store: Store, server: Id): boolean {
+  return isOwner(store, server) || has(serverPerms(store, server), Permission.ManageServer | Permission.ManageMessages);
+}
+
 export type ServerSection = 'overview' | 'roles' | 'emoji' | 'invites' | 'members' | 'bans';
 const NEEDS: Record<ServerSection, bigint[]> = {
   overview: [Permission.ManageServer],

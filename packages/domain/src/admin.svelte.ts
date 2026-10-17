@@ -216,8 +216,8 @@ export class ServerAdmin {
   invites(server: Id) { return this.backend.invites(server); }
   deleteInvite(code: string) { return this.run(() => this.backend.deleteInvite(code)); }
   editMember(server: Id, user: Id, edit: MemberEdit, reason?: string) { return this.run(() => this.backend.editMember(server, user, edit, reason)); }
-  kick(server: Id, user: Id) { return this.run(() => this.backend.kick(server, user)); }
-  ban(server: Id, user: Id, reason?: string) { return this.run(() => this.backend.ban(server, user, reason)); }
+  kick(server: Id, user: Id, reason?: string) { return this.run(() => this.backend.kick(server, user, reason)); }
+  ban(server: Id, user: Id, reason?: string, deleteSeconds?: number) { return this.run(() => this.backend.ban(server, user, reason, deleteSeconds)); }
   unban(server: Id, user: Id) { return this.run(() => this.backend.unban(server, user)); }
   bans(server: Id) { return this.backend.bans(server); }
   /** Upload an image and make it a server emoji, shown at once. */

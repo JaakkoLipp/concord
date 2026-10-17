@@ -59,6 +59,8 @@ export type DomainEvent =
   | { type: 'voiceMoved'; from: Id; to: Id; node: string; token: string }
   /** Only the flags that changed. */
   | { type: 'voiceUpdate'; channel: Id; user: Id; data: Partial<VoiceFlags> }
+  /** This account's wait in slow channels, in seconds, sent after each message it sends or has refused there. */
+  | { type: 'slowmode'; waits: { channel: Id; seconds: number }[] }
   /**
    * A DM or group call rings this account, from the first person to join it (client.md section 10.8), or
    * `ended`: the call emptied. An end names whoever left last, not the caller, and has no start time.
@@ -74,7 +76,9 @@ export interface MemberEdit {
   nickname?: string;
   /** An uploaded image ID from `upload(…, 'avatars')`. */
   avatar?: Id;
-  remove?: ('Nickname' | 'Avatar')[];
+  remove?: ('Nickname' | 'Avatar' | 'Timeout')[];
+  /** When a timeout ends, as an ISO time. */
+  timeout?: string;
   voiceChannel?: Id;
   canPublish?: boolean;
   canReceive?: boolean;
@@ -200,6 +204,8 @@ export interface ChannelEdit {
   remove?: 'description'[];
   /** A voice channel's user limit, null for none. Only for voice channels: it keeps the channel one. */
   maxUsers?: number | null;
+  /** Slow mode in seconds, 0 for off. */
+  slowmode?: number;
 }
 
 export interface Capabilities {
@@ -333,8 +339,9 @@ export interface Backend {
   setMemberRoles(server: Id, user: Id, roles: Id[]): Promise<void>;
   /** Change a member other than their roles, with an optional reason for the audit log (m4.7-plan.md). */
   editMember(server: Id, user: Id, edit: MemberEdit, reason?: string): Promise<void>;
-  kick(server: Id, user: Id): Promise<void>;
-  ban(server: Id, user: Id, reason?: string): Promise<void>;
+  kick(server: Id, user: Id, reason?: string): Promise<void>;
+  /** `deleteSeconds` also deletes the user's messages from that long back, up to 7 days. */
+  ban(server: Id, user: Id, reason?: string, deleteSeconds?: number): Promise<void>;
   unban(server: Id, user: Id): Promise<void>;
   bans(server: Id): Promise<{ bans: Ban[]; users: User[] }>;
   /** Turn an upload from `upload(…, 'emojis')` into a server emoji. */

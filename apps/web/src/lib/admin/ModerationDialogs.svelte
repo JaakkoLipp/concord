@@ -1,24 +1,34 @@
 <script lang="ts">
   /**
-   * Kick, ban and invite (m2c-plan.md task 6). The invite dialog offers only channels where this account may
-   * invite, the current one first, and shows the link once made.
+   * Kick, ban, timeout and invite (m2c-plan.md task 6, m4.7-plan.md task 6). Kick, ban and timeout take a reason for the
+   * audit log; a ban can also delete the person's recent messages, for server admins only. The invite dialog offers only
+   * channels where this account may invite, the current one first, and shows the link once made.
    */
   import { Button, Dialog, TextField } from '@concord/ui';
   import { Permission, type Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
-  import { channelsWith } from '$lib/view/admin.ts';
+  import { channelsWith, isServerAdmin } from '$lib/view/admin.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
-  import { adminDialogs } from './dialogs.svelte.ts';
+  import { adminDialogs, type AdminDialog } from './dialogs.svelte.ts';
 
   let { session }: { session: Session } = $props();
   const store = $derived(session.store);
   const d = $derived(adminDialogs.current);
-  const member = $derived(d && (d.kind === 'kick' || d.kind === 'ban') ? d : null);
-  const invite = $derived(d?.kind === 'invite' ? d : null);
+  type MemberDialog = Extract<AdminDialog, { kind: 'kick' | 'ban' | 'timeout' }>;
+  const isMember = (x: AdminDialog | null): x is MemberDialog => !!x && (x.kind === 'kick' || x.kind === 'ban' || x.kind === 'timeout');
+  const member = $derived(isMember(d) ? d : null);
   const name = $derived(member ? store.displayName(member.user, member.server) : '');
+  /** A ban's message deletion, in seconds (m4.7-plan.md task 6). Stoat takes up to 7 days. */
+  const DELETIONS = [0, 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60];
+  const canDelete = $derived(member?.kind === 'ban' && isServerAdmin(store, member.server));
+  const title = $derived(!member ? '' : member.kind === 'timeout' ? m.moderation.timeoutTitle(name, member.seconds) : member.kind === 'kick' ? m.admin.kick.title(name) : m.admin.ban.title(name));
+  const body = $derived(!member ? '' : member.kind === 'timeout' ? m.moderation.timeoutBody : member.kind === 'kick' ? m.admin.kick.body : m.admin.ban.body);
+  const confirmLabel = $derived(member?.kind === 'ban' ? m.admin.ban.confirm : member?.kind === 'timeout' ? m.moderation.timeoutConfirm : m.admin.kick.confirm);
+  const invite = $derived(d?.kind === 'invite' ? d : null);
   const inviteChannels = $derived(invite ? channelsWith(store, invite.server, Permission.InviteOthers) : []);
 
   let reason = $state('');
+  let deletion = $state(0);
   let channel = $state('');
   let link = $state('');
   let busy = $state(false);
@@ -27,6 +37,7 @@
     if (d === filledFor) return;
     filledFor = d;
     reason = '';
+    deletion = 0;
     link = '';
     if (d?.kind === 'invite') channel = d.channel && inviteChannels.includes(d.channel) ? d.channel : (inviteChannels[0] ?? '');
   });
@@ -37,12 +48,14 @@
     const x = member;
     if (!x || busy) return;
     busy = true;
+    const why = reason.trim() || undefined;
     try {
-      if (x.kind === 'kick') await session.admin.kick(x.server, x.user);
-      else await session.admin.ban(x.server, x.user, reason.trim() || undefined);
+      if (x.kind === 'timeout') await session.admin.editMember(x.server, x.user, { timeout: new Date(Date.now() + x.seconds * 1000).toISOString() }, why);
+      else if (x.kind === 'kick') await session.admin.kick(x.server, x.user, why);
+      else await session.admin.ban(x.server, x.user, why, canDelete ? deletion : 0);
       adminDialogs.done(x);
     } catch {
-      toasts.show(x.kind === 'kick' ? m.admin.kick.failed : m.admin.ban.failed);
+      toasts.show(x.kind === 'kick' ? m.admin.kick.failed : x.kind === 'ban' ? m.admin.ban.failed : m.moderation.timeoutFailed);
     } finally {
       busy = false;
     }
@@ -70,20 +83,27 @@
   }
 </script>
 
-<Dialog open={!!member} title={member ? (member.kind === 'kick' ? m.admin.kick.title(name) : m.admin.ban.title(name)) : ''} onclose={close}>
+<Dialog open={!!member} {title} onclose={close}>
   {#if member}
-    <p>{member.kind === 'kick' ? m.admin.kick.body : m.admin.ban.body}</p>
-    {#if member.kind === 'ban'}
+    <p>{body}</p>
+    {#if canDelete}
       <div class="group">
-        <label class="label" for="ban-reason">{m.admin.ban.reason}</label>
-        <textarea id="ban-reason" rows="3" bind:value={reason} maxlength={1024} aria-describedby="ban-reason-note"></textarea>
-        <p class="note" id="ban-reason-note">{m.admin.ban.reasonHint}</p>
+        <label class="label" for="ban-delete">{m.admin.ban.deleteMessages}</label>
+        <select id="ban-delete" bind:value={deletion} aria-describedby="ban-delete-note">
+          {#each DELETIONS as s (s)}<option value={s}>{s ? m.admin.ban.deleteFor(s) : m.admin.ban.deleteNone}</option>{/each}
+        </select>
+        <p class="note" id="ban-delete-note">{m.admin.ban.deleteHint}</p>
       </div>
     {/if}
+    <div class="group">
+      <label class="label" for="moderation-reason">{member.kind === 'ban' ? m.admin.ban.reason : m.moderation.reason}</label>
+      <textarea id="moderation-reason" rows="3" bind:value={reason} maxlength={1024} aria-describedby="moderation-reason-note"></textarea>
+      <p class="note" id="moderation-reason-note">{member.kind === 'ban' ? m.admin.ban.reasonHint : m.moderation.reasonHint}</p>
+    </div>
   {/if}
   {#snippet actions()}
     <Button variant="ghost" onclick={close}>{m.admin.cancel}</Button>
-    <Button variant="danger" {busy} onclick={act}>{member?.kind === 'ban' ? m.admin.ban.confirm : m.admin.kick.confirm}</Button>
+    <Button variant="danger" {busy} onclick={act}>{confirmLabel}</Button>
   {/snippet}
 </Dialog>
 
