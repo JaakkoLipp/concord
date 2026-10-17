@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Badge, Button, IconButton, Menu } from '@concord/ui';
   import type { Channel, Id, Store } from '@concord/domain';
+  import { dropChannel } from '@concord/domain';
   import BellOff from '@lucide/svelte/icons/bell-off';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import Hash from '@lucide/svelte/icons/hash';
@@ -40,6 +41,55 @@
   const menuItems = $derived(menuOpen && app.session ? serverMenu(app.session, server) : []);
   const unfinished = $derived(!!app.session?.admin.setupUnfinished(server));
   let retrying = $state(false);
+  let channelNav = $state<HTMLElement | null>(null);
+  let drag = $state<{ channel: string; server: string; pointer: number; x: number; y: number; moved: boolean } | null>(null);
+  let drop = $state<{ category: string | null; target?: string; after: boolean; key: string } | null>(null);
+  let swallowClick = false;
+
+  function startDrag(e: PointerEvent, channel: string) {
+    swallowClick = false;
+    if (!manager || e.button !== 0 || e.pointerType === 'touch' || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    drag = { channel, server, pointer: e.pointerId, x: e.clientX, y: e.clientY, moved: false };
+  }
+
+  function dragMove(e: PointerEvent) {
+    if (!drag || drag.pointer !== e.pointerId) return;
+    if (!manager || drag.server !== server) { drag = null; drop = null; return; }
+    if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return;
+    drag.moved = true;
+    e.preventDefault();
+    const nav = channelNav;
+    const node = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>('[data-order-target]');
+    drop = null;
+    if (!nav || !node || !nav.contains(node)) return;
+    const rect = node.getBoundingClientRect();
+    const category = node.dataset.category || null;
+    const target = node.dataset.channel;
+    if (target === drag.channel) return;
+    // Uncategorized channels have a backend-defined order; only category membership can change there.
+    drop = { category, ...(category && target ? { target } : {}), after: !!target && e.clientY > rect.top + rect.height / 2, key: node.dataset.orderTarget! };
+    const bounds = nav.getBoundingClientRect();
+    if (e.clientY < bounds.top + 32) nav.scrollTop -= 16;
+    else if (e.clientY > bounds.bottom - 32) nav.scrollTop += 16;
+  }
+
+  function endDrag(e: PointerEvent) {
+    if (!drag || drag.pointer !== e.pointerId) return;
+    const from = drag;
+    const to = drop;
+    drag = null;
+    drop = null;
+    swallowClick = from.moved;
+    const session = app.session;
+    const current = store.servers.get(server);
+    if (!from.moved || !to || !session || !current || from.server !== server || !canManageChannels(session, server)) return;
+    const channel = store.channels.get(from.channel);
+    if (channel?.kind !== 'text' || channel.server !== server || !canView(store, channel)) return;
+    const next = dropChannel(current.categories, from.channel, to.category, to.target, to.after);
+    if (next) void session.admin.setCategories(server, next).catch(() => toasts.show(m.admin.channelFailed));
+  }
+
+  function cancelDrag() { if (drag?.moved) swallowClick = true; drag = null; drop = null; }
   async function retry() {
     retrying = true;
     await app.session?.admin.bootstrap(server).catch(() => toasts.show(m.admin.retryFailed));
@@ -60,6 +110,8 @@
   }
 </script>
 
+<svelte:window onpointermove={dragMove} onpointerup={endDrag} onpointercancel={cancelDrag} onkeydown={(e) => { if (e.key === 'Escape') cancelDrag(); }} />
+
 <header class="server-header" class:with-banner={!!info?.banner}>
   {#if info?.banner}<img class="banner" src={fileUrl(info.banner, { maxSide: 640 })} alt="" />{/if}
   <button class="header-button" bind:this={menuButton} aria-haspopup="menu" aria-expanded={menuOpen} aria-label={m.admin.menuLabel(info?.name ?? '')} onclick={() => (menuOpen = !menuOpen)}>
@@ -74,13 +126,14 @@
     <Button size="sm" busy={retrying} onclick={retry}>{m.admin.retry}</Button>
   </div>
 {/if}
-<nav class="channels" aria-label={m.shell.channels}>
+<nav class="channels" class:sorting={drag?.moved} bind:this={channelNav} aria-label={m.shell.channels}>
+  {#if drag?.moved}<div class="loose-drop" class:order-before={drop?.key === 'loose'} data-order-target="loose" data-category="">{m.admin.noCategory}</div>{/if}
   {#each tree as group (group.id ?? 'loose')}
     <div class="group" role="group" aria-label={group.title || m.shell.channels}>
       {#if group.id}
         {@const id = group.id}
         {@const folded = collapsed.is(server, id)}
-        <div class="category-row" use:menuOn={() => (app.session ? categoryMenu(app.session, server, id) : [])}>
+        <div class="category-row" class:order-after={drop?.key === id} data-order-target={id} data-category={id} use:menuOn={() => (app.session ? categoryMenu(app.session, server, id) : [])}>
           <button class="category" class:collapsed={folded} aria-expanded={!folded} onclick={() => collapsed.toggle(server, id)}>
             <span>{group.title}</span>
             <ChevronDown size={12} aria-hidden="true" />
@@ -101,7 +154,9 @@
         {@const lock = locked(channel)}
         {@const act = app.session ? channelActions(app.session, channel.id) : null}
         <!-- The row holds the link and, beside it rather than inside it, the hover actions (motion spec 4.1). -->
-        <div class="row" class:active={channel.id === active} class:drop-over={moves.hover === channel.id}>
+        <div class="row" class:active={channel.id === active} class:drop-over={moves.hover === channel.id}
+          class:order-before={drop?.key === channel.id && !drop.after} class:order-after={drop?.key === channel.id && drop.after}
+          data-order-target={channel.id} data-category={group.id ?? ''} data-channel={channel.id}>
           <a
             class="channel" class:active={channel.id === active} class:unread class:muted class:occupied={since !== undefined}
             class:drop-ok={moves.dragging?.to.has(channel.id)} class:drop-over={moves.hover === channel.id}
@@ -109,10 +164,11 @@
             ondragleave={isVoice(channel) ? () => moves.leave(channel.id) : undefined}
             ondrop={isVoice(channel) ? (e) => app.session && moves.drop(e, app.session, channel.id) : undefined}
             href={channelHref(channel.id)}
+            draggable={false} onpointerdown={(e) => startDrag(e, channel.id)}
             aria-current={channel.id === active ? 'page' : undefined}
             aria-label={[m.shell.channelLabel(name, isVoice(channel), unread, mentions), occupants || max ? m.voiceState.occupied(occupants, max) : '', lock ? m.voice.cantJoin : ''].filter(Boolean).join(', ')}
             use:menuOn={() => (app.session ? channelMenu(app.session, channel.id) : [])}
-            onclick={isVoice(channel) && !lock ? (e) => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey) app.voice?.join(channel.id); } : undefined}
+            onclick={(e) => { if (swallowClick) { e.preventDefault(); swallowClick = false; return; } if (isVoice(channel) && !lock && !e.ctrlKey && !e.metaKey && !e.shiftKey) app.voice?.join(channel.id); }}
           >
             {#if unread}<span class="unread-pill" aria-hidden="true"></span>{/if}
             <span class="icon" aria-hidden="true">{#if lock}<Lock size={20} />{:else if isVoice(channel)}<Volume2 size={20} />{:else}<Hash size={20} />{/if}</span>
@@ -137,6 +193,10 @@
 </nav>
 
 <style>
+  .sorting { user-select: none; cursor: grabbing; }
+  .order-before { box-shadow: 0 -2px 0 var(--accent); }
+  .order-after { box-shadow: 0 2px 0 var(--accent); }
+  .loose-drop { padding: var(--space-3); color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
   .server-header { position: relative; display: flex; min-height: var(--header-h); border-bottom: 1px solid var(--border-subtle); }
   .with-banner { min-height: 8.5rem; align-items: flex-start; border-bottom: 0; }
   .banner { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }

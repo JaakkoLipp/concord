@@ -1,6 +1,7 @@
 /** Sidebar ordering (m2c-plan.md task 3): moves step over hidden channels and keep every ID. */
 import { describe, expect, it } from 'vitest';
 import type { Category } from './entities.ts';
+import { dropChannel } from './layout.ts';
 import { deleteCategory, moveCategory, moveChannel, moveChannelTo, moveServer, orderingFor, placeServer, railOrder, writeOrdering } from './layout.ts';
 
 const cats = (): Category[] => [
@@ -11,6 +12,21 @@ const shown = (id: string) => id !== 'hidden';
 const ids = (c: Category[] | null) => c?.map((x) => x.channels.join(','));
 
 describe('layout', () => {
+  it('drops beside a channel while preserving hidden IDs and the input', () => {
+    const before = cats();
+    expect(ids(dropChannel(before, 'a2', 'a', 'a1'))).toEqual(['a2,a1,hidden', 'b1,b2']);
+    expect(ids(dropChannel(before, 'a1', 'b', 'b1', true))).toEqual(['hidden,a2', 'b1,a1,b2']);
+    expect(before).toEqual(cats());
+    expect(dropChannel(before, 'a1', 'a', 'a1')).toBeNull();
+    expect(dropChannel(before, 'a1', 'missing')).toBeNull();
+    expect(dropChannel(before, 'a1', 'b', 'gone')).toBeNull();
+  });
+
+  it('drops into empty categories and out into uncategorized channels', () => {
+    expect(ids(dropChannel([...cats(), { id: 'empty', title: '', channels: [] }], 'a1', 'empty'))).toEqual(['hidden,a2', 'b1,b2', 'a1']);
+    expect(ids(dropChannel(cats(), 'a1', null))).toEqual(['hidden,a2', 'b1,b2']);
+    expect(ids(dropChannel(cats(), 'loose', 'b'))).toEqual(['a1,hidden,a2', 'b1,b2,loose']);
+  });
   it('steps over channels this account can’t see, keeping them', () => {
     expect(ids(moveChannel(cats(), 'a2', -1, shown))).toEqual(['a2,a1,hidden', 'b1,b2']);
     expect(ids(moveChannel(cats(), 'a1', 1, shown))).toEqual(['hidden,a2,a1', 'b1,b2']);

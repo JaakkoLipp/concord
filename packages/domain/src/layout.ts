@@ -47,6 +47,20 @@ export function moveChannelTo(categories: Category[], channel: Id, category: str
   return next;
 }
 
+/** Drop beside a channel, or at the end of a category, preserving all other IDs. */
+export function dropChannel(categories: Category[], channel: Id, category: string | null, target?: Id, after = false): Category[] | null {
+  if (target === channel) return null;
+  if (category !== null && !categories.some((c) => c.id === category)) return null;
+  if (target && category !== null && !categories.find((c) => c.id === category)?.channels.includes(target)) return null;
+  const next = moveChannelTo(categories, channel, category);
+  const dest = next.find((c) => c.id === category);
+  if (dest && target) {
+    dest.channels = dest.channels.filter((id) => id !== channel);
+    dest.channels.splice(dest.channels.indexOf(target) + (after ? 1 : 0), 0, channel);
+  }
+  return JSON.stringify(next) === JSON.stringify(categories) ? null : next;
+}
+
 export function moveCategory(categories: Category[], category: string, delta: -1 | 1): Category[] | null {
   const i = categories.findIndex((c) => c.id === category);
   const j = i + delta;
