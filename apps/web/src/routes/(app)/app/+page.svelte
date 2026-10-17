@@ -1,10 +1,9 @@
 <script lang="ts">
-  /** /app reopens the last visited channel (client.md section 5). */
+  /** Open the app on the Friends / direct messages home screen. */
   import { goto } from '$app/navigation';
-  import { lastPlace } from '$lib/view/places.ts';
+  import { resolve } from '$app/paths';
 
   $effect(() => {
-    // eslint-disable-next-line svelte/no-navigation-without-resolve -- lastPlace() resolves
-    void goto(lastPlace(), { replaceState: true });
+    void goto(resolve('/app/channels/@me'), { replaceState: true });
   });
 </script>

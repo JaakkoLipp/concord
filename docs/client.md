@@ -101,7 +101,7 @@ Typing events are sent at most every 2.5 seconds, as Stoat's own client does.
 
 | Route | Screen |
 |---|---|
-| `/app` | Redirects to the last visited channel. |
+| `/app` | Opens at Friends, the direct messages home. A settings URL reload still opens over the last visited channel. |
 | `/app/channels/@me` | Friends: online, all, pending, blocked. |
 | `/app/channels/@me/<channel>` | DM or group DM. |
 | `/app/channels/@me/<channel>/<message>` | Same, jumped to a message. Added in M2a. |

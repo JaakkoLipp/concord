@@ -1,4 +1,4 @@
-/** Where the app reopens: the channel last visited, as `/app` and a reloaded settings URL use it (client.md section 5). */
+/** The channel to return to when reopening a settings URL. */
 import { resolve } from '$app/paths';
 import { recalled } from './channels.ts';
 

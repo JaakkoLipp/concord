@@ -3,6 +3,8 @@
   import { fileUrl } from '@concord/stoat';
   import type { Store } from '@concord/domain';
   import Users from '@lucide/svelte/icons/users';
+  import AtSign from '@lucide/svelte/icons/at-sign';
+  import { shell } from '$lib/view/shell.svelte.ts';
   import Volume2 from '@lucide/svelte/icons/volume-2';
   import { resolve } from '$app/paths';
   import { m } from '$lib/i18n/index.ts';
@@ -44,6 +46,10 @@
     <span class="name">{m.shell.friends}</span>
     {#if incoming}<Badge count={incoming} label={m.friends.waiting(incoming)} />{/if}
   </a>
+  <button class="row friends" class:active={shell.mentions} onclick={() => shell.openMentions()} aria-haspopup="dialog">
+    <span class="friends-icon" aria-hidden="true"><AtSign size={24} /></span>
+    <span class="name">{m.mentions.title}</span>
+  </button>
   <h3 class="section">
     <span>{m.shell.directMessages}</span>
     {#if app.session}<IconButton size="sm" label={m.groups.newMessageButton} onclick={() => (picking = true)}><Plus size={16} /></IconButton>{/if}
@@ -113,6 +119,7 @@
     display: flex; align-items: center; gap: var(--space-4); min-height: var(--row-dm); margin-top: 2px; padding: var(--space-1) var(--space-3);
     border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none;
   }
+  :where(button).row { width: 100%; border: 0; background: none; text-align: left; cursor: pointer; }
   @media (hover: hover) { .row:hover { background: var(--hover-overlay); color: var(--text-normal); text-decoration: none; } }
   .row.active { background: var(--surface-5); color: var(--text-strong); }
   .row.unread { color: var(--text-strong); }
