@@ -209,6 +209,24 @@ try {
   await chip.first().click();
   await chip.first().waitFor({ state: 'detached', timeout: 5_000 }).catch(() => {});
 
+  // Task 9: a scroller's thumb is coloured only while the pointer is over it. Headless Chromium hides scrollbars,
+  // so this reads the computed colour; Jaakko's recording checks what is painted.
+  const thumbs = () => page.evaluate(() => {
+    const probe = document.createElement('i');
+    probe.style.color = 'var(--scrollbar-thumb)';
+    document.body.append(probe);
+    const thumb = getComputedStyle(probe).color;
+    probe.remove();
+    const of = (sel: string) => getComputedStyle(document.querySelector(sel)!).scrollbarColor.startsWith(thumb);
+    return { channels: of('.channels'), chat: of('.main .scroller'), width: getComputedStyle(document.querySelector('.channels')!).scrollbarWidth };
+  });
+  await page.locator('.channels').hover({ position: { x: 100, y: 200 } });
+  const overList = await thumbs();
+  await page.locator('.main .scroller').hover({ position: { x: 300, y: 200 } });
+  const overChat = await thumbs();
+  check(overList.channels && !overList.chat && overList.width === 'thin', `over the channel list only its thumb is coloured (${JSON.stringify(overList)})`);
+  check(overChat.chat && !overChat.channels, `over the chat only its thumb is coloured (${JSON.stringify(overChat)})`);
+
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.getByRole('button', { name: 'User settings', exact: true }).hover();
   const reduced = page.locator('.concord-tooltip[data-open="true"]');

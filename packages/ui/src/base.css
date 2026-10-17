@@ -34,5 +34,10 @@ a { color: var(--link); text-decoration: none; }
     --dur-spinner: 1.8s;
   }
 }
-/* Thin scrollbars on the dark surfaces, like the reference. */
-* { scrollbar-width: thin; scrollbar-color: var(--surface-5) transparent; }
+/* Thin scrollbars with no track, whose thumb shows only while the pointer is over that scroller, in one frame
+   (motion spec 4.6). The standard properties, which Chromium and Firefox both follow (m4.6-results.md task 0).
+   Only with a hover pointer: phones keep their own scroll indicators. */
+@media (hover: hover) {
+  * { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+  *:hover { scrollbar-color: var(--scrollbar-thumb) transparent; }
+}
