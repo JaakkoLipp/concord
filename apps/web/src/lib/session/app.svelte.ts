@@ -55,6 +55,8 @@ class App {
   private async start(token: string): Promise<void> {
     const session = new Session(backend);
     await session.start(token, () => void this.signedOut());
+    // Before the shell mounts, so the composer opens with the stored draft.
+    if (session.store.selfId) drafts.open(session.store.selfId);
     this.stopIdle = watchIdle(session);
     this.stopNotify = watchNotifications(session);
     // Leaving needs no notice; the open conversation goes to the Friends screen on its own when its channel goes.

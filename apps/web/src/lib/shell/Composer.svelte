@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * The composer (client.md section 6.3). The editor loads lazily; until then, and when this account can't
-   * send here, the box is drawn at its real size. Each channel keeps its own draft while the tab is open.
+   * send here, the box is drawn at its real size. Each channel keeps its own draft, across reloads too (composer/drafts.ts).
    */
   import ImagePlay from '@lucide/svelte/icons/image-play';
   import GifPicker from '$lib/composer/GifPicker.svelte';

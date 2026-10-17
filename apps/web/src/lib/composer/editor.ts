@@ -37,7 +37,7 @@ export interface ComposerEditor {
   /** Replace a range, such as an autocomplete query with its token, and put the caret after it. */
   replace(from: number, to: number, text: string): void;
   focus(): void;
-  /** Keeps the current draft. */
+  /** The draft is kept already, on each edit. */
   destroy(): void;
 }
 
@@ -205,6 +205,8 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
         opts.onEdit?.(u.state.doc.toString());
       }
       if (u.docChanged || u.selectionSet || u.focusChanged) opts.onQuery?.(u.view.hasFocus ? queryAt(u.state) : null);
+      // Every edit and caret move is kept as it happens, so a reload or a crash keeps the draft too.
+      if (u.docChanged || u.selectionSet) keep(u.state);
     }),
   ];
   const fresh = (doc = '', caret = 0) => EditorState.create({ doc, selection: { anchor: Math.min(caret, doc.length) }, extensions: extensions() });
@@ -214,12 +216,10 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
   };
 
   let current = opts.draft;
-  const view = new EditorView({ parent, state: saved(current) });
-  const keep = () => {
-    if (current === null) return;
-    if (view.state.doc.length) drafts.set(current, { text: view.state.doc.toString(), caret: view.state.selection.main.head });
-    else drafts.delete(current);
+  const keep = (state: EditorState) => {
+    if (current !== null) drafts.set(current, state.doc.toString(), state.selection.main.head);
   };
+  const view = new EditorView({ parent, state: saved(current) });
 
   return {
     text: () => view.state.doc.toString(),
@@ -232,7 +232,6 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
     },
     switchTo: (draft) => {
       if (draft === current) return;
-      keep();
       current = draft;
       view.setState(saved(draft));
       opts.onChange(view.state.doc.toString());
@@ -253,7 +252,6 @@ export function createEditor(parent: HTMLElement, opts: EditorOptions): Composer
     },
     focus: () => view.focus(),
     destroy: () => {
-      keep();
       opts.onQuery?.(null);
       view.destroy();
     },

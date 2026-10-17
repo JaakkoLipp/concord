@@ -17,6 +17,7 @@
   import { resolve } from '$app/paths';
   import { m } from '$lib/i18n/index.ts';
   import { callRights, canView } from '$lib/view/channels.ts';
+  import { collapsed, shownInCategory } from '$lib/view/collapsed.svelte.ts';
   import { canManageChannels, categoryMenu, channelActions, channelMenu, serverMenu } from '$lib/admin/menu.ts';
   import { fileUrl } from '@concord/stoat';
   import { app } from '$lib/session/app.svelte.ts';
@@ -34,7 +35,6 @@
   // Managers see empty categories, so a new one can be filled.
   const tree = $derived(store.channelTree(server).map((g) => ({ ...g, channels: g.channels.filter((c) => canView(store, c)
     && (!store.settings.hiddenMutedChannels[server] || !store.notificationsMuted(c.id))) })).filter((g) => g.channels.length || (manager && g.id)));
-  let collapsed = $state<Record<string, boolean>>({});
   let menuOpen = $state(false);
   let menuButton = $state<HTMLButtonElement | null>(null);
   const menuItems = $derived(menuOpen && app.session ? serverMenu(app.session, server) : []);
@@ -51,8 +51,6 @@
   /** Without Connect a voice channel shows a lock, and opening it says why rather than trying to join (m4.7-plan.md task 5). */
   const locked = (c: Channel) => isVoice(c) && !callRights(store, c).connect;
   const maxUsers = (c: Channel) => (c.kind === 'text' ? c.voice?.maxUsers : undefined);
-  /** A collapsed category still shows its selected and unread channels, as on Discord. */
-  const visible = (id: string | null, c: Channel) => !id || !collapsed[id] || c.id === active || (store.isUnread(c.id) && !store.notificationsMuted(c.id));
   const channelHref = (channel: string) => resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server, channel });
   /** A voice channel with its chat beside the call, without joining it. */
   async function openChat(channel: string) {
@@ -81,8 +79,9 @@
     <div class="group" role="group" aria-label={group.title || m.shell.channels}>
       {#if group.id}
         {@const id = group.id}
+        {@const folded = collapsed.is(server, id)}
         <div class="category-row" use:menuOn={() => (app.session ? categoryMenu(app.session, server, id) : [])}>
-          <button class="category" class:collapsed={collapsed[id]} aria-expanded={!collapsed[id]} onclick={() => (collapsed = { ...collapsed, [id]: !collapsed[id] })}>
+          <button class="category" class:collapsed={folded} aria-expanded={!folded} onclick={() => collapsed.toggle(server, id)}>
             <span>{group.title}</span>
             <ChevronDown size={12} aria-hidden="true" />
           </button>
@@ -91,7 +90,7 @@
           {/if}
         </div>
       {/if}
-      {#each group.channels.filter((c) => visible(group.id, c)) as channel (channel.id)}
+      {#each group.channels.filter((c) => shownInCategory(store, server, group.id, c, active)) as channel (channel.id)}
         {@const unread = store.isUnread(channel.id) && !store.notificationsMuted(channel.id)}
         {@const muted = store.notificationsMuted(channel.id)}
         {@const mentions = store.mentionCount(channel.id)}

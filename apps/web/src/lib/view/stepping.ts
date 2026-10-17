@@ -4,6 +4,7 @@
  */
 import type { Id, Store } from '@concord/domain';
 import { canView, orderedServers } from './channels.ts';
+import { shownInCategory } from './collapsed.svelte.ts';
 
 export type Direction = 'up' | 'down';
 
@@ -42,12 +43,14 @@ export function stepServer(ids: readonly Id[], current: Id | null, dir: Directio
 }
 
 /**
- * A server's channels in sidebar order, for this account, including the ones in a collapsed category. The sidebar
- * hides those, but its collapsed state is component-local $state in ChannelSidebar.svelte, which this list can't
- * read; until that state is shared (M4.8 task 7), stepping can land on a channel the sidebar has folded away.
+ * A server's channels as the sidebar shows them, in its order, for this account: a collapsed category keeps only its
+ * selected (`active`) and unread channels, and hidden muted channels are left out.
  */
-export function serverChannelIds(store: Store, server: Id): Id[] {
-  return store.channelTree(server).flatMap((group) => group.channels.filter((c) => canView(store, c)).map((c) => c.id));
+export function serverChannelIds(store: Store, server: Id, active: Id | null): Id[] {
+  const hideMuted = !!store.settings.hiddenMutedChannels[server];
+  return store.channelTree(server).flatMap((group) => group.channels
+    .filter((c) => canView(store, c) && !(hideMuted && store.notificationsMuted(c.id)) && shownInCategory(store, server, group.id, c, active))
+    .map((c) => c.id));
 }
 
 /** The DMs and groups in the DM sidebar's order. */

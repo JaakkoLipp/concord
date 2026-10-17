@@ -33,7 +33,7 @@ function stepWithin(dir: Direction, unread: boolean): void {
   const here = area();
   if (!session || !here) return;
   const store = session.store;
-  const ids = here.kind === 'server' ? serverChannelIds(store, here.server) : dmChannelIds(store);
+  const ids = here.kind === 'server' ? serverChannelIds(store, here.server, here.channel) : dmChannelIds(store);
   const next = unread ? stepUnread(ids, here.channel, dir, unreadShown(store)) : stepChannel(ids, here.channel, dir);
   if (!next) return;
   if (here.kind === 'server') void toChannel(here.server, next);
