@@ -17,6 +17,15 @@ export interface LayerMe {
   gates: LayerGates;
 }
 
+export interface BetaInvitation {
+  id: string;
+  email: string;
+  requestedBy: Id;
+  createdAt: number;
+  status: 'pending' | 'approved' | 'declined' | 'claiming' | 'used' | 'failed';
+  expiresAt: number | null;
+}
+
 /** A server's tag (m4.5-plan.md task 10): up to 4 letters or digits, with one of its custom emoji as the badge. */
 export interface ServerTag {
   server: Id;
@@ -26,6 +35,14 @@ export interface ServerTag {
 
 export interface Layer {
   me(): Promise<LayerMe>;
+  /** The caller's own invitations; an admin sees every recent one when `review` is set. */
+  betaInvitations(review?: boolean): Promise<BetaInvitation[]>;
+  /** Ask for an invitation to the closed beta for a friend's address; admins and moderators get it approved at once. */
+  requestBetaInvitation(email: string): Promise<BetaInvitation>;
+  /** Approve or decline a pending request. Admin only. */
+  reviewBetaInvitation(id: string, action: 'approve' | 'decline'): Promise<void>;
+  /** A fresh invite link for an approved invitation; it invalidates the previous link. */
+  betaInvitationLink(id: string): Promise<{ token: string }>;
   /** The tags these users wear, by user. */
   wornTags(users: Id[]): Promise<Record<Id, ServerTag>>;
   /** These servers' tags, by server. */

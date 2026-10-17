@@ -59,11 +59,11 @@ async function open(handle: string) {
 }
 const a = await open('dev-admin');
 await a.page.goto(`${APP}/settings/profile`, { waitUntil: 'networkidle' });
-const gates = a.page.getByText('Can create servers · System admin');
+const gates = a.page.getByText('Moderator · System admin');
 check(await gates.waitFor({ timeout: 10_000 }).then(() => true, () => false), 'settings shows dev-admin’s gates');
 const d = await open('dev');
 await d.page.goto(`${APP}/settings/profile`, { waitUntil: 'networkidle' });
-check(await d.page.getByText('Can create servers').count() === 0, 'settings shows dev no gates');
+check(await d.page.getByText('Moderator').count() === 0, 'settings shows dev no gates');
 await d.page.context().close();
 
 // dev-admin spends their bucket for the server through the client while the layer checks them every 3 s, under

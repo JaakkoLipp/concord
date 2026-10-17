@@ -62,6 +62,26 @@ export class StoatClient {
     }
   }
 
+  /** Account creation is only exposed through a claimed, approved beta invitation. Never resets accounts. */
+  async createBetaAccount(email: string, password: string): Promise<void> {
+    let res: Response;
+    try {
+      res = await this.fetch(`${this.base}/auth/account/create`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email, password }), redirect: 'manual', signal: AbortSignal.timeout(15_000),
+      });
+    } catch {
+      throw new LayerError(503, 'InvitationNeedsHelp');
+    }
+    if (res.status === 204) return;
+    const data = await res.json().catch(() => null) as { type?: string; error?: string } | null;
+    if (res.status === 429) throw new LayerError(429, 'RateLimited');
+    const kind = data?.type ?? data?.error;
+    if (kind && ['ShortPassword', 'CompromisedPassword', 'InvalidEmail'].includes(kind)) throw new LayerError(400, kind);
+    if (kind === 'AccountExists' || kind === 'EmailAlreadyInUse') throw new LayerError(409, 'AccountExists');
+    throw new LayerError(503, 'InvitationNeedsHelp');
+  }
+
   /** The token's user, or null when Stoat rejects the token. */
   async me(token: string): Promise<StoatUser | null> {
     const { status, body } = await this.get('/users/@me', token);

@@ -21,11 +21,15 @@
   import { IconButton, type MenuItem } from '@concord/ui';
   import Plus from '@lucide/svelte/icons/plus';
   import X from '@lucide/svelte/icons/x';
+  import MailPlus from '@lucide/svelte/icons/mail-plus';
+  import { page } from '$app/state';
 
   interface Props { store: Store; active: string | null }
   let { store, active }: Props = $props();
   const dms = $derived(store.dmList());
   const incoming = $derived(store.related('Incoming').length);
+  const gates = $derived(app.layerMe?.gates);
+  const onInvitations = $derived(page.url.pathname === resolve('/app/channels/@me/invitations'));
   let picking = $state(false);
 
   function rowMenu(channel: string, partner: string | undefined): MenuItem[] {
@@ -41,7 +45,7 @@
   <button class="search" onclick={() => switcher.show(false)}>{m.shell.findConversation}</button>
 </header>
 <nav class="dms" aria-label={m.shell.directMessages}>
-  <a class="row friends" class:active={active === null} href={resolve('/app/channels/@me')} aria-current={active === null ? 'page' : undefined}>
+  <a class="row friends" class:active={active === null && !onInvitations} href={resolve('/app/channels/@me')} aria-current={active === null && !onInvitations ? 'page' : undefined}>
     <span class="friends-icon" aria-hidden="true"><Users size={24} /></span>
     <span class="name">{m.shell.friends}</span>
     {#if incoming}<Badge count={incoming} label={m.friends.waiting(incoming)} />{/if}
@@ -50,6 +54,12 @@
     <span class="friends-icon" aria-hidden="true"><AtSign size={24} /></span>
     <span class="name">{m.mentions.title}</span>
   </button>
+  {#if gates?.admin || gates?.serverCreator}
+    <a class="row friends" class:active={onInvitations} href={resolve('/app/channels/@me/invitations')} aria-current={onInvitations ? 'page' : undefined}>
+      <span class="friends-icon" aria-hidden="true"><MailPlus size={24} /></span>
+      <span class="name">{m.beta.row}</span>
+    </a>
+  {/if}
   <h3 class="section">
     <span>{m.shell.directMessages}</span>
     {#if app.session}<IconButton size="sm" label={m.groups.newMessageButton} onclick={() => (picking = true)}><Plus size={16} /></IconButton>{/if}

@@ -104,6 +104,8 @@ Admins invite people by creating ordinary server invites, revocable as on Discor
 
   Until then, the invite page at `/app/invite/<code>` serves existing accounts (m3-results.md).
 
+**Closed-beta invitations, since M4.8.** Jaakko's direction, 2026-10-17: instead of Jaakko making each account by hand, admins and moderators invite people by email from the app (Beta invitations, under Mentions in the DM sidebar), through the layer (section 11). An invite is approved at once for the two gate holders and waits for an admin otherwise. The invitee opens `/app/beta/<token>` signed out, chooses a password, and the layer runs step 3 above in their words: it claims the invitation atomically, calls Stoat's account-create over the internal network, and stores the link only as a hash. Single use; an answer from Stoat that leaves the outcome unclear fails the row to `failed` rather than risk a reset. Production sends no mail, so the account is created verified and the person logs straight in; they still get an ordinary server invite to join the server. Moderators are the server-creator list; it is the same gate the settings sidebar already shows.
+
 **Only server admins create invites.** New Stoat servers give every member the invite permission. Our server-creation flow removes it from the default role straight away, then creates an Admin role, first in rank, with every permission (m2c-plan.md decision 4). The permission editors warn when Everyone, or a role without Manage server, is given it back. The allowlist above stays even so, because group DM invites are not covered by server permissions.
 
 Two Stoat behaviours an owner should know (m2c-plan.md): leaving a server you own deletes it, and a new private channel's name briefly reaches every member's client while it is being made private (decision 8).
@@ -369,6 +371,7 @@ That is why the layer stays small and reviewed, holds no Stoat data, and never m
 |---|---|
 | Server tags | M4.5 |
 | GIF search, keeping the GIPHY key on the server | M4.5 |
+| Closed-beta invitations: `POST /beta/redeem` is its only public endpoint; requests, review and links are behind the session check | M4.8 (early) |
 | The admin panel | Its own plan, moved onto this layer: `/app/api/v1/admin/*`, 404 for anyone not on the admin list, with the session check and gate from M4.4. Jaakko's direction, 2026-10-15: a view in the web client that does what they do over SSH during the beta, with its scope kept small |
 | Bookmarks and reminders, if missed | Later |
 | Registration, the invite allowlist and the account pages (section 7) | M6 |
