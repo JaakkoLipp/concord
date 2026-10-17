@@ -1,12 +1,12 @@
 /** The server menu (m2c-plan.md, "Entry points"), from the sidebar header and a right-click on the rail icon. */
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import { Permission, deleteCategory, has, moveCategory, moveChannel, type Category, type Id, type Session } from '@concord/domain';
+import { Permission, deleteCategory, has, moveCategory, moveChannel, moveServer, type Category, type Id, type Session } from '@concord/domain';
 import type { MenuItem } from '@concord/ui';
 import { m } from '$lib/i18n/index.ts';
 import { app } from '$lib/session/app.svelte.ts';
 import { channelsWith, isOwner, serverPerms, serverSections } from '$lib/view/admin.ts';
-import { canView, permissionsIn } from '$lib/view/channels.ts';
+import { canView, orderedServers, permissionsIn } from '$lib/view/channels.ts';
 import { adminDialogs } from './dialogs.svelte.ts';
 import { notifyItems, notifyMuteItem, serverNotificationSettingsItem } from '$lib/notify/dialog.svelte.ts';
 import { confirm } from '$lib/view/confirm.svelte.ts';
@@ -59,6 +59,15 @@ export function serverMenu(session: Session, server: Id): MenuItem[] {
     serverNotificationSettingsItem(session, server),
     { kind: 'check', label: m.admin.hideMutedChannels, checked: !!store.settings.hiddenMutedChannels[server], onselect: () => void session.setHideMutedChannels(server, !store.settings.hiddenMutedChannels[server]).catch(() => toasts.show(m.notify.failed)) },
   );
+  // The keyboard path for the rail's drag (M4.8 task 10a).
+  const shown = orderedServers(store).map((s) => s.id);
+  const move = (delta: -1 | 1) => {
+    const next = moveServer(shown, server, delta);
+    if (next) void session.setServerOrder(next).catch(() => toasts.show(m.shell.serverOrderFailed));
+  };
+  items.push('separator',
+    { label: m.admin.moveUp, disabled: !moveServer(shown, server, -1), onselect: () => move(-1) },
+    { label: m.admin.moveDown, disabled: !moveServer(shown, server, 1), onselect: () => move(1) });
   if (sections.length || editServerProfileItem(session, server)) {
     const settings: MenuItem[] = [];
     if (sections.length) settings.push({

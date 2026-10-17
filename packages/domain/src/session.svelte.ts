@@ -11,6 +11,7 @@ import { BackendError } from './errors.ts';
 import { Store, memberKey, newer, type EmojiPrefs, type FavouriteGif, type MessageWindow, type PendingMessage, type Settings } from './store/store.svelte.ts';
 import { parseNotifications, writeNotifications, type NotificationLevel, type NotificationSettings } from './notify.ts';
 import { HOLD_MS, Latest } from './latest.ts';
+import { orderingFor, writeOrdering } from './layout.ts';
 import { ulid, ulidTime } from './ulid.ts';
 import { SvelteSet } from 'svelte/reactivity';
 
@@ -820,6 +821,12 @@ export class Session {
           if (!this.hiddenMutedWrites.holding) this.store.settings = { ...this.store.settings, hiddenMutedChannels: parseSettings(this.rawSettings).hiddenMutedChannels };
         }, HOLD_MS + 100);
       }
+      if (this.serverOrderWrites.holding) {
+        next.serverOrder = this.store.settings.serverOrder;
+        setTimeout(() => {
+          if (!this.serverOrderWrites.holding) this.store.settings = { ...this.store.settings, serverOrder: parseSettings(this.rawSettings).serverOrder };
+        }, HOLD_MS + 100);
+      }
       this.store.settings = next;
     }
     if (values[EMOJI_KEY] && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(values[EMOJI_KEY].value);
@@ -850,6 +857,28 @@ export class Session {
     this.rawSettings = { ...this.rawSettings, 'concord:hiddenMutedChannels': { value } };
   });
   private hiddenMutedChangedAt = 0;
+
+  /** Into Stoat's own `ordering` key, merged into its stored JSON, since Stoat's client writes other fields there. */
+  private readonly serverOrderWrites = new Latest<Id[]>(async (next) => {
+    const value = writeOrdering(this.rawSettings.ordering?.value, next);
+    await this.backend.setSettings({ ordering: value });
+    this.rawSettings = { ...this.rawSettings, ordering: { value } };
+  });
+  private serverOrderChangedAt = 0;
+
+  /**
+   * The rail's order (M4.8 task 10a), as the servers it shows; synced across this account's devices. Stored
+   * servers that aren't shown now keep their places after them.
+   */
+  setServerOrder(shown: Id[]): Promise<void> {
+    const changedAt = ++this.serverOrderChangedAt;
+    const next = orderingFor(shown, this.store.settings.serverOrder);
+    this.store.settings = { ...this.store.settings, serverOrder: next };
+    return this.serverOrderWrites.set(next).catch((e: unknown) => {
+      if (changedAt === this.serverOrderChangedAt) this.store.settings = { ...this.store.settings, serverOrder: parseSettings(this.rawSettings).serverOrder };
+      throw e;
+    });
+  }
 
   /** Hide or show muted channels in one server's sidebar, synced across this account's devices. */
   setHideMutedChannels(server: Id, hidden: boolean): Promise<void> {

@@ -1,7 +1,7 @@
 /** Sidebar ordering (m2c-plan.md task 3): moves step over hidden channels and keep every ID. */
 import { describe, expect, it } from 'vitest';
 import type { Category } from './entities.ts';
-import { deleteCategory, moveCategory, moveChannel, moveChannelTo } from './layout.ts';
+import { deleteCategory, moveCategory, moveChannel, moveChannelTo, moveServer, orderingFor, placeServer, railOrder, writeOrdering } from './layout.ts';
 
 const cats = (): Category[] => [
   { id: 'a', title: 'A', channels: ['a1', 'hidden', 'a2'] },
@@ -41,5 +41,32 @@ describe('layout', () => {
     moveChannel(before, 'a2', 1, shown);
     moveChannelTo(before, 'a1', 'b');
     expect(before).toEqual(cats());
+  });
+});
+
+describe('server rail order', () => {
+  it('takes the stored order for the servers present, then the rest by ID', () => {
+    expect(railOrder(['c', 'gone', 'a', 'c'], ['a', 'b', 'c', 'd'])).toEqual(['c', 'a', 'b', 'd']);
+    expect(railOrder([], ['b', 'a'])).toEqual(['a', 'b']);
+  });
+
+  it('moves a server one place, or to a position', () => {
+    expect(moveServer(['a', 'b', 'c'], 'b', -1)).toEqual(['b', 'a', 'c']);
+    expect(moveServer(['a', 'b', 'c'], 'b', 1)).toEqual(['a', 'c', 'b']);
+    expect(moveServer(['a', 'b', 'c'], 'a', -1)).toBeNull();
+    expect(moveServer(['a', 'b', 'c'], 'c', 1)).toBeNull();
+    expect(placeServer(['a', 'b', 'c'], 'c', 0)).toEqual(['c', 'a', 'b']);
+    expect(placeServer(['a', 'b', 'c'], 'a', 9)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('keeps stored servers that aren’t shown, after the shown ones', () => {
+    expect(orderingFor(['b', 'a'], ['a', 'gone', 'b'])).toEqual(['b', 'a', 'gone']);
+  });
+
+  it('replaces only the servers in Stoat’s ordering JSON', () => {
+    expect(JSON.parse(writeOrdering('{"servers":["a"],"other":{"x":1}}', ['b', 'a']))).toEqual({ servers: ['b', 'a'], other: { x: 1 } });
+    expect(JSON.parse(writeOrdering(undefined, ['a']))).toEqual({ servers: ['a'] });
+    expect(JSON.parse(writeOrdering('not json', ['a']))).toEqual({ servers: ['a'] });
+    expect(JSON.parse(writeOrdering('[1]', ['a']))).toEqual({ servers: ['a'] });
   });
 });

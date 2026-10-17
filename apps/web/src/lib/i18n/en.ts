@@ -97,6 +97,7 @@ export const en = {
   shell: {
     closeModeration: 'Close moderation view',
     servers: 'Servers',
+    serverOrderFailed: 'Couldn’t save the server order.',
     directMessages: 'Direct messages',
     friends: 'Friends',
     findConversation: 'Find or start a conversation',

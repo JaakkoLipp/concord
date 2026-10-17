@@ -63,3 +63,52 @@ export const renameCategory = (categories: Category[], id: string, title: string
 
 /** Its channels go to no category, at the top of the sidebar. */
 export const deleteCategory = (categories: Category[], id: string): Category[] => copy(categories).filter((c) => c.id !== id);
+
+// ---------- the server rail (M4.8 task 10a) ----------
+
+/** The rail's servers in order: those Stoat's `ordering` names first, in its order, then the rest by ID. */
+export function railOrder(stored: readonly Id[], present: Iterable<Id>): Id[] {
+  const here = new Set(present);
+  const named = [...new Set(stored)].filter((id) => here.has(id));
+  const known = new Set(named);
+  return [...named, ...[...here].filter((id) => !known.has(id)).sort()];
+}
+
+/** Puts `server` at index `to` of the order without it. */
+export function placeServer(shown: readonly Id[], server: Id, to: number): Id[] {
+  const rest = shown.filter((id) => id !== server);
+  rest.splice(Math.max(0, Math.min(to, rest.length)), 0, server);
+  return rest;
+}
+
+/** One place up (-1) or down (+1), or null at the end it would leave. */
+export function moveServer(shown: readonly Id[], server: Id, delta: -1 | 1): Id[] | null {
+  const i = shown.indexOf(server);
+  const j = i + delta;
+  if (i < 0 || j < 0 || j >= shown.length) return null;
+  return placeServer(shown, server, j);
+}
+
+/**
+ * The list to store: the shown order, then the stored IDs of servers not shown now, so a server that is only
+ * missing for a moment, or one Stoat's own client knows of, keeps its place.
+ */
+export function orderingFor(shown: readonly Id[], stored: readonly Id[]): Id[] {
+  const set = new Set(shown);
+  return [...shown, ...stored.filter((id) => !set.has(id))];
+}
+
+/**
+ * Stoat's `ordering` setting with `servers` replaced. Stoat's own client writes this key too, so every other
+ * field in the stored JSON is kept as it was.
+ */
+export function writeOrdering(raw: string | undefined, servers: readonly Id[]): string {
+  let o: Record<string, unknown> = {};
+  try {
+    const v = JSON.parse(raw ?? '{}') as unknown;
+    if (v && typeof v === 'object' && !Array.isArray(v)) o = v as Record<string, unknown>;
+  } catch {
+    // Unreadable: written fresh.
+  }
+  return JSON.stringify({ ...o, servers });
+}
