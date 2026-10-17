@@ -3,7 +3,7 @@
  * never a cookie. Only the layer's own 401 signs out: a 503 means Stoat failed, and must never log anyone out.
  */
 import { BackendError } from '@concord/domain/errors';
-import type { BetaInvitation, Id, Layer, LayerMe, ServerInviteRequest, ServerTag } from '@concord/domain';
+import type { AccountAction, AccountActionResult, BetaInvitation, Id, Layer, LayerMe, PlatformUser, ServerInviteRequest, ServerTag } from '@concord/domain';
 
 export class HttpLayer implements Layer {
   private readonly token: () => string | null;
@@ -63,6 +63,18 @@ export class HttpLayer implements Layer {
 
   reviewServerInvite(id: string, action: 'approve' | 'decline', code?: string): Promise<void> {
     return this.request('POST', `/server-invites/${id}`, { action, ...(code ? { code } : {}) });
+  }
+
+  platformUsers(): Promise<{ users: PlatformUser[]; updatedAt: number }> {
+    return this.get('/admin/users');
+  }
+
+  accountAction(action: AccountAction, user: Id): Promise<{ id: string }> {
+    return this.request('POST', '/admin/actions', { action, user });
+  }
+
+  accountActionResult(id: string): Promise<AccountActionResult> {
+    return this.get(`/admin/actions/${id}`);
   }
 
   async wornTags(users: Id[]): Promise<Record<Id, ServerTag>> {

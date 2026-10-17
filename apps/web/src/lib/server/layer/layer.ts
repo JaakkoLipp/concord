@@ -15,6 +15,8 @@ export interface LayerConfig {
   stoatApi: string;
   /** ADMIN_USER_IDS from host.env. Empty means nobody is admin. */
   adminIds: ReadonlySet<string>;
+  /** SPOOL_DIR: where the account runner's `in` and `out` folders are mounted. Unset means the admin view's account actions are off. */
+  spoolDir: string | null;
 }
 
 /** Reads the layer's settings from the environment, refusing an admin list that isn't all user IDs. */
@@ -22,7 +24,7 @@ export function configFrom(env: Record<string, string | undefined>, defaults: { 
   const ids = (env.ADMIN_USER_IDS ?? '').split(/[\s,]+/).filter(Boolean);
   const bad = ids.filter((id) => !isUlid(id));
   if (bad.length) throw new Error(`ADMIN_USER_IDS holds ${bad.length} entries that aren't user IDs`);
-  return { stoatApi: env.STOAT_API || defaults.stoatApi, adminIds: new Set(ids) };
+  return { stoatApi: env.STOAT_API || defaults.stoatApi, adminIds: new Set(ids), spoolDir: env.SPOOL_DIR || null };
 }
 
 /** A caller whose session Stoat accepted. The token goes only back to Stoat, as this caller. */
@@ -172,6 +174,16 @@ export class Layer {
       this.creators = { list, until: this.now() + LIMITS.serverCreatorsMs };
       return list;
     });
+  }
+
+  /** Everyone on Stoat's server-creator list: the moderators. */
+  async moderators(): Promise<string[]> {
+    return this.serverCreators();
+  }
+
+  /** The list just changed (the account runner changed it): read it again next time, not up to a minute later. */
+  forgetModerators(): void {
+    this.creators = null;
   }
 
   /**

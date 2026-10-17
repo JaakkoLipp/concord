@@ -1,0 +1,18 @@
+# Installed to /etc/systemd/system/ by pnpm deploy:stack:prod. The account runner (account-runner.py) is what changes
+# accounts and the two global roles for the admin view; concord-web only asks it, through spool/in. Its log lines
+# carry the tag "concord", so status.sh shows them with the rest.
+[Unit]
+Description=Concord account runner
+After=docker.service
+Requires=docker.service
+
+[Service]
+ExecStart=/home/jaakko/stoat/concord/account-runner.py loop
+Restart=always
+RestartSec=5
+SyslogIdentifier=concord
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

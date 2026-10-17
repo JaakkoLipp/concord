@@ -37,6 +37,28 @@ export interface ServerInviteRequest {
   code: string | null;
 }
 
+/** What the admin view may ask the account runner to do to a person (architecture section 11.5). */
+export type AccountAction = 'moderator:add' | 'moderator:remove' | 'admin:add' | 'admin:remove' | 'password-link' | 'suspend' | 'unsuspend';
+
+/** A person on the platform as the runner last listed them. The owner is the first admin, and can't be demoted. */
+export interface PlatformUser {
+  id: Id;
+  username: string;
+  discriminator: string;
+  displayName?: string;
+  disabled: boolean;
+  admin: boolean;
+  moderator: boolean;
+  owner: boolean;
+}
+
+/** The runner's answer to an action. A password link is shown once, to the admin who asked. */
+export interface AccountActionResult {
+  status: 'pending' | 'ok' | 'failed';
+  message?: string;
+  link?: string;
+}
+
 /** A server's tag (m4.5-plan.md task 10): up to 4 letters or digits, with one of its custom emoji as the badge. */
 export interface ServerTag {
   server: Id;
@@ -60,6 +82,12 @@ export interface Layer {
   requestServerInvite(server: Id, note: string, code?: string): Promise<ServerInviteRequest>;
   /** Approve (with the code of an invite the admin made in that server) or decline a pending request. Admin only. */
   reviewServerInvite(id: string, action: 'approve' | 'decline', code?: string): Promise<void>;
+  /** Everyone on the platform, for the admin view. Admin only; fails with 503 while the account runner is down. */
+  platformUsers(): Promise<{ users: PlatformUser[]; updatedAt: number }>;
+  /** Ask the account runner to do one thing to a person. Returns the request to ask about. Admin only. */
+  accountAction(action: AccountAction, user: Id): Promise<{ id: string }>;
+  /** The runner's answer to a request, pending until it has one. */
+  accountActionResult(id: string): Promise<AccountActionResult>;
   /** The tags these users wear, by user. */
   wornTags(users: Id[]): Promise<Record<Id, ServerTag>>;
   /** These servers' tags, by server. */

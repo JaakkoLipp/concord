@@ -23,6 +23,13 @@ run('rsync', ['-a', '--inplace', '--itemize-changes', '--exclude', 'web/', '--ex
 const host = LOCAL ? [] : [
   // The host-level files: cron jobs, automatic reboots, the sysctl for addresses that aren't up yet.
   'sudo install -m 0644 concord/concord-cron /etc/cron.d/concord',
+  // The account runner's folders (architecture section 11.5), before up -d, or Docker would make them as root: the
+  // container writes requests into `in` as uid 1000 and can only read `out`, which only the runner writes.
+  'sudo install -d -o 1000 -g 1000 -m 0700 concord/spool/in',
+  'sudo install -d -o root -g root -m 0755 concord/spool/out',
+  'sudo install -m 0644 concord/concord-runner.service /etc/systemd/system/concord-runner.service',
+  'sudo systemctl daemon-reload',
+  'sudo systemctl enable concord-runner >/dev/null 2>&1',
   'sudo install -m 0644 concord/52concord-auto-reboot /etc/apt/apt.conf.d/52concord-auto-reboot',
   'sudo install -m 0644 concord/99-concord-net.conf /etc/sysctl.d/99-concord-net.conf',
   'sudo sysctl --quiet --system >/dev/null',
@@ -34,8 +41,15 @@ run(...onStack([
   LOCAL ? 'install -d -m 0700 concord/data' : 'sudo install -d -o 1000 -g 1000 -m 0700 concord/data',
   // A broken Caddyfile would put Caddy in a crash loop once up -d recreates it: check it in the running one first.
   'concord/dc exec -T caddy caddy validate --config /etc/caddy/Caddyfile >/dev/null',
+  ...(LOCAL ? ['install -d -m 0700 concord/spool/in', 'install -d -m 0755 concord/spool/out'] : []),
   ...host,
   'concord/dc up -d --remove-orphans',
+  // The runner after the stack is up, so a new script is the one running. Locally it is a background process of
+  // this user, since the machine itself has no systemd units; on the VPS it is a service.
+  LOCAL
+    // By its pidfile, checked against the process's name: a pkill -f would match this very command line.
+    ? '(p=$(cat concord/spool/runner.pid 2>/dev/null); if [ -n "$p" ] && grep -q account-runner "/proc/$p/cmdline" 2>/dev/null; then kill "$p"; sleep 1; fi; true) && (setsid nohup concord/account-runner.py loop >>concord/spool/runner.log 2>&1 &)'
+    : 'sudo systemctl restart concord-runner',
   'concord/dc exec -T caddy caddy reload --config /etc/caddy/Caddyfile --force',
   'concord/dc ps --format "table {{.Service}}\\t{{.Status}}"',
 ].join(' && ')));

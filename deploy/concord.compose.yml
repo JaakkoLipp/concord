@@ -126,10 +126,14 @@ services:
       # touch, and the admin list from the server-only host.env. Empty means nobody is admin.
       LAYER_DB: /srv/data/layer.db
       ADMIN_USER_IDS: ${ADMIN_USER_IDS:-}
+      # The account runner's folders (architecture section 11.5): requests go in, answers come back read-only.
+      SPOOL_DIR: /srv/spool
     volumes:
       - ./concord/web:/srv/web:ro
       # Made by pnpm deploy:stack, owned by uid 1000, the image's node user. Docker would make it root's.
       - ./concord/data:/srv/data
+      - ./concord/spool/in:/srv/spool/in
+      - ./concord/spool/out:/srv/spool/out:ro
 
 # Outbound traffic from every container leaves from the main IPv4. Without this, Docker's NAT takes the first
 # address on eth0, which after a reboot is the floating IPv4: LiveKit then discovered the floating IP as its
