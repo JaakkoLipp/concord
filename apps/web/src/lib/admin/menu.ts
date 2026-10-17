@@ -115,6 +115,22 @@ async function copy(text: string): Promise<void> {
   }
 }
 
+/**
+ * Invite and Edit channel, for those who may: the channel menu's items and the channel row's buttons
+ * (m4.6-plan.md task 7) use the same checks.
+ */
+export function channelActions(session: Session, channel: Id): { invite: (() => void) | null; edit: (() => void) | null } {
+  const c = session.store.channels.get(channel);
+  if (c?.kind !== 'text') return { invite: null, edit: null };
+  const mine = permissionsIn(session.store, c);
+  const server = c.server;
+  return {
+    invite: has(mine, Permission.InviteOthers) ? () => adminDialogs.open({ kind: 'invite', server, channel }) : null,
+    edit: has(mine, Permission.ManageChannel) || has(mine, Permission.ManagePermissions)
+      ? () => openChannelSettings(channel, has(mine, Permission.ManageChannel) ? 'overview' : 'permissions') : null,
+  };
+}
+
 export function channelMenu(session: Session, channel: Id): MenuItem[] {
   const store = session.store;
   const c = store.channels.get(channel);
@@ -124,10 +140,9 @@ export function channelMenu(session: Session, channel: Id): MenuItem[] {
   if (store.isUnread(channel)) items.push({ label: m.notify.markRead, onselect: () => session.markRead(channel) });
   items.push(...notifyItems(session, 'channel', channel, 'channel'), 'separator');
   const mine = permissionsIn(store, c);
-  if (has(mine, Permission.InviteOthers)) items.push({ label: m.admin.invite.people, onselect: () => adminDialogs.open({ kind: 'invite', server, channel }) });
-  if (has(mine, Permission.ManageChannel) || has(mine, Permission.ManagePermissions)) {
-    items.push({ label: m.admin.editChannel, onselect: () => openChannelSettings(channel, has(mine, Permission.ManageChannel) ? 'overview' : 'permissions') });
-  }
+  const act = channelActions(session, channel);
+  if (act.invite) items.push({ label: m.admin.invite.people, onselect: act.invite });
+  if (act.edit) items.push({ label: m.admin.editChannel, onselect: act.edit });
   if (canManageChannels(session, server)) {
     const s = store.servers.get(server)!;
     const shown = (id: Id) => { const x = store.channels.get(id); return !!x && canView(store, x); };

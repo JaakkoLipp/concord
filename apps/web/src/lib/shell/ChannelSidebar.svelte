@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Badge, Button, Menu } from '@concord/ui';
+  import { Badge, Button, IconButton, Menu } from '@concord/ui';
   import type { Channel, Id, Store } from '@concord/domain';
   import BellOff from '@lucide/svelte/icons/bell-off';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
@@ -7,12 +7,17 @@
   import Volume2 from '@lucide/svelte/icons/volume-2';
   import Lock from '@lucide/svelte/icons/lock';
   import Plus from '@lucide/svelte/icons/plus';
+  import MessageSquare from '@lucide/svelte/icons/message-square';
+  import Settings from '@lucide/svelte/icons/settings';
+  import UserPlus from '@lucide/svelte/icons/user-plus';
+  import { goto } from '$app/navigation';
+  import { shell } from '$lib/view/shell.svelte.ts';
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import { adminDialogs } from '$lib/admin/dialogs.svelte.ts';
   import { resolve } from '$app/paths';
   import { m } from '$lib/i18n/index.ts';
   import { callRights, canView } from '$lib/view/channels.ts';
-  import { canManageChannels, categoryMenu, channelMenu, serverMenu } from '$lib/admin/menu.ts';
+  import { canManageChannels, categoryMenu, channelActions, channelMenu, serverMenu } from '$lib/admin/menu.ts';
   import { fileUrl } from '@concord/stoat';
   import { app } from '$lib/session/app.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
@@ -48,6 +53,12 @@
   const maxUsers = (c: Channel) => (c.kind === 'text' ? c.voice?.maxUsers : undefined);
   /** A collapsed category still shows its selected and unread channels, as on Discord. */
   const visible = (id: string | null, c: Channel) => !id || !collapsed[id] || c.id === active || (store.isUnread(c.id) && !store.notificationsMuted(c.id));
+  const channelHref = (channel: string) => resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server, channel });
+  /** A voice channel with its chat beside the call, without joining it. */
+  async function openChat(channel: string) {
+    await goto(channelHref(channel));
+    shell.voiceChat = true;
+  }
 </script>
 
 <header class="server-header" class:with-banner={!!info?.banner}>
@@ -88,26 +99,37 @@
         {@const occupants = since === undefined ? 0 : store.voiceParticipants(channel.id).length}
         {@const max = maxUsers(channel)}
         {@const lock = locked(channel)}
-        <a
-          class="channel" class:active={channel.id === active} class:unread class:muted class:occupied={since !== undefined}
-          class:drop-ok={moves.dragging?.to.has(channel.id)} class:drop-over={moves.hover === channel.id}
-          ondragover={isVoice(channel) ? (e) => moves.over(e, channel.id) : undefined}
-          ondragleave={isVoice(channel) ? () => moves.leave(channel.id) : undefined}
-          ondrop={isVoice(channel) ? (e) => app.session && moves.drop(e, app.session, channel.id) : undefined}
-          href={resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server, channel: channel.id })}
-          aria-current={channel.id === active ? 'page' : undefined}
-          aria-label={[m.shell.channelLabel(name, isVoice(channel), unread, mentions), occupants || max ? m.voiceState.occupied(occupants, max) : '', lock ? m.voice.cantJoin : ''].filter(Boolean).join(', ')}
-          use:menuOn={() => (app.session ? channelMenu(app.session, channel.id) : [])}
-          onclick={isVoice(channel) && !lock ? (e) => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey) app.voice?.join(channel.id); } : undefined}
-        >
-          {#if unread}<span class="unread-pill" aria-hidden="true"></span>{/if}
-          <span class="icon" aria-hidden="true">{#if lock}<Lock size={20} />{:else if isVoice(channel)}<Volume2 size={20} />{:else}<Hash size={20} />{/if}</span>
-          <span class="name">{name}</span>
-          {#if muted}<span class="muted-icon" aria-hidden="true"><BellOff size={16} /></span>{/if}
-          {#if mentions}<Badge count={mentions} />{/if}
-          {#if since !== undefined}<VoiceTimer {since} />{/if}
-          {#if max}<span class="limit" aria-hidden="true">{m.voiceState.limit(occupants, max)}</span>{/if}
-        </a>
+        {@const act = app.session ? channelActions(app.session, channel.id) : null}
+        <!-- The row holds the link and, beside it rather than inside it, the hover actions (motion spec 4.1). -->
+        <div class="row" class:active={channel.id === active} class:drop-over={moves.hover === channel.id}>
+          <a
+            class="channel" class:active={channel.id === active} class:unread class:muted class:occupied={since !== undefined}
+            class:drop-ok={moves.dragging?.to.has(channel.id)} class:drop-over={moves.hover === channel.id}
+            ondragover={isVoice(channel) ? (e) => moves.over(e, channel.id) : undefined}
+            ondragleave={isVoice(channel) ? () => moves.leave(channel.id) : undefined}
+            ondrop={isVoice(channel) ? (e) => app.session && moves.drop(e, app.session, channel.id) : undefined}
+            href={channelHref(channel.id)}
+            aria-current={channel.id === active ? 'page' : undefined}
+            aria-label={[m.shell.channelLabel(name, isVoice(channel), unread, mentions), occupants || max ? m.voiceState.occupied(occupants, max) : '', lock ? m.voice.cantJoin : ''].filter(Boolean).join(', ')}
+            use:menuOn={() => (app.session ? channelMenu(app.session, channel.id) : [])}
+            onclick={isVoice(channel) && !lock ? (e) => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey) app.voice?.join(channel.id); } : undefined}
+          >
+            {#if unread}<span class="unread-pill" aria-hidden="true"></span>{/if}
+            <span class="icon" aria-hidden="true">{#if lock}<Lock size={20} />{:else if isVoice(channel)}<Volume2 size={20} />{:else}<Hash size={20} />{/if}</span>
+            <span class="name">{name}</span>
+            {#if muted}<span class="muted-icon" aria-hidden="true"><BellOff size={16} /></span>{/if}
+            {#if mentions}<Badge count={mentions} />{/if}
+            {#if since !== undefined}<VoiceTimer {since} />{/if}
+            {#if max}<span class="limit" aria-hidden="true">{m.voiceState.limit(occupants, max)}</span>{/if}
+          </a>
+          {#if act?.invite || act?.edit || isVoice(channel)}
+            <span class="actions">
+              {#if isVoice(channel)}<IconButton size="sm" label={m.shell.openChat} onclick={() => void openChat(channel.id)}><MessageSquare /></IconButton>{/if}
+              {#if act?.invite}<IconButton size="sm" label={m.shell.inviteToChannel} onclick={act.invite}><UserPlus /></IconButton>{/if}
+              {#if act?.edit}<IconButton size="sm" label={m.admin.editChannel} onclick={act.edit}><Settings /></IconButton>{/if}
+            </span>
+          {/if}
+        </div>
         {#if occupants}<VoiceParticipants {store} {server} {name} {speaking} channel={channel.id} />{/if}
       {/each}
     </div>
@@ -143,24 +165,34 @@
   @media (hover: hover) { .category:hover { color: var(--text-strong); } }
   .category :global(svg) { transition: rotate calc(var(--dur-popover) * var(--motion)) var(--ease-out); }
   .category.collapsed :global(svg) { rotate: -90deg; }
+  /* The row carries the hover and selected backgrounds, so they cover the actions too. */
+  .row { display: flex; align-items: center; margin-top: 2px; border-radius: var(--radius-md); }
+  @media (hover: hover) { .row:hover { background: var(--hover-overlay); } }
+  .row.active { background: var(--surface-5); }
   .channel {
-    position: relative; display: flex; align-items: center; gap: var(--space-3);
-    min-height: var(--row-channel); margin-top: 2px; padding: 0 var(--space-3);
+    position: relative; flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3);
+    min-height: var(--row-channel); padding: 0 var(--space-3);
     border-radius: var(--radius-md); color: var(--text-secondary); text-decoration: none;
     font: 500 var(--text-md) var(--font-sans);
   }
-  @media (hover: hover) { .channel:hover { background: var(--hover-overlay); color: var(--text-normal); text-decoration: none; } }
-  .channel.active { background: var(--surface-5); color: var(--text-strong); }
+  /* Hovered text steps up: normal to strong, muted to secondary (m4.6-plan.md task 7). */
+  @media (hover: hover) { .row:hover .channel { color: var(--text-strong); text-decoration: none; } }
+  .channel.active { color: var(--text-strong); }
+  /* Invite, Edit and Open chat show on a hovered or selected row, only with a hover pointer: on touch the menu is the way in. */
+  .actions { display: none; align-items: center; gap: var(--space-1); padding-right: var(--space-2); }
+  @media (hover: hover) { .row:hover .actions, .row.active .actions, .row:focus-within .actions { display: flex; } }
+  .actions :global(.icon-button) { color: var(--text-secondary); }
   .channel.unread { color: var(--text-strong); }
   /* While a person is dragged, the channels they may be dropped on. */
   .channel.drop-ok { outline: 1px dashed var(--accent); outline-offset: -1px; }
-  .channel.drop-over { background: var(--accent-wash); color: var(--text-strong); }
+  .row.drop-over { background: var(--accent-wash); }
+  .channel.drop-over { color: var(--text-strong); }
   .channel.muted { color: var(--text-muted); font-weight: 400; }
   .channel.muted.active { color: var(--text-secondary); }
-  @media (hover: hover) { .channel.muted:hover { color: var(--text-secondary); } }
+  @media (hover: hover) { .row:hover .channel.muted { color: var(--text-secondary); } }
   .icon { display: grid; place-items: center; color: var(--text-muted); flex: none; }
   .channel.active .icon { color: var(--text-secondary); }
-  @media (hover: hover) { .channel:hover .icon { color: var(--text-secondary); } }
+  @media (hover: hover) { .row:hover .icon { color: var(--text-secondary); } }
   .channel.occupied .icon { color: var(--status-online); }
   .limit {
     flex: none; padding: 0 var(--space-2); border-radius: var(--radius-xs); background: var(--surface-4); color: var(--text-secondary);

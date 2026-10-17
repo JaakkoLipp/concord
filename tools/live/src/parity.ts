@@ -1,5 +1,5 @@
 /** M4.6's measured acceptance check, local personas only. Grows with the implementation tasks. */
-import { chromium, type Locator } from 'playwright-core';
+import { chromium, type Locator, type Page } from 'playwright-core';
 import { loadState } from '../../seed/src/config.ts';
 import { assertDevStack } from '../../seed/src/vps.ts';
 import { APP } from './browser.ts';
@@ -133,6 +133,48 @@ try {
   await page.waitForTimeout(300);
   check((await pill()).height === 8 && timed(toUnread.moving, 100, ['clip-path']), 'and shrinks back to 8 px in 100 ms');
   await page.goBack({ waitUntil: 'networkidle' });
+
+  // Task 7: channel row actions, by the same checks as the channel menu, with tooltips above.
+  const row = (p: Page, name: RegExp) => p.locator('.channels .row', { has: p.getByRole('link', { name }) });
+  const actions = async (p: Page, name: RegExp) => {
+    await row(p, name).hover();
+    return row(p, name).locator('.actions .icon-button').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')));
+  };
+  const devActions = await actions(page, /^yleinen/);
+  await row(page, /^yleinen/).getByRole('link').click({ button: 'right' });
+  const devMenu = await page.getByRole('menuitem').allInnerTexts();
+  await page.keyboard.press('Escape');
+  check(!devActions.includes('Edit channel') && devActions.includes('Invite to channel') === devMenu.includes('Invite people'), `as dev, no Edit channel, and Invite as the menu has it (${devActions.join(', ')})`);
+  const adminContext = await browser.newContext({ viewport: { width: 1600, height: 900 }, reducedMotion: 'no-preference' });
+  const admin = await adminContext.newPage();
+  await signIn(admin, 'dev-admin');
+  await admin.goto(`${APP}/channels/${st.serverId}/${st.channels.botti}`, { waitUntil: 'networkidle' });
+  await admin.locator('.composer').waitFor();
+  const text = await actions(admin, /^yleinen/);
+  const voice = await actions(admin, /^Olohuone/);
+  check(text.join() === 'Invite to channel,Edit channel' && voice.join() === 'Open chat,Invite to channel,Edit channel', `as dev-admin: ${text.join(', ')}; on a voice channel ${voice.join(', ')}`);
+  const edit = row(admin, /^yleinen/).getByRole('button', { name: 'Edit channel' });
+  await row(admin, /^yleinen/).hover();
+  await edit.hover();
+  await admin.waitForTimeout(200);
+  const tip = admin.locator('.concord-tooltip[data-open="true"]');
+  check(await tip.getAttribute('data-side') === 'top' && (await tip.innerText()).includes('Edit channel'), 'the row action’s tooltip is above it');
+  await row(admin, /^yleinen/).getByRole('button', { name: 'Invite to channel' }).click();
+  check(await admin.getByRole('dialog', { name: /^Invite people/ }).waitFor({ timeout: 3_000 }).then(() => true, () => false), 'Invite to channel opens the invite dialog');
+  await admin.keyboard.press('Escape');
+  await admin.getByRole('dialog', { name: /^Invite people/ }).waitFor({ state: 'hidden', timeout: 3_000 });
+  await row(admin, /^yleinen/).hover();
+  await edit.click();
+  check(await admin.locator('.settings[role="dialog"]').waitFor({ timeout: 3_000 }).then(() => true, () => false)
+    && admin.url().endsWith(`/channel-settings/${st.channels.yleinen}/overview`), 'Edit channel opens its settings');
+  await admin.keyboard.press('Escape');
+  await admin.locator('.settings[role="dialog"]').waitFor({ state: 'detached', timeout: 3_000 });
+  await row(admin, /^Olohuone/).hover();
+  await row(admin, /^Olohuone/).getByRole('button', { name: 'Open chat' }).click();
+  await admin.waitForURL(new RegExp(`/channels/${st.serverId}/${st.channels.olohuone}$`));
+  await admin.waitForTimeout(500);
+  check(await admin.locator('.side-panel .chat').count() === 1 && await admin.getByText('Voice connected').count() === 0, 'Open chat shows the voice channel with its chat, without joining');
+  await adminContext.close();
 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.getByRole('button', { name: 'User settings', exact: true }).hover();

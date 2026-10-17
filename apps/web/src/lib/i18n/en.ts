@@ -117,6 +117,8 @@ export const en = {
     hideProfile: 'Hide profile',
     openSidebar: 'Open channels',
     closeSidebar: 'Close channels',
+    inviteToChannel: 'Invite to channel',
+    openChat: 'Open chat',
     group: { online: 'Online', offline: 'Offline' },
   },
   conversation: {
