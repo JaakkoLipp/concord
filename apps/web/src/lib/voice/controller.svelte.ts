@@ -6,8 +6,8 @@
  * the SDK stays out of the main bundle. Everything here imports it as types only.
  */
 import { untrack } from 'svelte';
-import { Permission, has, isFinalJoinFailure, joinFailure, memberKey, type Id, type JoinFailure, type Session, type VoiceMoved } from '@concord/domain';
-import { permissionsIn } from '$lib/view/channels.ts';
+import { isFinalJoinFailure, joinFailure, memberKey, type Id, type JoinFailure, type Session, type VoiceMoved } from '@concord/domain';
+import { callRights, type CallRights } from '$lib/view/channels.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
 import { m } from '$lib/i18n/index.ts';
 import { webAudioOutput } from './audio/output.ts';
@@ -87,6 +87,16 @@ export class VoiceController {
   });
   readonly serverMuted: boolean = $derived(!!this.selfMember && !this.selfMember.canPublish);
   readonly serverDeafened: boolean = $derived(!!this.selfMember && !this.selfMember.canReceive);
+  /**
+   * Speak, Video and Listen in this call's channel (m4.7-plan.md task 5). A server mute or deafen takes them away too, as
+   * in Stoat. Without Speak and Video Stoat's token restricts nothing (m4.7-results.md task 1), so this client stops the
+   * microphone, camera and screen share itself.
+   */
+  readonly rights: CallRights = $derived.by(() => callRights(this.session.store, this.state.channel ? this.session.store.channels.get(this.state.channel) : undefined));
+  /** Why the microphone button is locked, for its tooltip, or null when it works. */
+  readonly micLock: string | null = $derived(this.serverMuted ? m.voiceMod.youServerMuted : this.rights.speak ? null : m.voice.cantSpeak);
+  /** Why the camera and share buttons are locked, or null. */
+  readonly videoLock: string | null = $derived(this.rights.video ? null : m.voice.cantVideo);
   /** Volumes stop at 200 % with Web Audio mixing, and at 100 % without it. */
   readonly maxVolume = this.webAudioMix ? 2 : 1;
   /**
@@ -105,10 +115,15 @@ export class VoiceController {
     // Speak gained or lost mid-call, by a role or an override: the call publishes the microphone once allowed.
     this.stopWatching = $effect.root(() => {
       $effect(() => {
-        const channel = this.state.channel;
-        const c = channel ? this.session.store.channels.get(channel) : undefined;
-        const can = (!c || has(permissionsIn(this.session.store, c), Permission.Speak)) && !this.serverMuted;
+        const can = this.rights.speak && !this.serverMuted;
         untrack(() => this.call?.setCanSpeak(can));
+      });
+      $effect(() => {
+        if (this.rights.video) return;
+        untrack(() => {
+          if (this.camera) this.toggleCamera();
+          if (this.sharing) this.stopShare();
+        });
       });
       $effect(() => {
         const server = this.serverDeafened;
@@ -122,6 +137,8 @@ export class VoiceController {
   join(channel: Id): void {
     const live = this.state.phase !== 'idle' && this.state.phase !== 'disconnected';
     if (live && this.state.channel === channel) return;
+    // Stoat would refuse it: say so rather than trying.
+    if (!callRights(this.session.store, this.session.store.channels.get(channel)).connect) return void toasts.show(m.voice.cantJoin);
     this.dispatch({ type: 'join', channel });
   }
 
@@ -142,7 +159,7 @@ export class VoiceController {
   }
 
   toggleMute(): void {
-    if (this.serverMuted) return;
+    if (this.serverMuted || !this.rights.speak) return;
     this.controls = toggleMute(this.controls);
     play(this.controls.muted ? 'mute' : 'unmute');
     this.applyControls();
@@ -183,6 +200,7 @@ export class VoiceController {
     const call = this.call;
     if (!call) return;
     const on = !this.camera;
+    if (on && !this.rights.video) return void toasts.show(m.voice.cantVideo);
     this.camera = on;
     call.setCamera(on, this.session.videoLimit()).catch((e: unknown) => {
       if (this.call !== call) return;
@@ -199,6 +217,7 @@ export class VoiceController {
   startShare(preset: SharePreset, audio: boolean): void {
     const call = this.call;
     if (!call || this.sharing) return;
+    if (!this.rights.video) return void toasts.show(m.voice.cantVideo);
     const limit = this.session.videoLimit();
     const plan = sharePlan(preset, limit, shareBrowser(navigator.userAgent));
     if (!plan) return void toasts.show(m.voice.videoLimit);
@@ -304,8 +323,7 @@ export class VoiceController {
       const voice = this.session.store.node?.voice;
       if (voice && !voice.enabled) throw new Unavailable();
       const node = voice?.nodes[0]?.name ?? DEFAULT_NODE;
-      const c = this.session.store.channels.get(channel);
-      const canSpeak = (!c || has(permissionsIn(this.session.store, c), Permission.Speak)) && !this.serverMuted;
+      const canSpeak = this.rights.speak && !this.serverMuted;
       // Load the SDK before asking for the token, which lives 10 s.
       const { connect } = await import('./call.ts');
       if (gen !== this.gen) return;

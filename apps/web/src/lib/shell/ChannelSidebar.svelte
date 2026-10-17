@@ -5,12 +5,13 @@
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
   import Hash from '@lucide/svelte/icons/hash';
   import Volume2 from '@lucide/svelte/icons/volume-2';
+  import Lock from '@lucide/svelte/icons/lock';
   import Plus from '@lucide/svelte/icons/plus';
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import { adminDialogs } from '$lib/admin/dialogs.svelte.ts';
   import { resolve } from '$app/paths';
   import { m } from '$lib/i18n/index.ts';
-  import { canView } from '$lib/view/channels.ts';
+  import { callRights, canView } from '$lib/view/channels.ts';
   import { canManageChannels, categoryMenu, channelMenu, serverMenu } from '$lib/admin/menu.ts';
   import { fileUrl } from '@concord/stoat';
   import { app } from '$lib/session/app.svelte.ts';
@@ -42,6 +43,8 @@
 
   const isVoice = (c: Channel) => c.kind === 'text' && !!c.voice;
   // Clicking a voice channel also joins its call, or does nothing more when already in it (client.md section 10.3).
+  /** Without Connect a voice channel shows a lock, and opening it says why rather than trying to join (m4.7-plan.md task 5). */
+  const locked = (c: Channel) => isVoice(c) && !callRights(store, c).connect;
   const maxUsers = (c: Channel) => (c.kind === 'text' ? c.voice?.maxUsers : undefined);
   /** A collapsed category still shows its selected and unread channels, as on Discord. */
   const visible = (id: string | null, c: Channel) => !id || !collapsed[id] || c.id === active || (store.isUnread(c.id) && !store.notificationsMuted(c.id));
@@ -84,6 +87,7 @@
         {@const since = isVoice(channel) ? store.voiceSince(channel.id) : undefined}
         {@const occupants = since === undefined ? 0 : store.voiceParticipants(channel.id).length}
         {@const max = maxUsers(channel)}
+        {@const lock = locked(channel)}
         <a
           class="channel" class:active={channel.id === active} class:unread class:muted class:occupied={since !== undefined}
           class:drop-ok={moves.dragging?.to.has(channel.id)} class:drop-over={moves.hover === channel.id}
@@ -92,12 +96,12 @@
           ondrop={isVoice(channel) ? (e) => app.session && moves.drop(e, app.session, channel.id) : undefined}
           href={resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server, channel: channel.id })}
           aria-current={channel.id === active ? 'page' : undefined}
-          aria-label={[m.shell.channelLabel(name, isVoice(channel), unread, mentions), occupants || max ? m.voiceState.occupied(occupants, max) : ''].filter(Boolean).join(', ')}
+          aria-label={[m.shell.channelLabel(name, isVoice(channel), unread, mentions), occupants || max ? m.voiceState.occupied(occupants, max) : '', lock ? m.voice.cantJoin : ''].filter(Boolean).join(', ')}
           use:menuOn={() => (app.session ? channelMenu(app.session, channel.id) : [])}
-          onclick={isVoice(channel) ? (e) => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey) app.voice?.join(channel.id); } : undefined}
+          onclick={isVoice(channel) && !lock ? (e) => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey) app.voice?.join(channel.id); } : undefined}
         >
           {#if unread}<span class="unread-pill" aria-hidden="true"></span>{/if}
-          <span class="icon" aria-hidden="true">{#if isVoice(channel)}<Volume2 size={20} />{:else}<Hash size={20} />{/if}</span>
+          <span class="icon" aria-hidden="true">{#if lock}<Lock size={20} />{:else if isVoice(channel)}<Volume2 size={20} />{:else}<Hash size={20} />{/if}</span>
           <span class="name">{name}</span>
           {#if muted}<span class="muted-icon" aria-hidden="true"><BellOff size={16} /></span>{/if}
           {#if mentions}<Badge count={mentions} />{/if}

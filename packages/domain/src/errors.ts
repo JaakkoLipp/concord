@@ -6,10 +6,13 @@ export class BackendError extends Error {
   readonly status: number;
   /** The backend's error type, such as MissingPermission or PayloadTooLarge. */
   readonly kind: string;
-  constructor(status: number, kind: string, message: string) {
+  /** More about the error where the backend says it, such as the permission a MissingPermission names. */
+  readonly detail: string | undefined;
+  constructor(status: number, kind: string, message: string, detail?: string) {
     super(message);
     this.status = status;
     this.kind = kind;
+    this.detail = detail;
   }
 }
 

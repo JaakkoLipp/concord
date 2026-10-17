@@ -14,7 +14,7 @@
   import Video from '@lucide/svelte/icons/video';
   import VideoOff from '@lucide/svelte/icons/video-off';
   import { m } from '$lib/i18n/index.ts';
-  import { channelName } from '$lib/view/channels.ts';
+  import { callRights, channelName } from '$lib/view/channels.ts';
   import { avatarUrl } from '$lib/view/users.ts';
   import { popout } from '$lib/view/popout.svelte.ts';
   import { voiceMarks } from '$lib/shell/voice.ts';
@@ -29,12 +29,16 @@
 
   /** `compact`: at the top of a DM or group, above its messages, rather than filling the column. */
   let { session, voice, channel, compact = false }: { session: Session; voice: VoiceController; channel: Id; compact?: boolean } = $props();
-  const muteLabel = $derived(voice.serverMuted ? m.voiceMod.youServerMuted : voice.muted ? m.voice.unmute : m.voice.mute);
+  const muteLabel = $derived(voice.micLock ?? (voice.muted ? m.voice.unmute : m.voice.mute));
+  const cameraLabel = $derived(voice.videoLock ?? (voice.camera ? m.voice.cameraOff : m.voice.cameraOn));
+  const shareLabel = $derived(voice.videoLock ?? (voice.sharing ? m.voice.stopShare : m.voice.share));
   const store = $derived(session.store);
   const info = $derived(store.channels.get(channel));
   const server = $derived(info?.kind === 'text' ? info.server : undefined);
   const participants = $derived(store.voiceParticipants(channel));
   const here = $derived(voice.channel === channel && voice.status !== 'none' && voice.status !== 'disconnected');
+  /** Before joining: this channel's own rights, which the controller only knows for the call it is in. */
+  const rights = $derived(callRights(store, info));
 
   interface Tile { id: string; user: Id; feed?: Feed | undefined; screen: boolean }
   const tiles = $derived.by((): Tile[] => {
@@ -135,15 +139,18 @@
         {#each tiles as t (t.id)}{@render tile(t)}{/each}
       </div>
     {/if}
+    {#if !voice.rights.listen && !voice.serverDeafened}<p class="notice" role="status">{m.voice.cantHear}</p>{/if}
     <div class="bar" role="toolbar" aria-label={m.call.controls}>
-      <button class="control" class:off={voice.muted || voice.serverMuted} class:locked={voice.serverMuted} aria-label={muteLabel} aria-disabled={voice.serverMuted} use:tooltip={muteLabel} onclick={() => voice.toggleMute()}>
-        {#if voice.muted || voice.serverMuted}<MicOff />{:else}<Mic />{/if}
+      <button class="control" class:off={voice.muted || !!voice.micLock} class:locked={!!voice.micLock} aria-label={muteLabel} aria-disabled={!!voice.micLock} use:tooltip={muteLabel} onclick={() => voice.toggleMute()}>
+        {#if voice.muted || voice.micLock}<MicOff />{:else}<Mic />{/if}
       </button>
-      <button class="control" class:on={voice.camera} aria-label={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} use:tooltip={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} disabled={voice.status !== 'connected'} onclick={() => voice.toggleCamera()}>
+      <!-- Locked rather than disabled, so the tooltip still says why. -->
+      <button class="control" class:on={voice.camera} class:dim={!!voice.videoLock} aria-label={cameraLabel} use:tooltip={cameraLabel} aria-disabled={!!voice.videoLock}
+        disabled={voice.status !== 'connected'} onclick={() => { if (!voice.videoLock) voice.toggleCamera(); }}>
         {#if voice.camera}<Video />{:else}<VideoOff />{/if}
       </button>
-      <button class="control" class:on={voice.sharing} aria-label={voice.sharing ? m.voice.stopShare : m.voice.share} use:tooltip={voice.sharing ? m.voice.stopShare : m.voice.share}
-        disabled={voice.status !== 'connected'} onclick={() => (voice.sharing ? voice.stopShare() : (shareDialog.open = true))}><ScreenShare /></button>
+      <button class="control" class:on={voice.sharing} class:dim={!!voice.videoLock} aria-label={shareLabel} use:tooltip={shareLabel} aria-disabled={!!voice.videoLock}
+        disabled={voice.status !== 'connected'} onclick={() => { if (!voice.videoLock) { if (voice.sharing) voice.stopShare(); else shareDialog.open = true; } }}><ScreenShare /></button>
       <button class="control leave" aria-label={m.voice.disconnect} use:tooltip={m.voice.disconnect} onclick={() => voice.leave()}><PhoneOff /></button>
     </div>
   {:else}
@@ -158,7 +165,11 @@
       {:else}
         <p>{m.call.empty}</p>
       {/if}
-      <Button onclick={() => voice.join(channel)}>{m.call.join}</Button>
+      {#if rights.connect}
+        <Button onclick={() => voice.join(channel)}>{m.call.join}</Button>
+      {:else}
+        <p class="cant" role="status"><strong>{m.voice.cantJoin}</strong> {m.voice.cantJoinHelp}</p>
+      {/if}
     </div>
   {/if}
 </section>
@@ -188,7 +199,10 @@
   .control:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .control :global(svg) { width: var(--icon-lg); height: var(--icon-lg); }
   .control.off { color: var(--danger); }
-  .control.locked { cursor: not-allowed; }
+  .control.locked, .control.dim { cursor: not-allowed; }
+  .control.dim { opacity: 0.4; }
+  .notice { margin: 0; padding: 0 var(--space-5); text-align: center; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
+  .cant strong { display: block; color: var(--text-strong); font-weight: 600; }
   .control.on { background: var(--text-strong); color: var(--surface-0); }
   @media (hover: hover) { .control.on:hover:not(:disabled) { background: var(--text-normal); } }
   .control.leave { background: var(--danger-fill); color: var(--on-danger); }

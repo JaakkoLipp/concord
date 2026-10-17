@@ -8,11 +8,13 @@ import { avatarUrl } from '$lib/view/users.ts';
 import { canView } from '$lib/view/channels.ts';
 import type { UnicodeEmoji } from '$lib/emoji/data.ts';
 import { best } from './rank.ts';
+import { m } from '$lib/i18n/index.ts';
 import { serialise, type QueryKind } from './text.ts';
 
 export interface Suggestion {
   id: string;
-  kind: 'user' | 'role' | 'channel' | 'emoji';
+  /** `mass`: @everyone or @online. */
+  kind: 'user' | 'role' | 'mass' | 'channel' | 'emoji';
   label: string;
   detail?: string | undefined;
   image?: string | undefined;
@@ -22,13 +24,14 @@ export interface Suggestion {
 }
 
 const LIMIT = 8;
+const MASS: ('everyone' | 'online')[] = ['everyone', 'online'];
 
 export function suggest(
   store: Store,
   channel: Channel,
   kind: QueryKind,
   query: string,
-  opts: { mentionRoles: boolean; unicode: UnicodeEmoji[] },
+  opts: { mentionRoles: boolean; mentionEveryone?: boolean; unicode: UnicodeEmoji[] },
 ): Suggestion[] {
   const server = channel.kind === 'text' ? channel.server : undefined;
   if (kind === '@') {
@@ -51,7 +54,11 @@ export function suggest(
         id: r.id, kind: 'role', label: r.name, colour: r.colour, insert: serialise.role(r.id),
       }))
       : [];
-    return [...users, ...roles].slice(0, LIMIT);
+    // Only where Stoat would let them through: a server channel, with Mention everyone (m4.7-plan.md task 5).
+    const mass = server && opts.mentionEveryone
+      ? best(MASS, (k) => [k], query).map((k): Suggestion => ({ id: k, kind: 'mass', label: `@${k}`, detail: m.composer.mass[k], insert: `@${k}` }))
+      : [];
+    return [...users, ...roles, ...mass].slice(0, LIMIT);
   }
   if (kind === '#') {
     if (!server) return [];

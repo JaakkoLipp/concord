@@ -5,10 +5,10 @@
    */
   import { Permission } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
-  import { groupsFor, setTri, triOf, type PermissionKey, type Tri } from './permissions.ts';
+  import { groupsFor, setTri, triOf, type PermissionContext, type PermissionKey, type Tri } from './permissions.ts';
 
   interface Props {
-    context: 'server' | 'channel';
+    context: PermissionContext;
     /** An override, or Everyone's server permissions as `{ allow: bits, deny: 0n }` with `plain`. */
     value: { allow: bigint; deny: bigint };
     /** On and off only: Everyone's server-wide permissions. */

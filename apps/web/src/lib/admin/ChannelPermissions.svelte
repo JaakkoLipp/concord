@@ -130,7 +130,7 @@
     {#if selected === 'default'}<p class="summary" role="status">{summary}</p>{/if}
     {#if locked}<p class="note">{m.admin.overrides.lockedRole}</p>{/if}
     {#if inviteWarning}<p class="warning" role="alert"><TriangleAlert size={16} aria-hidden="true" />{m.admin.roles.inviteWarning}</p>{/if}
-    <PermissionList context="channel" value={draft} {mine} readonly={!canEdit} onchange={(next) => (draft = next)} />
+    <PermissionList context={info?.kind === 'text' && info.voice ? 'voice' : 'text'} value={draft} {mine} readonly={!canEdit} onchange={(next) => (draft = next)} />
     {#if selected !== 'default' && canEdit}
       <div class="remove"><Button variant="danger" size="sm" onclick={remove}>{m.admin.overrides.remove}</Button></div>
     {/if}

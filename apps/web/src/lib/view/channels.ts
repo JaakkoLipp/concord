@@ -1,7 +1,8 @@
 /** Channel helpers for the shell: visibility, names and the last channel visited per server. */
 import { Permission, channelPermissions, has, memberKey, type Channel, type Id, type Server, type Store } from '@concord/domain';
+import { permissionTime } from './clock.svelte.ts';
 
-/** This account's permissions in a channel. */
+/** This account's permissions in a channel. Read reactively, they change again when a timeout ends. */
 export function permissionsIn(store: Store, channel: Channel): bigint {
   const self = store.self;
   if (!self) return 0n;
@@ -10,7 +11,17 @@ export function permissionsIn(store: Store, channel: Channel): bigint {
   const member = server ? store.members.get(memberKey(server.id, self.id)) : undefined;
   const relationship = (u: Id) => store.users.get(u)?.relationship ?? 'None';
   const isBot = (u: Id) => !!store.users.get(u)?.bot;
-  return channelPermissions(channel, { self, ...(server ? { server } : {}), ...(member ? { member } : {}), relationship, isBot });
+  const now = permissionTime(member?.timeout);
+  return channelPermissions(channel, { self, ...(server ? { server } : {}), ...(member ? { member } : {}), relationship, isBot, now });
+}
+
+/** What this account may do in a channel's call. A DM or group call allows everything (Stoat's DM defaults). */
+export interface CallRights { connect: boolean; speak: boolean; video: boolean; listen: boolean }
+
+export function callRights(store: Store, channel: Channel | undefined): CallRights {
+  if (!channel) return { connect: true, speak: true, video: true, listen: true };
+  const p = permissionsIn(store, channel);
+  return { connect: has(p, Permission.Connect), speak: has(p, Permission.Speak), video: has(p, Permission.Video), listen: has(p, Permission.Listen) };
 }
 
 export function canView(store: Store, channel: Channel): boolean {
@@ -22,7 +33,7 @@ export function canView(store: Store, channel: Channel): boolean {
 export type SendBlock = 'permission' | 'blocked' | 'blockedBy' | 'notFriend' | 'timeout';
 
 /** Why this account can't send in a channel, or null when it can. */
-export function sendBlock(store: Store, channel: Channel, now = new Date()): SendBlock | null {
+export function sendBlock(store: Store, channel: Channel): SendBlock | null {
   if (channel.kind === 'dm') {
     const rel = store.users.get(dmPartner(store, channel) ?? '')?.relationship;
     if (rel === 'Blocked') return 'blocked';
@@ -32,7 +43,7 @@ export function sendBlock(store: Store, channel: Channel, now = new Date()): Sen
   if (channel.kind === 'dm') return 'notFriend';
   if (channel.kind === 'text') {
     const timeout = store.members.get(memberKey(channel.server, store.selfId ?? ''))?.timeout;
-    if (timeout && new Date(timeout) > now) return 'timeout';
+    if (timeout && new Date(timeout) > permissionTime(timeout)) return 'timeout';
   }
   return 'permission';
 }

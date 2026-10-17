@@ -60,7 +60,11 @@
     if (!touch || !actions || (e.target as HTMLElement).closest('a, button, img, video, input, .cm-editor')) return;
     actions.select(selected ? null : message.id);
   }
-  const failedReason = (error: string | undefined) => (m.composer.failed as Record<string, string>)[error ?? ''] ?? m.composer.failed.other;
+  // The most specific first: a refused @everyone names MentionEveryone as its missing permission.
+  const failedReason = (error: string | undefined, detail: string | undefined) => {
+    const reasons = m.composer.failed as Record<string, string>;
+    return (error === 'MissingPermission' && detail ? reasons[detail] : undefined) ?? reasons[error ?? ''] ?? m.composer.failed.other;
+  };
 
   const user = $derived(store.users.get(message.author));
   const member = $derived(server && store.selfId ? store.members.get(`${server}:${message.author}`) : undefined);
@@ -123,7 +127,7 @@
         {/if}
         {#if pending?.state === 'failed'}
           <p class="not-sent" role="alert">
-            {m.composer.notSent} {failedReason(pending.error)}
+            {m.composer.notSent} {failedReason(pending.error, pending.errorDetail)}
             <button onclick={() => onretry?.(pending.key)}>{m.composer.retry}</button>
             <button onclick={() => ondiscard?.(pending.key)}>{m.composer.discard}</button>
           </p>

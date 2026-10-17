@@ -39,6 +39,8 @@
 
   // What this account may do with messages here (m2a-plan.md task 3).
   const perms = $derived(info ? permissionsIn(store, info) : 0n);
+  /** Stoat refuses the history of a server channel without Read message history; what is said from now on still shows. */
+  const noHistory = $derived(info?.kind === 'text' && !has(perms, Permission.ReadMessageHistory));
   let selected = $state<string | null>(null);
   let confirming = $state<Message | null>(null);
   async function copy(text: string) {
@@ -390,7 +392,12 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div class="scroller" bind:this={scroller} {onscroll} onkeydown={rove} onfocusin={focused} role="log" aria-live={stuck ? 'polite' : 'off'} aria-label={m.conversation.messages} tabindex="-1">
   <div class="content" bind:this={content}>
-    {#if win?.atOldest}
+    {#if noHistory}
+      <div class="start" role="status">
+        <h2>{m.conversation.noHistory}</h2>
+        <p>{m.conversation.noHistoryHelp}</p>
+      </div>
+    {:else if win?.atOldest}
       <div class="start">
         <h2>{info?.kind === 'group' ? m.conversation.welcomeGroup(info.name) : m.conversation.welcome(info?.kind === 'text' ? info.name : '')}</h2>
         <p>{m.conversation.start}</p>

@@ -30,6 +30,8 @@ export interface PendingMessage {
   state: 'sending' | 'failed';
   /** Why it failed: the backend's error type, or `network` when the request may not have arrived. */
   error?: string;
+  /** The backend's detail, such as the permission a MissingPermission names. */
+  errorDetail?: string;
 }
 
 export interface PendingFile {

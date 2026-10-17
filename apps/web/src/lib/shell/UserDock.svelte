@@ -84,9 +84,9 @@
     {#if app.voice}
       {@const voice = app.voice}
       <!-- Mute and deafen work outside a call too, and apply at the next join (client.md section 10.3). -->
-      <span class="toggle" class:on={voice.muted || voice.serverMuted} class:locked={voice.serverMuted}>
-        <IconButton label={voice.serverMuted ? m.voiceMod.youServerMuted : voice.muted ? m.voice.unmute : m.voice.mute} aria-disabled={voice.serverMuted} onclick={() => voice.toggleMute()}>
-          {#if voice.muted || voice.serverMuted}<MicOff />{:else}<Mic />{/if}
+      <span class="toggle" class:on={voice.muted || !!voice.micLock} class:locked={!!voice.micLock}>
+        <IconButton label={voice.micLock ?? (voice.muted ? m.voice.unmute : m.voice.mute)} aria-disabled={!!voice.micLock} onclick={() => voice.toggleMute()}>
+          {#if voice.muted || voice.micLock}<MicOff />{:else}<Mic />{/if}
         </IconButton>
         <button class="chevron" aria-label={m.voice.inputOptions} aria-haspopup="menu" aria-expanded={!!options && options.anchor.dataset.kind === 'input'} data-kind="input"
           onclick={(e) => void openOptions('input', e.currentTarget)}><ChevronDown /></button>

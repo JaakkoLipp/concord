@@ -287,6 +287,11 @@ export class Session {
       if (this.heldUnread.has(channel)) {
         if (!this.store.windows.has(channel)) await this.loadLatest(channel, () => this.openingLoads.get(channel) === request);
       } else await this.loadUnread(channel, request);
+    } catch (e) {
+      if (!(e instanceof BackendError && e.kind === 'MissingPermission')) throw e;
+      // Without Read message history Stoat refuses every page, but sending works (m4.7-results.md task 1). An empty window
+      // at the present still shows what is said from now on, and the list says why there is nothing before it.
+      if (this.openingLoads.get(channel) === request) this.store.setWindow(channel, [], { atNewest: true, atOldest: true });
     } finally {
       if (this.openingLoads.get(channel) === request) {
         this.openingChannels.delete(channel);
@@ -403,6 +408,9 @@ export class Session {
         atNewest: !!last && sorted.some((m) => m.id === last),
         atOldest: sorted.filter((m) => m.id < message).length < PAGE / 2 - 1,
       });
+    } catch (e) {
+      if (!(e instanceof BackendError && e.kind === 'MissingPermission')) throw e;
+      if (this.openingLoads.get(channel) === request) this.store.setWindow(channel, [], { atNewest: true, atOldest: true });
     } finally {
       if (this.openingLoads.get(channel) === request) {
         this.openingChannels.delete(channel);
@@ -515,8 +523,9 @@ export class Session {
         return;
       }
       const error = e instanceof BackendError ? e.kind : 'network';
+      const detail = e instanceof BackendError ? e.detail : undefined;
       const now = this.store.pending.get(key);
-      if (now) this.store.pending.set(key, { ...now, state: 'failed', error });
+      if (now) this.store.pending.set(key, { ...now, state: 'failed', error, ...(detail ? { errorDetail: detail } : {}) });
     }
   }
 

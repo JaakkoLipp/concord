@@ -44,6 +44,11 @@
   // Noise suppression, on or off from here as on Discord (m4.5-plan.md task 4). Off is the browser's own.
   let suppressing = $state(loadVoiceSettings().noiseSuppression === 'rnnoise');
   onMount(() => onVoiceSettings((s) => (suppressing = s.noiseSuppression === 'rnnoise')));
+  function share() {
+    if (voice.videoLock) return;
+    if (voice.sharing) voice.stopShare();
+    else shareDialog.open = true;
+  }
   const tip = $derived([m.voice.quality[voice.quality], m.voice.stats(voice.ping, voice.loss)].filter(Boolean).join('. '));
 </script>
 
@@ -59,6 +64,7 @@
       <div class="text">
         <p class="state {voice.status}" role="status">{title}</p>
         {#if channel && href}<a class="where" {href}>{m.voice.where(channelName(store, channel), place)}</a>{/if}
+        {#if voice.status === 'connected' && !voice.rights.listen && !voice.serverDeafened}<span class="note">{m.voice.cantHear}</span>{/if}
       </div>
       {#if voice.status === 'disconnected'}
         <Button size="sm" onclick={() => voice.rejoin()}>{m.voice.rejoin}</Button>
@@ -69,11 +75,13 @@
     </div>
     {#if voice.status !== 'disconnected'}
       <div class="actions">
-        <IconButton label={voice.camera ? m.voice.cameraOff : m.voice.cameraOn} active={voice.camera} disabled={voice.status !== 'connected'} onclick={() => voice.toggleCamera()}>
+        <!-- Without Video they stay focusable, so the tooltip says why (m4.7-plan.md task 5). -->
+        <IconButton label={voice.videoLock ?? (voice.camera ? m.voice.cameraOff : m.voice.cameraOn)} active={voice.camera}
+          aria-disabled={!!voice.videoLock} disabled={voice.status !== 'connected'} onclick={() => voice.toggleCamera()}>
           {#if voice.camera}<Video />{:else}<VideoOff />{/if}
         </IconButton>
-        <IconButton label={voice.sharing ? m.voice.stopShare : m.voice.share} active={voice.sharing} disabled={voice.status !== 'connected'}
-          onclick={() => (voice.sharing ? voice.stopShare() : (shareDialog.open = true))}><ScreenShare /></IconButton>
+        <IconButton label={voice.videoLock ?? (voice.sharing ? m.voice.stopShare : m.voice.share)} active={voice.sharing}
+          aria-disabled={!!voice.videoLock} disabled={voice.status !== 'connected'} onclick={share}><ScreenShare /></IconButton>
         <IconButton label={suppressing ? m.voice.noiseSuppressionOn : m.voice.noiseSuppressionOff} active={suppressing}
           onclick={() => saveVoiceSettings({ noiseSuppression: suppressing ? 'off' : 'rnnoise' })}>
           {#if suppressing}<AudioLines />{:else}<AudioLinesOff />{/if}
@@ -102,6 +110,8 @@
   .quality.poor { color: var(--status-idle); }
   .quality.lost { color: var(--danger); }
   .text { display: grid; flex: 1; min-width: 0; }
+  .note { color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
+  .actions :global(.icon-button[aria-disabled='true']) { opacity: 0.4; cursor: not-allowed; }
   .state { margin: 0; font: 600 var(--text-sm) var(--font-sans); color: var(--text-strong); }
   .state.connected { color: var(--status-online); }
   .state.connecting, .state.reconnecting { color: var(--status-idle); }

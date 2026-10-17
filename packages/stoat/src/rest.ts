@@ -12,7 +12,8 @@ export class StoatError extends BackendError {
   readonly body: unknown;
   constructor(status: number, body: unknown, what: string) {
     const kind = (body as { type?: string } | null)?.type ?? `HTTP${status}`;
-    super(status, kind, `${what}: ${status} ${kind}`);
+    // MissingPermission names the permission, such as MentionEveryone for a refused @everyone.
+    super(status, kind, `${what}: ${status} ${kind}`, (body as { permission?: string } | null)?.permission);
     this.body = body;
   }
 }

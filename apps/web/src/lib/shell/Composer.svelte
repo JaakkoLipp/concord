@@ -34,14 +34,8 @@
   const store = $derived(session.store);
   const limit = $derived(store.node?.limits.messageLength ?? 2000);
   const server = $derived(channel?.kind === 'text' ? channel.server : undefined);
-  /** Ticks while timed out, so the composer comes back when the timeout ends. */
-  let now = $state(new Date());
-  const block = $derived(channel ? sendBlock(store, channel, now) : null);
-  $effect(() => {
-    if (block !== 'timeout') return;
-    const t = setInterval(() => (now = new Date()), 15_000);
-    return () => clearInterval(t);
-  });
+  // Comes back by itself when a timeout ends (clock.svelte.ts).
+  const block = $derived(channel ? sendBlock(store, channel) : null);
 
   let host = $state<HTMLDivElement>();
   let editor = $state<ComposerEditor | null>(null);
@@ -103,7 +97,7 @@
   let unicode = $state<UnicodeEmoji[]>([]);
   let active = $state(0);
   const suggestions = $derived(query && channel
-    ? suggest(store, channel, query.kind, query.query, { mentionRoles: has(permissionsIn(store, channel), Permission.MentionRoles), unicode })
+    ? suggest(store, channel, query.kind, query.query, { mentionRoles: has(permissionsIn(store, channel), Permission.MentionRoles), mentionEveryone: has(permissionsIn(store, channel), Permission.MentionEveryone), unicode })
     : []);
   $effect(() => {
     if (query?.kind === ':' && !unicode.length) void unicodeEmoji().then((d) => (unicode = d));
@@ -241,7 +235,7 @@
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <li role="option" aria-selected={i === active} class:active={i === active}
           onmousedown={(e) => e.preventDefault()} onmouseenter={() => (active = i)} onclick={() => choose(s)}>
-          {#if s.kind === 'channel'}<span class="sym">#</span>{:else if s.kind === 'role'}<span class="sym" style:color={s.colour}>@</span>{:else if s.image}<img class:round={s.kind === 'user'} src={s.image} alt="" width="24" height="24" />{/if}
+          {#if s.kind === 'channel'}<span class="sym">#</span>{:else if s.kind === 'role' || s.kind === 'mass'}<span class="sym" style:color={s.colour}>@</span>{:else if s.image}<img class:round={s.kind === 'user'} src={s.image} alt="" width="24" height="24" />{/if}
           <span class="label" style:color={s.kind === 'user' ? s.colour : undefined}>{s.label}</span>
           {#if s.detail}<span class="detail">{s.detail}</span>{/if}
         </li>
@@ -271,7 +265,8 @@
     </ul>
   {/if}
   <div class="composer" class:with-reply={!!reply || !!chosen.length}>
-    <span class="side"><IconButton label={m.composer.attach} disabled={!canUpload} onclick={() => fileInput?.click()}><Plus size={22} /></IconButton></span>
+    <!-- Locked rather than disabled without Upload files, so its tooltip gives the reason (m4.7-plan.md task 5). -->
+    <span class="side" class:locked={!canUpload}><IconButton label={canUpload ? m.composer.attach : m.composer.cantUpload} aria-disabled={!canUpload} onclick={() => { if (canUpload) fileInput?.click(); }}><Plus size={22} /></IconButton></span>
     <input class="file-input" type="file" multiple tabindex="-1" aria-hidden="true" bind:this={fileInput}
       onchange={(e) => { const input = e.currentTarget; addFiles([...(input.files ?? [])]); input.value = ''; }} />
     <div class="editor" bind:this={host}>
@@ -305,6 +300,7 @@
   .blocked { align-items: center; cursor: not-allowed; }
   .wrap { position: relative; display: flow-root; }
   .file-input { display: none; }
+  .locked :global(.icon-button) { opacity: 0.4; cursor: not-allowed; }
   .tiles {
     display: flex; gap: var(--space-4); overflow-x: auto; margin: 0 var(--space-3); padding: var(--space-4); list-style: none;
     border: 1px solid var(--border-subtle); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface-2);
