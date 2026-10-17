@@ -41,6 +41,14 @@
   const perms = $derived(info ? permissionsIn(store, info) : 0n);
   /** Stoat refuses the history of a server channel without Read message history; what is said from now on still shows. */
   const noHistory = $derived(info?.kind === 'text' && !has(perms, Permission.ReadMessageHistory));
+  // Granted while open: load the history Stoat refused before, once, so a refusal again can't loop.
+  let retriedFor: string | null = null;
+  $effect(() => {
+    if (noHistory) { retriedFor = null; return; }
+    if (!session.unreadable.has(channel) || retriedFor === channel) return;
+    retriedFor = channel;
+    untrack(() => void session.openChannel(channel).catch(() => {}));
+  });
   let selected = $state<string | null>(null);
   let confirming = $state<Message | null>(null);
   async function copy(text: string) {

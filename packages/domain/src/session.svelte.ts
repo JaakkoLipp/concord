@@ -224,6 +224,7 @@ export class Session {
     this.mentionLoads.clear();
     this.openingLoads.clear();
     this.openingChannels.clear();
+    this.unreadable.clear();
     this.gateway?.close();
     this.gateway = null;
     this.store.clear();
@@ -279,21 +280,38 @@ export class Session {
   private readonly openingLoads = new Map<Id, symbol>();
   /** Includes the intermediate latest page while an unread opening is still finding its boundary. */
   readonly openingChannels = new SvelteSet<Id>();
+  /**
+   * Channels whose history Stoat refused, without Read message history (m4.7-plan.md task 5). Their window holds only what
+   * arrived since, so it is never reused: opening one again, or reloading it, asks Stoat afresh.
+   */
+  readonly unreadable = new SvelteSet<Id>();
+
+  /** Stoat refused this channel's history: an empty window at the present still shows what is said from now on. */
+  private refused(e: unknown, channel: Id, current: boolean): void {
+    if (!(e instanceof BackendError && e.kind === 'MissingPermission')) throw e;
+    if (!current) return;
+    this.unreadable.add(channel);
+    this.store.setWindow(channel, [], { atNewest: true, atOldest: true });
+  }
+
+  /** An unreadable channel's window isn't history: drop it so the next load asks again. */
+  private forgetRefusal(channel: Id): void {
+    if (this.unreadable.delete(channel)) this.store.dropWindow(channel);
+  }
 
   async openChannel(channel: Id): Promise<void> {
     this.openChannelId = channel;
     const request = Symbol();
     this.openingLoads.set(channel, request);
     this.openingChannels.add(channel);
+    this.forgetRefusal(channel);
     try {
       if (this.heldUnread.has(channel)) {
         if (!this.store.windows.has(channel)) await this.loadLatest(channel, () => this.openingLoads.get(channel) === request);
       } else await this.loadUnread(channel, request);
     } catch (e) {
-      if (!(e instanceof BackendError && e.kind === 'MissingPermission')) throw e;
-      // Without Read message history Stoat refuses every page, but sending works (m4.7-results.md task 1). An empty window
-      // at the present still shows what is said from now on, and the list says why there is nothing before it.
-      if (this.openingLoads.get(channel) === request) this.store.setWindow(channel, [], { atNewest: true, atOldest: true });
+      // Without Read message history Stoat refuses every page, but sending works (m4.7-results.md task 1).
+      this.refused(e, channel, this.openingLoads.get(channel) === request);
     } finally {
       if (this.openingLoads.get(channel) === request) {
         this.openingChannels.delete(channel);
@@ -399,6 +417,7 @@ export class Session {
     this.openingLoads.set(channel, request);
     this.openingChannels.add(channel);
     this.openChannelId = channel;
+    this.forgetRefusal(channel);
     try {
       const page = await this.backend.messages(channel, { limit: PAGE, nearby: message });
       if (this.openingLoads.get(channel) !== request) return;
@@ -411,8 +430,7 @@ export class Session {
         atOldest: sorted.filter((m) => m.id < message).length < PAGE / 2 - 1,
       });
     } catch (e) {
-      if (!(e instanceof BackendError && e.kind === 'MissingPermission')) throw e;
-      if (this.openingLoads.get(channel) === request) this.store.setWindow(channel, [], { atNewest: true, atOldest: true });
+      this.refused(e, channel, this.openingLoads.get(channel) === request);
     } finally {
       if (this.openingLoads.get(channel) === request) {
         this.openingChannels.delete(channel);
@@ -1297,8 +1315,10 @@ export class Session {
   }
 
   private async reloadWindow(channel: Id): Promise<void> {
+    // Opening again asks Stoat afresh, and handles a refusal: history may have been granted or taken away meanwhile.
+    if (this.unreadable.has(channel)) return this.openChannel(channel);
     const w = this.store.windows.get(channel);
-    if (!w || w.atNewest || !w.ids.length) return this.loadLatest(channel);
+    if (!w || w.atNewest || !w.ids.length) return this.loadLatest(channel).catch((e: unknown) => this.refused(e, channel, this.openChannelId === channel));
     return this.jumpTo(channel, w.ids[Math.floor(w.ids.length / 2)]!);
   }
 
