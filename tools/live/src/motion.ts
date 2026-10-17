@@ -124,7 +124,7 @@ async function step(p: Page, mode: string, name: string, act: () => Promise<void
     const allowed = expect.moves === false ? FADES : [...MOVES, ...FADES];
     const bad = seen.filter((s) => s.props.some((x) => !allowed.includes(x)));
     check(!bad.length, `${mode}: ${name} animates ${props.join(', ') || 'nothing'}${bad.length ? ` (not allowed: ${JSON.stringify(bad)})` : ''}`);
-    if (expect.some !== undefined) check(expect.some === seen.length > 0, `${mode}: ${name} ${expect.some ? 'animates' : "doesn't animate"}`);
+    if (expect.some !== undefined) check(expect.some === seen.length > 0, `${mode}: ${name} ${expect.some ? 'animates' : "doesn't animate"}${!expect.some && seen.length ? ` (${seen.map((s) => s.what).join('; ')})` : ''}`);
   }
   // Frames count where something animates: a page change that doesn't animate isn't an animation's dropped frame.
   if (mode !== 'reduce' && seen.length) check(gap < 50, `${mode}: ${name} longest frame ${gap.toFixed(0)} ms${long.length ? ` (${long.join('; ')})` : ''}`);
@@ -260,7 +260,13 @@ for (const mode of modes) {
   check(page(opened) === (mode === 'reduce' ? 0 : 1), `${mode}: settings ${mode === 'reduce' ? 'opens instantly' : 'fades in'}`);
   const moved = await step(p, mode, 'settings changes section', () => p.getByRole('link', { name: 'Notifications' }).click());
   check(page(moved) === 0, `${mode}: a change of section doesn't fade the page`);
-  await step(p, mode, 'settings closes', () => p.keyboard.press('Escape'), { some: false });
+  // Settings is over the shell now (m4.6-plan.md task 16a): Esc puts keyboard focus back on the gear, whose
+  // tooltip shows, so only that tooltip's fade may run. Task 16b gives the close its own motion.
+  const closing = await step(p, mode, 'settings closes', () => p.keyboard.press('Escape'));
+  if (mode !== 'reduce') {
+    const others = closing.filter((x) => !x.what.includes('.concord-tooltip'));
+    check(!others.length, `${mode}: settings closes without motion besides the gear's tooltip${others.length ? ` (${others.map((x) => x.what).join('; ')})` : ''}`);
+  }
 
   // Voice: the panel, someone joining and leaving, grid and focus, and leaving.
   await p.goto(`${APP}/channels/${st.serverId}/${st.channels.pelit}`, { waitUntil: 'networkidle' });
