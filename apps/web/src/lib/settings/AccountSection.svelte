@@ -1,6 +1,7 @@
 <script lang="ts">
   /**
-   * User settings, My account (M4.8 task 8): the email and changing it, the password, and the devices signed in.
+   * User settings, My account (M4.8 tasks 8 and 9): the email and changing it, the password, two-factor
+   * authentication, and the devices signed in.
    * Self-contained, dialogs included, so it moves as one piece when settings become a modal (M4.6 task 16a).
    * Which actions need an MFA ticket follows m4.8-results.md probe 2; identity.svelte.ts gets a fresh one each time.
    * The email form shows only where the server sends mail (probe 5), and "This device" only for a session this
@@ -15,6 +16,7 @@
   import { accountError } from './accountErrors.ts';
   import { identity } from './identity.svelte.ts';
   import ConfirmIdentity from './ConfirmIdentity.svelte';
+  import TwoFactor from './TwoFactor.svelte';
 
   let { session }: { session: Session } = $props();
   const backend = $derived(session.backend);
@@ -24,7 +26,7 @@
   let email = $state<string | null>(null);
   let sessions = $state<AccountSession[] | null>(null);
   let loadError = $state(false);
-  // Newest first: Stoat's IDs are ULIDs, so they sort by when the session began.
+  // This device first, then newest first: Stoat's IDs are ULIDs, so they sort by when the session began.
   const listed = $derived((sessions ?? []).toSorted((a, b) => (a.id === app.sessionId ? -1 : b.id === app.sessionId ? 1 : b.id.localeCompare(a.id))));
   const known = $derived(!!app.sessionId && !!sessions?.some((s) => s.id === app.sessionId));
   const others = $derived((sessions?.length ?? 0) - 1);
@@ -140,9 +142,13 @@
   </div>
   {#if loadError}
     <p class="error" role="alert">{t.loadFailed}</p>
-    <Button variant="secondary" size="sm" onclick={load}>{m.admin.retry}</Button>
+    <div><Button variant="secondary" size="sm" onclick={load}>{m.admin.retry}</Button></div>
   {/if}
 </section>
+
+<div class="separator"></div>
+
+<TwoFactor {backend} {email} />
 
 <div class="separator"></div>
 

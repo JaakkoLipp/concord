@@ -29,6 +29,7 @@ Every runtime dependency must earn its place. The list below is the whole budget
 | Composer editor | CodeMirror 6: `@codemirror/state`, `view` and `commands`. MIT. Chosen over our own editor on 2026-10-12 (m2a-plan.md decision 1). About 87 KB gzipped. | Lazily, when the composer first mounts |
 | Code highlighting | highlight.js core with a short language list | Lazily, on first code block |
 | Math | KaTeX | Lazily, on first `$$` block |
+| TOTP setup QR code | `uqr` 0.1.3, MIT, a port of Project Nayuki’s generator with no dependencies, about 4 KB gzipped. Added in M4.8 (task 9, decision 1): authenticator apps scan the secret, and drawing a QR code by hand isn't worth our own code. | Lazily, on the two-factor setup step |
 | Voice | `livekit-client`, about 144 KB gzipped, and `@sapphi-red/web-noise-suppressor` for RNNoise, MIT, about 220 KB of wasm and worklet | Lazily, on first voice join |
 
 Not used: a component library, a state library, a date library, a virtual-list library, a markdown library, Storybook. The platform covers dates and plurals through `Intl`. The rest is ours, because it is small and central to the feel.
@@ -333,6 +334,7 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
 
   --scrollbar-thumb: var(--border-control); --scrollbar-width: 8px;
   --video-backdrop: #000000; --video-foreground: #ffffff;
+  --qr-light: #ffffff; --qr-dark: #000000;   /* a QR code scans only dark on light */
   --syntax-keyword: #c792ea; --syntax-string: #a5d6a7; --syntax-number: #f5b942;
   --syntax-title: #82aaff; --syntax-type: #4fcbe3; --syntax-meta: #f78c6c;
 

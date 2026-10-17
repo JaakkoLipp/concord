@@ -5,11 +5,15 @@
  * session's token stops working while this one stays. It changes its password and logs in with the new one; the
  * other sessions stay signed in, as Stoat does. With the stored session ID removed, as for a browser signed in
  * before M4.8, nothing is marked and only "Log out all other devices" is offered, which ends every other session.
- * The email change sends its link and leaves the email as it was until then. Every session made here is revoked.
+ * The email change sends its link and leaves the email as it was until then. Task 9: two-factor turns on with the
+ * key shown beside its QR code, a TOTP code then logs in, the confirmation asks for a code instead of the password,
+ * ten new recovery codes are shown, and one of them turns two-factor off. Every session made here is revoked, and
+ * TOTP ends off.
  */
 import { loadState } from '../../seed/src/config.ts';
 import { api } from '../../seed/src/http.ts';
 import { makeAccount, passwordFor } from '../../seed/src/seed.ts';
+import { totp } from '../../seed/src/totp.ts';
 import { assertDevStack } from '../../seed/src/vps.ts';
 import { APP, launch, watch } from './browser.ts';
 import { signIn } from './login.ts';
@@ -116,7 +120,56 @@ if (await changeEmail.count()) {
   check(false, 'Change email is shown where the server sends mail');
 }
 
-check(problems.console.length === 0, 'no console errors', problems.console.slice(0, 3).join(' | '));
+// Two-factor (task 9): on with the shown key, a TOTP login, new recovery codes, and off with a recovery code.
+// Stoat takes each code once and only in its own 30-second window, so every code here waits for a fresh window.
+let lastCode = '';
+async function freshCode(secret: string): Promise<string> {
+  for (;;) {
+    const into = Date.now() % 30_000;
+    if (into >= 4_000 && into <= 22_000 && totp(secret) !== lastCode) return (lastCode = totp(secret));
+    await new Promise((r) => setTimeout(r, 1_000));
+  }
+}
+await page.getByRole('button', { name: 'Turn on two-factor' }).click();
+await confirm.getByLabel('Password').fill(next);
+await confirm.getByRole('button', { name: 'Confirm' }).click();
+const secretBox = page.locator('code.secret');
+await secretBox.waitFor({ timeout: 8_000 });
+const secret = (await secretBox.innerText()).replace(/\s+/g, '');
+check(await page.getByRole('img', { name: 'QR code for your authenticator app' }).waitFor({ timeout: 8_000 }).then(() => true, () => false), 'the setup shows a QR code');
+check((await page.locator('a', { hasText: 'Open in an authenticator app' }).getAttribute('href'))?.startsWith(`otpauth://totp/Concord%3A${encodeURIComponent(live.email)}?secret=${secret}`) ?? false, 'and an otpauth link with the key');
+await page.locator('form.confirm').getByLabel('Authentication code').fill(await freshCode(secret));
+await page.locator('form.confirm').getByRole('button', { name: 'Turn on' }).click();
+check(await page.getByText('Two-factor authentication is on.').waitFor({ timeout: 8_000 }).then(() => true, () => false), 'two-factor turns on with a code from the key',
+  await page.locator('form.confirm .note').innerText({ timeout: 500 }).catch(() => ''));
+const mfaStatus = () => api<{ totp_mfa?: boolean }>('GET', '/auth/mfa/', { auth: { session: browserToken } });
+check((await mfaStatus()).totp_mfa === true, 'Stoat has TOTP on');
+
+const first = await api<{ result: string; ticket: string }>('POST', '/auth/session/login', { body: { email: live.email, password: next, friendly_name: 'Concord check E' } });
+check(first.result === 'MFA', 'logging in now asks for a code', first.result);
+const viaTotp = await api<{ result: string; token: string }>('POST', '/auth/session/login', { body: { mfa_ticket: first.ticket, mfa_response: { totp_code: await freshCode(secret) }, friendly_name: 'Concord check E' } }).catch(() => null);
+if (viaTotp?.token) tokens.add(viaTotp.token);
+check(viaTotp?.result === 'Success', 'and a TOTP code logs in');
+
+await page.getByRole('button', { name: 'Make new recovery codes' }).click();
+check(await confirm.getByLabel('Authentication code').waitFor({ timeout: 5_000 }).then(() => true, () => false), 'with TOTP on, the confirmation asks for a code, not the password');
+await confirm.getByLabel('Authentication code').fill(await freshCode(secret));
+await confirm.getByRole('button', { name: 'Confirm' }).click();
+const codeList = page.getByRole('list', { name: 'Recovery codes' });
+await codeList.waitFor({ timeout: 8_000 }).catch(() => {});
+const codes = await codeList.locator('code').allInnerTexts().catch(() => [] as string[]);
+check(codes.length === 10, 'ten new recovery codes are shown', String(codes.length));
+
+await page.getByRole('button', { name: 'Turn off two-factor' }).click();
+await confirm.getByRole('button', { name: 'Use a recovery code instead' }).click();
+await confirm.getByLabel('Recovery code').fill(codes[0] ?? '');
+await confirm.getByRole('button', { name: 'Confirm' }).click();
+check(await page.getByText('Two-factor authentication is off.').waitFor({ timeout: 8_000 }).then(() => true, () => false), 'a recovery code turns two-factor off');
+check((await mfaStatus()).totp_mfa !== true, 'Stoat has TOTP off');
+
+// The 401s are the wrong password asked for on purpose; a 429 is a rate-limit wait the client sits out.
+const errors = problems.console.filter((c) => !c.includes('429') && !c.includes('401'));
+check(errors.length === 0, 'no other console errors', errors.slice(0, 3).join(' | '));
 await browser.close();
 // Every session this check made ends; the account itself stays (Stoat deletes accounts only through a mail link).
 for (const token of tokens) await api('POST', '/auth/session/logout', { auth: { session: token } }).catch(() => {});

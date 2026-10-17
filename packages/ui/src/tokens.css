@@ -45,6 +45,7 @@
 
   --scrollbar-thumb: var(--border-control); --scrollbar-width: 8px;
   --video-backdrop: #000000; --video-foreground: #ffffff;
+  --qr-light: #ffffff; --qr-dark: #000000;   /* a QR code scans only dark on light */
   --syntax-keyword: #c792ea; --syntax-string: #a5d6a7; --syntax-number: #f5b942;
   --syntax-title: #82aaff; --syntax-type: #4fcbe3; --syntax-meta: #f78c6c;
 
