@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { FileRef } from '@concord/domain';
   import { fileUrl } from '@concord/stoat';
+  import { fadeIn } from '@concord/ui';
   import FileIcon from '@lucide/svelte/icons/file';
   import { m } from '$lib/i18n/index.ts';
   import { fileSize, fit, placeholder } from '$lib/view/media.ts';
@@ -16,7 +17,7 @@
   <button class="media" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" style:background-image={thumb ? `url(${thumb})` : undefined}
     aria-label={m.conversation.viewImage(file.filename)}
     onclick={() => viewer.open({ src: url, alt: file.filename, width: file.width, height: file.height, original: url })}>
-    <img src={fileUrl(file, { maxSide: 800 })} data-original={fileUrl(file)} data-name={file.filename} alt={file.filename} width={size.width} height={size.height} loading="lazy" decoding="async" />
+    <img use:fadeIn src={fileUrl(file, { maxSide: 800 })} data-original={fileUrl(file)} data-name={file.filename} alt={file.filename} width={size.width} height={size.height} loading="lazy" decoding="async" />
   </button>
 {:else if file.kind === 'video'}
   <!-- svelte-ignore a11y_media_has_caption -->

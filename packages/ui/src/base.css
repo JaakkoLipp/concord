@@ -23,6 +23,9 @@ a { color: var(--link); text-decoration: none; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
   clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
+/* Images fade in over their placeholder once loaded (motion spec 4.8, motion.ts fadeIn). */
+img.concord-fade { transition: opacity var(--dur-image) var(--ease-out); }
+img.concord-fade.concord-loading { opacity: 0; }
 /* Reduced motion removes every timed effect. The spinner is the one deliberate exception. */
 @media (prefers-reduced-motion: reduce) {
   :root {

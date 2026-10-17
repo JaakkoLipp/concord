@@ -180,6 +180,27 @@ export function dialogLeave(_node: Element, dialog: HTMLDialogElement | null | u
   return { duration: ms };
 }
 
+/**
+ * `use:fadeIn={src}` on an image (motion spec 4.8): transparent over its placeholder until it loads, then it fades in
+ * over --dur-image. One already loaded, from the cache, shows at once. A new `src` waits and fades again. The
+ * classes are styled in base.css.
+ */
+export function fadeIn(img: HTMLImageElement, _src?: string) {
+  const loaded = () => img.classList.remove('concord-loading');
+  const arm = () => {
+    img.classList.add('concord-fade');
+    if (img.complete && img.naturalWidth) return;
+    img.classList.add('concord-loading');
+  };
+  img.addEventListener('load', loaded);
+  img.addEventListener('error', loaded);
+  arm();
+  return {
+    update() { arm(); },
+    destroy() { img.removeEventListener('load', loaded); img.removeEventListener('error', loaded); },
+  };
+}
+
 /** Clears a dialog's exit: once it has closed, or when it opens again mid-exit. */
 export function settle(dialog: HTMLDialogElement): void {
   for (const a of exits.get(dialog) ?? []) a.cancel();

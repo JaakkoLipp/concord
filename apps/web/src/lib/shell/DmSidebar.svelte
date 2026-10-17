@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Avatar, Badge } from '@concord/ui';
+  import { Avatar, Badge, fadeIn } from '@concord/ui';
   import { fileUrl } from '@concord/stoat';
   import type { Store } from '@concord/domain';
   import Users from '@lucide/svelte/icons/users';
@@ -62,7 +62,7 @@
     >
       {#if channel.kind === 'group'}
         {#if channel.icon}
-          <img class="group-icon" src={fileUrl(channel.icon, { maxSide: 64 })} alt="" width="32" height="32" />
+          <img use:fadeIn class="group-icon" src={fileUrl(channel.icon, { maxSide: 64 })} alt="" width="32" height="32" />
         {:else}
           <span class="group-icon initials" aria-hidden="true"><Users size={18} /></span>
         {/if}

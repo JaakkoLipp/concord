@@ -2,6 +2,7 @@
   import type { Embed, FavouriteGif } from '@concord/domain';
   import GifStar from './GifStar.svelte';
   import { fileUrl } from '@concord/stoat';
+  import { fadeIn } from '@concord/ui';
   import Play from '@lucide/svelte/icons/play';
   import Markdown from '$lib/markdown/Markdown.svelte';
   import { m } from '$lib/i18n/index.ts';
@@ -44,7 +45,7 @@
   <span class="frame" class:has-star={!!fav} style:width="{size.width}px" data-gif={fav ? JSON.stringify(fav) : undefined}>
     <button class="media" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.viewImage('')}
       onclick={() => viewer.open({ src: proxied(embed.url), alt: '', width: embed.width, height: embed.height, original: safe(embed.url) })}>
-      <img src={proxied(embed.url)} data-original={embed.url} alt="" loading="lazy" decoding="async" />
+      <img use:fadeIn src={proxied(embed.url)} data-original={embed.url} alt="" loading="lazy" decoding="async" />
     </button>
     {#if fav}<GifStar gif={fav} />{/if}
   </span>
@@ -59,7 +60,7 @@
     {#if embed.video}
       <video src={proxied(embed.video.url)} autoplay={!still} controls={still} loop muted playsinline aria-label={embed.title ?? m.conversation.gif}></video>
     {:else}
-      <img src={proxied(gif.url)} data-original={gif.url} alt={embed.title ?? m.conversation.gif} loading="lazy" decoding="async" />
+      <img use:fadeIn src={proxied(gif.url)} data-original={gif.url} alt={embed.title ?? m.conversation.gif} loading="lazy" decoding="async" />
     {/if}
     <span class="badge" aria-hidden="true">{m.conversation.gif}</span>
     {#if fav}<GifStar gif={fav} />{/if}
@@ -87,17 +88,17 @@
       {@const size = large ? fit(img.width, img.height, 400, 300) : fit(img.width, img.height, 80, 80)}
       {#if embed.special?.type === 'youtube' && link}
         <a class="media large video-link" href={link} target="_blank" rel="noopener noreferrer" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.playVideo}>
-          <img src={proxied(img.url)} data-original={img.url} alt="" loading="lazy" />
+          <img use:fadeIn src={proxied(img.url)} data-original={img.url} alt="" loading="lazy" />
           <span class="play" aria-hidden="true"><Play size={28} /></span>
         </a>
       {:else}
         <button class="media" class:large class:thumb={!large} style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.viewImage(embed.title ?? '')}
           onclick={() => viewer.open({ src: proxied(img.url), alt: embed.title ?? '', width: img.width, height: img.height, original: safe(img.url) })}>
-          <img src={proxied(img.url)} data-original={img.url} alt="" loading="lazy" decoding="async" />
+          <img use:fadeIn src={proxied(img.url)} data-original={img.url} alt="" loading="lazy" decoding="async" />
         </button>
       {/if}
     {:else if embed.kind === 'text' && embed.media}
-      <img class="media large" src={fileUrl(embed.media, { maxSide: 800 })} data-original={fileUrl(embed.media)} data-name={embed.media.filename} alt="" loading="lazy" />
+      <img use:fadeIn class="media large" src={fileUrl(embed.media, { maxSide: 800 })} data-original={fileUrl(embed.media)} data-name={embed.media.filename} alt="" loading="lazy" />
     {/if}
   </article>
 {/if}

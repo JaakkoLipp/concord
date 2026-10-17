@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Store } from '@concord/domain';
+  import { fadeIn } from '@concord/ui';
   import Inline from '$lib/markdown/Inline.svelte';
   import { parse } from '$lib/markdown/parse.ts';
   import { m } from '$lib/i18n/index.ts';
@@ -17,7 +18,7 @@
 <button class="reply" onclick={() => onjump(id)} aria-label={m.conversation.jumpToReply}>
   <span class="curve" aria-hidden="true"></span>
   {#if message}
-    <img class="avatar" src={avatarUrl(store.users.get(message.author) ?? { id: message.author })} alt="" width="16" height="16" />
+    <img use:fadeIn class="avatar" src={avatarUrl(store.users.get(message.author) ?? { id: message.author })} alt="" width="16" height="16" />
     <span class="name" style:--role={server ? store.roleColour(message.author, server) : undefined}>{store.displayName(message.author, server)}</span>
     <span class="snippet">{#if first.length}<Inline nodes={first} />{:else if message.attachments.length}{m.conversation.attachment}{/if}</span>
   {:else}

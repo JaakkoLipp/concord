@@ -227,6 +227,30 @@ try {
   check(overList.channels && !overList.chat && overList.width === 'thin', `over the channel list only its thumb is coloured (${JSON.stringify(overList)})`);
   check(overChat.chat && !overChat.channels, `over the chat only its thumb is coloured (${JSON.stringify(overChat)})`);
 
+  // Task 10: images wait on their placeholder, then fade in over 200 ms. Images are slowed, in a fresh context
+  // so nothing comes from the cache.
+  const slow = await browser.newContext({ viewport: { width: 1600, height: 900 }, reducedMotion: 'no-preference' });
+  const sp = await slow.newPage();
+  await signIn(sp, 'dev');
+  await sp.route(/\/autumn\/(attachments|avatars)\//, async (route) => { await new Promise((r) => setTimeout(r, 1_500)); await route.continue(); });
+  await sp.goto(`${APP}/channels/${st.serverId}/${st.channels.kuvat}`);
+  const loading = async (selector: string) => {
+    const img = sp.locator(selector).last();
+    await img.waitFor({ state: 'attached', timeout: 15_000 });
+    return img.evaluate((el: HTMLImageElement) => new Promise<{ before: { opacity: string; placeholder: string }; fade: { property: string; duration: number }[] }>((done) => {
+      const box = el.parentElement!;
+      const before = { opacity: getComputedStyle(el).opacity, placeholder: getComputedStyle(box).backgroundImage !== 'none' ? 'thumbhash' : getComputedStyle(box, '::before').backgroundColor };
+      const take = () => done({ before, fade: el.getAnimations().map((a) => ({ property: (a as CSSTransition).transitionProperty, duration: Number(a.effect?.getComputedTiming().duration ?? 0) })) });
+      if (el.complete && el.naturalWidth) take(); else el.addEventListener('load', () => queueMicrotask(take), { once: true });
+    }));
+  };
+  const [attachment, avatar] = await Promise.all([loading('.main button.media img'), loading('.main .avatar img')]);
+  check(attachment.before.opacity === '0' && attachment.before.placeholder === 'thumbhash', `an attachment waits transparent over its thumbhash (${JSON.stringify(attachment.before)})`);
+  check(attachment.fade.some((a) => a.property === 'opacity' && a.duration === 200), `then fades in over 200 ms (${JSON.stringify(attachment.fade)})`);
+  check(avatar.before.opacity === '0' && avatar.before.placeholder === 'rgb(0, 0, 0)', `an avatar waits on a black circle (${JSON.stringify(avatar.before)})`);
+  check(avatar.fade.some((a) => a.property === 'opacity' && a.duration === 200), `then fades in over 200 ms (${JSON.stringify(avatar.fade)})`);
+  await slow.close();
+
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.getByRole('button', { name: 'User settings', exact: true }).hover();
   const reduced = page.locator('.concord-tooltip[data-open="true"]');

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Badge, tooltip } from '@concord/ui';
+  import { Badge, fadeIn, tooltip } from '@concord/ui';
   import { fileUrl } from '@concord/stoat';
   import type { Store } from '@concord/domain';
   import Logo from '$lib/brand/Logo.svelte';
@@ -109,7 +109,7 @@
     >
       <span class="pill" aria-hidden="true"></span>
       {#if server.icon}
-        <img class="tile" src={fileUrl(server.icon, { maxSide: 128 })} alt="" width="40" height="40" draggable="false" />
+        <img use:fadeIn class="tile" src={fileUrl(server.icon, { maxSide: 128 })} alt="" width="40" height="40" draggable="false" />
       {:else}
         <span class="tile initials">{initials(server.name)}</span>
       {/if}
