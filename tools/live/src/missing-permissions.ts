@@ -39,7 +39,8 @@ async function deny(bits: bigint, allow = 0n): Promise<void> {
 const composer = (page: Page) => page.locator('.composer').last();
 const attach = (page: Page) => composer(page).locator('.side').first().getByRole('button');
 const visible = (page: Page, text: string, ms = 8_000) => passes(page.getByText(text, { exact: false }).first().waitFor({ timeout: ms }));
-const label = (page: Page, name: RegExp) => page.locator('section[aria-label="Voice call"]').getByRole('button', { name });
+/** The dock, the voice panel and the call view all have these buttons. */
+const label = (page: Page, name: RegExp) => page.getByRole('button', { name });
 /** Bytes of video this page sends per second, over two seconds. */
 async function videoSent(page: Page): Promise<number> {
   const total = () => page.evaluate(async () => {
@@ -105,7 +106,7 @@ try {
   await deny(0n);
   await page.getByRole('link', { name: /^Alpha/ }).click();
   check(await visible(page, 'Voice connected', 20_000), 'dev joins Alpha');
-  await label(page, /^Turn on camera$/).click();
+  await label(page, /^Turn on camera$/).first().click();
   await sleep(4_000);
   const cameraOn = await videoSent(page);
   await deny(P.Speak);
@@ -136,11 +137,19 @@ try {
   await deny(0n);
   await openText();
   await p.owner.call('POST', `/channels/${p.text}/messages`, { content: 'react to me' });
-  await p.owner.call('PATCH', `/servers/${p.server}/members/${p.plain.id}`, { timeout: new Date(Date.now() + 12_000).toISOString() });
-  check(await visible(page, 'You’re timed out', 6_000) || await visible(page, "You're timed out", 1_000), 'a timeout blocks the composer');
-  check(await passes(attach(page).and(page.getByRole('button', { name: 'Upload a file' })).waitFor({ timeout: 20_000 })), 'when it ends the composer and + come back without a reload');
-  await page.getByText('react to me').hover();
-  check(await passes(page.getByRole('button', { name: 'Add reaction' }).first().waitFor({ timeout: 3_000 })), 'and reactions with them');
+  const target = page.locator('article.message', { hasText: 'react to me' });
+  await target.waitFor({ timeout: 8_000 });
+  const ends = Date.now() + 12_000;
+  await p.owner.call('PATCH', `/servers/${p.server}/members/${p.plain.id}`, { timeout: new Date(ends).toISOString() });
+  check(await visible(page, "You're timed out", 6_000), 'a timeout blocks the composer');
+  await target.hover();
+  check(!(await target.getByRole('button', { name: 'Add reaction' }).count()), 'and reactions');
+  // The blocked composer has a disabled "+" with the same name, so wait for the editor itself.
+  await composer(page).locator('.cm-content').waitFor({ timeout: 20_000 });
+  const late = Date.now() - ends;
+  check(late < 2_000 && await attach(page).getAttribute('aria-disabled') !== 'true', 'when it ends the composer and + come back at once, without a reload', { lateMs: late });
+  await target.hover();
+  check(await passes(target.getByRole('button', { name: 'Add reaction' }).waitFor({ timeout: 1_000 })), 'and reactions with them');
 
   // 7. The role editor, as the owner.
   const owner = await seat(browser, 'dev-admin');
