@@ -46,7 +46,7 @@ function stepRail(dir: Direction): void {
   const here = area();
   if (!session || !here) return;
   const current = here.kind === 'server' ? here.server : null;
-  const next = stepServer(serverIds(session.store), current, dir);
+  const next = stepServer(serverIds(session.store, current), current, dir);
   if (!next) return;
   // As ServerRail's href: the channel last visited there, else its first, else the friends screen.
   const channel = recalled(next) ?? firstChannel(session.store, next);

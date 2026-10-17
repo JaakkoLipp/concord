@@ -10,3 +10,4 @@ export { Session, parseSettings, type ServerRemoval, type VoiceMoved } from './s
 export * from './ranks.ts';
 export * from './layout.ts';
 export { ServerAdmin, ALL_PERMISSIONS, ADMIN_ROLE } from './admin.svelte.ts';
+export * from './folders.ts';

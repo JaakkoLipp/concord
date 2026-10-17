@@ -3,6 +3,7 @@
  * handler is an idempotent upsert, so a REST response and its WebSocket echo may arrive in either order.
  * Entries are replaced, never mutated, so a component reading one key re-renders only when that key changes.
  */
+import type { Folder } from '../folders.ts';
 import { emptyNotifications, muteActive, type NotificationLevel, type NotificationSettings } from '../notify.ts';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { ConnectionState, DomainEvent } from '../backend.ts';
@@ -104,6 +105,8 @@ export class Store {
   closedDms = $state<Record<Id, Id>>({});
   /** The status this account chose in the menu, from `concord:status` (m2b-plan.md decision 2). */
   chosenStatus = $state<Presence | null>(null);
+  /** Server folders on the rail, from `concord:folders` (M4.8 task 10b), as stored: folders.ts reads them against the servers. */
+  folders = $state<Folder[]>([]);
 
   readonly users = new SvelteMap<Id, User>();
   readonly servers = new SvelteMap<Id, Server>();
@@ -759,5 +762,6 @@ export class Store {
     this.favouriteGifs = [];
     this.closedDms = {};
     this.chosenStatus = null;
+    this.folders = [];
   }
 }

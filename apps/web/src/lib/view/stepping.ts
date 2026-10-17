@@ -3,7 +3,8 @@
  * arrays of IDs; the list builders read the store the way the sidebars do, so the keys walk what is on screen.
  */
 import type { Id, Store } from '@concord/domain';
-import { canView, orderedServers } from './channels.ts';
+import { canView, railOf } from './channels.ts';
+import { openFolders } from './folders.svelte.ts';
 import { shownInCategory } from './collapsed.svelte.ts';
 
 export type Direction = 'up' | 'down';
@@ -61,7 +62,14 @@ export function dmChannelIds(store: Store): Id[] {
 /** Unread as the sidebar styles it: unread, and not muted for notifications. */
 export const unreadShown = (store: Store) => (id: Id) => store.isUnread(id) && !store.notificationsMuted(id);
 
-/** The servers in the rail's order. */
-export function serverIds(store: Store): Id[] {
-  return orderedServers(store).map((s) => s.id);
+/**
+ * The servers in the rail's order, as Ctrl+Alt+Up and Down step through them: all of an open folder's, and of a
+ * closed one only its first server, or the one open now when the step starts inside it.
+ */
+export function serverIds(store: Store, current: Id | null): Id[] {
+  return railOf(store).flatMap((i) => {
+    if (i.kind === 'server') return [i.id];
+    if (openFolders.is(i.folder.id)) return i.folder.servers;
+    return [current && i.folder.servers.includes(current) ? current : i.folder.servers[0]!];
+  });
 }

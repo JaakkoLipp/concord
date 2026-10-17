@@ -1,12 +1,13 @@
 /** The server menu (m2c-plan.md, "Entry points"), from the sidebar header and a right-click on the rail icon. */
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import { Permission, deleteCategory, has, moveCategory, moveChannel, moveServer, type Category, type Id, type Session } from '@concord/domain';
+import { Permission, deleteCategory, flatten, foldersOf, has, moveCategory, moveChannel, moveOnRail, removeFolder, removeFromFolder, type Category, type Id, type RailItem, type Session } from '@concord/domain';
 import type { MenuItem } from '@concord/ui';
 import { m } from '$lib/i18n/index.ts';
 import { app } from '$lib/session/app.svelte.ts';
 import { channelsWith, isOwner, serverPerms, serverSections } from '$lib/view/admin.ts';
-import { canView, orderedServers, permissionsIn } from '$lib/view/channels.ts';
+import { canView, permissionsIn, railOf } from '$lib/view/channels.ts';
+import { folderDialog } from '$lib/view/folders.svelte.ts';
 import { adminDialogs } from './dialogs.svelte.ts';
 import { notifyItems, notifyMuteItem, serverNotificationSettingsItem } from '$lib/notify/dialog.svelte.ts';
 import { confirm } from '$lib/view/confirm.svelte.ts';
@@ -59,15 +60,17 @@ export function serverMenu(session: Session, server: Id): MenuItem[] {
     serverNotificationSettingsItem(session, server),
     { kind: 'check', label: m.admin.hideMutedChannels, checked: !!store.settings.hiddenMutedChannels[server], onselect: () => void session.setHideMutedChannels(server, !store.settings.hiddenMutedChannels[server]).catch(() => toasts.show(m.notify.failed)) },
   );
-  // The keyboard path for the rail's drag (M4.8 task 10a).
-  const shown = orderedServers(store).map((s) => s.id);
-  const move = (delta: -1 | 1) => {
-    const next = moveServer(shown, server, delta);
-    if (next) void session.setServerOrder(next).catch(() => toasts.show(m.shell.serverOrderFailed));
-  };
+  // The keyboard path for the rail's drag (M4.8 tasks 10a and 10b). In a folder, a server moves within it.
+  const rail = railOf(store);
+  const inFolder = rail.some((i) => i.kind === 'folder' && i.folder.servers.includes(server));
+  const up = moveOnRail(rail, { kind: 'server', id: server }, -1);
+  const down = moveOnRail(rail, { kind: 'server', id: server }, 1);
   items.push('separator',
-    { label: m.admin.moveUp, disabled: !moveServer(shown, server, -1), onselect: () => move(-1) },
-    { label: m.admin.moveDown, disabled: !moveServer(shown, server, 1), onselect: () => move(1) });
+    { label: m.admin.moveUp, disabled: !up, onselect: () => up && saveRail(session, rail, up) },
+    { label: m.admin.moveDown, disabled: !down, onselect: () => down && saveRail(session, rail, down) },
+    inFolder
+      ? { label: m.shell.folders.removeFromFolder, onselect: () => saveRail(session, rail, removeFromFolder(rail, server)) }
+      : { label: m.shell.folders.create, disabled: store.servers.size < 2, onselect: () => folderDialog.open({ kind: 'create', server }) });
   if (sections.length || editServerProfileItem(session, server)) {
     const settings: MenuItem[] = [];
     if (sections.length) settings.push({
@@ -89,6 +92,37 @@ export function serverMenu(session: Session, server: Id): MenuItem[] {
     items.push('separator', { label: m.admin.leaveServer, danger: true, onselect: () => void leaveServer(session, server) });
   }
   return items;
+}
+
+/**
+ * Writes a changed rail: only the order when the folders are as they were, else the folders and the order. Every
+ * rail edit, from the menus and the drag, goes through here.
+ */
+export function saveRail(session: Session, before: RailItem[], after: RailItem[]): void {
+  const same = JSON.stringify(foldersOf(before)) === JSON.stringify(foldersOf(after));
+  if (same && flatten(before).join() === flatten(after).join()) return;
+  if (same) void session.setServerOrder(flatten(after)).catch(() => toasts.show(m.shell.serverOrderFailed));
+  else void session.setRail(after).catch(() => toasts.show(m.shell.folders.failed));
+}
+
+/** A folder on the rail: rename it, move it, read it, or let its servers go (M4.8 task 10b). */
+export function folderMenu(session: Session, folder: string): MenuItem[] {
+  const store = session.store;
+  const rail = railOf(store);
+  const item = rail.find((i) => i.kind === 'folder' && i.folder.id === folder);
+  if (item?.kind !== 'folder') return [];
+  const up = moveOnRail(rail, { kind: 'folder', id: folder }, -1);
+  const down = moveOnRail(rail, { kind: 'folder', id: folder }, 1);
+  const unread = item.folder.servers.some((s) => { const b = store.serverBadge(s, (c) => canView(store, c)); return b.unread || b.mentions > 0; });
+  return [
+    { label: m.shell.folders.markRead, disabled: !unread, onselect: () => void Promise.all(item.folder.servers.map((s) => session.markServerRead(s))).catch(() => toasts.show(m.notify.markReadFailed)) },
+    'separator',
+    { label: m.shell.folders.rename, onselect: () => folderDialog.open({ kind: 'rename', folder }) },
+    { label: m.admin.moveUp, disabled: !up, onselect: () => up && saveRail(session, rail, up) },
+    { label: m.admin.moveDown, disabled: !down, onselect: () => down && saveRail(session, rail, down) },
+    'separator',
+    { label: m.shell.folders.remove, danger: true, onselect: () => saveRail(session, rail, removeFolder(rail, folder)) },
+  ];
 }
 
 export function categoryMenu(session: Session, server: Id, category: string): MenuItem[] {

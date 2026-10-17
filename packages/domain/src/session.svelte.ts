@@ -12,6 +12,7 @@ import { Store, memberKey, newer, type EmojiPrefs, type FavouriteGif, type Messa
 import { parseNotifications, writeNotifications, type NotificationLevel, type NotificationSettings } from './notify.ts';
 import { HOLD_MS, Latest } from './latest.ts';
 import { orderingFor, writeOrdering } from './layout.ts';
+import { FOLDERS_KEY, flatten, foldersOf, parseFolders, writeFolders, type Folder, type RailItem } from './folders.ts';
 import { ulid, ulidTime } from './ulid.ts';
 import { SvelteSet } from 'svelte/reactivity';
 
@@ -239,7 +240,7 @@ export class Session {
   private async coldStart(): Promise<void> {
     const windowAtReady = this.openChannelId ? this.store.windows.get(this.openChannelId) : undefined;
     const fetchedAt = Date.now();
-    const fetched = await this.backend.settings(['notifications', 'ordering', 'concord:hiddenMutedChannels', EMOJI_KEY, GIFS_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY]).catch(() => null);
+    const fetched = await this.backend.settings(['notifications', 'ordering', 'concord:hiddenMutedChannels', EMOJI_KEY, GIFS_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY, FOLDERS_KEY]).catch(() => null);
     // A failed fetch keeps what this session has, rather than resetting the chosen status or favourites.
     if (!fetched) return this.coldStartRest(windowAtReady);
     const settings: Record<string, { value: string }> = fetched;
@@ -251,6 +252,7 @@ export class Session {
     this.store.settings = parseSettings(this.rawSettings);
     if (this.emojiChangedAt < fetchedAt) this.store.emojiPrefs = parseEmojiPrefs(settings[EMOJI_KEY]?.value);
     if (this.gifsChangedAt < fetchedAt) this.store.favouriteGifs = parseFavouriteGifs(settings[GIFS_KEY]?.value);
+    if (!this.folderWrites.holding) this.store.folders = parseFolders(settings[FOLDERS_KEY]?.value);
     await this.coldStartRest(windowAtReady);
   }
 
@@ -850,6 +852,11 @@ export class Session {
     }
     if (values[EMOJI_KEY] && !this.emojiSave) this.store.emojiPrefs = parseEmojiPrefs(values[EMOJI_KEY].value);
     if (values[GIFS_KEY] && !this.gifsSave) this.store.favouriteGifs = parseFavouriteGifs(values[GIFS_KEY].value);
+    if (values[FOLDERS_KEY]) {
+      // As with the order: a change of ours on its way is newer. Look again once the hold ends.
+      if (!this.folderWrites.holding) this.store.folders = parseFolders(values[FOLDERS_KEY].value);
+      else setTimeout(() => { if (!this.folderWrites.holding) this.store.folders = parseFolders(this.rawSettings[FOLDERS_KEY]?.value); }, HOLD_MS + 100);
+    }
     if (values[CLOSED_DMS_KEY] && !this.closedSaving) this.store.closedDms = parseClosedDms(values[CLOSED_DMS_KEY].value);
     if (values[STATUS_KEY] && !this.statusSaving) this.store.chosenStatus = parseStatus(values[STATUS_KEY].value);
     // Another device was used, or this one's own write came back: either way, someone is here.
@@ -884,6 +891,28 @@ export class Session {
     this.rawSettings = { ...this.rawSettings, ordering: { value } };
   });
   private serverOrderChangedAt = 0;
+
+  private readonly folderWrites = new Latest<Folder[]>(async (next) => {
+    const value = writeFolders(next);
+    await this.backend.setSettings({ [FOLDERS_KEY]: value });
+    this.rawSettings = { ...this.rawSettings, [FOLDERS_KEY]: { value } };
+  });
+  private foldersChangedAt = 0;
+
+  /**
+   * The rail after a change to its folders (M4.8 task 10b): the folders as `concord:folders`, and the order of
+   * their servers into Stoat's `ordering`, each key last write wins across devices.
+   */
+  setRail(items: RailItem[]): Promise<void> {
+    const changedAt = ++this.foldersChangedAt;
+    const folders = foldersOf(items);
+    this.store.folders = folders;
+    const saved = this.folderWrites.set(folders).catch((e: unknown) => {
+      if (changedAt === this.foldersChangedAt) this.store.folders = parseFolders(this.rawSettings[FOLDERS_KEY]?.value);
+      throw e;
+    });
+    return Promise.all([saved, this.setServerOrder(flatten(items))]).then(() => {});
+  }
 
   /**
    * The rail's order (M4.8 task 10a), as the servers it shows; synced across this account's devices. Stored

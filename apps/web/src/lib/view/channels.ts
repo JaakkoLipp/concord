@@ -1,5 +1,5 @@
 /** Channel helpers for the shell: visibility, names and the last channel visited per server. */
-import { Permission, channelPermissions, has, memberKey, railOrder, type Channel, type Id, type Server, type Store } from '@concord/domain';
+import { Permission, channelPermissions, has, memberKey, railItems, railOrder, type RailItem, type Channel, type Id, type Server, type Store } from '@concord/domain';
 import { permissionTime } from './clock.svelte.ts';
 
 /** This account's permissions in a channel. Read reactively, they change again when a timeout ends. */
@@ -66,6 +66,11 @@ export function channelName(store: Store, channel: Channel): string {
 /** Servers in the user's saved order, then any others by ID. */
 export function orderedServers(store: Store): Server[] {
   return railOrder(store.settings.serverOrder, store.servers.keys()).map((id) => store.servers.get(id)!);
+}
+
+/** The rail as shown: servers in order, and folders (M4.8 task 10b) in place of their servers. */
+export function railOf(store: Store): RailItem[] {
+  return railItems(orderedServers(store).map((s) => s.id), store.folders);
 }
 
 /** First text channel the user can see, in sidebar order. */
