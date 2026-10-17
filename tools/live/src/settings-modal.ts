@@ -62,9 +62,10 @@ try {
   const scroller = page.locator('.main .scroller');
   await scroller.waitFor();
   await page.waitForTimeout(1_000);
-  await scroller.evaluate((el) => el.scrollBy(0, -600));
-  await page.waitForTimeout(300);
+  await scroller.evaluate((el) => { el.scrollTop = el.scrollHeight - el.clientHeight - 600; });
+  await page.waitForTimeout(500);
   const scroll = await mark(page);
+  check(scroll > 0, `the conversation is scrolled up from the bottom (${scroll} px)`);
   const channelUrl = page.url();
   const serverName = (await page.locator('.header-button').getAttribute('aria-label'))!.replace(/ menu$/, '');
 
@@ -110,11 +111,14 @@ try {
   // 4. Esc closes a menu inside settings first.
   await openMenuItem(page, header, 'Server settings', 'Members');
   await opened(page);
+  // The member list fills in as members load: let it settle before picking a row.
+  await settings(page).locator('.member .icon-button').first().waitFor();
+  await page.waitForTimeout(1_500);
   await settings(page).locator('.member .icon-button').first().click();
-  const menuShown = await passes(page.getByRole('menu').waitFor({ timeout: 3_000 }));
+  const menuShown = await passes(page.locator('[role="menu"]').waitFor({ timeout: 3_000 }));
   await page.keyboard.press('Escape');
-  const menuGone = await passes(page.getByRole('menu').waitFor({ state: 'detached', timeout: 3_000 }));
-  check(menuShown && menuGone && await settings(page).isVisible(), 'Esc closes the open menu and leaves settings open');
+  const menuGone = await passes(page.locator('[role="menu"]').waitFor({ state: 'detached', timeout: 3_000 }));
+  check(menuShown && menuGone && await settings(page).isVisible(), 'Esc closes the open menu and leaves settings open', { menuShown, menuGone, url: page.url() });
   await page.keyboard.press('Escape');
   check(await closed(page), 'a second Esc closes settings');
 
@@ -124,7 +128,8 @@ try {
   await settings(page).getByLabel('Server name').fill(`${serverName} muutettu`);
   await page.goBack();
   const asked = page.getByRole('dialog', { name: 'Leave without saving?' });
-  check(await passes(asked.waitFor({ timeout: 3_000 })) && /\/server-settings\//.test(page.url()), 'Back with unsaved changes asks, and settings stays');
+  check(await passes(asked.waitFor({ timeout: 3_000 })) && /\/server-settings\//.test(page.url()), 'Back with unsaved changes asks, and settings stays',
+    { url: page.url(), open: await settings(page).count(), dialogs: await page.locator('dialog[open] h2').allInnerTexts() });
   await asked.getByRole('button', { name: 'Cancel' }).click();
   await page.waitForTimeout(300);
   check(await settings(page).isVisible() && await settings(page).getByLabel('Server name').inputValue() === `${serverName} muutettu`, 'Cancel keeps the edit open');

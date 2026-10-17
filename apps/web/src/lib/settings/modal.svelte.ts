@@ -53,8 +53,11 @@ function entry(how: 'push' | 'replace', target: SettingsTarget): void {
 }
 
 class SettingsModal {
-  /** What the modal shows. It follows page.state, except while a Back with unsaved changes waits for an answer. */
-  shown = $state<SettingsTarget | null>(null);
+  /**
+   * What the modal shows. It follows page.state, except while a Back with unsaved changes waits for an answer.
+   * Raw, not a proxy, since it goes back into history state, which must be cloneable.
+   */
+  shown = $state.raw<SettingsTarget | null>(null);
   /** A SettingsHost is mounted, so a shallow push has something to draw it. */
   hosted = false;
   private opener: HTMLElement | null = null;
