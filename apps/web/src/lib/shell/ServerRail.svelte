@@ -83,17 +83,21 @@
   button.item { padding: 0; border: 0; background: none; cursor: pointer; }
   .add { color: var(--status-online); }
   @media (hover: hover) { .item:hover .add { background: var(--status-online); color: var(--on-accent); } }
-  /* The pill on the left edge: a dot for unread, taller on hover, full height when selected. It is always
-     38 px tall and clipped to size with rounded ends, since animating its height would lay out the rail on
-     every frame, and a scale would flatten its ends. */
+  /* The pill on the left edge (motion spec 4.4): 8 px for unread, 20 on hover, 40 when selected. It is always
+     40 px tall and clipped to size with rounded ends, since animating its height would lay out the rail on
+     every frame, and a scale would flatten its ends. Growing, it slides in from the left and brightens over
+     --dur-pill-in; shrinking takes --dur-pill-out. */
   .pill {
-    position: absolute; left: 0; top: 50%; width: 4px; height: 38px; translate: 0 -50%;
+    position: absolute; left: 0; top: 50%; width: 4px; height: var(--rail-icon); translate: -100% -50%; opacity: 0;
     background: var(--text-strong); clip-path: inset(50% 0 round 0 var(--radius-xs) var(--radius-xs) 0);
-    transition: clip-path calc(var(--dur-popover) * var(--motion)) var(--ease-out);
+    transition: clip-path var(--dur-pill-out) var(--ease-standard), translate var(--dur-pill-out) var(--ease-standard), opacity var(--dur-pill-out) var(--ease-standard);
   }
-  .unread .pill { clip-path: inset(15px 0 round 0 var(--radius-xs) var(--radius-xs) 0); }
-  @media (hover: hover) { .item:hover .pill { clip-path: inset(9px 0 round 0 var(--radius-xs) var(--radius-xs) 0); } }
-  .active .pill { clip-path: inset(0 round 0 var(--radius-xs) var(--radius-xs) 0); }
+  .unread .pill { translate: 0 -50%; opacity: 1; clip-path: inset(16px 0 round 0 var(--radius-xs) var(--radius-xs) 0); }
+  @media (hover: hover) {
+    .item:hover .pill { translate: 0 -50%; opacity: 1; clip-path: inset(10px 0 round 0 var(--radius-xs) var(--radius-xs) 0); transition-duration: var(--dur-pill-in); }
+  }
+  /* After hover, so a hovered selected server keeps its full pill. */
+  .item.active .pill { translate: 0 -50%; opacity: 1; clip-path: inset(0 round 0 var(--radius-xs) var(--radius-xs) 0); transition-duration: var(--dur-pill-in); }
   .badge { position: absolute; right: 12px; bottom: -4px; padding: 2px; border-radius: var(--radius-full); background: var(--surface-0); line-height: 0; }
   .separator { width: 32px; height: 1px; flex: none; background: var(--border-default); margin: var(--space-1) 0; }
   .item:focus-visible { outline: none; }

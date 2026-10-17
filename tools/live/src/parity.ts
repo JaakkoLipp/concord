@@ -4,6 +4,7 @@ import { loadState } from '../../seed/src/config.ts';
 import { assertDevStack } from '../../seed/src/vps.ts';
 import { APP } from './browser.ts';
 import { signIn } from './login.ts';
+import { person } from './people.ts';
 
 await assertDevStack();
 const st = loadState()!;
@@ -79,6 +80,60 @@ try {
   const chatClose = page.locator('.chat header .icon-button');
   await tooltip(chatClose, 'bottom', 'Hide chat');
   await chatClose.click();
+
+  // Task 6: the rail pill, 8, 20 and 40 px, growing with a slide in 200 ms and shrinking in 100 ms.
+  const server = page.locator(`.rail a.item[href*="/channels/${st.serverId}/"]`);
+  const home = page.locator('.rail a.item').first();
+  const away = async () => { await page.mouse.move(900, 450); await page.waitForTimeout(300); };
+  const pill = (item = server) => item.locator('.pill').evaluate((el) => {
+    const cs = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    const inset = /inset\(([\d.]+)(px|%)/.exec(cs.clipPath);
+    const top = !inset ? 0 : inset[2] === '%' ? r.height * Number(inset[1]) / 100 : Number(inset[1]);
+    const rail = el.closest('.rail')!.getBoundingClientRect();
+    const moving = el.getAnimations().map((a) => ({ property: (a as CSSTransition).transitionProperty, duration: Number(a.effect?.getComputedTiming().duration ?? 0) }));
+    return { height: Math.round(r.height - 2 * top), inside: r.left >= rail.left - 0.5, opacity: Number(cs.opacity), moving };
+  });
+  const timed = (moving: { property: string; duration: number }[], ms: number, props = ['clip-path', 'translate', 'opacity']) =>
+    props.every((p) => moving.some((a) => a.property === p && a.duration === ms));
+  await away();
+  const none = await pill(home);
+  await home.hover();
+  const growing = await pill(home);
+  await page.waitForTimeout(300);
+  const hovered = await pill(home);
+  check(none.opacity === 0 && !none.inside && hovered.height === 20 && hovered.inside && hovered.opacity === 1, `hover pill is 20 px, slid in from out of sight (${none.height} → ${hovered.height})`);
+  check(timed(growing.moving, 200), `the pill grows, slides in and brightens over 200 ms (${JSON.stringify(growing.moving)})`);
+  await page.mouse.move(900, 450);
+  const shrinking = await pill(home);
+  check(timed(shrinking.moving, 100), `the pill collapses in 100 ms (${JSON.stringify(shrinking.moving)})`);
+  await away();
+  const selected = await pill();
+  await server.hover();
+  const selectedHover = await pill();
+  await page.waitForTimeout(300);
+  check(selected.height === 40 && selected.inside && (await pill()).height === 40, `selected pill is 40 px, and stays 40 px hovered (${selected.height}, ${(await pill()).height})`);
+  check(!selectedHover.moving.length, 'hovering the selected server starts no pill transition');
+  await page.goto(`${APP}/channels/@me`, { waitUntil: 'networkidle' });
+  await away();
+  if (!(await server.evaluate((el) => el.classList.contains('unread')))) {
+    const aino = await person('aino');
+    await aino.call('POST', `/channels/${st.channels.botti}/messages`, { content: 'Pill unread' });
+    await server.and(page.locator('.unread')).waitFor({ timeout: 8_000 });
+    await page.waitForTimeout(300);
+  }
+  const unread = await pill();
+  check(unread.height === 8 && unread.inside && unread.opacity === 1, `unread pill is 8 px (${unread.height})`);
+  await server.hover();
+  const fromUnread = await pill();
+  await page.waitForTimeout(300);
+  check((await pill()).height === 20 && timed(fromUnread.moving, 200, ['clip-path']), `an unread pill grows to 20 px on hover in 200 ms (${JSON.stringify(fromUnread.moving)})`);
+  await page.mouse.move(900, 450);
+  const toUnread = await pill();
+  await page.waitForTimeout(300);
+  check((await pill()).height === 8 && timed(toUnread.moving, 100, ['clip-path']), 'and shrinks back to 8 px in 100 ms');
+  await page.goBack({ waitUntil: 'networkidle' });
+
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.getByRole('button', { name: 'User settings', exact: true }).hover();
   const reduced = page.locator('.concord-tooltip[data-open="true"]');
