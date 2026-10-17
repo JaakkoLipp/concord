@@ -26,6 +26,17 @@ export interface BetaInvitation {
   expiresAt: number | null;
 }
 
+/** A member's request for an invite to a server; its code arrives once an admin approves, or at once for a moderator. */
+export interface ServerInviteRequest {
+  id: string;
+  requestedBy: Id;
+  server: Id;
+  note: string;
+  createdAt: number;
+  status: 'pending' | 'approved' | 'declined';
+  code: string | null;
+}
+
 /** A server's tag (m4.5-plan.md task 10): up to 4 letters or digits, with one of its custom emoji as the badge. */
 export interface ServerTag {
   server: Id;
@@ -43,6 +54,12 @@ export interface Layer {
   reviewBetaInvitation(id: string, action: 'approve' | 'decline'): Promise<void>;
   /** A fresh invite link for an approved invitation; it invalidates the previous link. */
   betaInvitationLink(id: string): Promise<{ token: string }>;
+  /** The caller's own server-invite requests; an admin sees every recent one when `review` is set. */
+  serverInvites(review?: boolean): Promise<ServerInviteRequest[]>;
+  /** Ask for an invite to a server. A moderator or admin passes the code of an invite they made, and skips review. */
+  requestServerInvite(server: Id, note: string, code?: string): Promise<ServerInviteRequest>;
+  /** Approve (with the code of an invite the admin made in that server) or decline a pending request. Admin only. */
+  reviewServerInvite(id: string, action: 'approve' | 'decline', code?: string): Promise<void>;
   /** The tags these users wear, by user. */
   wornTags(users: Id[]): Promise<Record<Id, ServerTag>>;
   /** These servers' tags, by server. */

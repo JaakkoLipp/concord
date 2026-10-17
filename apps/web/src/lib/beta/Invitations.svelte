@@ -16,6 +16,7 @@
   import { shell } from '$lib/view/shell.svelte.ts';
   import { shortDate } from '$lib/markdown/time.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
+  import ServerInvites from './ServerInvites.svelte';
 
   let { mode }: { mode: 'invite' | 'review' } = $props();
   const review = $derived(mode === 'review');
@@ -185,6 +186,7 @@
         <h2 class="heading" id="beta-mine">{m.beta.mine}</h2>
         <ul aria-labelledby="beta-mine">{#each rows as row (row.id)}{@render invitation(row)}{/each}</ul>
       {/if}
+      {#if app.session}<ServerInvites session={app.session} {mode} />{/if}
     {/if}
   </div>
 </div>
