@@ -1,6 +1,9 @@
 <script lang="ts">
-  /** The hover action bar on a message (client.md section 6.1): reply, edit if own, and a menu with the rest. */
-  import { IconButton, Popover } from '@concord/ui';
+  /**
+   * The hover action bar on a message (client.md section 6.1, motion spec 4.2): the top three quick reactions, a
+   * divider, add reaction, edit on one's own message or reply on others', and a menu with the rest.
+   */
+  import { IconButton, Popover, tooltip } from '@concord/ui';
   import Ellipsis from '@lucide/svelte/icons/ellipsis';
   import Hash from '@lucide/svelte/icons/hash';
   import Link from '@lucide/svelte/icons/link';
@@ -11,14 +14,17 @@
   import SmilePlus from '@lucide/svelte/icons/smile-plus';
   import Trash from '@lucide/svelte/icons/trash-2';
   import { m } from '$lib/i18n/index.ts';
+  import type { QuickEmoji } from './menu.ts';
 
   interface Props {
     canReact: boolean; onreact: (anchor: HTMLElement) => void;
+    /** M4.5's use-ranked quick reactions: the bar shows the first three. */
+    quick: QuickEmoji[]; onquick: (key: string) => void;
     canEdit: boolean; canDelete: boolean; canPin: boolean; canReply: boolean; pinned: boolean;
     onreply: () => void; onedit: () => void; ondelete: (skipConfirm: boolean) => void; onpin: () => void;
     oncopylink: () => void; oncopyid: () => void; onmenu: (open: boolean) => void;
   }
-  let { canReact, onreact, canEdit, canDelete, canPin, canReply, pinned, onreply, onedit, ondelete, onpin, oncopylink, oncopyid, onmenu }: Props = $props();
+  let { canReact, onreact, quick, onquick, canEdit, canDelete, canPin, canReply, pinned, onreply, onedit, ondelete, onpin, oncopylink, oncopyid, onmenu }: Props = $props();
   let more = $state<HTMLElement | null>(null);
   let open = $state(false);
   const setOpen = (v: boolean) => { open = v; onmenu(v); };
@@ -26,9 +32,18 @@
 </script>
 
 <div class="bar" role="toolbar" aria-label={m.actions.label}>
-  {#if canReact}<IconButton size="sm" label={m.actions.react} onclick={(e: MouseEvent) => onreact(e.currentTarget as HTMLElement)}><SmilePlus size={18} /></IconButton>{/if}
-  {#if canReply}<IconButton size="sm" label={m.actions.reply} onclick={onreply}><Reply size={18} /></IconButton>{/if}
-  {#if canEdit}<IconButton size="sm" label={m.actions.edit} onclick={onedit}><Pencil size={18} /></IconButton>{/if}
+  {#if canReact}
+    {#each quick.slice(0, 3) as q (q.key)}
+      <button class="quick" aria-label={m.actions.reactWith(q.label)} use:tooltip={q.label} onclick={() => onquick(q.key)}>
+        {#if q.image}<img src={q.image} alt="" draggable="false" />{:else}{q.text ?? q.label}{/if}
+      </button>
+    {/each}
+    {#if quick.length}<span class="divider" aria-hidden="true"></span>{/if}
+    <IconButton size="sm" label={m.actions.react} onclick={(e: MouseEvent) => onreact(e.currentTarget as HTMLElement)}><SmilePlus size={18} /></IconButton>
+  {/if}
+  <!-- Reply stays in the menus on one's own messages, where Edit takes its place. -->
+  {#if canEdit}<IconButton size="sm" label={m.actions.edit} onclick={onedit}><Pencil size={18} /></IconButton>
+  {:else if canReply}<IconButton size="sm" label={m.actions.reply} onclick={onreply}><Reply size={18} /></IconButton>{/if}
   <span bind:this={more}><IconButton size="sm" label={m.actions.more} active={open} aria-haspopup="menu" aria-expanded={open} onclick={() => setOpen(!open)}><Ellipsis size={18} /></IconButton></span>
 </div>
 <Popover anchor={more} {open} onclose={() => setOpen(false)} side="left" label={m.actions.more}>
@@ -45,10 +60,15 @@
 </Popover>
 
 <style>
+  /* A floating surface, 32 px tall (motion spec 4.2). */
   .bar {
-    display: flex; gap: var(--space-1); padding: var(--space-1); border: 1px solid var(--border-default); border-radius: var(--radius-md);
-    background: var(--surface-2); box-shadow: var(--shadow-popover);
+    display: flex; align-items: center; gap: var(--space-1); min-height: 2rem; padding: 0 var(--space-1);
+    border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-1); box-shadow: var(--shadow-popover);
   }
+  .quick { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; padding: 0; border: 0; border-radius: var(--radius-md); background: none; font-size: var(--icon-sm); cursor: pointer; }
+  @media (hover: hover) { .quick:hover { background: var(--hover-overlay); } }
+  .quick img { width: 1.125rem; height: 1.125rem; }
+  .divider { width: 1px; height: var(--icon-md); margin: 0 var(--space-1); background: var(--border-default); }
   .menu { display: flex; flex-direction: column; min-width: 12rem; padding: var(--space-2); }
   .menu button {
     display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-2) var(--space-3);

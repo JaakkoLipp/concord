@@ -13,7 +13,7 @@
   import VoiceSection from './VoiceSection.svelte';
   import TagChooser from './TagChooser.svelte';
   import AccountSection from './AccountSection.svelte';
-  import { USER_SECTIONS, type UserSection } from './modal.svelte.ts';
+  import { USER_SECTIONS, settingsModal, type UserSection } from './modal.svelte.ts';
 
   let { session, section }: { session: Session; section: UserSection } = $props();
   const items = $derived(USER_SECTIONS.map((s) => ({ id: s, label: m.settings.sections[s], target: { kind: 'user' as const, section: s } })));
@@ -29,7 +29,7 @@
     {#if gates?.serverCreator || gates?.admin}
       <p class="gates">{[gates.serverCreator && m.settings.gates.serverCreator, gates.admin && m.settings.gates.admin].filter(Boolean).join(' · ')}</p>
     {/if}
-    <Button variant="ghost" size="sm" onclick={() => app.signOut()}>{m.session.logout}</Button>
+    <Button variant="ghost" size="sm" onclick={() => void settingsModal.dismiss().then(() => app.signOut())}>{m.session.logout}</Button>
   {/snippet}
 </SettingsFrame>
 

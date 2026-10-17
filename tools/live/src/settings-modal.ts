@@ -7,7 +7,8 @@
  * - Tab never reaches the inert shell, Ctrl+E opens no picker and Ctrl+Shift+M doesn't mute under settings,
  * - records Ctrl+Shift+M as a keybind in Voice and video without muting,
  * - edits the server's name, presses Back and gets the unsaved-changes question; Cancel keeps settings, Leave closes,
- * - a reload at a settings URL reopens it over a channel, and Back then closes it; at phone width it fills the screen.
+ * - a reload at a settings URL reopens it over a channel, and Back then closes it; at phone width it fills the screen,
+ * - Log out from Profile reaches the login page without a page error.
  * Usage: node tools/live/src/settings-modal.ts [screenshot-dir]
  */
 import type { Locator, Page } from 'playwright-core';
@@ -164,6 +165,13 @@ try {
   const box = await settings(page).boundingBox();
   check(!!box && box.x === 0 && box.y === 0 && box.width === 390 && box.height === 844, 'at phone width settings fills the screen', box);
   if (out) await page.screenshot({ path: `${out}/settings-modal-phone.png` });
+  // 9. Log out from Profile: the modal goes first, so the editor never reads a missing account.
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.goto(`${APP}/settings/profile`, { waitUntil: 'networkidle' });
+  await opened(page);
+  await settings(page).getByRole('button', { name: 'Log out', exact: true }).click();
+  check(await passes(page.waitForURL(/\/app\/login/, { timeout: 10_000 })), 'Log out from settings reaches the login page');
+  await page.waitForTimeout(1_000);
   check(!s.problems.console.some((l) => l.startsWith('pageerror')), 'no page errors', s.problems.console.filter((l) => l.startsWith('pageerror')));
 } finally {
   await browser.close();

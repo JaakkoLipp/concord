@@ -143,7 +143,7 @@
     </div>
     {#if actions && !pending && !editing}
       <div class="actions">
-        <ActionBar canReact={actions.react} onreact={(anchor) => actions.pickReaction(message, anchor)} canReply={actions.send} canEdit={own && !!message.content} canDelete={own || actions.manage} canPin={actions.manage} pinned={message.pinned}
+        <ActionBar canReact={actions.react} onreact={(anchor) => actions.pickReaction(message, anchor)} {quick} onquick={(key) => actions.quickReact(message, key)} canReply={actions.send} canEdit={own && !!message.content} canDelete={own || actions.manage} canPin={actions.manage} pinned={message.pinned}
           onreply={() => actions.reply(message)} onedit={() => actions.edit(message)} ondelete={(skip) => actions.delete(message, skip)}
           onpin={() => actions.pin(message)} oncopylink={() => actions.copyLink(message)} oncopyid={() => actions.copyId(message)}
           onmenu={(open) => (menuOpen = open)} />

@@ -110,6 +110,13 @@ class SettingsModal {
     void tick().then(() => { if (back?.isConnected) back.focus(); });
   }
 
+  /** Log out from settings: the modal goes at once, before the account its pages read is gone. */
+  async dismiss(): Promise<void> {
+    this.shown = null;
+    this.opener = null;
+    await tick();
+  }
+
   /** The channels layout is going, on sign-out or another route: nothing is shown or waiting any more. */
   detach(): void {
     this.hosted = false;

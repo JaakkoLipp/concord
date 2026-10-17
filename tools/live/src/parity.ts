@@ -176,6 +176,39 @@ try {
   check(await admin.locator('.side-panel .chat').count() === 1 && await admin.getByText('Voice connected').count() === 0, 'Open chat shows the voice channel with its chat, without joining');
   await adminContext.close();
 
+  // Task 8: the message action bar, 32 px on the floating surface, with three quick reactions first.
+  await page.goto(`${APP}/channels/${st.serverId}/${st.channels.botti}`, { waitUntil: 'networkidle' });
+  // Someone else's message, so the bar has Reply rather than Edit.
+  const said = `Palkki ${Date.now()}`;
+  await (await person('aino')).call('POST', `/channels/${st.channels.botti}/messages`, { content: said });
+  const message = page.locator('article.message', { hasText: said });
+  await message.waitFor({ timeout: 8_000 });
+  await message.hover();
+  const bar = message.getByRole('toolbar', { name: 'Message actions' });
+  const shape = await bar.evaluate((el) => ({
+    height: Math.round(el.getBoundingClientRect().height),
+    order: [...el.children].map((c) => c.classList.contains('divider') ? '|' : c.classList.contains('quick') ? 'emoji' : (c.querySelector('button') ?? c).getAttribute('aria-label')),
+    // The token's colour as the browser resolves it, through a probe element.
+    surface: getComputedStyle(el).backgroundColor === (() => {
+      const probe = document.createElement('i');
+      probe.style.color = 'var(--surface-1)';
+      document.body.append(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    })(),
+  }));
+  check(shape.height === 32 && shape.surface, `the action bar is 32 px on --surface-1 (${shape.height})`);
+  check(shape.order.join() === 'emoji,emoji,emoji,|,Add reaction,Reply,More', `three reactions, a divider, add reaction, reply, more (${shape.order.join(', ')})`);
+  const first = bar.locator('.quick').first();
+  const label = (await first.getAttribute('aria-label'))!.replace(/^React with /, '');
+  await first.click();
+  const chip = message.locator('.chip[aria-pressed="true"]');
+  check(await chip.first().waitFor({ timeout: 5_000 }).then(() => true, () => false), `the first quick reaction (${label}) reacts`);
+  if (!(await chip.count())) console.log('     toasts:', await page.getByRole('status').allInnerTexts());
+  await chip.first().click();
+  await chip.first().waitFor({ state: 'detached', timeout: 5_000 }).catch(() => {});
+
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.getByRole('button', { name: 'User settings', exact: true }).hover();
   const reduced = page.locator('.concord-tooltip[data-open="true"]');

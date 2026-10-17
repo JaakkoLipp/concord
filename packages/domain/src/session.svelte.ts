@@ -272,7 +272,8 @@ export class Session {
     this.openServerId = server;
     if (!server) return;
     this.gateway?.subscribe(server);
-    void this.loadMembers(server, false);
+    // A failure, such as a 401 from a fetch still in flight at logout, leaves the list as it was.
+    void this.loadMembers(server, false).catch(() => {});
   }
 
   private readonly openingLoads = new Map<Id, symbol>();
