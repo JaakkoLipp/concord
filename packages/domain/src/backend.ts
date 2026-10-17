@@ -98,10 +98,25 @@ export interface GatewayHandlers {
   onState(state: ConnectionState): void;
 }
 
+export type MfaMethod = 'Password' | 'Totp' | 'Recovery';
+
+/** `sessionId` names the new session in `sessions()`, so the account page can mark this device. */
 export type LoginResult =
-  | { kind: 'session'; token: string; userId: Id }
-  | { kind: 'mfa'; ticket: string; methods: ('Password' | 'Totp' | 'Recovery')[] }
+  | { kind: 'session'; token: string; userId: Id; sessionId: Id }
+  | { kind: 'mfa'; ticket: string; methods: MfaMethod[] }
   | { kind: 'disabled'; userId: Id };
+
+/** One signed-in session of this account. Stoat says only its ID and the name it was given at login. */
+export interface AccountSession { id: Id; name: string }
+
+/** What proves it is the account's owner, for an MFA ticket: the password, or with TOTP on, a code. */
+export type MfaProof = { password: string } | { totp: string } | { recovery: string };
+
+export interface MfaStatus {
+  totp: boolean;
+  /** Recovery codes have been generated. */
+  recovery: boolean;
+}
 
 export interface MessagePage {
   messages: Message[];
@@ -197,9 +212,32 @@ export interface Backend {
   setToken(token: string | null): void;
 
   root(): Promise<NodeInfo>;
-  login(email: string, password: string): Promise<LoginResult>;
-  loginMfa(ticket: string, response: { totp: string } | { recovery: string }): Promise<LoginResult>;
+  /** `device` names the session, as the account page lists it. */
+  login(email: string, password: string, device?: string): Promise<LoginResult>;
+  loginMfa(ticket: string, response: { totp: string } | { recovery: string }, device?: string): Promise<LoginResult>;
   logout(): Promise<void>;
+
+  // The account (M4.8 tasks 8 and 9). A ticket is single use (m4.8-results.md probe 2): each action takes a fresh one.
+  accountEmail(): Promise<string>;
+  /** The methods a ticket can be made with now: the password with TOTP off, codes with it on. */
+  mfaMethods(): Promise<MfaMethod[]>;
+  mfaStatus(): Promise<MfaStatus>;
+  mfaTicket(proof: MfaProof): Promise<string>;
+  /** Needs a ticket only with TOTP on. Other sessions stay signed in. */
+  changePassword(current: string, next: string, ticket?: string): Promise<void>;
+  /** Needs a ticket only with TOTP on. Applies once the link mailed to the new address is followed. */
+  changeEmail(email: string, current: string, ticket?: string): Promise<void>;
+  sessions(): Promise<AccountSession[]>;
+  revokeSession(id: Id, ticket: string): Promise<void>;
+  /** Every session but the caller's. */
+  revokeOtherSessions(ticket: string): Promise<void>;
+  /** A new TOTP secret, not yet active until `enableTotp` confirms a code from it. */
+  totpSecret(ticket: string): Promise<string>;
+  enableTotp(code: string): Promise<void>;
+  disableTotp(ticket: string): Promise<void>;
+  recoveryCodes(ticket: string): Promise<string[]>;
+  /** Replaces every recovery code with ten new ones. */
+  regenerateRecoveryCodes(ticket: string): Promise<string[]>;
   onboarding(): Promise<boolean>;
   completeOnboarding(username: string): Promise<User>;
 

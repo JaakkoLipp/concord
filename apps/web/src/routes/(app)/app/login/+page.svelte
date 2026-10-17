@@ -4,8 +4,9 @@
   import { StoatError } from '@concord/stoat';
   import { m } from '$lib/i18n/index.ts';
   import { app, backend } from '$lib/session/app.svelte.ts';
+  import { deviceName } from '$lib/session/device.ts';
 
-  type Step = { kind: 'credentials' } | { kind: 'mfa'; ticket: string; methods: string[]; recovery: boolean } | { kind: 'onboard'; token: string };
+  type Step = { kind: 'credentials' } | { kind: 'mfa'; ticket: string; methods: string[]; recovery: boolean } | { kind: 'onboard'; token: string; sessionId: string };
 
   let step = $state<Step>({ kind: 'credentials' });
   let email = $state('');
@@ -29,13 +30,16 @@
     return e instanceof TypeError ? m.login.errors.network : m.login.errors.unknown;
   }
 
-  async function finish(token: string) {
+  // The session is named after this browser, so the account page's list says which device is which.
+  const device = deviceName(navigator.userAgent);
+
+  async function finish(token: string, sessionId: string) {
     backend.setToken(token);
     if (await backend.onboarding()) {
-      step = { kind: 'onboard', token };
+      step = { kind: 'onboard', token, sessionId };
       return;
     }
-    await app.signIn(token);
+    await app.signIn(token, sessionId);
   }
 
   async function attempt(fn: () => Promise<void>) {
@@ -56,14 +60,14 @@
   const submitCredentials = (e: SubmitEvent) => {
     e.preventDefault();
     void attempt(async () => {
-      const r = await backend.login(email.trim(), password);
+      const r = await backend.login(email.trim(), password, device);
       if (r.kind === 'disabled') throw new Error(m.login.errors.disabled);
       if (r.kind === 'mfa') {
         step = { kind: 'mfa', ticket: r.ticket, methods: r.methods, recovery: !r.methods.includes('Totp') };
         code = '';
         return;
       }
-      await finish(r.token);
+      await finish(r.token, r.sessionId);
     });
   };
 
@@ -73,19 +77,19 @@
     const s = step;
     void attempt(async () => {
       const value = code.replace(/\s+/g, '');
-      const r = await backend.loginMfa(s.ticket, s.recovery ? { recovery: value } : { totp: value });
+      const r = await backend.loginMfa(s.ticket, s.recovery ? { recovery: value } : { totp: value }, device);
       if (r.kind !== 'session') throw new Error(m.login.errors.unknown);
-      await finish(r.token);
+      await finish(r.token, r.sessionId);
     });
   };
 
   const submitUsername = (e: SubmitEvent) => {
     e.preventDefault();
     if (step.kind !== 'onboard') return;
-    const token = step.token;
+    const { token, sessionId } = step;
     void attempt(async () => {
       await backend.completeOnboarding(username.trim());
-      await app.signIn(token);
+      await app.signIn(token, sessionId);
     });
   };
 </script>

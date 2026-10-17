@@ -1,6 +1,6 @@
 /** The Stoat implementation of the domain's Backend interface. */
 import type {
-  Backend, Capabilities, Channel, ChannelEdit, Emoji, Gateway, GatewayHandlers, GroupEdit, Id, Invite, InvitePreview, LoginResult, Member, MemberEdit, SelfEdit, SelfField, Message,
+  AccountSession, Backend, Capabilities, MfaMethod, MfaProof, MfaStatus, Channel, ChannelEdit, Emoji, Gateway, GatewayHandlers, GroupEdit, Id, Invite, InvitePreview, LoginResult, Member, MemberEdit, SelfEdit, SelfField, Message,
   MessagePage, MessageQuery, NodeInfo, OutgoingMessage, Override, Role, RoleEdit, SearchQuery, Server, ServerEdit, User, VideoLimit,
 } from '@concord/domain';
 import { JoinCallError, type JoinFailure } from '@concord/domain/errors';
@@ -20,6 +20,13 @@ import type { Transport } from './transport.ts';
 
 type Root = components['schemas']['RevoltConfig'];
 type WLogin = components['schemas']['ResponseLogin'];
+type WAccount = components['schemas']['AccountInfo'];
+type WMfaStatus = components['schemas']['MultiFactorStatus'];
+type WMfaTicket = components['schemas']['MFATicket'];
+type WSessionInfo = components['schemas']['SessionInfo'];
+type WTotpSecret = components['schemas']['ResponseTotpSecret'];
+/** The header a single-use MFA ticket goes in. */
+const mfa = (ticket: string | undefined): Record<string, string> => (ticket ? { 'x-mfa-ticket': ticket } : {});
 
 const FRIENDLY_NAME = 'Concord';
 
@@ -100,23 +107,84 @@ export class StoatBackend implements Backend {
         },
         groupSize: limits.global?.group_size ?? 100,
       },
+      email: r.features.email === true,
       ...(r.vapid ? { vapid: r.vapid } : {}),
     };
   }
 
   private loginResult(r: WLogin): LoginResult {
-    if (r.result === 'Success') return { kind: 'session', token: r.token, userId: r.user_id };
+    if (r.result === 'Success') return { kind: 'session', token: r.token, userId: r.user_id, sessionId: r._id };
     if (r.result === 'MFA') return { kind: 'mfa', ticket: r.ticket, methods: r.allowed_methods };
     return { kind: 'disabled', userId: r.user_id };
   }
 
-  async login(email: string, password: string): Promise<LoginResult> {
-    return this.loginResult(await this.rest.request<WLogin>('POST', '/auth/session/login', { email, password, friendly_name: FRIENDLY_NAME }));
+  async login(email: string, password: string, device = FRIENDLY_NAME): Promise<LoginResult> {
+    return this.loginResult(await this.rest.request<WLogin>('POST', '/auth/session/login', { email, password, friendly_name: device }));
   }
 
-  async loginMfa(ticket: string, response: { totp: string } | { recovery: string }): Promise<LoginResult> {
+  async loginMfa(ticket: string, response: { totp: string } | { recovery: string }, device = FRIENDLY_NAME): Promise<LoginResult> {
     const mfa_response = 'totp' in response ? { totp_code: response.totp } : { recovery_code: response.recovery };
-    return this.loginResult(await this.rest.request<WLogin>('POST', '/auth/session/login', { mfa_ticket: ticket, mfa_response, friendly_name: FRIENDLY_NAME }));
+    return this.loginResult(await this.rest.request<WLogin>('POST', '/auth/session/login', { mfa_ticket: ticket, mfa_response, friendly_name: device }));
+  }
+
+  // ---------- the account (M4.8 tasks 8 and 9; which routes take a ticket is in m4.8-results.md probe 2) ----------
+
+  async accountEmail(): Promise<string> {
+    return (await this.rest.request<WAccount>('GET', '/auth/account/')).email;
+  }
+
+  mfaMethods(): Promise<MfaMethod[]> {
+    return this.rest.request<MfaMethod[]>('GET', '/auth/mfa/methods');
+  }
+
+  async mfaStatus(): Promise<MfaStatus> {
+    const r = await this.rest.request<WMfaStatus>('GET', '/auth/mfa/');
+    return { totp: !!r.totp_mfa, recovery: !!r.recovery_active };
+  }
+
+  async mfaTicket(proof: MfaProof): Promise<string> {
+    const body = 'password' in proof ? { password: proof.password } : 'totp' in proof ? { totp_code: proof.totp } : { recovery_code: proof.recovery };
+    return (await this.rest.request<WMfaTicket>('PUT', '/auth/mfa/ticket', body)).token;
+  }
+
+  async changePassword(current: string, next: string, ticket?: string): Promise<void> {
+    await this.rest.request('PATCH', '/auth/account/change/password', { password: next, current_password: current }, mfa(ticket));
+  }
+
+  async changeEmail(email: string, current: string, ticket?: string): Promise<void> {
+    await this.rest.request('PATCH', '/auth/account/change/email', { email, current_password: current }, mfa(ticket));
+  }
+
+  async sessions(): Promise<AccountSession[]> {
+    return (await this.rest.request<WSessionInfo[]>('GET', '/auth/session/all')).map((s) => ({ id: s._id, name: s.name }));
+  }
+
+  async revokeSession(id: Id, ticket: string): Promise<void> {
+    await this.rest.request('DELETE', `/auth/session/${id}`, undefined, mfa(ticket));
+  }
+
+  async revokeOtherSessions(ticket: string): Promise<void> {
+    await this.rest.request('DELETE', '/auth/session/all?revoke_self=false', undefined, mfa(ticket));
+  }
+
+  async totpSecret(ticket: string): Promise<string> {
+    return (await this.rest.request<WTotpSecret>('POST', '/auth/mfa/totp', undefined, mfa(ticket))).secret;
+  }
+
+  async enableTotp(code: string): Promise<void> {
+    await this.rest.request('PUT', '/auth/mfa/totp', { totp_code: code });
+  }
+
+  async disableTotp(ticket: string): Promise<void> {
+    await this.rest.request('DELETE', '/auth/mfa/totp', undefined, mfa(ticket));
+  }
+
+  recoveryCodes(ticket: string): Promise<string[]> {
+    return this.rest.request<string[]>('POST', '/auth/mfa/recovery', undefined, mfa(ticket));
+  }
+
+  regenerateRecoveryCodes(ticket: string): Promise<string[]> {
+    return this.rest.request<string[]>('PATCH', '/auth/mfa/recovery', undefined, mfa(ticket));
   }
 
   async logout(): Promise<void> {

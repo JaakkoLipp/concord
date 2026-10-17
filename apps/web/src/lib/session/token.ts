@@ -1,10 +1,12 @@
 /**
  * The session token lives in IndexedDB, in the browser and the desktop app alike (architecture section 4.1).
- * Logout deletes it.
+ * Next to it, the session's ID, from logins since M4.8 (task 8), so the account page knows which session is
+ * this device. Logout deletes both.
  */
 const DB = 'concord';
 const STORE = 'session';
 const KEY = 'token';
+const SESSION_KEY = 'session-id';
 
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -30,4 +32,8 @@ async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
 
 export const loadToken = () => run<string | undefined>('readonly', (s) => s.get(KEY) as IDBRequest<string | undefined>).catch(() => undefined);
 export const saveToken = (token: string) => run('readwrite', (s) => s.put(token, KEY)).then(() => {});
-export const clearToken = () => run('readwrite', (s) => s.delete(KEY)).then(() => {}).catch(() => {});
+/** Undefined for a browser signed in before M4.8, until it signs in again. */
+export const loadSessionId = () => run<string | undefined>('readonly', (s) => s.get(SESSION_KEY) as IDBRequest<string | undefined>).catch(() => undefined);
+/** A login without an ID removes the old one, so it can't name another session. */
+export const saveSessionId = (id: string | undefined) => (id ? run('readwrite', (s) => s.put(id, SESSION_KEY)) : run('readwrite', (s) => s.delete(SESSION_KEY))).then(() => {}).catch(() => {});
+export const clearToken = () => run('readwrite', (s) => { s.delete(SESSION_KEY); return s.delete(KEY); }).then(() => {}).catch(() => {});

@@ -288,5 +288,7 @@ export interface NodeInfo {
    * `newUserHours`. Group size counts every member, the owner included.
    */
   social: { friendRequests: { newUser: number; other: number; newUserHours: number }; groupSize: number };
+  /** The server sends mail, so an email change can be verified (m4.8-results.md probe 5). */
+  email: boolean;
   vapid?: string;
 }

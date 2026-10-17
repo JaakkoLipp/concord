@@ -4,7 +4,7 @@
 import { Session, type LayerMe } from '@concord/domain';
 import { LiveTransport, StoatBackend, StoatError } from '@concord/stoat';
 import { drafts } from '$lib/composer/drafts.ts';
-import { clearToken, loadToken, saveToken } from './token.ts';
+import { clearToken, loadSessionId, loadToken, saveSessionId, saveToken } from './token.ts';
 import { watchIdle } from './idle.ts';
 import { watchNotifications } from '$lib/notify/watch.ts';
 import { m } from '$lib/i18n/index.ts';
@@ -29,6 +29,8 @@ class App {
   layerMe = $state<LayerMe | null>(null);
   /** 'checking' until the stored token has been tried. */
   status = $state<'checking' | 'signed-out' | 'signed-in'>('checking');
+  /** This device's session, as `Backend.sessions()` lists it. Unknown for a browser signed in before M4.8. */
+  sessionId = $state<string | null>(null);
 
   async restore(): Promise<void> {
     if (this.session) return;
@@ -37,6 +39,7 @@ class App {
       this.status = 'signed-out';
       return;
     }
+    this.sessionId = (await loadSessionId()) ?? null;
     await this.start(token).catch(async (e: unknown) => {
       // A rejected token means signed out. Anything else (offline, server down) keeps the token for a retry.
       if (e instanceof StoatError && e.status === 401) await clearToken();
@@ -44,8 +47,10 @@ class App {
     });
   }
 
-  async signIn(token: string): Promise<void> {
+  async signIn(token: string, sessionId?: string): Promise<void> {
     await saveToken(token);
+    await saveSessionId(sessionId);
+    this.sessionId = sessionId ?? null;
     await this.start(token);
   }
 
@@ -94,6 +99,7 @@ class App {
     await this.session?.stop();
     this.session = null;
     drafts.clear();
+    this.sessionId = null;
     await clearToken();
     this.status = 'signed-out';
   }

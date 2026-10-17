@@ -16,7 +16,7 @@ import { confirm, type Question } from '$lib/view/confirm.svelte.ts';
 import { lastPlace } from '$lib/view/places.ts';
 import { popout } from '$lib/view/popout.svelte.ts';
 
-export const USER_SECTIONS = ['profile', 'notifications', 'voice'] as const;
+export const USER_SECTIONS = ['account', 'profile', 'notifications', 'voice'] as const;
 export type UserSection = (typeof USER_SECTIONS)[number];
 /** A user settings section from a URL, Profile when it names none we have. */
 export const userSection = (s: string | undefined): UserSection => USER_SECTIONS.find((x) => x === s) ?? 'profile';
