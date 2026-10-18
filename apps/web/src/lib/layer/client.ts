@@ -4,7 +4,7 @@
  */
 import { BackendError } from '@concord/domain/errors';
 import type {
-  AccountAction, AccountActionResult, BetaInvitation, Id, Layer, LayerMe, PlatformUser, Report, ReportReason, ReportScope, ReportTarget, ServerInviteRequest, ServerTag,
+  AccountAction, AccountActionResult, BetaInvitation, Feedback, Id, Layer, LayerMe, PlatformUser, Report, ReportReason, ReportScope, ReportTarget, ServerInviteRequest, ServerTag,
 } from '@concord/domain';
 
 export class HttpLayer implements Layer {
@@ -115,6 +115,18 @@ export class HttpLayer implements Layer {
 
   async closeReport(id: string, note: string): Promise<void> {
     await this.request('POST', `/reports/${encodeURIComponent(id)}`, { note });
+  }
+
+  async submitFeedback(kind: Feedback['kind'], title: string, description: string): Promise<void> {
+    await this.request('POST', '/feedback', { kind, title, description });
+  }
+
+  async feedback(includeClosed = false): Promise<Feedback[]> {
+    return (await this.get<{ feedback: Feedback[] }>(`/feedback?closed=${includeClosed}`)).feedback;
+  }
+
+  async closeFeedback(id: string): Promise<void> {
+    await this.request('POST', `/feedback/${encodeURIComponent(id)}`);
   }
 }
 

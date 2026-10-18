@@ -22,6 +22,8 @@
   import Plus from '@lucide/svelte/icons/plus';
   import X from '@lucide/svelte/icons/x';
   import MailPlus from '@lucide/svelte/icons/mail-plus';
+  import Bug from '@lucide/svelte/icons/bug';
+  import FeedbackDialog from '$lib/feedback/FeedbackDialog.svelte';
   import ShieldCheck from '@lucide/svelte/icons/shield-check';
   import { page } from '$app/state';
 
@@ -34,6 +36,7 @@
   const onAdministration = $derived(page.url.pathname === resolve('/app/channels/@me/administration'));
   const onHome = $derived(active === null && !onInvitations && !onAdministration);
   let picking = $state(false);
+  let feedbackOpen = $state(false);
 
   function rowMenu(channel: string, partner: string | undefined): MenuItem[] {
     const session = app.session;
@@ -63,6 +66,10 @@
       <span class="name">{m.beta.row}</span>
     </a>
   {/if}
+  <button class="row friends" onclick={() => (feedbackOpen = true)} aria-haspopup="dialog">
+    <span class="friends-icon" aria-hidden="true"><Bug size={24} /></span>
+    <span class="name">{m.feedback.row}</span>
+  </button>
   {#if gates?.admin}
     <a class="row friends" class:active={onAdministration} href={resolve('/app/channels/@me/administration')} aria-current={onAdministration ? 'page' : undefined}>
       <span class="friends-icon" aria-hidden="true"><ShieldCheck size={24} /></span>
@@ -115,6 +122,7 @@
     </div>
   {/each}
 </nav>
+{#if feedbackOpen}<FeedbackDialog onclose={() => (feedbackOpen = false)} />{/if}
 {#if app.session}
   {@const session = app.session}
   <FriendPicker {session} open={picking} title={m.groups.newMessage} fresh max={room(session, 1)}

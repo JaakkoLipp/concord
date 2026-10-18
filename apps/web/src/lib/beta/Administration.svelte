@@ -12,8 +12,10 @@
   import Invitations from './Invitations.svelte';
   import Users from './Users.svelte';
   import Reports from '$lib/admin/Reports.svelte';
+  import Feedback from '$lib/feedback/Feedback.svelte';
 
-  let tab = $state<'users' | 'requests' | 'reports'>('users');
+  type Tab = 'users' | 'requests' | 'reports' | 'feedback';
+  let tab = $state<Tab>('users');
   // Reports of DMs and people come here (m4.7-plan.md task 9), counted every minute.
   let waiting = $state(0);
   $effect(() => {
@@ -32,10 +34,11 @@
   <span class="icon" aria-hidden="true"><ShieldCheck size={22} /></span>
   <h1>{m.beta.adminTitle}</h1>
   <span class="divider" aria-hidden="true"></span>
-  <Tabs label={m.accounts.tabs.label} selected={tab} onselect={(id) => (tab = id as 'users' | 'requests' | 'reports')} tabs={[
+  <Tabs label={m.accounts.tabs.label} selected={tab} onselect={(id) => (tab = id as Tab)} tabs={[
     { id: 'users', label: m.accounts.tabs.users },
     { id: 'requests', label: m.accounts.tabs.requests },
     { id: 'reports', label: m.reports.count(waiting) },
+    { id: 'feedback', label: m.feedback.tab },
   ]} />
 </header>
 
@@ -45,6 +48,8 @@
       <p class="empty">{m.beta.notAllowed}</p>
     {:else if tab === 'users'}
       <Users />
+    {:else if tab === 'feedback'}
+      {#if app.session}<Feedback session={app.session} />{/if}
     {:else if tab === 'reports'}
       {#if app.session}<Reports session={app.session} scope="admin" />{/if}
     {:else}

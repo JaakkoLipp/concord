@@ -67,6 +67,19 @@ export type ReportScope = { server: Id } | 'admin';
 
 export type ReportTarget = { kind: 'message'; channel: Id; message: Id } | { kind: 'user'; user: Id };
 
+/** Product feedback and bug reports, visible only to the app's admins. */
+export interface Feedback {
+  id: string;
+  reporter: Id;
+  kind: 'bug' | 'feedback';
+  title: string;
+  description: string;
+  createdAt: number;
+  status: 'open' | 'closed';
+  closedBy: Id | null;
+  closedAt: number | null;
+}
+
 /** What the admin view may ask the account runner to do to a person (architecture section 11.5). */
 export type AccountAction = 'moderator:add' | 'moderator:remove' | 'admin:add' | 'admin:remove' | 'password-link' | 'suspend' | 'unsuspend';
 
@@ -134,4 +147,7 @@ export interface Layer {
   reportCount(scope: ReportScope): Promise<number>;
   /** Close a report with a note; it doesn't act by itself. */
   closeReport(id: string, note: string): Promise<void>;
+  submitFeedback(kind: Feedback['kind'], title: string, description: string): Promise<void>;
+  feedback(includeClosed?: boolean): Promise<Feedback[]>;
+  closeFeedback(id: string): Promise<void>;
 }
