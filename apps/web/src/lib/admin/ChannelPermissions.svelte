@@ -3,7 +3,7 @@
    * A channel's permission overrides (m2c-plan.md): Everyone, then each role with an override, then "Add a
    * role". Stoat can't delete an override, so removing one writes it empty, and an empty one counts as none.
    */
-  import { Button } from '@concord/ui';
+  import { Button, InfoBanner } from '@concord/ui';
   import { Permission, canActOnRole, has, rolesByRank, type Id, type Override, type Session } from '@concord/domain';
   import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
   import { m } from '$lib/i18n/index.ts';
@@ -128,7 +128,7 @@
 
   <div class="editor">
     {#if selected === 'default'}<p class="summary" role="status">{summary}</p>{/if}
-    {#if locked}<p class="note">{m.admin.overrides.lockedRole}</p>{/if}
+    {#if locked}<div class="banner"><InfoBanner>{m.admin.overrides.lockedRole}</InfoBanner></div>{/if}
     {#if inviteWarning}<p class="warning" role="alert"><TriangleAlert size={16} aria-hidden="true" />{m.admin.roles.inviteWarning}</p>{/if}
     <PermissionList context={info?.kind === 'text' && info.voice ? 'voice' : 'text'} value={draft} {mine} readonly={!canEdit} onchange={(next) => (draft = next)} />
     {#if selected !== 'default' && canEdit}
@@ -152,7 +152,7 @@
   .add { display: grid; gap: var(--space-2); }
   select { padding: var(--space-2) var(--space-3); background: var(--surface-0); color: var(--text-strong); border: 1px solid var(--border-control); border-radius: var(--radius-md); font: var(--text-sm) var(--font-sans); }
   .summary { margin: 0 0 var(--space-5); color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); }
-  .note { margin: 0 0 var(--space-4); color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
+  .banner { margin: 0 0 var(--space-4); }
   .warning { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-5); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--surface-3); border-left: 3px solid var(--status-idle); color: var(--text-normal); font: var(--text-sm) var(--font-sans); }
   .remove { margin-top: var(--space-5); }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }

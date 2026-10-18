@@ -103,11 +103,11 @@ for (const dir of dirs) {
   }
 }
 
-/** Toggle tracks may change colour with state. Keep this exception separate from hover and speaking rings. */
+/** The one toggle's track may change colour with state (Toggle.svelte). Keep this exception separate from hover and speaking rings. */
 function allowedToggleTrack(file: string, source: string, index: number, prop: string): boolean {
   if (prop !== 'background-color') return false;
   const path = relative(ROOT, file);
-  if (!['packages/ui/src/Toggle.svelte', 'apps/web/src/lib/admin/PermissionList.svelte', 'apps/web/src/lib/settings/VoiceSection.svelte', 'apps/web/src/lib/notify/NotificationsSection.svelte'].includes(path)) return false;
+  if (path !== 'packages/ui/src/Toggle.svelte') return false;
   const open = source.lastIndexOf('{', index);
   const start = Math.max(source.lastIndexOf('}', open - 1), source.lastIndexOf('{', open - 1));
   return source.slice(start + 1, open).trim() === '.track';

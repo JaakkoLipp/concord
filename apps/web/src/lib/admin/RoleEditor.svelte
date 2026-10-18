@@ -3,7 +3,7 @@
    * One role's editor (m2c-plan.md): Display (name, colour, hoist) and Permissions, or for Everyone only the
    * permissions as on or off. A locked role is shown read-only. Saving writes only what changed.
    */
-  import { Button, Tabs, TextField } from '@concord/ui';
+  import { Button, InfoBanner, Tabs, TextField } from '@concord/ui';
   import { Permission, canActOnRole, has, type Override, type RoleEdit, type Session } from '@concord/domain';
   import ArrowLeft from '@lucide/svelte/icons/arrow-left';
   import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
@@ -100,7 +100,7 @@
   <Button variant="ghost" size="sm" onclick={back}><ArrowLeft size={16} aria-hidden="true" />{m.admin.roles.back}</Button>
   <h2><span class="swatch" style:background={(everyone ? '' : draft.colour.trim()) || 'var(--text-muted)'} aria-hidden="true"></span>{everyone ? m.admin.roles.everyone : draft.name || original.name}</h2>
 </div>
-{#if locked}<p class="note">{m.admin.roles.locked}</p>{/if}
+{#if locked}<div class="banner"><InfoBanner>{m.admin.roles.locked}</InfoBanner></div>{/if}
 
 {#if !everyone}
   <Tabs label={original.name} selected={tab} onselect={(id) => (tab = id as 'display' | 'permissions')}
@@ -141,7 +141,7 @@
   .head { display: grid; gap: var(--space-3); justify-items: start; margin-bottom: var(--space-5); }
   h2 { display: flex; align-items: center; gap: var(--space-3); margin: 0; color: var(--text-strong); font: 700 var(--text-lg) var(--font-sans); }
   .swatch { width: 1rem; height: 1rem; border-radius: var(--radius-full); flex: none; }
-  .note { margin: 0 0 var(--space-4); color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
+  .banner { margin: 0 0 var(--space-4); }
   .panel { margin-top: var(--space-5); }
   .fields { display: grid; gap: var(--space-6); }
   .group { display: grid; gap: var(--space-3); margin: 0; padding: 0; border: 0; min-width: 0; }

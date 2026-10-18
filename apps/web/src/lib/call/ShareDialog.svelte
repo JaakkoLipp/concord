@@ -4,7 +4,7 @@
    * settings' default, and "Share audio" in Chromium. Firefox shares VP8 in one layer, so it says so. The Share
    * click starts the capture itself, which keeps the user's gesture for the picker.
    */
-  import { Button, Dialog } from '@concord/ui';
+  import { Button, Dialog, InfoBanner } from '@concord/ui';
   import { m } from '$lib/i18n/index.ts';
   import type { VoiceController } from '$lib/voice/controller.svelte.ts';
   import { loadVoiceSettings, type SharePreset } from '$lib/voice/settings.ts';
@@ -38,7 +38,7 @@
   {#if canShareAudio(browser)}
     <label class="option check"><input type="checkbox" bind:checked={audio} /><span>{m.call.shareAudio}<small>{m.call.shareAudioHelp}</small></span></label>
   {:else if browser === 'firefox'}
-    <p class="note">{m.call.shareFirefox}</p>
+    <InfoBanner>{m.call.shareFirefox}</InfoBanner>
   {/if}
   {#snippet actions()}
     <Button variant="ghost" onclick={() => (shareDialog.open = false)}>{m.call.cancel}</Button>
@@ -54,5 +54,4 @@
   .check input { margin-top: 0.2rem; }
   .check span { display: grid; gap: var(--space-1); }
   small { color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
-  .note { margin: 0; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
 </style>

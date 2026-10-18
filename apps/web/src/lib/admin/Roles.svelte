@@ -4,7 +4,7 @@
    * locked. Move up and Move down reorder through the merged writer, so quick clicks end in the last order.
    */
   import { untrack } from 'svelte';
-  import { Button, Dialog, Menu, TextField, type MenuItem } from '@concord/ui';
+  import { Button, Dialog, InfoBanner, Menu, TextField, type MenuItem } from '@concord/ui';
   import { Permission, canActOnRole, has, moveRole, rolesByRank, type Id, type Session } from '@concord/domain';
   import Lock from '@lucide/svelte/icons/lock';
   import Ellipsis from '@lucide/svelte/icons/ellipsis';
@@ -120,7 +120,7 @@
       </button>
     </li>
   </ul>
-  {#if roles.some((r) => !canActOnRole(rank, r))}<p class="note">{m.admin.roles.locked}</p>{/if}
+  {#if roles.some((r) => !canActOnRole(rank, r))}<div class="banner"><InfoBanner>{m.admin.roles.locked}</InfoBanner></div>{/if}
 {/if}
 
 <Menu open={!!menu} onclose={() => (menu = null)} items={menu?.items ?? []} label={m.admin.roles.title} anchor={menu?.anchor ?? null} />
@@ -133,8 +133,8 @@
 </Dialog>
 
 <style>
-  .intro, .note { margin: 0 0 var(--space-5); color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
-  .note { margin-top: var(--space-4); }
+  .intro { margin: 0 0 var(--space-5); color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
+  .banner { margin: var(--space-4) 0 var(--space-5); }
   .actions { margin-bottom: var(--space-5); }
   .roles { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
   .role { display: flex; align-items: center; gap: var(--space-2); border-radius: var(--radius-md); }

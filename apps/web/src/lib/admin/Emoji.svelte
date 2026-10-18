@@ -3,7 +3,7 @@
    * A server's custom emoji (m2c-plan.md task 7): upload with the name filled from the file, slots left, and
    * each emoji with its name editable in place, its uploader and Delete. Limits are checked before uploading.
    */
-  import { Button, IconButton, TextField } from '@concord/ui';
+  import { Button, IconButton, InfoBanner, TextField } from '@concord/ui';
   import type { Session } from '@concord/domain';
   import Trash from '@lucide/svelte/icons/trash-2';
   import { m } from '$lib/i18n/index.ts';
@@ -84,7 +84,7 @@
 <p class="intro">{m.admin.emoji.intro}</p>
 <section class="upload" aria-label={m.admin.emoji.upload}>
   {#if list.length >= max}
-    <p class="note">{m.admin.emoji.full}</p>
+    <div class="banner"><InfoBanner>{m.admin.emoji.full}</InfoBanner></div>
   {:else}
     <div class="row">
       <div class="preview">{#if file}<img src={file.url} alt="" />{/if}</div>
@@ -121,6 +121,7 @@
 
 <style>
   .intro, .note { margin: 0 0 var(--space-4); color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
+  .banner { margin: 0 0 var(--space-4); }
   .upload { display: grid; gap: var(--space-4); margin-bottom: var(--space-6); padding-bottom: var(--space-5); border-bottom: 1px solid var(--border-subtle); }
   .row { display: flex; align-items: center; gap: var(--space-4); }
   .preview { width: 3rem; height: 3rem; border-radius: var(--radius-md); background: var(--surface-3); overflow: hidden; display: grid; place-items: center; }

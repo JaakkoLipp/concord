@@ -4,6 +4,7 @@
    * Everyone's plain list. Permissions you don't hold are disabled, since Stoat refuses to grant them.
    */
   import { Permission } from '@concord/domain';
+  import { Toggle } from '@concord/ui';
   import { m } from '$lib/i18n/index.ts';
   import { groupsFor, setTri, triOf, type PermissionContext, type PermissionKey, type Tri } from './permissions.ts';
 
@@ -38,11 +39,8 @@
             <span class="help">{disabled && !readonly ? m.admin.roles.notHeld : help}</span>
           </div>
           {#if plain}
-            <label class="switch">
-              <input type="checkbox" role="switch" aria-labelledby="{uid}-{key}" checked={(value.allow & bit) === bit} {disabled}
-                onchange={(e) => onchange({ allow: e.currentTarget.checked ? value.allow | bit : value.allow & ~bit, deny: 0n })} />
-              <span class="track" aria-hidden="true"></span>
-            </label>
+            <Toggle aria-labelledby="{uid}-{key}" checked={(value.allow & bit) === bit} {disabled}
+              onchange={(on) => onchange({ allow: on ? value.allow | bit : value.allow & ~bit, deny: 0n })} />
           {:else}
             <div class="tri" role="radiogroup" aria-labelledby="{uid}-{key}">
               {#each STATES as state (state)}
@@ -74,13 +72,4 @@
   .tri .allow[aria-checked='true'] { background: var(--status-online); color: var(--on-accent); }
   .tri .deny[aria-checked='true'] { background: var(--danger-fill); color: var(--on-danger); }
   .tri .neutral[aria-checked='true'] { background: var(--surface-5); color: var(--text-strong); }
-  .switch { position: relative; flex: none; display: inline-flex; cursor: pointer; }
-  .switch input { position: absolute; inset: 0; z-index: 1; opacity: 0; margin: 0; cursor: inherit; }
-  .track { width: 2.5rem; height: 1.5rem; border-radius: var(--radius-full); background: var(--surface-5); position: relative; transition: background-color var(--dur-state) var(--ease-out); }
-  .track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 1.125rem; height: 1.125rem; border-radius: var(--radius-full); background: var(--text-strong); transition: translate calc(var(--dur-state) * var(--motion)) var(--ease-out); }
-  .switch input:checked + .track { background: var(--status-online); }
-  .switch input:checked + .track::after { translate: 1rem 0; }
-  .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .switch input:disabled + .track { opacity: 0.5; }
-  .switch:has(input:disabled) { cursor: not-allowed; }
 </style>

@@ -10,6 +10,7 @@
   import type { SelfEdit, SelfField, Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
   import ProfileCard from '$lib/people/ProfileCard.svelte';
+  import SaveBar from '$lib/admin/SaveBar.svelte';
   import { avatarUrl } from '$lib/view/users.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
 
@@ -165,11 +166,7 @@
 </div>
 
 {#if dirty}
-  <div class="unsaved" role="status">
-    <span>{m.settings.profile.unsaved}</span>
-    <Button size="sm" variant="ghost" onclick={reset}>{m.settings.profile.reset}</Button>
-    <Button size="sm" onclick={save} busy={saving} disabled={!valid}>{m.settings.profile.save}</Button>
-  </div>
+  <SaveBar {saving} {valid} onreset={reset} onsave={save} />
 {/if}
 
 <style>
@@ -194,12 +191,6 @@
   .error { margin: 0; color: var(--danger); font: var(--text-sm) var(--font-sans); }
   .preview { display: grid; gap: var(--space-3); position: sticky; top: 0; }
   .preview :global(.card) { border: 1px solid var(--border-default); }
-  .unsaved {
-    position: sticky; bottom: var(--space-5); display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-8);
-    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5); border-radius: var(--radius-lg);
-    background: var(--surface-4); border: 1px solid var(--border-default); box-shadow: var(--shadow-popover);
-  }
-  .unsaved span { flex: 1; color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans); }
   /* Side by side only with room for the form beside the 400 px card; otherwise the preview goes below the form. */
   @container settings (max-width: 52rem) {
     .editor { grid-template-columns: minmax(0, 1fr); }

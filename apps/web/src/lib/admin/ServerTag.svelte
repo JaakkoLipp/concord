@@ -4,7 +4,7 @@
    * badge. Shown only to someone Stoat lets create servers who holds Manage server here; the layer checks both.
    */
   import type { Session, ServerTag } from '@concord/domain';
-  import { Button, TextField } from '@concord/ui';
+  import { Button, InfoBanner, TextField } from '@concord/ui';
   import { m } from '$lib/i18n/index.ts';
   import { app } from '$lib/session/app.svelte.ts';
   import { tags } from '$lib/layer/tags.svelte.ts';
@@ -84,7 +84,7 @@
           {/each}
         </div>
       {:else}
-        <p class="note">{t.noEmoji}</p>
+        <InfoBanner>{t.noEmoji}</InfoBanner>
       {/if}
     </fieldset>
     {#if draft.tag.trim() && draft.emoji && !error}
@@ -99,7 +99,7 @@
 
 <style>
   .fields { display: grid; gap: var(--space-6); }
-  .intro, .note { margin: 0; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
+  .intro { margin: 0; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
   fieldset { display: grid; gap: var(--space-3); margin: 0; padding: 0; border: 0; }
   legend { margin-bottom: var(--space-3); padding: 0; color: var(--text-secondary); font: 700 var(--text-xs) var(--font-sans); letter-spacing: 0.02em; text-transform: uppercase; }
   .grid { display: flex; flex-wrap: wrap; gap: var(--space-2); }

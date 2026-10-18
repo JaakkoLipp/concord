@@ -814,9 +814,6 @@ export const en = {
       status: 'Custom status',
       left: (n: number) => plural('en', n, { one: '1 character left', other: `${n} characters left` }),
       preview: 'Preview',
-      unsaved: 'You have unsaved changes.',
-      reset: 'Reset',
-      save: 'Save changes',
       saved: 'Profile saved.',
       failed: "Your profile didn't save. Try again.",
       errors: {

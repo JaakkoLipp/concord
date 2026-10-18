@@ -329,7 +329,7 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
   --rail-icon: 40px; --rail-pitch: 48px; --row-channel: 32px; --row-dm: 42px; --row-member: 42px;
   --avatar-sm: 32px; --avatar-md: 40px; --avatar-panel: 80px; --avatar-popout: 120px;
   --profile-w: 300px; --side-panel-w: 456px; --preview-w: 400px;
-  --picker-w: 500px; --picker-h: 486px; --settings-nav-w: 252px; --settings-col-w: 696px; --settings-col-wide-w: 940px;
+  --picker-w: 500px; --picker-h: 486px; --settings-nav-w: 252px; --settings-col-w: 700px; --settings-col-wide-w: 940px;
   --control-h: 40px; --icon-sm: 16px; --icon-md: 20px; --icon-lg: 24px;
 
   --scrollbar-thumb: var(--border-control); --scrollbar-width: 8px;

@@ -5,7 +5,7 @@
    * this device as they change. The mic test runs the call's own chain, loaded on the first test.
    */
   import { onMount } from 'svelte';
-  import { Button } from '@concord/ui';
+  import { Button, Toggle } from '@concord/ui';
   import { m } from '$lib/i18n/index.ts';
   import { loadVoiceSettings, onVoiceSettings, saveVoiceSettings, type SharePreset, type VoiceSettings } from '$lib/voice/settings.ts';
   import { listDevices, maxOutputVolume, outputSelectable, playTrack, type Playback } from '$lib/voice/audio/output.ts';
@@ -182,10 +182,7 @@
       <span class="name" id={id}>{label}</span>
       {#if help}<span class="help">{help}</span>{/if}
     </div>
-    <label class="switch">
-      <input type="checkbox" role="switch" aria-labelledby={id} {checked} onchange={(e) => change(e.currentTarget.checked)} />
-      <span class="track" aria-hidden="true"></span>
-    </label>
+    <Toggle aria-labelledby={id} {checked} onchange={change} />
   </div>
 {/snippet}
 
@@ -386,13 +383,6 @@
   .row { display: flex; align-items: center; gap: var(--space-5); }
   .text { flex: 1; display: grid; gap: var(--space-1); }
   .name { color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); }
-  .switch { position: relative; flex: none; display: inline-flex; cursor: pointer; }
-  .switch input { position: absolute; inset: 0; z-index: 1; opacity: 0; margin: 0; cursor: inherit; }
-  .track { width: 2.5rem; height: 1.5rem; border-radius: var(--radius-full); background: var(--surface-5); position: relative; }
-  .track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 1.125rem; height: 1.125rem; border-radius: var(--radius-full); background: var(--text-strong); transition: translate calc(var(--dur-state) * var(--motion)) var(--ease-out); }
-  .switch input:checked + .track { background: var(--status-online); }
-  .switch input:checked + .track::after { translate: 1rem 0; }
-  .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .advanced { display: grid; gap: var(--space-5); }
   .advanced summary { width: fit-content; color: var(--text-secondary); font: 700 var(--text-xs) var(--font-sans); letter-spacing: 0.02em; text-transform: uppercase; cursor: pointer; }
