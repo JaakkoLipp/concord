@@ -354,10 +354,11 @@ Every feature uses these, and none brings its own:
 
 ### 11.3 Rules
 
-- **Store only what Stoat has no place for.** Never keep a copy of Stoat's data. Read it from Stoat when needed, cached for seconds, not stored.
+- **Store only what Stoat has no place for.** Never keep a copy of Stoat's data. Read it from Stoat when needed, cached for seconds, not stored. The one exception is a reported message's text, kept as evidence until 90 days after its report closes (m4.7-plan.md decision 3).
 - **Membership is not re-checked on reads.** The caller's token can't prove other people's membership without running into Stoat's limits. So clients show a stored per-user fact, such as a tag, only for people their own member lists contain, and the layer removes stale rows when it next writes.
 - **Write to Stoat only through its API**, as the caller. The exceptions are the few admin actions already done over SSH, such as writing a password link, and each needs the admin gate.
 - **No direct database access.** Stoat's MongoDB has no login, and the same network holds Valkey, RabbitMQ and MinIO. The admin panel's lists come from a root cron job that writes a small snapshot, with no emails, into a read-only mount, as its status page does.
+- **The one bulk write to Stoat's database** is `deploy/restore-history.sh` (m4.7-plan.md task 10), run as root over SSH by an admin, never by the layer. It has a dry run, takes a dump of the live database first, and inserts only missing documents, so it can run twice.
 - **Check on the server, every call.** Hiding a button proves nothing.
 
 **If `concord-web` is compromised**, an attacker gets:

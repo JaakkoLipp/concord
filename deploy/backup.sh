@@ -48,9 +48,10 @@ fi
 [ -e /etc/netplan/60-floating-ip.yaml ] && files+=(/etc/netplan/60-floating-ip.yaml)
 restic backup --quiet --tag files "${files[@]}"
 
-restic forget --quiet --prune --keep-daily 7 --keep-weekly 4 --keep-monthly 6
-# A full check reads every pack; weekly is enough at this size.
-[ "$(date +%u)" != 7 ] || restic check --quiet
+# Only the nightly tags: history-snapshot.sh keeps its own 48 hourly ones. The prune frees what both forgot.
+restic forget --quiet --retry-lock 15m --prune --tag db --tag files --keep-daily 7 --keep-weekly 4 --keep-monthly 6
+# Weekly, the structure and a sample of the data: reading every pack grows with the hourly snapshots' files.
+[ "$(date +%u)" != 7 ] || restic check --quiet --read-data-subset=5%
 
 size=$(du -sh "$RESTIC_REPOSITORY" | cut -f1)
 # A failed layer copy still saves everything else, but the status says so from its first word.

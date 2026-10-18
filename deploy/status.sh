@@ -11,6 +11,15 @@ if [ -n "$stamp" ] && when="$(date -d "$stamp" +%s 2>/dev/null)"; then
   [ "$hours" -lt 36 ] || age="  <- OLD: ${hours} h ago, is the 03:30 job running?"
 fi
 echo "== last backup:   ${last}${age}"
+# The hourly history snapshot (history-snapshot.sh, m4.7-plan.md task 10).
+hist="$(cat /var/backups/concord/last-history 2>/dev/null || echo 'never')"
+hstamp="$(awk '{print $2}' <<<"$hist")"
+hage=""
+if [ -n "$hstamp" ] && hwhen="$(date -d "$hstamp" +%s 2>/dev/null)"; then
+  hmins=$(( ($(date +%s) - hwhen) / 60 ))
+  [ "$hmins" -lt 130 ] || hage="  <- OLD: ${hmins} min ago, is the hourly job running?"
+fi
+echo "== last history:  ${hist}${hage}"
 echo "== disk:          $(df -h --output=pcent,avail / | tail -1 | awk '{print $1 " used, " $2 " free"}')"
 echo "== memory:        $(free -h | awk '/^Mem/ {print $7 " available of " $2}')"
 echo "== TURN:          $(sed -n 's/^TURN=//p' concord/host.env)"

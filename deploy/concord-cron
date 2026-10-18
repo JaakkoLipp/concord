@@ -4,3 +4,5 @@
 0 5 * * 1 root /home/jaakko/stoat/concord/restart-livekit.sh
 # 03:30 nightly: backup to the VPS's own disk (m3-plan.md task 4).
 30 3 * * * root /home/jaakko/stoat/concord/backup.sh >/dev/null
+# Five past each hour: the 48-hour history snapshot (m4.7-plan.md task 10). It waits out the nightly backup's lock.
+5 * * * * root /home/jaakko/stoat/concord/history-snapshot.sh >/dev/null

@@ -177,3 +177,26 @@ Write `docs/m3-results.md` with:
 - A verdict against each of the five decision-gate criteria, and the go or no-go.
 
 On go, voice work in M4 and the website in M6 start. On no-go, the next step is a backend specification for our own Rust service.
+
+## 9. History was wiped
+
+From M4.7 (m4.7-plan.md tasks 10 and 12). A channel deleted, or messages deleted in bulk or one by one, can be brought back with their files from the hourly history snapshot, losing at most the last hour. Nothing in Stoat undoes a deletion.
+
+**What runs**:
+- `concord/history-snapshot.sh`, at five past each hour from `/etc/cron.d/concord`: plain dumps of the messages, channels, servers, attachments and attachment_hashes collections, plus the object storage, into restic under the tag `history`, 48 kept. `status.sh` shows `last history`, and says OLD past two hours.
+- The nightly `backup.sh` forgets only its own `db` and `files` snapshots, prunes for both, and on Sundays checks a 5 % sample of the data.
+
+**When the guard's message comes, or someone says a channel is gone**:
+1. Find the channel's ID: from the guard's DM, the audit log's `ChannelDelete` or `MessageBulkDelete` entry, or a link to it. Note the time just before the deletion.
+2. Dry run, which changes nothing:
+   `sudo ~/stoat/concord/restore-history.sh --channel <ID> --at <time before the deletion, UTC> --dry-run`
+   It names the snapshot and says how many messages and files it would bring back, and whether the channel goes back in its server's list and which category.
+3. The restore: the same without `--dry-run`. It takes a dump of the live database first (restic tag `pre-restore`), inserts only what is missing, and copies the files back through the storage's API. It restarts nothing.
+4. Check: open the channel in the app after a reload. The messages are back where they were, images open, and the channel is in its category. Running the restore a second time reports nothing to bring back.
+5. If it went wrong: the `pre-restore` snapshot is a full `mongodump --archive --gzip`. Stop the stack's `api`, `events` and `crond`, `mongorestore --drop --archive --gzip` it into the database container, and start them again.
+
+**Before the first real use, the drill** (task 10's done-check), on the local stack: seed a channel with 200 messages and 10 attachments, two uploaded after the last nightly backup, delete it, bulk-delete 50 messages in another channel, dry-run then restore both, check them in the app after reconnecting, and run the restore again to no effect. Things to confirm in that drill, since they were written from Stoat's source, not watched:
+- that `mongosh` reads the script from stdin in the database container, and `mongorestore --nsFrom 'revolt.*' --nsTo 'concord_restore.*'` takes an archive of one collection,
+- the storage layout: a file's object is keyed by its `hash`, through `attachment_hashes`' `bucket_id` and `path`, and lives in `data/minio/<bucket>/<key>/`,
+- that the temporary storage container serves a partial copy of `data/minio`, and Stoat's `mc` image copies from it,
+- how long the dumps take within the database container’s 768 MB, and the sizes listed in m4.7-results.md task 10.
