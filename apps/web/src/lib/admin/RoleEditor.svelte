@@ -12,6 +12,8 @@
   import { confirm } from '$lib/view/confirm.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
   import PermissionList from './PermissionList.svelte';
+  import { DANGEROUS_BITS } from './permissions.ts';
+  import { confirmGrant } from './guard.ts';
   import SaveBar from './SaveBar.svelte';
   import { guardUnsaved } from './unsaved.ts';
 
@@ -49,6 +51,12 @@
   const dirty = $derived(displayDirty || permsDirty);
   // Decision 5: a role without ManageServer, or Everyone, given InviteOthers.
   const inviteWarning = $derived((draft.perms.allow & Permission.InviteOthers) !== 0n && (everyone || (draft.perms.allow & Permission.ManageServer) === 0n));
+
+  /** A dangerous permission given to a role asks first; Everyone can't be given one at all (m4.7-plan.md task 11). */
+  async function changePerms(next: Override) {
+    if (!everyone && !(await confirmGrant(session, server, role, draft.perms.allow, next.allow))) return;
+    draft.perms = next;
+  }
 
   const reset = () => { draft = saved(); };
   guardUnsaved(() => dirty, reset);
@@ -131,7 +139,7 @@
     </div>
   {:else}
     {#if inviteWarning}<p class="warning" role="alert"><TriangleAlert size={16} aria-hidden="true" />{m.admin.roles.inviteWarning}</p>{/if}
-    <PermissionList context="server" value={draft.perms} plain={everyone} {mine} readonly={!canPerms} onchange={(next) => (draft.perms = next)} />
+    <PermissionList context="server" value={draft.perms} plain={everyone} {mine} readonly={!canPerms} forbid={everyone ? DANGEROUS_BITS : 0n} onchange={(next) => void changePerms(next)} />
   {/if}
 </div>
 

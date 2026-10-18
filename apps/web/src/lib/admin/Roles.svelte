@@ -14,6 +14,8 @@
   import { confirm } from '$lib/view/confirm.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
   import RoleEditor from './RoleEditor.svelte';
+  import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
+  import { DANGEROUS, DANGEROUS_BITS, SUGGESTED_ROLES } from './permissions.ts';
 
   let { session, server }: { session: Session; server: string } = $props();
   const store = $derived(session.store);
@@ -27,6 +29,31 @@
     for (const mem of store.members.values()) if (mem.server === server) for (const r of mem.roles) n[r] = (n[r] ?? 0) + 1;
     return n;
   });
+  // Guardrails (m4.7-plan.md task 11): a server that already gives Everyone a dangerous permission is warned, with one click
+  // to take them away, and a server with no roles yet is offered the suggested ones.
+  const everyoneDangers = $derived(DANGEROUS.filter((k) => (info.defaultPermissions & Permission[k]) !== 0n));
+  const canPerms = $derived(has(mine, Permission.ManagePermissions));
+  async function stripEveryone() {
+    try {
+      await session.admin.setDefaultPermissions(server, info.defaultPermissions & ~DANGEROUS_BITS);
+    } catch {
+      toasts.show(m.admin.saveFailed);
+    }
+  }
+  async function suggest(kind: keyof typeof SUGGESTED_ROLES) {
+    if (busy) return;
+    busy = true;
+    try {
+      const role = await session.admin.createRole(server, kind === 'admin' ? m.admin.roles.adminName : m.admin.roles.moderatorName);
+      // Stoat refuses what the creator doesn't hold, so give only that.
+      await session.admin.setRolePermissions(server, role.id, { allow: SUGGESTED_ROLES[kind] & mine, deny: 0n });
+    } catch {
+      toasts.show(m.admin.roles.failed);
+    } finally {
+      busy = false;
+    }
+  }
+
   // Member counts need the member list.
   $effect(() => {
     const id = server;
@@ -93,8 +120,25 @@
 {#if selected}
   <RoleEditor {session} {server} role={selected} onback={() => (selected = null)} />
 {:else}
+  {#if everyoneDangers.length}
+    <div class="danger" role="alert">
+      <TriangleAlert size={16} aria-hidden="true" />
+      <p>{m.admin.roles.everyoneDanger(everyoneDangers.map((k) => m.admin.permissionNames[k][0]).join(', '))}</p>
+      {#if canPerms}<Button size="sm" variant="danger" onclick={stripEveryone}>{m.admin.roles.everyoneDangerFix}</Button>{/if}
+    </div>
+  {/if}
   <p class="intro">{m.admin.roles.intro}</p>
   {#if canCreate}<div class="actions"><Button onclick={() => (creating = true)}>{m.admin.roles.create}</Button></div>{/if}
+  {#if canCreate && canPerms && !roles.length}
+    <section class="suggested">
+      <h3>{m.admin.roles.suggested}</h3>
+      <p class="intro">{m.admin.roles.suggestedHelp}</p>
+      <div class="buttons">
+        <Button variant="secondary" size="sm" {busy} onclick={() => suggest('admin')}>{m.admin.roles.addAdmin}</Button>
+        <Button variant="secondary" size="sm" {busy} onclick={() => suggest('moderator')}>{m.admin.roles.addModerator}</Button>
+      </div>
+    </section>
+  {/if}
   <ul class="roles" aria-label={m.admin.roles.title}>
     {#each roles as role (role.id)}
       {@const locked = !canActOnRole(rank, role)}
@@ -136,6 +180,14 @@
   .intro { margin: 0 0 var(--space-5); color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
   .banner { margin: var(--space-4) 0 var(--space-5); }
   .actions { margin-bottom: var(--space-5); }
+  .danger {
+    display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-5); padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md); background: var(--surface-3); border-left: 3px solid var(--danger); color: var(--text-normal); font: var(--text-sm) var(--font-sans);
+  }
+  .danger p { flex: 1; margin: 0; }
+  .suggested { margin-bottom: var(--space-6); }
+  .suggested h3 { margin: 0 0 var(--space-2); color: var(--text-secondary); font: 700 var(--text-xs) var(--font-sans); letter-spacing: 0.02em; text-transform: uppercase; }
+  .buttons { display: flex; flex-wrap: wrap; gap: var(--space-3); }
   .roles { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
   .role { display: flex; align-items: center; gap: var(--space-2); border-radius: var(--radius-md); }
   @media (hover: hover) { .role:hover { background: var(--hover-overlay); } }

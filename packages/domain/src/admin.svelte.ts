@@ -236,6 +236,6 @@ export class ServerAdmin {
     this.store.apply({ type: 'emojiDelete', id: emoji });
   }
   editChannel(channel: Id, change: ChannelEdit) { return this.run(() => this.backend.editChannel(channel, change)); }
-  deleteChannel(channel: Id) { return this.run(() => this.backend.deleteChannel(channel)); }
+  deleteChannel(channel: Id, reason?: string) { return this.run(() => this.backend.deleteChannel(channel, reason)); }
   setChannelPermissions(channel: Id, role: Id | 'default', p: Override) { return this.run(() => this.backend.setChannelPermissions(channel, role, p)); }
 }

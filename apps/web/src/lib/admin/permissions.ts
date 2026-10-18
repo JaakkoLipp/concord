@@ -31,6 +31,29 @@ export function groupsFor(context: PermissionContext): PermissionGroup[] {
     .filter((g) => g.keys.length && (context === 'voice' || g.id !== 'voice'));
 }
 
+/**
+ * Permissions that can wipe history or take a server over (m4.7-plan.md task 11). Marked in the editor, granted only after
+ * a confirmation naming how many members get them, and never given to Everyone in Concord's editor.
+ */
+export const DANGEROUS: PermissionKey[] = ['ManageChannel', 'ManageMessages', 'BanMembers', 'ManageServer', 'ManageRole', 'ManagePermissions'];
+export const DANGEROUS_BITS = DANGEROUS.reduce((bits, k) => bits | Permission[k], 0n);
+export const isDangerous = (k: PermissionKey) => DANGEROUS.includes(k);
+
+/** The dangerous permissions a change newly allows. */
+export function newlyDangerous(before: bigint, after: bigint): PermissionKey[] {
+  return DANGEROUS.filter((k) => (after & Permission[k]) !== 0n && (before & Permission[k]) === 0n);
+}
+
+/**
+ * Suggested roles for a new server (m4.7-plan.md task 11), as starting points. A Moderator keeps the chat tidy but can't
+ * delete channels or ban; an Admin has everything. Manage server also lets someone add bots, which Stoat can't separate.
+ */
+export const SUGGESTED_ROLES = {
+  admin: Object.values(Permission).reduce((bits, b) => bits | b, 0n) & ~Permission.ManageWebhooks,
+  moderator: Permission.KickMembers | Permission.TimeoutMembers | Permission.MuteMembers | Permission.DeafenMembers | Permission.MoveMembers
+    | Permission.ManageMessages | Permission.ManageNicknames | Permission.ViewAuditLogs,
+} as const;
+
 export type Tri = 'allow' | 'neutral' | 'deny';
 export const triOf = (o: { allow: bigint; deny: bigint }, bit: bigint): Tri => ((o.allow & bit) ? 'allow' : (o.deny & bit) ? 'deny' : 'neutral');
 export function setTri(o: { allow: bigint; deny: bigint }, bit: bigint, t: Tri): { allow: bigint; deny: bigint } {

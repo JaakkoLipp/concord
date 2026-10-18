@@ -12,6 +12,8 @@
   import { confirm } from '$lib/view/confirm.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
   import PermissionList from './PermissionList.svelte';
+  import { DANGEROUS_BITS } from './permissions.ts';
+  import { confirmGrant } from './guard.ts';
   import SaveBar from './SaveBar.svelte';
   import { guardUnsaved } from './unsaved.ts';
 
@@ -23,6 +25,12 @@
   const mine = $derived(info ? permissionsIn(store, info) : 0n);
   const rank = $derived(text ? myRank(store, text.server) : Number.POSITIVE_INFINITY);
   const EMPTY: Override = { allow: 0n, deny: 0n };
+  /** As in the role editor: a dangerous permission for a role here asks first, and Everyone gets none (m4.7-plan.md task 11). */
+  async function changeOverride(next: Override) {
+    const id = selected;
+    if (id !== 'default' && text && !(await confirmGrant(session, text.server, id, draft.allow, next.allow))) return;
+    if (selected === id) draft = next;
+  }
   const empty = (o: Override | undefined) => !o || (!o.allow && !o.deny);
 
   /** Roles just added here, shown before they have an override. */
@@ -130,7 +138,8 @@
     {#if selected === 'default'}<p class="summary" role="status">{summary}</p>{/if}
     {#if locked}<div class="banner"><InfoBanner>{m.admin.overrides.lockedRole}</InfoBanner></div>{/if}
     {#if inviteWarning}<p class="warning" role="alert"><TriangleAlert size={16} aria-hidden="true" />{m.admin.roles.inviteWarning}</p>{/if}
-    <PermissionList context={info?.kind === 'text' && info.voice ? 'voice' : 'text'} value={draft} {mine} readonly={!canEdit} onchange={(next) => (draft = next)} />
+    <PermissionList context={info?.kind === 'text' && info.voice ? 'voice' : 'text'} value={draft} {mine} readonly={!canEdit}
+      forbid={selected === 'default' ? DANGEROUS_BITS : 0n} onchange={(next) => void changeOverride(next)} />
     {#if selected !== 'default' && canEdit}
       <div class="remove"><Button variant="danger" size="sm" onclick={remove}>{m.admin.overrides.remove}</Button></div>
     {/if}

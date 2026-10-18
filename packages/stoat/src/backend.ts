@@ -488,8 +488,8 @@ export class StoatBackend implements Backend {
     await this.rest.request('PATCH', `/channels/${channel}`, body);
   }
 
-  async deleteChannel(channel: string): Promise<void> {
-    await this.rest.request('DELETE', `/channels/${channel}`);
+  async deleteChannel(channel: string, reason?: string): Promise<void> {
+    await this.rest.request('DELETE', `/channels/${channel}`, undefined, reasonHeader(reason));
   }
 
   async setChannelPermissions(channel: string, role: string, p: Override): Promise<void> {

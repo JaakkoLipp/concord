@@ -1,7 +1,7 @@
 /** What a missing permission takes away, as the call, composer and role editor read it (m4.7-plan.md task 5). */
 import { Permission as P, Store, type Member, type Role, type TextChannel, type User } from '@concord/domain';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { groupsFor } from '$lib/admin/permissions.ts';
+import { DANGEROUS_BITS, SUGGESTED_ROLES, groupsFor, newlyDangerous } from '$lib/admin/permissions.ts';
 import { suggest } from '$lib/composer/suggest.ts';
 import { callRights, permissionsIn, sendBlock } from './channels.ts';
 
@@ -76,5 +76,16 @@ describe('the role editor', () => {
     expect(keys('voice')).toEqual(expect.arrayContaining(['Connect', 'Speak', 'MoveMembers', 'SendMessage']));
     expect(keys('text')).not.toContain('Connect');
     expect(keys('text')).toContain('SendMessage');
+  });
+
+  it('names only the dangerous permissions a change adds', () => {
+    expect(newlyDangerous(P.ManageMessages, P.ManageMessages | P.BanMembers | P.KickMembers)).toEqual(['BanMembers']);
+    expect(newlyDangerous(P.BanMembers, 0n)).toEqual([]);
+  });
+
+  it('suggests a Moderator who can’t delete channels or ban, and an Admin with everything dangerous', () => {
+    expect(SUGGESTED_ROLES.moderator & (P.ManageChannel | P.BanMembers | P.ManageServer)).toBe(0n);
+    expect(SUGGESTED_ROLES.moderator & P.ManageMessages).toBe(P.ManageMessages);
+    expect(SUGGESTED_ROLES.admin & DANGEROUS_BITS).toBe(DANGEROUS_BITS);
   });
 });

@@ -10,8 +10,8 @@
   import { m } from '$lib/i18n/index.ts';
   import { firstChannel, permissionsIn } from '$lib/view/channels.ts';
   import { untrack } from 'svelte';
-  import { confirm } from '$lib/view/confirm.svelte.ts';
-  import { toasts } from '$lib/view/toast.svelte.ts';
+  import { isServerAdmin } from '$lib/view/admin.ts';
+  import { deleteChannel } from './menu.ts';
   import SettingsFrame from '$lib/settings/SettingsFrame.svelte';
   import ChannelOverview from './ChannelOverview.svelte';
   import ChannelPermissions from './ChannelPermissions.svelte';
@@ -38,16 +38,7 @@
     void goto(server && first ? resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server, channel: first }) : resolve('/app/channels/@me'), { replaceState: true });
   });
 
-  async function remove() {
-    if (info?.kind !== 'text') return;
-    const ok = await confirm.ask({ title: m.admin.deleteChannelTitle(name), body: m.admin.deleteChannelBody, confirm: m.admin.deleteChannel, danger: true });
-    if (!ok) return;
-    try {
-      await session.admin.deleteChannel(channel);
-    } catch {
-      toasts.show(m.admin.channelFailed);
-    }
-  }
+  const remove = () => void deleteChannel(session, channel);
 </script>
 
 {#if info?.kind === 'text'}
@@ -55,7 +46,7 @@
     {#if current === 'overview'}<ChannelOverview {session} {channel} />{/if}
     {#if current === 'permissions'}<ChannelPermissions {session} {channel} />{/if}
     {#snippet footer()}
-      {#if has(mine, Permission.ManageChannel)}<Button variant="ghost" size="sm" onclick={remove}>{m.admin.deleteChannel}</Button>{/if}
+      {#if has(mine, Permission.ManageChannel) && info?.kind === 'text' && isServerAdmin(store, info.server)}<Button variant="ghost" size="sm" onclick={remove}>{m.admin.deleteChannel}</Button>{/if}
     {/snippet}
   </SettingsFrame>
 {/if}

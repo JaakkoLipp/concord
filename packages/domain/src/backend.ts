@@ -342,7 +342,8 @@ export interface Backend {
   setRoleRanks(server: Id, order: Id[]): Promise<void>;
   createChannel(server: Id, kind: 'text' | 'voice', name: string, description?: string): Promise<Channel>;
   editChannel(channel: Id, change: ChannelEdit): Promise<void>;
-  deleteChannel(channel: Id): Promise<void>;
+  /** With an optional reason for the audit log. */
+  deleteChannel(channel: Id, reason?: string): Promise<void>;
   /** A role's override in a channel, or the channel's default with `'default'`. Allow 0 and deny 0 clears it. */
   setChannelPermissions(channel: Id, role: Id | 'default', permissions: Override): Promise<void>;
   createInvite(channel: Id): Promise<Invite>;
