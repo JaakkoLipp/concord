@@ -105,6 +105,48 @@ export interface Ban {
   reason?: string;
 }
 
+/**
+ * What a member edit changed, from the audit log's before and after (m4.7-plan.md task 8). An edit with none, as Stoat
+ * logs a timeout's removal, is still shown, as "edited a member" (m4.7-results.md task 1).
+ */
+export type MemberChange =
+  | { kind: 'nickname'; to?: string }
+  | { kind: 'avatar'; removed: boolean }
+  | { kind: 'roles'; added: Id[]; removed: Id[] }
+  | { kind: 'timeout'; until: string }
+  | { kind: 'mute'; on: boolean }
+  | { kind: 'deafen'; on: boolean };
+
+/** One audit log action. `changed` names the fields an edit touched, as Stoat spells them. */
+export type AuditAction =
+  | { type: 'MessageDelete'; author: Id; channel: Id }
+  | { type: 'MessageBulkDelete'; channel: Id; count: number }
+  | { type: 'MessagePin' | 'MessageUnpin'; author: Id; channel: Id }
+  | { type: 'BanCreate' | 'BanDelete' | 'MemberKick'; user: Id }
+  | { type: 'MemberEdit'; user: Id; changes: MemberChange[] }
+  | { type: 'ChannelCreate' | 'ChannelDelete'; channel: Id; name: string }
+  | { type: 'ChannelEdit'; channel: Id; changed: string[] }
+  | { type: 'ChannelRolePermissionsEdit'; channel: Id; role: Id }
+  | { type: 'ServerEdit'; changed: string[] }
+  | { type: 'RoleCreate' | 'RoleDelete'; role: Id; name: string }
+  | { type: 'RoleEdit'; role: Id; changed: string[] }
+  | { type: 'RolesReorder' }
+  | { type: 'InviteCreate' | 'InviteDelete'; invite: string; channel: Id }
+  | { type: 'WebhookCreate' | 'WebhookDelete'; name: string; channel: Id }
+  | { type: 'EmojiCreate' | 'EmojiDelete'; name: string }
+  | { type: 'EmojiUpdate'; name: string }
+  | { type: 'Unknown'; name: string };
+
+export interface AuditEntry {
+  /** A ULID: its time is when it happened. */
+  id: Id;
+  /** Who acted. */
+  user: Id;
+  target?: Id;
+  reason?: string;
+  action: AuditAction;
+}
+
 export interface TextChannel {
   kind: 'text';
   id: Id;

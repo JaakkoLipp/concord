@@ -1,12 +1,13 @@
 /** The Stoat implementation of the domain's Backend interface. */
 import type {
-  AccountSession, Backend, Capabilities, MfaMethod, MfaProof, MfaStatus, Channel, ChannelEdit, Emoji, Gateway, GatewayHandlers, GroupEdit, Id, Invite, InvitePreview, LoginResult, Member, MemberEdit, SelfEdit, SelfField, Message,
+  AccountSession, AuditQuery, Backend, Capabilities, MfaMethod, MfaProof, MfaStatus, Channel, ChannelEdit, Emoji, Gateway, GatewayHandlers, GroupEdit, Id, Invite, InvitePreview, LoginResult, Member, MemberEdit, SelfEdit, SelfField, Message,
   MessagePage, MessageQuery, NodeInfo, OutgoingMessage, Override, Role, RoleEdit, SearchQuery, Server, ServerEdit, User, VideoLimit,
 } from '@concord/domain';
 import { JoinCallError, type JoinFailure } from '@concord/domain/errors';
 import type { components } from './api/types.ts';
 import { capabilitiesFor } from './capabilities.ts';
 import { reasonHeader } from './reason.ts';
+import { mapAuditEntry, type WAuditEntry } from './map/audit.ts';
 import { mapChannel } from './map/channel.ts';
 import { mapEmoji } from './map/emoji.ts';
 import { mapFile } from './map/file.ts';
@@ -565,6 +566,16 @@ export class StoatBackend implements Backend {
       // Only what the ban list carries: anything else about these users is unknown, not empty.
       users: r.users.map((u) => mapUser({ ...u, relationship: 'None', online: false } as WUser)),
     };
+  }
+
+  async auditLog(server: string, q: AuditQuery) {
+    const params = new URLSearchParams({ limit: String(q.limit) });
+    if (q.user) params.set('user', q.user);
+    if (q.target) params.set('target', q.target);
+    if (q.before) params.set('before', q.before);
+    for (const t of q.types ?? []) params.append('type', t);
+    const r = await this.rest.request<{ audit_logs: WAuditEntry[]; users: WUser[] }>('GET', `/servers/${server}/audit_logs?${params}`);
+    return { entries: r.audit_logs.map(mapAuditEntry), users: r.users.map(mapUser) };
   }
 
   async createEmoji(file: string, server: string, name: string): Promise<Emoji> {

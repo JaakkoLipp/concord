@@ -28,7 +28,7 @@ export function isServerAdmin(store: Store, server: Id): boolean {
   return isOwner(store, server) || has(serverPerms(store, server), Permission.ManageServer | Permission.ManageMessages);
 }
 
-export type ServerSection = 'overview' | 'roles' | 'emoji' | 'invites' | 'members' | 'bans';
+export type ServerSection = 'overview' | 'roles' | 'emoji' | 'invites' | 'members' | 'bans' | 'audit';
 const NEEDS: Record<ServerSection, bigint[]> = {
   overview: [Permission.ManageServer],
   roles: [Permission.ManageRole, Permission.ManagePermissions],
@@ -36,6 +36,7 @@ const NEEDS: Record<ServerSection, bigint[]> = {
   invites: [Permission.ManageServer],
   members: [Permission.KickMembers, Permission.BanMembers, Permission.AssignRoles],
   bans: [Permission.BanMembers],
+  audit: [Permission.ViewAuditLogs],
 };
 
 /** Server settings sections this account may open, in order. Empty means no "Server settings" at all. */

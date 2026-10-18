@@ -3,7 +3,7 @@
  * write. Writes may wait a while for Stoat's 5-per-10-s server bucket, so `pending` counts those on their
  * way and the web layer asks before the tab closes.
  */
-import type { ChannelEdit, MemberEdit, RoleEdit, ServerEdit } from './backend.ts';
+import type { AuditQuery, ChannelEdit, MemberEdit, RoleEdit, ServerEdit } from './backend.ts';
 import type { Category, Channel, Id, Override, Role } from './entities.ts';
 import { moveChannelTo } from './layout.ts';
 import { Latest } from './latest.ts';
@@ -220,6 +220,7 @@ export class ServerAdmin {
   ban(server: Id, user: Id, reason?: string, deleteSeconds?: number) { return this.run(() => this.backend.ban(server, user, reason, deleteSeconds)); }
   unban(server: Id, user: Id) { return this.run(() => this.backend.unban(server, user)); }
   bans(server: Id) { return this.backend.bans(server); }
+  auditLog(server: Id, query: AuditQuery) { return this.backend.auditLog(server, query); }
   /** Upload an image and make it a server emoji, shown at once. */
   async createEmoji(server: Id, file: File, name: string) {
     const emoji = await this.run(async () => this.backend.createEmoji(await this.backend.upload(file, file.name, undefined, 'emojis'), server, name));

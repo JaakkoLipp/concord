@@ -21,6 +21,7 @@
   import Emoji from './Emoji.svelte';
   import Members from './Members.svelte';
   import Bans from './Bans.svelte';
+  import AuditLog from './AuditLog.svelte';
   import DeleteServerDialog from './DeleteServerDialog.svelte';
 
   let { session, server, section }: { session: Session; server: string; section: string } = $props();
@@ -48,6 +49,7 @@
     {#if current === 'invites'}<Invites {session} {server} />{/if}
     {#if current === 'members'}<Members {session} {server} />{/if}
     {#if current === 'bans'}<Bans {session} {server} />{/if}
+    {#if current === 'audit'}<AuditLog {session} {server} />{/if}
     {#if current === 'tag'}<ServerTag {session} {server} />{/if}
     {#snippet footer()}
       {#if isOwner(store, server)}

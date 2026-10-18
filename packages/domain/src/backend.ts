@@ -3,7 +3,7 @@
  * Events are already mapped to domain shapes, so the store never sees a Stoat frame.
  */
 import type {
-  Ban, Category, Channel, Emoji, Id, Invite, InvitePreview, Member, Message, NodeInfo, Override, Presence, Profile, Relationship, Role, Server,
+  AuditEntry, Ban, Category, Channel, Emoji, Id, Invite, InvitePreview, Member, Message, NodeInfo, Override, Presence, Profile, Relationship, Role, Server,
   SystemChannels, Unread, User, VoiceFlags, VoiceState,
 } from './entities.ts';
 
@@ -82,6 +82,16 @@ export interface MemberEdit {
   voiceChannel?: Id;
   canPublish?: boolean;
   canReceive?: boolean;
+}
+
+/** A page of the audit log, newest first: who did it, which actions, and the entry to start before. */
+export interface AuditQuery {
+  user?: Id;
+  /** Whom it was done to. */
+  target?: Id;
+  types?: string[];
+  before?: Id;
+  limit: number;
 }
 
 export type ConnectionState = 'connecting' | 'ready' | 'reconnecting' | 'offline' | 'invalid-session';
@@ -351,6 +361,8 @@ export interface Backend {
   ban(server: Id, user: Id, reason?: string, deleteSeconds?: number): Promise<void>;
   unban(server: Id, user: Id): Promise<void>;
   bans(server: Id): Promise<{ bans: Ban[]; users: User[] }>;
+  /** The server's audit log, with View audit logs (m4.7-plan.md task 8). Stoat keeps 30 days. */
+  auditLog(server: Id, query: AuditQuery): Promise<{ entries: AuditEntry[]; users: User[] }>;
   /** Turn an upload from `upload(…, 'emojis')` into a server emoji. */
   createEmoji(file: Id, server: Id, name: string): Promise<Emoji>;
   renameEmoji(emoji: Id, name: string): Promise<void>;

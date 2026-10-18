@@ -8,6 +8,11 @@
   import { moderationView } from './moderation.svelte.ts';
   import { kickBanItems, nicknameItem, removeAvatarItem, roleItem, timeoutItem } from './members.ts';
   import { moderationItems as voiceModerationItems } from '$lib/call/moderation.ts';
+  import { untrack } from 'svelte';
+  import { SvelteMap } from 'svelte/reactivity';
+  import type { AuditEntry, User } from '@concord/domain';
+  import { auditNames, describe } from './audit.ts';
+  import { shortDate } from '$lib/markdown/time.ts';
 
   let { session, store }: { session: Session; store: Store } = $props();
   const current = $derived(moderationView.current);
@@ -50,6 +55,24 @@
     return items;
   });
 
+  // Their latest audit log entries (m4.7-plan.md tasks 4 and 8), with View audit logs: one request when the panel opens.
+  let audit = $state<AuditEntry[]>([]);
+  const auditUsers = new SvelteMap<string, User>();
+  const names = $derived(current ? auditNames(store, current.server, auditUsers) : null);
+  $effect(() => {
+    const c = current;
+    audit = [];
+    // Only a new member asks again: unrelated store changes mustn't spend the server's shared limit.
+    if (!c || !untrack(() => has(serverPerms(store, c.server), Permission.ViewAuditLogs))) return;
+    let stale = false;
+    untrack(() => void session.admin.auditLog(c.server, { target: c.user, limit: 5 }).then((page) => {
+      if (stale) return;
+      for (const u of page.users) auditUsers.set(u.id, u);
+      audit = page.entries;
+    }).catch(() => {}));
+    return () => { stale = true; };
+  });
+
   let menuOpen = $state(false);
   let menuButton = $state<HTMLElement | null>(null);
 </script>
@@ -78,6 +101,16 @@
         <ul class="roles">{#each roles as role (role!.id)}<li><span class="swatch" style:--role={role!.colour ?? 'var(--text-muted)'}></span>{role!.name}</li>{/each}</ul>
       {:else}<p class="empty">{m.moderation.noRoles}</p>{/if}
     </section>
+    {#if audit.length && names}
+      <section>
+        <h3>{m.admin.audit.recent}</h3>
+        <ul class="audit">
+          {#each audit as e (e.id)}
+            <li><strong>{names.user(e.user)}</strong> {describe(e, names)}{#if e.reason} · {e.reason}{/if} <time>{shortDate(ulidTime(e.id))}</time></li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
     {#if timeout || !member.canPublish || !member.canReceive}
       <section>
         <h3>{m.voiceMod.title}</h3>
@@ -110,6 +143,10 @@
   .swatch { width: 10px; height: 10px; border-radius: 50%; background: var(--role); }
   .status li { color: var(--text-normal); font: var(--text-sm) var(--font-sans); }
   .empty { margin: 0; }
+  .audit { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+  .audit li { color: var(--text-normal); font: var(--text-sm) var(--font-sans); overflow-wrap: anywhere; }
+  .audit strong { color: var(--text-strong); font-weight: 600; }
+  .audit time { color: var(--text-secondary); font: var(--text-xs) var(--font-sans); font-variant-numeric: tabular-nums; }
   .reason { display: grid; gap: var(--space-2); }
   .reason span { color: var(--text-secondary); font: 700 var(--text-xs) var(--font-sans); }
   .reason input {
