@@ -26,6 +26,7 @@ Every milestone ends with a demo on Jaakko's real devices. A milestone is done w
 | M4.6 | UI motion and design parity with Discord, from a measured spec | M4.5 | [discord-ui-motion-spec.md](design/discord-ui-motion-spec.md) |
 | M4.7 | Moderation, voice and text: moving people between calls, server mute and deafen, permissions that work, timeouts, slow mode, bulk delete, the audit log, reports | M4.5 | m4.7 plan |
 | M4.8 | Everyday usability: quick switcher and shortcuts, opening at the first unread, a mentions inbox, My Account in the app, server folders, drafts that survive a reload, message sounds, an offline banner, appearance settings, notes, search filters | M4.5 | m4.8 plan |
+| M4.9 | A Supporter global role beside moderator and admin: custom CSS on the profile card, and server creation | M4.8, the account runner | m4.9 plan |
 | M5 | Desktop apps for Windows and Linux | M4 | desktop spec |
 | M6 | Website: invites, registration, account management, downloads | M3 | website spec |
 | M7 | Polish, Finnish locale, PWA with web push, closed beta | M2 to M6 | none new |
@@ -526,6 +527,33 @@ Added on 2026-10-16 at Jaakko's request, from a Sonnet audit of the client again
 - A member changes their password and logs out another session without leaving the app.
 - Server order and folders, drafts and collapsed categories survive a reload, and the server order and folders sync to a second device.
 - Losing the connection shows the banner within 2 s, and it clears on reconnect.
+
+## M4.9: Supporter role
+
+Added on 2026-10-18 at Jaakko's request. **Plan only**: nothing is built until `m4.9-plan.md` is written, challenger-reviewed and signed off. Runs after M4.3. A Nitro-like perk tier, under Concord's own name, with no payment: admins grant it by hand.
+
+**What exists**: the layer knows two global roles, admin (`ADMIN_USER_IDS`) and moderator (a layer list), both managed from Administration through the host-side account runner (`deploy/account-runner.py`). Server creation is Stoat's `restrict_server_creation` list, which the layer reads as the server-creator gate. Changing it restarts `api`.
+
+**Scope**:
+- **The role.** A third global role, *Supporter* (name to be decided), stored in the layer and granted or removed by admins in Administration, with an audit line for each change. Supporters show a small mark on their profile card and member row.
+- **Server creation.** A supporter is added to `restrict_server_creation` by the runner, with a per-supporter cap on servers they own, checked by the layer before Create server is offered. Removing the role stops new servers and leaves existing ones alone. The plan decides whether to batch runner changes so `api` restarts at most once a few minutes.
+- **Custom CSS on the profile card.** A supporter writes CSS for their own card in Profile settings, with a live preview. Other Concord clients render it on the popout and the DM profile panel. Rules, since the CSS runs in other people's browsers:
+  - **Scoped**: it applies only inside the card, rendered in a shadow root with `contain: strict` and `overflow: hidden`, so nothing escapes the card's box.
+  - **Sanitised in the layer**, with a CSS parser:
+    - **properties** come from an allowlist: colours, gradients, borders, radius, shadows, fonts, spacing, transforms, filters within limits, and keyframe animations;
+    - **removed**: `position: fixed` and `sticky`, `@import`, `@font-face` from outside Autumn, `url()` that isn't an Autumn file, `expression`, behaviours and anything that loads from another host;
+    - **capped**: the size is limited to about 8 KB.
+  - **Viewer controls**: a setting to show plain cards everywhere. Reduced motion stops custom animations, and streamer mode shows plain cards.
+  - **Stays readable**: the name, roles and buttons keep Concord's own layout. CSS styles the card's surfaces through named parts (`::part(banner)`, `::part(body)` and so on), not the app's markup.
+  - **Other clients** (Stoat's own) see the ordinary profile.
+- **Extras the plan may add**: an animated avatar and banner (GIF or WebP) for supporters, a profile theme colour pair, and more favourite GIF slots. Each is checked against Stoat's own limits first.
+
+**Decisions for the plan**: the role's name and mark; the server cap; whether supporters may also create more than one invite-on-request without review; whether custom CSS reaches the member list row or only the card; and whether it is free for everyone during the beta.
+
+**Acceptance criteria**:
+- An admin grants the role, and the person can create a server within the cap. Removing the role takes it away again.
+- A supporter's custom card shows on another member's client, and planted CSS cannot escape the card, load another host, cover the app or hide its controls. The plan lists the cases to try.
+- "Show plain cards" and reduced motion both work.
 
 ## M5: Desktop apps
 
