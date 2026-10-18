@@ -339,6 +339,7 @@ export const en = {
     group: { online: 'Online', offline: 'Offline' },
   },
   conversation: {
+    voiceMessage: 'Voice message',
     nsfwTitle: 'Age-restricted channel',
     nsfwBody: (channel: string) => `#${channel} is marked as age-restricted and may hold content that isn’t for everyone. Continue only if you are 18 or older.`,
     nsfwContinue: 'Continue',
@@ -440,6 +441,13 @@ export const en = {
   composer: {
     send: 'Send message',
     attach: 'Upload a file',
+    recordVoice: 'Record a voice message',
+    stopRecording: 'Stop and attach',
+    cancelRecording: 'Cancel recording',
+    recording: (time: string) => `Recording ${time}`,
+    micRefused: 'Concord can’t use your microphone. Allow it in the browser’s site settings.',
+    recordFailed: 'Couldn’t start recording.',
+    recordingLimit: 'Voice messages stop at 10 minutes.',
     emoji: 'Choose an emoji',
     bytesLeftLabel: (n: number) => (n >= 0 ? plural('en', n, { one: `${n} byte left`, other: `${n} bytes left` }) : plural('en', -n, { one: `${-n} byte over the limit`, other: `${-n} bytes over the limit` })),
     blocked: {

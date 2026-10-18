@@ -3,8 +3,8 @@ import type { Id } from '@concord/domain';
 
 export interface Reply { id: Id; mention: boolean }
 
-/** A file chosen for the next message, with a local preview for images. */
-export interface Chosen { key: string; file: File; preview?: string | undefined }
+/** A file chosen for the next message, with a local preview for images, and a local player's source for a voice message. */
+export interface Chosen { key: string; file: File; preview?: string | undefined; audio?: string | undefined }
 
 class Compose {
   /** The message being edited inline, if any. One at a time, as on Discord. */
@@ -20,12 +20,14 @@ class Compose {
   removeFile(channel: Id, key: string): void {
     const gone = this.files[channel]?.find((c) => c.key === key);
     if (gone?.preview) URL.revokeObjectURL(gone.preview);
+    if (gone?.audio) URL.revokeObjectURL(gone.audio);
     this.files = { ...this.files, [channel]: (this.files[channel] ?? []).filter((c) => c.key !== key) };
   }
 
   /** Hand the chosen files to a message. Their previews now belong to the pending message. */
   takeFiles(channel: Id): Chosen[] {
     const taken = this.files[channel] ?? [];
+    for (const c of taken) if (c.audio) URL.revokeObjectURL(c.audio);
     const { [channel]: _gone, ...rest } = this.files;
     this.files = rest;
     return taken;

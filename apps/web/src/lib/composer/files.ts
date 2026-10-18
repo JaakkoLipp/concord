@@ -7,6 +7,7 @@ import { m } from '$lib/i18n/index.ts';
 import { permissionsIn } from '$lib/view/channels.ts';
 import { compose, type Chosen } from '$lib/view/compose.svelte.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
+import { isVoiceMessage } from './voiceMessage.ts';
 
 let next = 0;
 
@@ -16,7 +17,10 @@ export function choose(files: File[], already: number, limits: { count: number; 
   for (const file of files) {
     if (file.size > limits.size) refused.push(m.files.tooLarge(file.name, m.files.size(limits.size)));
     else if (already + chosen.length >= limits.count) refused.push(m.files.tooMany(limits.count));
-    else chosen.push({ key: `f${next++}`, file, preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined });
+    else chosen.push({
+      key: `f${next++}`, file, preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
+      audio: isVoiceMessage(file.name) ? URL.createObjectURL(file) : undefined,
+    });
   }
   return { chosen, refused: [...new Set(refused)] };
 }

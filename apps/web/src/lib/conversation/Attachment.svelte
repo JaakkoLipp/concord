@@ -3,6 +3,8 @@
   import { fileUrl } from '@concord/stoat';
   import { fadeIn } from '@concord/ui';
   import FileIcon from '@lucide/svelte/icons/file';
+  import Mic from '@lucide/svelte/icons/mic';
+  import { isVoiceMessage } from '$lib/composer/voiceMessage.ts';
   import { m } from '$lib/i18n/index.ts';
   import { fileSize, fit, placeholder } from '$lib/view/media.ts';
   import { viewer } from '$lib/view/viewer.svelte.ts';
@@ -11,9 +13,19 @@
   const url = $derived(fileUrl(file));
   const size = $derived(fit(file.width ?? 0, file.height ?? 0, 400, 300));
   const thumb = $derived(placeholder(file.thumbhash));
+  // Recognised by name, since Autumn classes Chromium's WebM recordings as plain files (M4.8 task 14c).
+  const voice = $derived(file.kind !== 'image' && file.kind !== 'text' && isVoiceMessage(file.filename));
 </script>
 
-{#if file.kind === 'image'}
+{#if voice}
+  <div class="voice">
+    <span class="mic" aria-hidden="true"><Mic size={20} /></span>
+    <div class="voice-body">
+      <a href={url} target="_blank" rel="noopener noreferrer" download={file.filename}>{m.conversation.voiceMessage}</a>
+      <audio controls preload="metadata" src={url} aria-label={m.conversation.voiceMessage}></audio>
+    </div>
+  </div>
+{:else if file.kind === 'image'}
   <button class="media" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" style:background-image={thumb ? `url(${thumb})` : undefined}
     aria-label={m.conversation.viewImage(file.filename)}
     onclick={() => viewer.open({ src: url, alt: file.filename, width: file.width, height: file.height, original: url })}>
@@ -49,4 +61,12 @@
   .meta a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--text-md) var(--font-sans); }
   .meta span { font: var(--text-xs) var(--font-sans); }
   audio { width: 100%; }
+  .voice {
+    display: flex; align-items: center; gap: var(--space-4); max-width: 26rem; margin-top: var(--space-2); padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-1);
+  }
+  .mic { display: grid; place-items: center; flex: none; width: var(--avatar-md); height: var(--avatar-md); border-radius: var(--radius-full); background: var(--accent); color: var(--on-accent); }
+  .voice-body { display: grid; gap: var(--space-1); min-width: 0; flex: 1; }
+  .voice-body a { color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans); }
+  .voice audio { height: 2.25rem; }
 </style>

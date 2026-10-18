@@ -16,6 +16,9 @@
   import SendHorizontal from '@lucide/svelte/icons/send-horizontal';
   import Smile from '@lucide/svelte/icons/smile';
   import Timer from '@lucide/svelte/icons/timer';
+  import Mic from '@lucide/svelte/icons/mic';
+  import Square from '@lucide/svelte/icons/square';
+  import { startVoiceRecording, voiceFormat, VOICE_MAX_MS, type VoiceRecording } from '$lib/composer/voiceMessage.ts';
   import { IconButton, tooltip } from '@concord/ui';
   import { Permission, has, type Channel, type FavouriteGif, type Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
@@ -82,6 +85,55 @@
   const canUpload = $derived(!!channel && has(permissionsIn(store, channel), Permission.UploadFiles));
   let fileInput = $state<HTMLInputElement | null>(null);
   const addFiles = (files: File[]) => channel && attachFiles(store, channel, files);
+
+  // Voice messages (M4.8 task 14c): recorded here, then attached like any file, to hear before sending.
+  const canRecord = typeof window !== 'undefined' && !!voiceFormat();
+  let recording = $state<{ rec: VoiceRecording; channel: Channel } | null>(null);
+  let starting = false;
+  let recordClock = $state(0);
+  $effect(() => {
+    if (!recording) return;
+    const r = recording;
+    const timer = setInterval(() => {
+      recordClock = Date.now();
+      if (Date.now() - r.rec.started >= VOICE_MAX_MS) {
+        toasts.show(m.composer.recordingLimit, 'info');
+        void stopRecording();
+      }
+    }, 250);
+    return () => clearInterval(timer);
+  });
+  const recorded = $derived(recording ? Math.max(0, Math.floor((recordClock - recording.rec.started) / 1000)) : 0);
+  const clockText = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  async function startRecording() {
+    if (!channel || recording || starting) return;
+    starting = true;
+    try {
+      const rec = await startVoiceRecording();
+      recordClock = Date.now();
+      recording = { rec, channel };
+    } catch (e) {
+      toasts.show(e instanceof DOMException && e.name === 'NotAllowedError' ? m.composer.micRefused : m.composer.recordFailed);
+    } finally {
+      starting = false;
+    }
+  }
+  async function stopRecording() {
+    const r = recording;
+    if (!r) return;
+    recording = null;
+    const file = await r.rec.stop();
+    if (file) attachFiles(store, r.channel, [file]);
+  }
+  function cancelRecording() {
+    recording?.rec.cancel();
+    recording = null;
+  }
+  // Another channel, or the composer going away, throws a recording in progress away.
+  $effect(() => {
+    void channel?.id;
+    return () => untrack(() => cancelRecording());
+  });
 
   function send() {
     if (!editor || !channel || block || wait) return;
@@ -282,11 +334,19 @@
       <IconButton size="sm" label={m.composer.cancelReply} onclick={() => channel && compose.clearReply(channel.id)}><CircleX size={16} /></IconButton>
     </div>
   {/if}
+  {#if recording}
+    <div class="recording" class:after-bar={!!reply} role="status">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="elapsed">{m.composer.recording(clockText(recorded))}</span>
+      <IconButton size="sm" label={m.composer.cancelRecording} onclick={cancelRecording}><Trash size={16} /></IconButton>
+      <IconButton size="sm" label={m.composer.stopRecording} onclick={() => void stopRecording()}><Square size={16} /></IconButton>
+    </div>
+  {/if}
   {#if chosen.length && channel}
-    <ul class="tiles" class:after-reply={!!reply}>
+    <ul class="tiles" class:after-reply={!!reply || !!recording}>
       {#each chosen as c (c.key)}
-        <li class="tile">
-          {#if c.preview}<img src={c.preview} alt="" />{:else}<span class="file-icon"><FileText size={32} /></span>{/if}
+        <li class="tile" class:voice={!!c.audio}>
+          {#if c.preview}<img src={c.preview} alt="" />{:else if c.audio}<span class="file-icon"><Mic size={32} /></span><audio controls preload="metadata" src={c.audio}></audio>{:else}<span class="file-icon"><FileText size={32} /></span>{/if}
           <span class="file-name">{c.file.name}</span>
           <span class="file-size">{m.files.size(c.file.size)}</span>
           <span class="remove"><IconButton size="sm" label={m.files.remove(c.file.name)} onclick={() => channel && compose.removeFile(channel.id, c.key)}><Trash size={16} /></IconButton></span>
@@ -294,7 +354,7 @@
       {/each}
     </ul>
   {/if}
-  <div class="composer" class:with-reply={!!reply || !!chosen.length}>
+  <div class="composer" class:with-reply={!!reply || !!chosen.length || !!recording}>
     <!-- Locked rather than disabled without Upload files, so its tooltip gives the reason (m4.7-plan.md task 5). -->
     <span class="side" class:locked={!canUpload}><IconButton label={canUpload ? m.composer.attach : m.composer.cantUpload} aria-disabled={!canUpload} onclick={() => { if (canUpload) fileInput?.click(); }}><Plus size={22} /></IconButton></span>
     <input class="file-input" type="file" multiple tabindex="-1" aria-hidden="true" bind:this={fileInput}
@@ -309,6 +369,10 @@
     {/if}
     {#if left <= COUNTER_FROM}
       <span class="counter" class:over={left < 0} aria-label={m.composer.bytesLeftLabel(left)}>{left}</span>
+    {/if}
+    {#if canRecord && canUpload}
+      <span class="side"><IconButton label={recording ? m.composer.stopRecording : m.composer.recordVoice} active={!!recording} aria-pressed={!!recording}
+        onclick={() => void (recording ? stopRecording() : startRecording())}><Mic size={22} /></IconButton></span>
     {/if}
     <span class="side" bind:this={gifButton}><IconButton label={m.gifs.button} disabled={!editor} active={gifsOpen} aria-haspopup="dialog" aria-expanded={gifsOpen} onclick={() => (gifsOpen = !gifsOpen)}><ImagePlay size={22} /></IconButton></span>
     <span class="side" bind:this={emojiButton}><IconButton label={m.composer.emoji} disabled={!editor} active={!!picker.request && picker.request.anchor === emojiButton} onclick={openPicker}><Smile size={22} /></IconButton></span>
@@ -341,6 +405,16 @@
     border: 1px solid var(--border-subtle); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface-2);
   }
   .tiles.after-reply { border-radius: 0; }
+  .tile.voice { width: 18rem; }
+  .tile audio { width: 100%; height: 2rem; margin-top: var(--space-2); }
+  .recording {
+    display: flex; align-items: center; gap: var(--space-3); margin: 0 var(--space-3); padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
+    border: 1px solid var(--border-subtle); border-bottom: 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--surface-1);
+    color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans);
+  }
+  .recording.after-bar { border-radius: 0; }
+  .recording .dot { width: 0.625rem; height: 0.625rem; border-radius: var(--radius-full); background: var(--danger); flex: none; }
+  .elapsed { flex: 1; font-variant-numeric: tabular-nums; }
   .tile {
     position: relative; display: flex; flex-direction: column; flex: none; width: 12rem; padding: var(--space-3);
     border-radius: var(--radius-md); background: var(--surface-1);
