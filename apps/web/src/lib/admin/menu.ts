@@ -5,7 +5,7 @@ import { Permission, deleteCategory, flatten, foldersOf, has, moveCategory, move
 import type { MenuItem } from '@concord/ui';
 import { m } from '$lib/i18n/index.ts';
 import { app } from '$lib/session/app.svelte.ts';
-import { channelsWith, isOwner, isServerAdmin, serverPerms, serverSections } from '$lib/view/admin.ts';
+import { channelsWith, isOwner, serverPerms, serverSections } from '$lib/view/admin.ts';
 import { canView, permissionsIn, railOf } from '$lib/view/channels.ts';
 import { folderDialog } from '$lib/view/folders.svelte.ts';
 import { adminDialogs } from './dialogs.svelte.ts';
@@ -175,8 +175,8 @@ export function channelActions(session: Session, channel: Id): { invite: (() => 
 }
 
 /**
- * Delete a channel, for server admins in Concord (m4.7-plan.md task 11): its name typed first, since its messages and files
- * go for good, and an optional reason for the audit log.
+ * Delete a channel, for whoever holds Manage channel in it (m4.7-plan.md task 11, Jaakko's decision): its name typed first,
+ * since its messages and files go for good, and an optional reason for the audit log.
  */
 export async function deleteChannel(session: Session, channel: Id): Promise<void> {
   const c = session.store.channels.get(channel);
@@ -209,7 +209,8 @@ export function channelMenu(session: Session, channel: Id): MenuItem[] {
       { label: m.admin.moveToCategory, onselect: () => adminDialogs.open({ kind: 'moveChannel', server, channel }) },
     );
   }
-  if (has(mine, Permission.ManageChannel) && isServerAdmin(store, server)) {
+  // Manage channel in this channel, through any role or as the owner: what Stoat checks for DELETE /channels/{id}.
+  if (has(mine, Permission.ManageChannel)) {
     items.push({ label: m.admin.deleteChannel, danger: true, onselect: () => void deleteChannel(session, channel) });
   }
   if (items.length) items.push('separator');

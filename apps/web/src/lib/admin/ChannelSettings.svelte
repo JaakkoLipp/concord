@@ -10,7 +10,6 @@
   import { m } from '$lib/i18n/index.ts';
   import { firstChannel, permissionsIn } from '$lib/view/channels.ts';
   import { untrack } from 'svelte';
-  import { isServerAdmin } from '$lib/view/admin.ts';
   import { deleteChannel } from './menu.ts';
   import SettingsFrame from '$lib/settings/SettingsFrame.svelte';
   import ChannelOverview from './ChannelOverview.svelte';
@@ -46,7 +45,7 @@
     {#if current === 'overview'}<ChannelOverview {session} {channel} />{/if}
     {#if current === 'permissions'}<ChannelPermissions {session} {channel} />{/if}
     {#snippet footer()}
-      {#if has(mine, Permission.ManageChannel) && info?.kind === 'text' && isServerAdmin(store, info.server)}<Button variant="ghost" size="sm" onclick={remove}>{m.admin.deleteChannel}</Button>{/if}
+      {#if has(mine, Permission.ManageChannel) && info?.kind === 'text'}<Button variant="ghost" size="sm" onclick={remove}>{m.admin.deleteChannel}</Button>{/if}
     {/snippet}
   </SettingsFrame>
 {/if}
