@@ -26,6 +26,7 @@
   import { dayLabel, sameDay, shortDate, ulidTime } from '$lib/markdown/time.ts';
   import { m } from '$lib/i18n/index.ts';
   import MessageItem from './MessageItem.svelte';
+  import { visit } from '$lib/view/links.ts';
   import { copyImage, saveImage } from './images.ts';
 
   interface Props { session: Session; channel: string; target?: string | undefined; opening?: boolean; onjump: (id: string) => void }
@@ -176,7 +177,7 @@
       unreadFrom = before ?? '0';
     },
     copyText: (msg) => void copy(msg.content ?? ''),
-    openUrl: (url) => void window.open(url, '_blank', 'noopener,noreferrer'),
+    openUrl: (url, text) => void visit(url, text),
     copyUrl: (url) => void copy(url),
     isFavouriteGif: (url) => store.favouriteGifs.some((g) => g.url === url),
     toggleFavouriteGif: (gif) => session.toggleFavouriteGif(gif),

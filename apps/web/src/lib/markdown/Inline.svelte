@@ -6,6 +6,7 @@
   import type { Inline } from './parse.ts';
   import { formatStyle, fullDate } from './time.ts';
   import { m } from '$lib/i18n/index.ts';
+  import { guardLink } from '$lib/view/links.ts';
 
   let { nodes, big = false }: { nodes: Inline[]; big?: boolean } = $props();
   const ctx = $derived(markdownContext());
@@ -21,7 +22,7 @@
   {#if n.t === 'text'}{n.v}{:else if n.t === 'br'}<br />{:else if n.t === 'strong'}<strong><Self nodes={n.c} /></strong>{:else if n.t === 'em'}<em><Self nodes={n.c} /></em>{:else if n.t === 'strike'}<s><Self nodes={n.c} /></s>{:else if n.t === 'code'}<code class="inline-code">{n.v}</code>{:else if n.t === 'spoiler'}<button
       class="spoiler" class:revealed={revealed[i]} aria-expanded={!!revealed[i]} aria-label={revealed[i] ? undefined : m.markdown.spoiler}
       onclick={() => (revealed = { ...revealed, [i]: true })}><span aria-hidden={!revealed[i]}><Self nodes={n.c} /></span></button>{:else if n.t === 'link'}<a
-      href={n.href} target="_blank" rel="noopener noreferrer"><Self nodes={n.c} /></a>{:else if n.t === 'user'}{@const name = ctx.store.users.has(n.id) ? ctx.store.displayName(n.id, ctx.server) : null}<span
+      href={n.href} target="_blank" rel="noopener noreferrer" onclick={guardLink} onauxclick={guardLink}><Self nodes={n.c} /></a>{:else if n.t === 'user'}{@const name = ctx.store.users.has(n.id) ? ctx.store.displayName(n.id, ctx.server) : null}<span
       class="mention" class:self={n.id === ctx.store.selfId}>@{name ?? m.markdown.unknownUser}</span>{:else if n.t === 'role'}{@const r = role(n.id)}<span
       class="mention role" style:--role={r?.colour}>@{r?.name ?? m.markdown.unknownRole}</span>{:else if n.t === 'channel'}<span
       class="mention">#{channelName(n.id) ?? m.markdown.unknownChannel}</span>{:else if n.t === 'mass'}<span class="mention">@{n.v}</span>{:else if n.t === 'emoji'}<img

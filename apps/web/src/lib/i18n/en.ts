@@ -303,6 +303,11 @@ export const en = {
     viewImage: (name: string) => (name ? `View image ${name}` : 'View image'),
     imageViewer: 'Image viewer',
     openOriginal: 'Open original',
+    zoom: 'Zoom',
+    zoomIn: 'Zoom in',
+    zoomOut: 'Zoom out',
+    zoomReset: 'Reset zoom',
+    zoomLevel: (percent: number) => `${percent}%`,
     close: 'Close',
     playVideo: 'Play video',
     gif: 'GIF',
@@ -474,6 +479,12 @@ export const en = {
     before: 'Before',
     scanned: (n: number) => plural('en', n, { one: 'Searched 1 message', other: `Searched ${n.toLocaleString('en')} messages` }),
     searchFurther: 'Search further back',
+  },
+  /** Masked links (M4.8 task 14a). */
+  links: {
+    leaveTitle: 'Leaving Concord',
+    leaveBody: (url: string) => `This link goes to ${url}. Are you sure you want to visit it?`,
+    visit: 'Visit site',
   },
   typing: {
     one: (a: string) => `${a} is typing…`,

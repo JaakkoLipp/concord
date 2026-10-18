@@ -10,6 +10,8 @@ import type { MessageActions } from './actions.ts';
 /** What was pressed inside the message, read from the event's target. */
 export interface MenuTarget {
   link?: string;
+  /** The text the link was shown as, for the masked-link check. */
+  linkText?: string;
   image?: { src: string; original: string; name: string };
   /** A GIF that can be starred, as its star would save it. */
   gif?: FavouriteGif;
@@ -27,7 +29,10 @@ export function targetOf(event: Event | undefined): MenuTarget {
   const el = event?.target instanceof Element ? event.target : null;
   const target: MenuTarget = {};
   const a = el?.closest<HTMLAnchorElement>('a[href]');
-  if (a && /^https?:/.test(a.href) && new URL(a.href).origin !== location.origin) target.link = a.href;
+  if (a && /^https?:/.test(a.href) && new URL(a.href).origin !== location.origin) {
+    target.link = a.href;
+    target.linkText = a.dataset.linkText ?? a.textContent ?? '';
+  }
   const img = el?.closest<HTMLImageElement>('img[data-original]');
   // The original address comes from the message's sender: only a web address is ever opened.
   const original = img ? urlOf(img.dataset.original ?? '') : null;
@@ -80,12 +85,12 @@ export function messageMenu(msg: Message, a: MessageActions, o: Options): MenuIt
   if (msg.content) main.push({ label: m.actions.copyText, onselect: () => a.copyText(msg) });
   main.push({ label: m.actions.copyLink, onselect: () => a.copyLink(msg) }, { label: m.actions.copyId, onselect: () => a.copyId(msg) });
   groups.push(main);
-  const { link, image, gif } = o.target;
+  const { link, linkText, image, gif } = o.target;
   if (gif) {
     const on = a.isFavouriteGif(gif.url);
     groups.push([{ label: on ? m.gifs.unfavourite : m.gifs.favourite, onselect: () => a.toggleFavouriteGif(gif) }]);
   }
-  if (link) groups.push([{ label: m.actions.openLink, onselect: () => a.openUrl(link) }, { label: m.actions.copyUrl, onselect: () => a.copyUrl(link) }]);
+  if (link) groups.push([{ label: m.actions.openLink, onselect: () => a.openUrl(link, linkText) }, { label: m.actions.copyUrl, onselect: () => a.copyUrl(link) }]);
   if (image) {
     groups.push([
       { label: m.actions.copyImage, onselect: () => a.copyImage(image.src) },

@@ -8,11 +8,16 @@
   import { m } from '$lib/i18n/index.ts';
   import { fit, proxied } from '$lib/view/media.ts';
   import { viewer } from '$lib/view/viewer.svelte.ts';
+  import { guardLink } from '$lib/view/links.ts';
 
   let { embed }: { embed: Embed } = $props();
   // Embeds come from senders; only http and https become links (client.md section 6.2).
   const safe = (url: string | undefined) => (url && /^https?:\/\//i.test(url) ? url : undefined);
   const link = $derived(embed.kind === 'website' || embed.kind === 'text' ? safe(embed.url) : undefined);
+  // A link preview's address is the one in the message, so it never asks. A sender's own embed can title a link
+  // with anything, so its links are checked like masked ones (M4.8 task 14a).
+  const shownAs = $derived(embed.kind === 'website' ? link : undefined);
+  const guard = (e: MouseEvent) => guardLink(e, shownAs);
   const colour = $derived(embed.kind === 'website' || embed.kind === 'text' ? embed.colour : undefined);
   // January marks GIF sites (KLIPY, Giphy, Tenor) as special GIFs, with the animation as a video or an image.
   const gif = $derived(embed.kind === 'website' && embed.special?.type === 'other' && embed.special.name === 'GIF' ? (embed.video ?? embed.image) : undefined);
@@ -70,7 +75,7 @@
     <div class="text">
       {#if embed.kind === 'website' && embed.siteName}<p class="site">{embed.siteName}</p>{/if}
       {#if embed.title}
-        {#if link}<a class="title" href={link} target="_blank" rel="noopener noreferrer">{embed.title}</a>{:else}<p class="title">{embed.title}</p>{/if}
+        {#if link}<a class="title" href={link} target="_blank" rel="noopener noreferrer" data-link-text={shownAs} onclick={guard} onauxclick={guard}>{embed.title}</a>{:else}<p class="title">{embed.title}</p>{/if}
       {/if}
       {#if embed.description}
         <div class="description">{#if embed.kind === 'text'}<Markdown source={embed.description} />{:else}{embed.description}{/if}</div>
@@ -87,7 +92,7 @@
       {@const large = img.size === 'large' || !!embed.special}
       {@const size = large ? fit(img.width, img.height, 400, 300) : fit(img.width, img.height, 80, 80)}
       {#if embed.special?.type === 'youtube' && link}
-        <a class="media large video-link" href={link} target="_blank" rel="noopener noreferrer" style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.playVideo}>
+        <a class="media large video-link" href={link} target="_blank" rel="noopener noreferrer" data-link-text={shownAs} onclick={guard} onauxclick={guard} style:width="{size.width}px" style:aspect-ratio="{size.width} / {size.height}" aria-label={m.conversation.playVideo}>
           <img use:fadeIn src={proxied(img.url)} data-original={img.url} alt="" loading="lazy" />
           <span class="play" aria-hidden="true"><Play size={28} /></span>
         </a>
