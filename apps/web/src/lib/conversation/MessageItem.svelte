@@ -10,6 +10,7 @@
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import { app } from '$lib/session/app.svelte.ts';
   import { personMenu } from '$lib/people/actions.ts';
+  import { appearance } from '$lib/settings/appearance.svelte.ts';
   import Attachment from './Attachment.svelte';
   import Embed from './Embed.svelte';
   import Reactions from './Reactions.svelte';
@@ -83,6 +84,9 @@
   // A message that is only a GIF's link shows the GIF alone, as Discord does. Editing still shows the link.
   const gifOnly = $derived(message.embeds.length === 1 && message.embeds[0]!.kind === 'website' && message.embeds[0]!.special?.type === 'other'
     && message.embeds[0]!.special.name === 'GIF' && message.content?.trim() === message.embeds[0]!.url && !message.edited);
+  // Compact (M4.8 task 15): every message has its time and name on its first line, and no picture.
+  const compact = $derived(appearance.compact);
+  const grouped = $derived(continuation && !compact);
   const mentioned = $derived(message.author !== store.selfId && store.mentionsSelf(message) && store.channels.get(message.channel)?.kind === 'text');
 </script>
 
@@ -93,22 +97,22 @@
 {:else}
   <!-- A message is focusable, one at a time, so the keyboard reaches its actions and context menu (m4.5-plan.md task 2). -->
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
-  <article class="row message" class:continuation class:mentioned class:highlighted class:static-highlight={staticHighlight} class:sending={pending?.state === 'sending'} class:failed={pending?.state === 'failed'} aria-busy={pending?.state === 'sending' || undefined}
-    class:selected class:menu-open={menuOpen} class:editing class:picking={!!picking} class:picked={picking?.checked} onclick={tap} id="message-{message.id}" data-id={message.id} aria-labelledby={continuation ? undefined : `author-${message.id}`} aria-label={continuation ? name : undefined} aria-describedby="content-{message.id}"
+  <article class="row message" class:continuation class:compact class:mentioned class:highlighted class:static-highlight={staticHighlight} class:sending={pending?.state === 'sending'} class:failed={pending?.state === 'failed'} aria-busy={pending?.state === 'sending' || undefined}
+    class:selected class:menu-open={menuOpen} class:editing class:picking={!!picking} class:picked={picking?.checked} onclick={tap} id="message-{message.id}" data-id={message.id} aria-labelledby={grouped ? undefined : `author-${message.id}`} aria-label={grouped ? name : undefined} aria-describedby="content-{message.id}"
     tabindex={tabbable ? 0 : -1} use:menuOn={messageContextMenu}>
     {#each message.replies as reply (reply)}
       <ReplyPreview id={reply} {store} {server} {onjump} />
     {/each}
     <div class="line">
-      <div class="gutter">
+      {#if !compact}<div class="gutter">
         {#if continuation}
           <time class="hover-time" datetime={sent.toISOString()} title={fullDate(sent)}>{timeOfDay(sent)}</time>
         {:else}
           <button class="avatar-button" tabindex="-1" aria-hidden="true" onclick={(e) => popout.open(message.author, server, e.currentTarget)} use:menuOn={authorMenu}><Avatar src={avatar} size={40} /></button>
         {/if}
-      </div>
+      </div>{/if}
       <div class="body">
-        {#if !continuation}
+        {#if !grouped}
           <header class="head">
             <button class="name" id="author-{message.id}" style:--role={colour} onclick={(e) => popout.open(message.author, server, e.currentTarget)} use:menuOn={authorMenu}>{name}</button>
             {#if !message.webhook && !message.masquerade}<TagBadge {store} user={message.author} /><TimeoutMark {store} {server} user={message.author} />{/if}
@@ -171,6 +175,13 @@
   .message.continuation { margin-top: 0; padding-top: 0.125rem; padding-bottom: 0.125rem; }
   /* Inside the row, so the list's edges don't clip it. */
   .message:focus-visible { outline-offset: -2px; border-radius: 0; }
+  /* Compact: the head floats at the start of the first line, the text wraps under it, and what follows starts below. */
+  .message.compact { margin-top: var(--space-1); padding-top: 0.125rem; padding-bottom: 0.125rem; contain-intrinsic-size: auto 1.625rem; }
+  .message.compact.continuation { margin-top: 0; }
+  .compact .body { display: flow-root; }
+  .compact .head { float: left; margin-right: var(--space-3); line-height: 1.375rem; }
+  .compact .head .time { order: -1; }
+  .compact .body > :not(.head, .content) { clear: left; }
   .system { margin-top: var(--space-3); }
   @media (hover: hover) { .row:hover { background: var(--hover-overlay); } }
   .mentioned { background: var(--accent-wash); box-shadow: inset 2px 0 0 var(--accent); }

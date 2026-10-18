@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * User settings at /app/settings/<section> (m2b-plan.md task 7): my account (M4.8 task 8), the profile editor,
-   * notifications, voice and video, and Log out, in the shared settings frame. A new section is a name in USER_SECTIONS and a branch here.
+   * appearance (M4.8 task 15), notifications, voice and video, and Log out, in the shared settings frame. A new section is a name in USER_SECTIONS and a branch here.
    */
   import type { Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
@@ -12,6 +12,7 @@
   import VoiceSection from './VoiceSection.svelte';
   import TagChooser from './TagChooser.svelte';
   import AccountSection from './AccountSection.svelte';
+  import AppearanceSection from './AppearanceSection.svelte';
   import { USER_SECTIONS, settingsModal, type UserSection } from './modal.svelte.ts';
   import type { FrameItem, FrameSection } from './SettingsFrame.svelte';
 
@@ -38,6 +39,7 @@
 <SettingsFrame title={m.settings.title} {items} active={section} heading={m.settings.sections[section]} wide={section === 'profile'} version={__CONCORD_VERSION__}>
   {#if section === 'account'}<AccountSection {session} />{/if}
   {#if section === 'profile'}<ProfileEditor {session} /><TagChooser {session} />{/if}
+  {#if section === 'appearance'}<AppearanceSection />{/if}
   {#if section === 'notifications'}<NotificationsSection />{/if}
   {#if section === 'voice'}<VoiceSection />{/if}
   {#snippet footer()}
