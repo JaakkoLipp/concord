@@ -1603,6 +1603,22 @@ export const en = {
     results: 'Results',
     kind: { inbox: 'Inbox', channel: 'Channel', voice: 'Voice channel', server: 'Server', dm: 'Direct message', person: 'Start a conversation' },
   },
+  // A static demo bot catalogue, from the DM sidebar under Mentions.
+  bots: {
+    title: 'Bot catalogue',
+    subtitle: 'Community made bots for your server',
+    eyebrow: 'Made by the community',
+    heroTitle: 'Find your server’s next favorite bot.',
+    heroBody: 'Discover community made bots for moderation, music, games, and more.',
+    explore: 'Explore bots',
+    exploreBody: 'Handpicked tools made by people like you.',
+    search: 'Search bots',
+    categories: 'Bot categories',
+    pick: 'Community pick',
+    by: (creator: string) => `by ${creator}`,
+    add: 'Add to server',
+    empty: 'No bots match that search.',
+  },
 };
 
 export type Messages = typeof en;

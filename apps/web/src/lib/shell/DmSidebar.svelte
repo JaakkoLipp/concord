@@ -4,6 +4,7 @@
   import type { Store } from '@concord/domain';
   import Users from '@lucide/svelte/icons/users';
   import AtSign from '@lucide/svelte/icons/at-sign';
+  import Bot from '@lucide/svelte/icons/bot';
   import { shell } from '$lib/view/shell.svelte.ts';
   import Volume2 from '@lucide/svelte/icons/volume-2';
   import { resolve } from '$app/paths';
@@ -33,8 +34,9 @@
   const incoming = $derived(store.related('Incoming').length);
   const gates = $derived(app.layerMe?.gates);
   const onInvitations = $derived(page.url.pathname === resolve('/app/channels/@me/invitations'));
+  const onBots = $derived(page.url.pathname === resolve('/app/channels/@me/bots'));
   const onAdministration = $derived(page.url.pathname === resolve('/app/channels/@me/administration'));
-  const onHome = $derived(active === null && !onInvitations && !onAdministration);
+  const onHome = $derived(active === null && !onInvitations && !onBots && !onAdministration);
   let picking = $state(false);
   let feedbackOpen = $state(false);
 
@@ -60,6 +62,10 @@
     <span class="friends-icon" aria-hidden="true"><AtSign size={24} /></span>
     <span class="name">{m.mentions.title}</span>
   </button>
+  <a class="row friends" class:active={onBots} href={resolve('/app/channels/@me/bots')} aria-current={onBots ? 'page' : undefined}>
+    <span class="friends-icon" aria-hidden="true"><Bot size={24} /></span>
+    <span class="name">{m.bots.title}</span>
+  </a>
   {#if app.layerMe}
     <a class="row friends" class:active={onInvitations} href={resolve('/app/channels/@me/invitations')} aria-current={onInvitations ? 'page' : undefined}>
       <span class="friends-icon" aria-hidden="true"><MailPlus size={24} /></span>
