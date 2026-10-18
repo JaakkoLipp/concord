@@ -338,9 +338,14 @@ export class VoiceController {
       // Load the SDK before asking for the token, which lives 10 s.
       const { connect } = await import('./call.ts');
       if (gen !== this.gen) return;
-      const { muted } = this.controls;
-      const deafened = this.controls.deafened || this.serverDeafened;
-      const options = { current: () => gen === this.gen && this.state.phase === 'connecting', muted, deafened, canSpeak, webAudioMix: this.webAudioMix, volumes: this.volumes, mutedForMe: this.mutedForMe };
+      const controls = () => ({ muted: this.controls.muted, deafened: this.controls.deafened || this.serverDeafened });
+      const options = {
+        current: () => gen === this.gen && this.state.phase === 'connecting',
+        // Joining can wait on a token and the network. Read the current choices when the room is ready.
+        get muted() { return controls().muted; },
+        get deafened() { return controls().deafened; },
+        canSpeak, webAudioMix: this.webAudioMix, volumes: this.volumes, mutedForMe: this.mutedForMe,
+      };
       let call: Call;
       try {
         const token = moved ? moved.token : (await this.session.backend.joinCall(channel, node)).token;
@@ -356,6 +361,7 @@ export class VoiceController {
       // Superseded, or the room already ended, which the sink has handled.
       if (gen !== this.gen || this.state.phase !== 'connecting') return void call.disconnect();
       this.call = call;
+      this.applyControls();
       this.leaving = null;
       this.removedAs = null;
       this.dispatch({ type: 'connected' });

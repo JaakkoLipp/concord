@@ -83,7 +83,7 @@
   .avatar { position: relative; display: grid; flex: none; border-radius: var(--radius-full); }
   .avatar::after {
     content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-    box-shadow: 0 0 0 2px var(--status-online); opacity: 0; transition: opacity var(--dur-state) var(--ease-out);
+    box-shadow: 0 0 0 2px var(--status-online); opacity: 0;
   }
   .talking .avatar::after { opacity: 1; }
   .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

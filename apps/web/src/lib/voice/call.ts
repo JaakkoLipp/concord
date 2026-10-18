@@ -20,6 +20,7 @@ import { loadVoiceSettings, onVoiceSettings, streamVolumeKey, userOfVolumeKey } 
 import type { SharePlan } from './share.ts';
 import { sharerStats, viewerStats, type Counters, type SharerStats, type ViewerStats } from './videostats.ts';
 import { Peers } from './peers.ts';
+import { Speaking } from './speaking.ts';
 import { lossBetween, sample, type Sample } from './stats.ts';
 
 export type Quality = 'excellent' | 'good' | 'poor' | 'lost' | 'unknown';
@@ -174,6 +175,8 @@ export async function connect(url: string, token: string, options: CallOptions, 
   /** Feeds by publication, kept while their track is the same, so tiles keep their elements. */
   const feedCache = new Map<string, { track: unknown; feed: Feed }>();
   let statsTimer: ReturnType<typeof setInterval> | null = null;
+  let speakingTimer: ReturnType<typeof setInterval> | null = null;
+  const speaking = new Speaking(() => room.localParticipant.identity, (ids) => sink.speaking(ids));
   let lastSample: Sample | undefined;
 
   const live = () => room.state === 'connected';
@@ -270,6 +273,8 @@ export async function connect(url: string, token: string, options: CallOptions, 
   const cleanup = () => {
     unblock?.();
     if (statsTimer) clearInterval(statsTimer);
+    if (speakingTimer) clearInterval(speakingTimer);
+    speakingTimer = null;
     statsTimer = null;
     stopSettings();
     chain?.stop();
@@ -290,7 +295,7 @@ export async function connect(url: string, token: string, options: CallOptions, 
       if (track.kind === Track.Kind.Video) return emitFeeds();
       if (track.kind !== Track.Kind.Audio) return;
       box.append(track.attach());
-      if (deafened) pub.setEnabled(false);
+      if (up ? deafened : options.deafened) pub.setEnabled(false);
     })
     .on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack) => {
       if (track.kind === Track.Kind.Video) {
@@ -336,7 +341,7 @@ export async function connect(url: string, token: string, options: CallOptions, 
       if (live()) watched.delete(p.identity);
       emitFeeds();
     })
-    .on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => sink.speaking(speakers.map((s) => s.identity)))
+    .on(RoomEvent.ActiveSpeakersChanged, (speakers: Participant[]) => speaking.speakers(speakers.map((s) => s.identity)))
     .on(RoomEvent.ConnectionQualityChanged, (q, p: Participant) => {
       if (p.identity === room.localParticipant.identity) sink.quality(q as Quality);
     })
@@ -389,17 +394,26 @@ export async function connect(url: string, token: string, options: CallOptions, 
     cleanup();
     throw new Error('join cancelled');
   }
+  // Controls may have changed while room.connect was pending.
+  muted = options.muted;
+  deafened = options.deafened;
   up = true;
   peers.seed(room.remoteParticipants.keys());
   for (const p of remotes()) {
     subscribeWanted(p);
     applyVolume(p);
   }
-  if (deafened) setReceiving(remotes(), false);
+  setReceiving(remotes(), !deafened);
   emitFeeds();
   void room.startAudio().catch(() => {});
   statsTimer = setInterval(() => void readStats(), STATS_EVERY_MS);
   let canSpeak = options.canSpeak;
+  const updateSpeaking = () => speaking.microphone(
+    live() && canSpeak && !muted && !!mic && !mic.isMuted,
+    chain?.gateOpen() ?? false, chain?.level() ?? -100, performance.now(),
+  );
+  // The local worklet reports every 33 ms; don't wait for server speaker notifications for our own ring.
+  speakingTimer = setInterval(updateSpeaking, 33);
   /** Whether LiveKit lets this participant publish a microphone: its token's grant, as updated since. */
   const livekitAllowsMic = () => {
     const p = room.localParticipant.permissions;
@@ -489,6 +503,7 @@ export async function connect(url: string, token: string, options: CallOptions, 
     mic: () => chain,
     async setMuted(next) {
       muted = next;
+      updateSpeaking();
       if (mic) await (next ? mic.mute() : mic.unmute());
     },
     setDeafened(next) {
