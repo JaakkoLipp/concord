@@ -78,14 +78,16 @@
     else if (!pickRefusal(msg)) picked.add(msg.id);
   }
   async function deletePicked() {
-    const ids = picked ? [...picked].filter((id) => store.messages.has(id)) : [];
+    // Taken now: the channel may change while the confirmation is open, and these ids are this one's.
+    const ch = channel;
+    const ids = picked ? [...picked].filter((id) => store.messages.get(id)?.channel === ch) : [];
     if (!ids.length || deleting) return;
     const n = ids.length;
     if (!(await confirm.ask({ title: m.actions.deleteManyTitle(n), body: m.actions.deleteManyBody, confirm: m.actions.deleteMany(n), danger: true }))) return;
     deleting = true;
     try {
-      await session.deleteMessages(channel, ids);
-      picked = null;
+      await session.deleteMessages(ch, ids);
+      if (channel === ch) picked = null;
     } catch {
       toasts.show(m.actions.deleteManyFailed);
     } finally {

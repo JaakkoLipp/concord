@@ -24,6 +24,18 @@ describe('reasonHeader', () => {
     expect(header('plain reason')).toBe('plain reason');
   });
 
+  it('stops at about 2 KB encoded, at a whole character', () => {
+    const value = header('漢'.repeat(1_000))!;
+    expect(value.length).toBeLessThanOrEqual(2_000);
+    expect(value.length % 9).toBe(0);
+    expect(decodeReason(value)).toBe('漢'.repeat(value.length / 9));
+  });
+
+  it('decodes what it can of a cut sequence', () => {
+    expect(decodeReason('%C3%84l%C3%A4 %E2%80')).toBe('Älä %E2%80');
+    expect(decodeReason('%C3%84%E2%80')).toBe('Ä%E2%80');
+  });
+
   it('leaves out a reason it can’t encode rather than throwing', () => {
     expect(reasonHeader('broken \ud800')).toEqual({});
   });

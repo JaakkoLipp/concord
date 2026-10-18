@@ -6,7 +6,7 @@
    */
   import { untrack } from 'svelte';
   import { SvelteMap } from 'svelte/reactivity';
-  import { Avatar } from '@concord/ui';
+  import { Avatar, Button } from '@concord/ui';
   import { memberKey, type AuditEntry, type Session, type User } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
   import { fullDate, shortDate, ulidTime } from '$lib/markdown/time.ts';
@@ -128,7 +128,9 @@
     </li>
   {/each}
 </ul>
-{#if !done}
+{#if failed && entries.length}
+  <p class="more" role="alert">{m.admin.audit.failed} <Button size="sm" variant="secondary" onclick={() => { failed = false; void load(); }}>{m.admin.audit.retry}</Button></p>
+{:else if !done}
   <p class="more" bind:this={end} aria-hidden={!loading}>{loading ? m.admin.audit.more : ''}</p>
 {/if}
 

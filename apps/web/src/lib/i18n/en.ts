@@ -1190,6 +1190,7 @@ export const en = {
       groups: { messages: 'Messages', members: 'Members', bans: 'Bans', channels: 'Channels', roles: 'Roles', server: 'Server', invites: 'Invites', emoji: 'Emoji', webhooks: 'Webhooks' },
       empty: 'Nothing here.',
       failed: 'Couldn’t load the audit log.',
+      retry: 'Try again',
       more: 'Loading more…',
       reason: (reason: string) => `Reason: ${reason}`,
       recent: 'Audit log',
