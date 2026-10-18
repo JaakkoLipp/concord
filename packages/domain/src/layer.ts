@@ -53,6 +53,8 @@ export interface Report {
   reported: Id;
   reporter: Id;
   content: string | null;
+  /** Set when the text is kept but this moderator can't view the channel it was in, so it isn't sent. */
+  contentHidden?: boolean;
   reason: ReportReason;
   notes: string;
   createdAt: number;
@@ -141,8 +143,8 @@ export interface Layer {
   wearTag(server: Id | null): Promise<void>;
   /** Report a message or a user, with a reason and optional notes. 10 an hour each. */
   report(target: ReportTarget, reason: ReportReason, notes: string): Promise<void>;
-  /** Open reports in a scope, and closed ones too when asked. */
-  reports(scope: ReportScope, includeClosed?: boolean): Promise<Report[]>;
+  /** Open reports in a scope, and closed ones too when asked, newest first, 50 a page, older ones `before` a report's ID. */
+  reports(scope: ReportScope, includeClosed?: boolean, before?: string): Promise<Report[]>;
   /** How many reports wait in a scope. */
   reportCount(scope: ReportScope): Promise<number>;
   /** Close a report with a note; it doesn't act by itself. */

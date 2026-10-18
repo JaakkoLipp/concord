@@ -19,11 +19,14 @@ export function holders(session: Session, server: Id, role: Id): number {
 export async function confirmGrant(session: Session, server: Id, role: Id, before: bigint, after: bigint): Promise<boolean> {
   const added = newlyDangerous(before, after);
   if (!added.length) return true;
+  // The channel editor doesn't load members: without the list the count would say 0, so it is left out.
+  await session.loadMembers(server, false).catch(() => {});
+  const known = session.store.memberListLoaded.has(server);
   const name = session.store.servers.get(server)?.roles[role]?.name ?? '';
   const permissions = added.map((k) => m.admin.permissionNames[k][0]).join(', ');
   const dangers = added.map((k) => m.admin.roles.dangers[k as keyof typeof m.admin.roles.dangers]).join(' ');
   return confirm.ask({
-    title: m.admin.roles.grantTitle(permissions, name), body: m.admin.roles.grantBody(holders(session, server, role), dangers),
+    title: m.admin.roles.grantTitle(permissions, name), body: known ? m.admin.roles.grantBody(holders(session, server, role), dangers) : m.admin.roles.grantBodyUnknown(dangers),
     confirm: m.admin.roles.grant, danger: true,
   });
 }

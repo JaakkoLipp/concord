@@ -9,6 +9,8 @@ import { LayerError } from './util.ts';
 
 const ADMIN = '01HZZZZZZZZZZZZZZZZZZADM1N';
 const MOD = '01HZZZZZZZZZZZZZZZZZZZZM0D';
+/** A moderator who can't view the reported channel. */
+const BLIND = '01HZZZZZZZZZZZZZZZZZZZBMND';
 const DEV = '01HZZZZZZZZZZZZZZZZZZZZDEV';
 const AINO = '01HZZZZZZZZZZZZZZZZZZZA1N0';
 const SERVER = '01HZZZZZZZZZZZZZZZZZSERWER';
@@ -19,7 +21,7 @@ const DM_MSG = '01HZZZZZZZZZZZZZZZZZZZDMSG';
 const MOD_ROLE = '01HZZZZZZZZZZZZZZZZZZZR0L3';
 
 /** A fake Stoat: ADMIN owns the server, MOD has Manage messages, DEV and AINO are members. AINO wrote both messages. */
-function fakeFetch(input: string | URL | Request): Promise<Response> {
+function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const url = new URL(String(input));
   const p = url.pathname;
   if (p === '/') return Promise.resolve(Response.json({ features: { limits: { global: { restrict_server_creation: [] } } } }));
@@ -30,8 +32,14 @@ function fakeFetch(input: string | URL | Request): Promise<Response> {
     }));
   }
   const member = /^\/servers\/\w+\/members\/(\w+)$/.exec(p);
-  if (member) return Promise.resolve(Response.json({ _id: { server: SERVER, user: member[1] }, joined_at: '2026-01-01T00:00:00Z', roles: member[1] === MOD ? [MOD_ROLE] : [] }));
-  if (p === `/channels/${TEXT}`) return Promise.resolve(Response.json({ channel_type: 'TextChannel', _id: TEXT, server: SERVER, name: 'general' }));
+  if (member) return Promise.resolve(Response.json({ _id: { server: SERVER, user: member[1] }, joined_at: '2026-01-01T00:00:00Z', roles: member[1] === MOD || member[1] === BLIND ? [MOD_ROLE] : [] }));
+  const token = new Headers((init as RequestInit | undefined)?.headers).get('x-session-token') ?? '';
+  if (p === `/channels/${TEXT}`) {
+    if (token.startsWith(BLIND)) return Promise.resolve(Response.json({ type: 'NotFound' }, { status: 404 }));
+    return Promise.resolve(Response.json({ channel_type: 'TextChannel', _id: TEXT, server: SERVER, name: 'general' }));
+  }
+  const any = new RegExp(`^/channels/${TEXT}/messages/(\\w+)$`).exec(p);
+  if (any && any[1] !== MSG && any[1]!.startsWith('01HZZZZZZZZZZZZZZZZZZZZM')) return Promise.resolve(Response.json({ _id: any[1], author: AINO, content: `message ${any[1]}` }));
   if (p === `/channels/${DM}`) return Promise.resolve(Response.json({ channel_type: 'DirectMessage', _id: DM, recipients: [DEV, AINO] }));
   if (p === `/channels/${TEXT}/messages/${MSG}`) return Promise.resolve(Response.json({ _id: MSG, author: AINO, content: 'rude words' }));
   if (p === `/channels/${DM}/messages/${DM_MSG}`) return Promise.resolve(Response.json({ _id: DM_MSG, author: AINO, content: 'dm words' }));
@@ -71,12 +79,41 @@ describe('filing a report', () => {
     expect((await refusal(fileReport(layer, caller(DEV), { ...serverMessage, message: '01HZZZZZZZZZZZZZZZZZZZZZZZ' }))).status).toBe(404);
     expect((await refusal(fileReport(layer, caller(AINO), serverMessage))).type).toBe('OwnMessage');
     expect((await refusal(fileReport(layer, caller(DEV), { ...serverMessage, reason: 'boring' }))).type).toBe('InvalidReason');
-    for (let i = 0; i < 10; i++) await fileReport(layer, caller(DEV), serverMessage);
+    for (let i = 0; i < 10; i++) await fileReport(layer, caller(DEV), { kind: 'user', user: AINO, reason: 'spam' });
     expect((await refusal(fileReport(layer, caller(DEV), serverMessage))).type).toBe('ReportLimit');
+  });
+
+  it('holds the hourly limit for requests sent at once, and one open report per message', async () => {
+    const layer = setup();
+    const ids = Array.from({ length: 12 }, (_, i) => `01HZZZZZZZZZZZZZZZZZZZZM${'ABCDEFGHJKMN'[i]}0`);
+    const results = await Promise.allSettled(ids.map((message) => fileReport(layer, caller(DEV), { kind: 'message', channel: TEXT, message, reason: 'spam' })));
+    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(10);
+    const other = setup();
+    await fileReport(other, caller(DEV), serverMessage);
+    expect((await refusal(fileReport(other, caller(DEV), serverMessage))).type).toBe('AlreadyReported');
   });
 });
 
 describe('reading and closing', () => {
+  it('hides the text from a moderator who can’t view its channel', async () => {
+    const layer = setup();
+    await fileReport(layer, caller(DEV), serverMessage);
+    expect((await listReports(layer, caller(BLIND), { server: SERVER }, false))[0]).toMatchObject({ content: null, contentHidden: true });
+    expect((await listReports(layer, caller(MOD), { server: SERVER }, false))[0]!.content).toBe('rude words');
+  });
+
+  it('pages, newest first, 50 at a time', async () => {
+    const layer = setup();
+    for (let i = 0; i < 60; i++) {
+      layer.store.prepare(`INSERT INTO reports (id, reporter, kind, server, reported, reason, notes, created_at, status) VALUES (?, ?, 'user', ?, ?, 'spam', '', ?, 'open')`)
+        .run(`r${String(i).padStart(2, '0')}`, DEV, SERVER, AINO, 1_000 + i);
+    }
+    const first = await listReports(layer, caller(MOD), { server: SERVER }, false);
+    expect([first.length, first[0]!.id]).toEqual([50, 'r59']);
+    const second = await listReports(layer, caller(MOD), { server: SERVER }, false, first.at(-1)!.id);
+    expect(second.map((r) => r.id)).toEqual(Array.from({ length: 10 }, (_, i) => `r${String(9 - i).padStart(2, '0')}`));
+  });
+
   it('needs Manage messages in the server', async () => {
     const layer = setup();
     await fileReport(layer, caller(DEV), serverMessage);

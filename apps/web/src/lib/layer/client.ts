@@ -105,8 +105,9 @@ export class HttpLayer implements Layer {
     await this.request('POST', '/reports', { ...target, reason, notes });
   }
 
-  async reports(scope: ReportScope, includeClosed = false): Promise<Report[]> {
-    return (await this.get<{ reports: Report[] }>(`/reports?${scopeQuery(scope)}&closed=${includeClosed}`)).reports;
+  async reports(scope: ReportScope, includeClosed = false, before?: string): Promise<Report[]> {
+    const page = before ? `&before=${encodeURIComponent(before)}` : '';
+    return (await this.get<{ reports: Report[] }>(`/reports?${scopeQuery(scope)}&closed=${includeClosed}${page}`)).reports;
   }
 
   async reportCount(scope: ReportScope): Promise<number> {

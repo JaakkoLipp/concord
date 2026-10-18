@@ -22,11 +22,17 @@
   let notes = $state<Record<string, string>>({});
   let busy = $state<string | null>(null);
 
-  async function load() {
+  /** 50 a page, as the layer sends them; `more` while a full page came back. */
+  const PAGE = 50;
+  let more = $state(false);
+  async function load(older = false) {
     const layer = app.layer;
     if (!layer) return;
     try {
-      reports = await layer.reports(scope, closed);
+      const before = older ? reports?.at(-1)?.id : undefined;
+      const page = await layer.reports(scope, closed, before);
+      reports = older ? [...(reports ?? []), ...page] : page;
+      more = page.length === PAGE;
       failed = false;
     } catch {
       failed = true;
@@ -81,7 +87,9 @@
         <p class="by">{m.reports.by(name(r.reporter))}</p>
         {#if r.notes}<p class="notes">{r.notes}</p>{/if}
         {#if r.kind === 'message'}
-          {#if r.content !== null}
+          {#if r.contentHidden}
+            <p class="by">{m.reports.hidden}</p>
+          {:else if r.content !== null}
             <figure>
               <figcaption>{m.reports.evidence}</figcaption>
               <blockquote>{r.content}</blockquote>
@@ -102,6 +110,7 @@
       </li>
     {/each}
   </ul>
+  {#if more}<Button variant="ghost" size="sm" onclick={() => load(true)}>{m.reports.more}</Button>{/if}
 {/if}
 
 <style>

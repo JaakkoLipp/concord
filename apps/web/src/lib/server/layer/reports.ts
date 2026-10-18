@@ -44,9 +44,8 @@ export interface ReportInput { kind?: unknown; channel?: unknown; message?: unkn
 export async function fileReport(layer: Layer, caller: Caller, input: ReportInput): Promise<{ id: string }> {
   const reason = requireReason(input.reason);
   const notes = requireText(input.notes ?? '', { max: 500, min: 0, field: 'notes' });
-  const now = Date.now();
-  const recent = layer.store.prepare('SELECT count(*) AS n FROM reports WHERE reporter = ? AND created_at > ?').get(caller.id, now - 60 * 60_000) as { n: number };
-  if (recent.n >= REPORTS_PER_HOUR) throw new LayerError(429, 'ReportLimit', { retry_after: 60 * 60_000 });
+  // A cheap look first, so someone at the limit costs Stoat nothing. The binding check is with the insert, below.
+  overLimit(layer, caller, Date.now());
 
   let row: { kind: 'message' | 'user'; server: string | null; channel: string | null; message: string | null; reported: string; content: string | null };
   if (input.kind === 'message') {
@@ -63,23 +62,55 @@ export async function fileReport(layer: Layer, caller: Caller, input: ReportInpu
     row = { kind: 'user', server: null, channel: null, message: null, reported: user, content: null };
   } else throw new LayerError(400, 'InvalidKind');
 
+  // The limit and the insert in one transaction, after Stoat's answers, so requests sent at once can't pass the limit
+  // together; the unique index refuses a second open report of the same message.
   const id = randomUUID();
-  layer.store.prepare(`INSERT INTO reports (id, reporter, kind, server, channel, message, reported, content, reason, notes, created_at, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')`)
-    .run(id, caller.id, row.kind, row.server, row.channel, row.message, row.reported, row.content, reason, notes, now);
+  const now = Date.now();
+  layer.store.exec('BEGIN IMMEDIATE');
+  try {
+    overLimit(layer, caller, now);
+    layer.store.prepare(`INSERT INTO reports (id, reporter, kind, server, channel, message, reported, content, reason, notes, created_at, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open')`)
+      .run(id, caller.id, row.kind, row.server, row.channel, row.message, row.reported, row.content, reason, notes, now);
+    layer.store.exec('COMMIT');
+  } catch (e) {
+    layer.store.exec('ROLLBACK');
+    if (e instanceof Error && /UNIQUE constraint failed/.test(e.message)) throw new LayerError(409, 'AlreadyReported');
+    throw e;
+  }
   return { id };
+}
+
+function overLimit(layer: Layer, caller: Caller, now: number): void {
+  const recent = layer.store.prepare('SELECT count(*) AS n FROM reports WHERE reporter = ? AND created_at > ?').get(caller.id, now - 60 * 60_000) as { n: number };
+  if (recent.n >= REPORTS_PER_HOUR) throw new LayerError(429, 'ReportLimit', { retry_after: 60 * 60_000 });
 }
 
 const where = (scope: ReportScope) => (scope === 'admin' ? 'server IS NULL' : 'server = ?');
 const params = (scope: ReportScope) => (scope === 'admin' ? [] : [scope.server]);
 
-/** Reports in a scope, open ones first then newest. Never those about the caller, whose reporters they mustn't see. */
-export async function listReports(layer: Layer, caller: Caller, scope: ReportScope, includeClosed: boolean): Promise<Report[]> {
+export const REPORTS_PAGE = 50;
+
+/**
+ * Reports in a scope, newest first, a page at a time: `before` is the last report of the page before. Never those about
+ * the caller, whose reporters they mustn't see. A server moderator sees a message's text only where they can view its
+ * channel, which Stoat answers as the caller, once per channel per page.
+ */
+export async function listReports(layer: Layer, caller: Caller, scope: ReportScope, includeClosed: boolean, before?: string): Promise<Report[]> {
   await requireScope(layer, caller, scope);
   dropOldEvidence(layer);
+  const cursor = before ? layer.store.prepare('SELECT created_at AS t, id FROM reports WHERE id = ?').get(before) as { t: number; id: string } | undefined : undefined;
   const sql = `SELECT ${fields} FROM reports WHERE ${where(scope)} AND reported != ? ${includeClosed ? '' : "AND status = 'open'"}
-    ORDER BY status = 'closed', created_at DESC LIMIT 200`;
-  return layer.store.prepare(sql).all(...params(scope), caller.id) as unknown as Report[];
+    ${cursor ? 'AND (created_at < ? OR (created_at = ? AND id < ?))' : ''} ORDER BY created_at DESC, id DESC LIMIT ${REPORTS_PAGE}`;
+  const rows = layer.store.prepare(sql).all(...params(scope), caller.id, ...(cursor ? [cursor.t, cursor.t, cursor.id] : [])) as unknown as Report[];
+  if (scope === 'admin') return rows;
+  const visible = new Map<string, boolean>();
+  for (const r of rows) {
+    if (!r.channel || r.content === null) continue;
+    if (!visible.has(r.channel)) visible.set(r.channel, !!(await layer.stoat.channel(caller.token, r.channel)));
+    if (!visible.get(r.channel)) Object.assign(r, { content: null, contentHidden: true });
+  }
+  return rows;
 }
 
 /** How many reports wait in a scope, for the count beside "Reports". */

@@ -34,13 +34,14 @@
       {#each group.keys as key (key)}
         {@const bit = Permission[key]}
         {@const forbidden = (forbid & bit) === bit && (value.allow & bit) !== bit}
-        {@const disabled = readonly || !held(key) || forbidden}
+        {@const locked = readonly || !held(key)}
+        {@const disabled = locked || (plain && forbidden)}
         {@const [name, help] = m.admin.permissionNames[key]}
         {@const danger = isDangerous(key) ? m.admin.roles.dangers[key as keyof typeof m.admin.roles.dangers] : null}
         <div class="row" class:disabled data-permission={key}>
           <div class="text">
             <span class="name" id="{uid}-{key}">{name}{#if danger}<span class="danger-mark">{m.admin.roles.dangerous}</span>{/if}</span>
-            <span class="help">{forbidden ? m.admin.roles.notForEveryone : disabled && !readonly ? m.admin.roles.notHeld : help}</span>
+            <span class="help">{forbidden ? m.admin.roles.notForEveryone : locked && !readonly ? m.admin.roles.notHeld : help}</span>
             {#if danger && !forbidden}<span class="help danger-help">{danger}</span>{/if}
           </div>
           {#if plain}
@@ -49,7 +50,7 @@
           {:else}
             <div class="tri" role="radiogroup" aria-labelledby="{uid}-{key}">
               {#each STATES as state (state)}
-                <button type="button" role="radio" class={state} aria-checked={triOf(value, bit) === state} aria-label={m.admin.roles[state]} title={m.admin.roles[state]} {disabled}
+                <button type="button" role="radio" class={state} aria-checked={triOf(value, bit) === state} aria-label={m.admin.roles[state]} title={m.admin.roles[state]} disabled={locked || (state === 'allow' && forbidden)}
                   onclick={() => onchange(setTri(value, bit, state))}>{state === 'allow' ? '✓' : state === 'deny' ? '✕' : '/'}</button>
               {/each}
             </div>

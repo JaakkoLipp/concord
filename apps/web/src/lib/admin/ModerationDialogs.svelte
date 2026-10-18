@@ -79,7 +79,7 @@
       adminDialogs.done(x);
       toasts.show(m.reports.sent, 'info');
     } catch (e) {
-      toasts.show(e instanceof BackendError && e.kind === 'ReportLimit' ? m.reports.limit : m.reports.failed);
+      toasts.show(e instanceof BackendError && e.kind === 'ReportLimit' ? m.reports.limit : e instanceof BackendError && e.kind === 'AlreadyReported' ? m.reports.already : m.reports.failed);
     } finally {
       busy = false;
     }

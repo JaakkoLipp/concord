@@ -9,6 +9,7 @@ import betaInvitations from './migrations/003-beta-invitations.sql?raw';
 import serverInvites from './migrations/004-server-invites.sql?raw';
 import reports from './migrations/005-reports.sql?raw';
 import feedback from './migrations/006-feedback.sql?raw';
+import reportsOnce from './migrations/007-reports-once.sql?raw';
 
 export const MIGRATIONS = migrationsFrom({
   '001-meta.sql': meta,
@@ -17,4 +18,5 @@ export const MIGRATIONS = migrationsFrom({
   '004-server-invites.sql': serverInvites,
   '005-reports.sql': reports,
   '006-feedback.sql': feedback,
+  '007-reports-once.sql': reportsOnce,
 });
