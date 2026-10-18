@@ -2,7 +2,11 @@
   /**
    * A floating panel anchored to an element. Closes on Escape and outside clicks, takes focus when it
    * opens and gives it back when it closes (client.md section 11). It grows from its anchor and fades out on
-   * close, except when opened from the keyboard.
+   * close, except when opened from the keyboard or when `instant`.
+   *
+   * `keep` names elements, such as other profile triggers, whose pointerdown leaves it open: their click then
+   * moves it to a new `anchor`, which it follows in the same frame (m4.6-plan.md task 14). `edge` is an element
+   * whose facing side it keeps `gap` from, in place of the anchor's, such as the member list's.
    */
   import type { Snippet } from 'svelte';
   import { tick } from 'svelte';
@@ -14,9 +18,13 @@
     onclose: () => void;
     side?: 'right' | 'left' | 'bottom' | 'top';
     label: string;
+    instant?: boolean;
+    keep?: string;
+    edge?: HTMLElement | null;
+    gap?: number;
     children: Snippet;
   }
-  let { anchor, open, onclose, side = 'right', label, children }: Props = $props();
+  let { anchor, open, onclose, side = 'right', label, instant = false, keep, edge = null, gap = 8, children }: Props = $props();
   let panel = $state<HTMLDivElement | null>(null);
   let pos = $state({ top: 0, left: 0 });
   let origin = $state('top left');
@@ -26,9 +34,9 @@
     if (!anchor || !panel) return;
     const a = anchor.getBoundingClientRect();
     const p = panel.getBoundingClientRect();
-    const gap = 8;
-    let top = side === 'bottom' ? a.bottom + gap : side === 'top' ? a.top - p.height - gap : a.top;
-    let left = side === 'right' ? a.right + gap : side === 'left' ? a.left - p.width - gap : a.left;
+    const e = edge?.getBoundingClientRect() ?? a;
+    let top = side === 'bottom' ? e.bottom + gap : side === 'top' ? e.top - p.height - gap : a.top;
+    let left = side === 'right' ? e.right + gap : side === 'left' ? e.left - p.width - gap : a.left;
     top = Math.max(gap, Math.min(window.innerHeight - p.height - gap, top));
     left = Math.max(gap, Math.min(window.innerWidth - p.width - gap, left));
     pos = { top, left };
@@ -41,7 +49,7 @@
   $effect(() => {
     if (!open) return;
     const returnTo = document.activeElement as HTMLElement | null;
-    still = fromKeyboard();
+    still = instant || fromKeyboard();
     void tick().then(() => {
       place();
       panel?.querySelector<HTMLElement>('button, [href], input, [tabindex]:not([tabindex="-1"])')?.focus();
@@ -49,8 +57,11 @@
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); onclose(); } };
     const down = (e: PointerEvent) => {
       const t = e.target as Node;
-      if (panel && !panel.contains(t) && !anchor?.contains(t)) onclose();
+      if (panel && !panel.contains(t) && !anchor?.contains(t) && !(keep && t instanceof Element && t.closest(keep))) onclose();
     };
+    // Content that loads later, such as a profile, can grow it past the window's edge.
+    const resized = new ResizeObserver(() => place());
+    void tick().then(() => panel && resized.observe(panel));
     window.addEventListener('keydown', key, true);
     window.addEventListener('pointerdown', down, true);
     window.addEventListener('resize', place);
@@ -58,8 +69,14 @@
       window.removeEventListener('keydown', key, true);
       window.removeEventListener('pointerdown', down, true);
       window.removeEventListener('resize', place);
+      resized.disconnect();
       returnTo?.focus?.();
     };
+  });
+
+  // A new anchor while open: move there before the next paint, without closing.
+  $effect(() => {
+    if (open && anchor) void tick().then(place);
   });
 </script>
 

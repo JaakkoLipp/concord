@@ -30,7 +30,7 @@
       {#each group.members as member (member.user)}
         {@const user = store.users.get(member.user)}
         {@const offline = presenceOf(user) === 'offline'}
-        <li class:offline><button class="member" aria-label={m.people.openProfile(store.displayName(member.user, server))} onclick={(e) => popout.open(member.user, server, e.currentTarget, 'left')}
+        <li class:offline><button class="member" class:shown={popout.shownIn(member.user, 'members')} data-profile-trigger="members" aria-label={m.people.openProfile(store.displayName(member.user, server))} onclick={(e) => popout.open(member.user, server, e.currentTarget, 'left')}
           use:menuOn={(node) => (app.session ? participantMenu(app.session, app.voice, member.user, { profile: () => popout.open(member.user, server, node, 'left'), server }) : [])}>
           <Avatar src={avatarUrl(user ?? { id: member.user }, member.avatar)} size={32} presence={offline ? undefined : presenceOf(user)} presenceLabel={m.presence[presenceOf(user)]} />
           <span class="text">
@@ -57,8 +57,10 @@
     border: 0; border-radius: var(--radius-md); background: none; text-align: left;
   }
   @media (hover: hover) { .member:hover { background: var(--hover-overlay); } }
+  /* The row whose profile is open keeps its hover background (m4.6-plan.md task 14). */
+  .member.shown { background: var(--hover-overlay); }
   .offline { opacity: 0.45; }
-  .offline:hover { opacity: 1; }
+  .offline:hover, .offline:has(.shown) { opacity: 1; }
   .text { display: grid; min-width: 0; }
   .name {
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 500 var(--text-md) var(--font-sans);

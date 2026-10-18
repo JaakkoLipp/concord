@@ -361,6 +361,8 @@ export const en = {
     rolesFailed: 'Couldn’t change roles.',
     moderationView: 'Open in moderation view',
     moveTo: 'Move to',
+    moreRoles: (n: number) => `+${n}`,
+    moreRolesLabel: (n: number) => plural('en', n, { one: `Show ${n} more role`, other: `Show ${n} more roles` }),
   },
   composer: {
     send: 'Send message',

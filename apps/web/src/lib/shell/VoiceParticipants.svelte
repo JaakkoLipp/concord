@@ -52,7 +52,7 @@
           marks.serverDeafened ? m.voiceState.serverDeafened : '', moving ? m.voiceState.moving : '', marks.camera ? m.voiceState.camera : '', marks.live ? m.voiceState.sharing : '',
           volume !== 100 ? m.call.volumeMark(volume) : '',
         ].filter(Boolean))}
-        onclick={(e) => popout.open(v.user, server, e.currentTarget)}
+        data-profile-trigger="voice" onclick={(e) => popout.open(v.user, server, e.currentTarget)}
         use:menuOn={(node) => (app.session ? participantMenu(app.session, app.voice, v.user, { profile: () => popout.open(v.user, server, node), server }) : [])}
       >
         <span class="avatar"><Avatar src={avatarUrl(store.users.get(v.user) ?? { id: v.user }, member?.avatar)} size={24} /></span>
