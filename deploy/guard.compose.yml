@@ -1,0 +1,26 @@
+# The history guard (m4.7-plan.md task 12), added by dc when host.env sets GUARD_BOT_TOKEN. Its own container with no
+# ports: it holds a bot token that outranks the moderators, so it stays out of concord-web. Its code is deploy/guard/,
+# run by Node's type stripping, and its record of what it read and whose roles it took is concord/guard-data/.
+services:
+  guard:
+    image: docker.io/node:24.21.0-alpine
+    restart: unless-stopped
+    mem_limit: 64m
+    user: "1000:1000"
+    working_dir: /guard
+    command: ["node", "guard.ts"]
+    environment:
+      GUARD_BOT_TOKEN: ${GUARD_BOT_TOKEN}
+      GUARD_SERVER: ${GUARD_SERVER:-}
+      GUARD_ALERT: ${GUARD_ALERT:-}
+      GUARD_MESSAGES_10M: ${GUARD_MESSAGES_10M:-}
+      GUARD_MESSAGES_24H: ${GUARD_MESSAGES_24H:-}
+      GUARD_BULK_10M: ${GUARD_BULK_10M:-}
+      GUARD_CHANNELS_24H: ${GUARD_CHANNELS_24H:-}
+      GUARD_BANS_10M: ${GUARD_BANS_10M:-}
+    volumes:
+      - ./concord/guard:/guard:ro
+      - ./concord/guard-data:/data
+    depends_on:
+      - api
+      - events

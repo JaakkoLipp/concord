@@ -39,6 +39,8 @@ run(...onStack([
   'concord/dc config -q',
   // The layer's data folder, before up -d, or Docker would make it as root. Locally jaakko is uid 1000 already.
   LOCAL ? 'install -d -m 0700 concord/data' : 'sudo install -d -o 1000 -g 1000 -m 0700 concord/data',
+  // The guard's record (m4.7-plan.md task 12), for its container's node user, made whether or not it is switched on.
+  LOCAL ? 'install -d -m 0700 concord/guard-data' : 'sudo install -d -o 1000 -g 1000 -m 0700 concord/guard-data',
   // A broken Caddyfile would put Caddy in a crash loop once up -d recreates it: check it in the running one first.
   'concord/dc exec -T caddy caddy validate --config /etc/caddy/Caddyfile >/dev/null',
   ...(LOCAL ? ['install -d -m 0700 concord/spool/in', 'install -d -m 0755 concord/spool/out'] : []),

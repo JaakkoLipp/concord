@@ -8,6 +8,7 @@
 #   FLOATING_IPV4 set           -> floating.compose.yml: Caddy gets the TURN hostname's certificate
 #   TURN=on in host.env         -> turn.compose.yml adds LiveKit's TURN listeners
 #   LOCAL=on in host.env        -> local.compose.yml: the local stack in Docker Desktop, on 127.0.0.1 over HTTP
+#   GUARD_BOT_TOKEN set         -> guard.compose.yml: the history guard (m4.7-plan.md task 12)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f concord/host.env ] || { echo "concord/host.env is missing (see docs/vps-runbook.md)" >&2; exit 1; }
@@ -22,4 +23,5 @@ fi
 [ -n "$floating" ] && files+=(-f concord/floating.compose.yml)
 [ "$turn" = on ] && files+=(-f concord/turn.compose.yml)
 [ "$(setting LOCAL)" = on ] && files+=(-f concord/local.compose.yml)
+[ -n "$(setting GUARD_BOT_TOKEN)" ] && files+=(-f concord/guard.compose.yml)
 exec docker compose --env-file .env --env-file concord/host.env "${files[@]}" "$@"

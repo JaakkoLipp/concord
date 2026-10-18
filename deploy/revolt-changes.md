@@ -54,3 +54,14 @@ restrict_server_creation = ["<admin user ID>"]
 ```
 
 On the dev stack the ID is the seeded `dev-admin`, set by the seed. On production it is Jaakko's account, set in M3 task 5. Wiping the database changes the ID, so this is redone after any reset.
+
+## 4. Audit log kept a year
+
+From M4.7 (m4.7-plan.md task 12, decision 12). Stoat keeps audit log entries 30 days by default; the history guard and the moderators read them, so keep a year. The value is a duration in Stoat's config format; check the generated file's existing `[api.audit_logs]` section, if any, for the unit it uses before editing.
+
+```toml
+[api.audit_logs]
+expires_after = "365d"
+```
+
+Apply with `concord/dc restart api`. Not yet applied anywhere.

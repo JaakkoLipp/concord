@@ -20,6 +20,12 @@ if [ -n "$hstamp" ] && hwhen="$(date -d "$hstamp" +%s 2>/dev/null)"; then
   [ "$hmins" -lt 130 ] || hage="  <- OLD: ${hmins} min ago, is the hourly job running?"
 fi
 echo "== last history:  ${hist}${hage}"
+# The history guard, when switched on: down for more than 5 minutes says so (m4.7-plan.md task 12).
+if grep -q '^GUARD_BOT_TOKEN=.' concord/host.env 2>/dev/null; then
+  beat="$(cat concord/guard-data/heartbeat 2>/dev/null || echo 0)"
+  gmins=$(( ($(date +%s) - beat / 1000) / 60 ))
+  if [ "$gmins" -gt 5 ]; then echo "== guard:         DOWN: last heartbeat ${gmins} min ago, see concord/dc logs guard"; else echo "== guard:         up"; fi
+fi
 echo "== disk:          $(df -h --output=pcent,avail / | tail -1 | awk '{print $1 " used, " $2 " free"}')"
 echo "== memory:        $(free -h | awk '/^Mem/ {print $7 " available of " $2}')"
 echo "== TURN:          $(sed -n 's/^TURN=//p' concord/host.env)"

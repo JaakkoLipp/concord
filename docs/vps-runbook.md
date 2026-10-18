@@ -200,3 +200,9 @@ From M4.7 (m4.7-plan.md tasks 10 and 12). A channel deleted, or messages deleted
 - the storage layout: a file's object is keyed by its `hash`, through `attachment_hashes`' `bucket_id` and `path`, and lives in `data/minio/<bucket>/<key>/`,
 - that the temporary storage container serves a partial copy of `data/minio`, and Stoat's `mc` image copies from it,
 - how long the dumps take within the database container’s 768 MB, and the sizes listed in m4.7-results.md task 10.
+
+**The history guard** (`deploy/guard/`, its own container, no ports), when it is switched on:
+- **What it does**: reads the audit log on every deletion, ban or role event, and every minute. Past a limit it takes the person's roles and DMs the owner and the admins on `GUARD_ALERT`: who, what, and the restore command to dry-run. The limits are in `host.env` (`GUARD_MESSAGES_10M` 25, `GUARD_MESSAGES_24H` 150, `GUARD_BULK_10M` 1, `GUARD_CHANNELS_24H` 1, `GUARD_BANS_10M` 3); a first channel deletion only alerts. Every 10 minutes it checks its own role, and that no other bot ranks above the moderators, and tells the owner if not.
+- **A false alarm**: the owner replies `restore <user ID>` to the guard's DM, and it gives back exactly the roles it took. Over SSH: `concord/dc exec guard node guard.ts restore <user ID>`.
+- **Is it up**: `status.sh` says `guard: up`, or DOWN past 5 minutes without a heartbeat. `concord/dc logs guard` says why. Once back, it catches up on the audit log and tells the owner how long it was down.
+- **Its record**: `concord/guard-data/guard.json`, the last entry it read and the roles it took. Deleting it makes the guard start afresh from the newest entry, forgetting the strips it could undo.

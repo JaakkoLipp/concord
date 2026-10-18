@@ -8,6 +8,6 @@ export default defineConfig({
   // SvelteKit's `$lib`, for the web app's modules that import through it.
   resolve: { alias: { $lib: fileURLToPath(new URL('./apps/web/src/lib', import.meta.url)) } },
   test: {
-    include: ['packages/*/src/**/*.test.ts', 'tools/*/src/**/*.test.ts', 'apps/web/src/**/*.test.ts'],
+    include: ['packages/*/src/**/*.test.ts', 'tools/*/src/**/*.test.ts', 'apps/web/src/**/*.test.ts', 'deploy/guard/*.test.ts'],
   },
 });
