@@ -37,6 +37,36 @@ export interface ServerInviteRequest {
   code: string | null;
 }
 
+/** Why something was reported (m4.7-plan.md task 9). */
+export type ReportReason = 'spam' | 'harassment' | 'hate' | 'sexual' | 'violence' | 'other';
+
+/**
+ * A report, as a server's moderators or the app's admins see it. `content` is the reported message's text as it was,
+ * kept as evidence until 90 days after the report closes. A report of a DM message or a user has no server.
+ */
+export interface Report {
+  id: string;
+  kind: 'message' | 'user';
+  server: Id | null;
+  channel: Id | null;
+  message: Id | null;
+  reported: Id;
+  reporter: Id;
+  content: string | null;
+  reason: ReportReason;
+  notes: string;
+  createdAt: number;
+  status: 'open' | 'closed';
+  closedBy: Id | null;
+  closedAt: number | null;
+  closeNote: string | null;
+}
+
+/** Where reports are read: a server's moderators, with Manage messages, or the app's admins. */
+export type ReportScope = { server: Id } | 'admin';
+
+export type ReportTarget = { kind: 'message'; channel: Id; message: Id } | { kind: 'user'; user: Id };
+
 /** What the admin view may ask the account runner to do to a person (architecture section 11.5). */
 export type AccountAction = 'moderator:add' | 'moderator:remove' | 'admin:add' | 'admin:remove' | 'password-link' | 'suspend' | 'unsuspend';
 
@@ -96,4 +126,12 @@ export interface Layer {
   removeServerTag(server: Id): Promise<void>;
   /** Wear a server's tag, or none. */
   wearTag(server: Id | null): Promise<void>;
+  /** Report a message or a user, with a reason and optional notes. 10 an hour each. */
+  report(target: ReportTarget, reason: ReportReason, notes: string): Promise<void>;
+  /** Open reports in a scope, and closed ones too when asked. */
+  reports(scope: ReportScope, includeClosed?: boolean): Promise<Report[]>;
+  /** How many reports wait in a scope. */
+  reportCount(scope: ReportScope): Promise<number>;
+  /** Close a report with a note; it doesn't act by itself. */
+  closeReport(id: string, note: string): Promise<void>;
 }

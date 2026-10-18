@@ -22,6 +22,7 @@
   import Members from './Members.svelte';
   import Bans from './Bans.svelte';
   import AuditLog from './AuditLog.svelte';
+  import Reports from './Reports.svelte';
   import DeleteServerDialog from './DeleteServerDialog.svelte';
 
   let { session, server, section }: { session: Session; server: string; section: string } = $props();
@@ -31,7 +32,18 @@
   const tagAllowed = $derived(!!app.layerMe?.gates.serverCreator && has(serverPerms(store, server), Permission.ManageServer));
   const sections = $derived<Section[]>([...serverSections(store, server), ...(tagAllowed ? ['tag' as const] : [])]);
   const current = $derived(sections.find((s) => s === section) ?? sections[0]);
-  const items = $derived(sections.map((s) => ({ id: s, label: m.admin.sections[s], target: { kind: 'server' as const, server, section: s } })));
+  // Moderators see how many reports wait, fetched every minute while settings are open (m4.7-plan.md task 9).
+  let waiting = $state(0);
+  $effect(() => {
+    const layer = app.layer;
+    if (!layer || !sections.includes('reports')) return;
+    const id = server;
+    const count = () => void layer.reportCount({ server: id }).then((n) => (waiting = n), () => {});
+    count();
+    const timer = setInterval(count, 60_000);
+    return () => clearInterval(timer);
+  });
+  const items = $derived(sections.map((s) => ({ id: s, label: s === 'reports' ? m.reports.count(waiting) : m.admin.sections[s], target: { kind: 'server' as const, server, section: s } })));
   let deleting = $state(false);
 
   // Gone, or nothing here for this account: back to the app. Waits for the connection, so a reload can load it first.
@@ -50,6 +62,7 @@
     {#if current === 'members'}<Members {session} {server} />{/if}
     {#if current === 'bans'}<Bans {session} {server} />{/if}
     {#if current === 'audit'}<AuditLog {session} {server} />{/if}
+    {#if current === 'reports'}<Reports {session} scope={{ server }} />{/if}
     {#if current === 'tag'}<ServerTag {session} {server} />{/if}
     {#snippet footer()}
       {#if isOwner(store, server)}

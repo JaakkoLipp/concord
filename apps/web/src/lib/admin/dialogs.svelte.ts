@@ -1,5 +1,5 @@
 /** The admin dialog showing, if any, opened from menus anywhere in the shell. One at a time. */
-import type { Id } from '@concord/domain';
+import type { Id, ReportTarget } from '@concord/domain';
 
 export type AdminDialog =
   | { kind: 'createChannel'; server: Id; category: string | null }
@@ -11,6 +11,8 @@ export type AdminDialog =
   | { kind: 'kick' | 'ban'; server: Id; user: Id }
   /** Time someone out for this many seconds, with a reason (m4.7-plan.md task 6). */
   | { kind: 'timeout'; server: Id; user: Id; seconds: number }
+  /** Report a message or a person to whoever reads its reports (m4.7-plan.md task 9). `name` is the author or person. */
+  | { kind: 'report'; target: ReportTarget; name: string }
   | { kind: 'invite'; server: Id; channel: Id | null };
 
 class AdminDialogs {

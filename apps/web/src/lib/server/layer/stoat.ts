@@ -113,6 +113,20 @@ export class StoatClient {
     return parent?.type === 'Server' && parent.id ? parent.id : null;
   }
 
+  /** A channel as the caller sees it: its server, if any. Null when the caller can't see it. */
+  async channel(token: string, channel: string): Promise<{ server?: string } | null> {
+    const { status, body } = await this.get(`/channels/${channel}`, token);
+    return status === 200 ? { ...(typeof (body as { server?: unknown }).server === 'string' ? { server: (body as { server: string }).server } : {}) } : null;
+  }
+
+  /** A message as the caller sees it, or null when they can't read it. */
+  async message(token: string, channel: string, message: string): Promise<{ author: string; content: string } | null> {
+    const { status, body } = await this.get(`/channels/${channel}/messages/${message}`, token);
+    const m = body as { author?: unknown; content?: unknown } | null;
+    if (status !== 200 || typeof m?.author !== 'string') return null;
+    return { author: m.author, content: typeof m.content === 'string' ? m.content : '' };
+  }
+
   /** The caller's member record in a server, or null when they aren't a member. */
   async member(token: string, server: string, user: string): Promise<WireMember | null> {
     const { status, body } = await this.get(`/servers/${server}/members/${user}`, token);

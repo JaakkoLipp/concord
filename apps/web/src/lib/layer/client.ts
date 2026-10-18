@@ -3,7 +3,9 @@
  * never a cookie. Only the layer's own 401 signs out: a 503 means Stoat failed, and must never log anyone out.
  */
 import { BackendError } from '@concord/domain/errors';
-import type { AccountAction, AccountActionResult, BetaInvitation, Id, Layer, LayerMe, PlatformUser, ServerInviteRequest, ServerTag } from '@concord/domain';
+import type {
+  AccountAction, AccountActionResult, BetaInvitation, Id, Layer, LayerMe, PlatformUser, Report, ReportReason, ReportScope, ReportTarget, ServerInviteRequest, ServerTag,
+} from '@concord/domain';
 
 export class HttpLayer implements Layer {
   private readonly token: () => string | null;
@@ -98,4 +100,22 @@ export class HttpLayer implements Layer {
   async wearTag(server: Id | null): Promise<void> {
     await this.request('PUT', '/tags/me', { server });
   }
+
+  async report(target: ReportTarget, reason: ReportReason, notes: string): Promise<void> {
+    await this.request('POST', '/reports', { ...target, reason, notes });
+  }
+
+  async reports(scope: ReportScope, includeClosed = false): Promise<Report[]> {
+    return (await this.get<{ reports: Report[] }>(`/reports?${scopeQuery(scope)}&closed=${includeClosed}`)).reports;
+  }
+
+  async reportCount(scope: ReportScope): Promise<number> {
+    return (await this.get<{ count: number }>(`/reports/count?${scopeQuery(scope)}`)).count;
+  }
+
+  async closeReport(id: string, note: string): Promise<void> {
+    await this.request('POST', `/reports/${encodeURIComponent(id)}`, { note });
+  }
 }
+
+const scopeQuery = (scope: ReportScope) => (scope === 'admin' ? 'scope=admin' : `server=${encodeURIComponent(scope.server)}`);

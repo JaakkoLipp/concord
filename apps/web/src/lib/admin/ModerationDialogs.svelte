@@ -2,10 +2,12 @@
   /**
    * Kick, ban, timeout and invite (m2c-plan.md task 6, m4.7-plan.md task 6). Kick, ban and timeout take a reason for the
    * audit log; a ban can also delete the person's recent messages, for server admins only. The invite dialog offers only
-   * channels where this account may invite, the current one first, and shows the link once made.
+   * channels where this account may invite, the current one first, and shows the link once made. Reporting a message or a
+   * person (m4.7-plan.md task 9) goes through Concord's layer.
    */
   import { Button, Dialog, TextField } from '@concord/ui';
-  import { Permission, type Session } from '@concord/domain';
+  import { BackendError, Permission, type ReportReason, type Session } from '@concord/domain';
+  import { app } from '$lib/session/app.svelte.ts';
   import { m } from '$lib/i18n/index.ts';
   import { channelsWith, isServerAdmin } from '$lib/view/admin.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
@@ -26,6 +28,10 @@
   const confirmLabel = $derived(member?.kind === 'ban' ? m.admin.ban.confirm : member?.kind === 'timeout' ? m.moderation.timeoutConfirm : m.admin.kick.confirm);
   const invite = $derived(d?.kind === 'invite' ? d : null);
   const inviteChannels = $derived(invite ? channelsWith(store, invite.server, Permission.InviteOthers) : []);
+  const report = $derived(d?.kind === 'report' ? d : null);
+  const REASONS: ReportReason[] = ['spam', 'harassment', 'hate', 'sexual', 'violence', 'other'];
+  let why = $state<ReportReason | ''>('');
+  let notes = $state('');
 
   let reason = $state('');
   let deletion = $state(0);
@@ -38,6 +44,8 @@
     filledFor = d;
     reason = '';
     deletion = 0;
+    why = '';
+    notes = '';
     link = '';
     if (d?.kind === 'invite') channel = d.channel && inviteChannels.includes(d.channel) ? d.channel : (inviteChannels[0] ?? '');
   });
@@ -56,6 +64,22 @@
       adminDialogs.done(x);
     } catch {
       toasts.show(x.kind === 'kick' ? m.admin.kick.failed : x.kind === 'ban' ? m.admin.ban.failed : m.moderation.timeoutFailed);
+    } finally {
+      busy = false;
+    }
+  }
+
+  async function sendReport() {
+    const x = report;
+    const layer = app.layer;
+    if (!x || !layer || !why || busy) return;
+    busy = true;
+    try {
+      await layer.report(x.target, why, notes.trim());
+      adminDialogs.done(x);
+      toasts.show(m.reports.sent, 'info');
+    } catch (e) {
+      toasts.show(e instanceof BackendError && e.kind === 'ReportLimit' ? m.reports.limit : m.reports.failed);
     } finally {
       busy = false;
     }
@@ -107,6 +131,27 @@
   {/snippet}
 </Dialog>
 
+<Dialog open={!!report} title={report ? (report.target.kind === 'message' ? m.reports.titleMessage(report.name) : m.reports.titleUser(report.name)) : ''} onclose={close}>
+  {#if report}
+    <p>{m.reports.body}</p>
+    <fieldset class="group reasons">
+      <legend class="label">{m.reports.reason}</legend>
+      {#each REASONS as r (r)}
+        <label class="choice"><input type="radio" name="report-reason" value={r} bind:group={why} />{m.reports.reasons[r]}</label>
+      {/each}
+    </fieldset>
+    <div class="group">
+      <label class="label" for="report-notes">{m.reports.notes}</label>
+      <textarea id="report-notes" rows="3" bind:value={notes} maxlength={500} aria-describedby="report-notes-note"></textarea>
+      <p class="note" id="report-notes-note">{m.reports.notesHint}</p>
+    </div>
+  {/if}
+  {#snippet actions()}
+    <Button variant="ghost" onclick={close}>{m.admin.cancel}</Button>
+    <Button variant="danger" {busy} disabled={!why} onclick={sendReport}>{m.reports.send}</Button>
+  {/snippet}
+</Dialog>
+
 <Dialog open={!!invite} title={invite ? m.admin.invite.title(store.servers.get(invite.server)?.name ?? '') : ''} onclose={close}>
   {#if invite}
     <div class="form">
@@ -146,4 +191,7 @@
   textarea { resize: vertical; }
   textarea:focus-visible, select:focus-visible { outline: none; border-color: var(--accent); }
   .note { margin: 0; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
+  .reasons { margin: var(--space-4) 0 0; padding: 0; border: 0; }
+  .choice { display: flex; align-items: center; gap: var(--space-3); min-height: 2rem; color: var(--text-normal); font: var(--text-md) var(--font-sans); }
+  .choice input { accent-color: var(--accent); }
 </style>

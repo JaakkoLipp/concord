@@ -16,6 +16,8 @@ import type { VoiceController } from '$lib/voice/controller.svelte.ts';
 import { m } from '$lib/i18n/index.ts';
 import { confirm } from '$lib/view/confirm.svelte.ts';
 import { toasts } from '$lib/view/toast.svelte.ts';
+import { adminDialogs } from '$lib/admin/dialogs.svelte.ts';
+import { app } from '$lib/session/app.svelte.ts';
 
 const failed = () => toasts.show(m.friends.errors.action);
 const nameOf = (session: Session, user: Id) => session.store.displayName(user);
@@ -174,6 +176,8 @@ export function personMenu(session: Session, user: Id, opts: PersonMenuOptions =
       if (rel === 'Blocked') {
         if (primary) social.push({ label: m.friends.actions.unblock, onselect: () => unblock(session, user) });
       } else social.push({ label: m.friends.actions.block, danger: true, onselect: () => void block(session, user) });
+      // To the app's admins, through Concord's layer (m4.7-plan.md task 9).
+      if (app.layer) social.push({ label: m.reports.reportUser, danger: true, onselect: () => adminDialogs.open({ kind: 'report', target: { kind: 'user', user }, name: store.displayName(user, opts.server) }) });
     }
     group(...social);
     if (opts.server) {

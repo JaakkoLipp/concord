@@ -82,7 +82,7 @@ try {
 
   const targetExpected = [
     'Profile', 'Mention', 'Message', 'Start call', '|',
-    'Change nickname', 'Invite to server', 'Remove friend', 'Block', '|',
+    'Change nickname', 'Invite to server', 'Remove friend', 'Block', 'Report user', '|',
     'Roles', '|', 'Open in moderation view', 'Time out', 'Kick', 'Ban', '|', 'Copy user ID',
   ];
   const targetLabels = await openPerson(owner, p.target.handle);
@@ -197,7 +197,7 @@ try {
 
   // A plain member gets the social basics and Copy ID, with no server or moderation controls.
   const plainLabels = await openPerson(plain, p.target.handle);
-  const plainExpected = ['Profile', 'Mention', 'Message', 'Start call', '|', 'Add friend', 'Block', '|', 'Copy user ID'];
+  const plainExpected = ['Profile', 'Mention', 'Message', 'Start call', '|', 'Add friend', 'Block', 'Report user', '|', 'Copy user ID'];
   check(JSON.stringify(plainLabels) === JSON.stringify(plainExpected), 'plain member on target: visible labels, separators and order match task 4', plainLabels);
   await closeMenu(plain);
 

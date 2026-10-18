@@ -102,6 +102,8 @@ export function messageMenu(msg: Message, a: MessageActions, o: Options): MenuIt
   const pick = a.pick;
   if (pick) removal.push({ label: m.actions.selectMessages, onselect: () => pick(msg) });
   if (o.own || a.manage) removal.push({ label: m.actions.delete, danger: true, onselect: () => a.delete(msg, false) });
+  const report = a.report;
+  if (report && !o.own && !msg.webhook) removal.push({ label: m.reports.reportMessage, danger: true, onselect: () => report(msg) });
   if (removal.length) groups.push(removal);
   return groups.flatMap((g, i) => (i ? ['separator' as const, ...g] : g));
 }

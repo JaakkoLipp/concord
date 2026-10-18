@@ -19,4 +19,6 @@ export interface MessageActions {
   isFavouriteGif(url: string): boolean; toggleFavouriteGif(gif: FavouriteGif): void;
   /** Start selecting messages to delete together, from this one, for server admins only (m4.7-plan.md task 7). */
   pick?: ((m: Message) => void) | undefined;
+  /** Report someone else's message, through Concord's layer (m4.7-plan.md task 9). */
+  report?: ((m: Message) => void) | undefined;
 }

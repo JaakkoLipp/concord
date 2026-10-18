@@ -11,8 +11,19 @@
   import { shell } from '$lib/view/shell.svelte.ts';
   import Invitations from './Invitations.svelte';
   import Users from './Users.svelte';
+  import Reports from '$lib/admin/Reports.svelte';
 
-  let tab = $state<'users' | 'requests'>('users');
+  let tab = $state<'users' | 'requests' | 'reports'>('users');
+  // Reports of DMs and people come here (m4.7-plan.md task 9), counted every minute.
+  let waiting = $state(0);
+  $effect(() => {
+    const layer = app.layer;
+    if (!layer || !app.layerMe?.gates.admin) return;
+    const count = () => void layer.reportCount('admin').then((n) => (waiting = n), () => {});
+    count();
+    const timer = setInterval(count, 60_000);
+    return () => clearInterval(timer);
+  });
   const refused = $derived(!!app.layerMe && !app.layerMe.gates.admin);
 </script>
 
@@ -21,9 +32,10 @@
   <span class="icon" aria-hidden="true"><ShieldCheck size={22} /></span>
   <h1>{m.beta.adminTitle}</h1>
   <span class="divider" aria-hidden="true"></span>
-  <Tabs label={m.accounts.tabs.label} selected={tab} onselect={(id) => (tab = id as 'users' | 'requests')} tabs={[
+  <Tabs label={m.accounts.tabs.label} selected={tab} onselect={(id) => (tab = id as 'users' | 'requests' | 'reports')} tabs={[
     { id: 'users', label: m.accounts.tabs.users },
     { id: 'requests', label: m.accounts.tabs.requests },
+    { id: 'reports', label: m.reports.count(waiting) },
   ]} />
 </header>
 
@@ -33,6 +45,8 @@
       <p class="empty">{m.beta.notAllowed}</p>
     {:else if tab === 'users'}
       <Users />
+    {:else if tab === 'reports'}
+      {#if app.session}<Reports session={app.session} scope="admin" />{/if}
     {:else}
       <Invitations mode="review" embedded />
     {/if}

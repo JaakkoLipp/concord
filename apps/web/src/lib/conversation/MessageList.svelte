@@ -11,6 +11,8 @@
   import { resolve } from '$app/paths';
   import { permissionsIn } from '$lib/view/channels.ts';
   import { isServerAdmin } from '$lib/view/admin.ts';
+  import { adminDialogs } from '$lib/admin/dialogs.svelte.ts';
+  import { app } from '$lib/session/app.svelte.ts';
   import { confirm } from '$lib/view/confirm.svelte.ts';
   import { Button } from '@concord/ui';
   import { compose } from '$lib/view/compose.svelte.ts';
@@ -184,6 +186,7 @@
     copyImage: (src) => void copyImage(src).then(() => toasts.show(m.actions.copied, 'info'), () => toasts.show(m.actions.copyImageFailed)),
     saveImage: (src, name) => void saveImage(src, name).catch(() => toasts.show(m.actions.saveImageFailed)),
     pick: canBulk ? (msg) => { picked = new SvelteSet(pickRefusal(msg) ? [] : [msg.id]); } : undefined,
+    report: app.layer ? (msg) => adminDialogs.open({ kind: 'report', target: { kind: 'message', channel, message: msg.id }, name: store.displayName(msg.author, server) }) : undefined,
   });
 
   // Messages sent from here and not yet confirmed, shown after the newest message (client.md section 4.3).
