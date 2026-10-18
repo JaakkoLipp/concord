@@ -124,7 +124,7 @@
   guardUnsaved(() => dirty, reset, { title: m.settings.profile.leaveTitle, body: m.settings.profile.leaveBody, confirm: m.settings.profile.leave });
 </script>
 
-<div class="editor">
+<div class="editor" id="profile-editor">
   <div class="fields">
     <TextField label={m.settings.profile.displayName} bind:value={draft.displayName} placeholder={self.username} error={errors.displayName} hint={m.settings.profile.displayNameHint} />
     <TextField label={m.settings.profile.pronouns} bind:value={draft.pronouns} error={errors.pronouns} />

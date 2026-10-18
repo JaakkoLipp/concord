@@ -686,6 +686,7 @@ export const en = {
     open: 'User settings',
     close: 'Close',
     sections: { account: 'My account', profile: 'Profile', notifications: 'Notifications', voice: 'Voice and video' },
+    groups: { app: 'App settings' },
     gates: { serverCreator: 'Moderator', admin: 'System admin' },
     tag: {
       heading: 'Server tag',

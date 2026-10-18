@@ -233,7 +233,7 @@
 
 <div class="separator" role="separator"></div>
 
-<section aria-label={t.inputMode}>
+<section id="input-mode-section" aria-label={t.inputMode}>
   <fieldset class="group">
     <legend class="label">{t.inputMode}</legend>
     <label class="option"><input type="radio" name="input-mode" checked={s.inputMode === 'voice'} onchange={() => set({ inputMode: 'voice' })} />{t.voiceActivity}</label>
