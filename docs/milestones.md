@@ -509,11 +509,17 @@ Added on 2026-10-16 at Jaakko's request, from a Sonnet audit of the client again
 
 ## M7: Polish and closed beta
 
-**Scope**: Finnish translation, PWA install and mobile layout pass, web push notifications to the installed app, keyboard navigation and focus states everywhere, empty and error states, the performance budgets, settings screens, an accessibility pass, a final visual polish pass against the reference, and a two-week beta with about 20 members.
+**Scope**: Finnish translation, PWA install and mobile layout pass, swipe navigation on phones (below), web push notifications to the installed app, keyboard navigation and focus states everywhere, empty and error states, the performance budgets, settings screens, an accessibility pass, a final visual polish pass against the reference, and a two-week beta with about 20 members.
+
+**Swipe navigation**, added 2026-10-18 at Jaakko's request, as on Discord's phone app (client.md section 3):
+- **Panels follow the finger.** In a conversation, a swipe right drags the server rail and channel list in from the left, and a swipe left drags the member list in from the right. Each tracks the finger 1:1 and settles open or shut by distance and flick velocity, with the spec's spring.
+- **Back by swipe.** From a conversation, an edge swipe right returns to the channel list. Settings pages, threads and the profile sheet close the same way. The browser's own back-swipe still works.
+- **Rules.** Horizontal intent is decided in the first few pixels, so vertical scrolling never jitters. Swipes don't start inside the composer, a code block, an image being zoomed or a horizontally scrolling row. Reduced motion snaps instead of springing. Every panel stays reachable by button.
 
 **Acceptance criteria**:
 
 - All performance budgets met.
+- On an Android phone and an iPhone, with the app installed, swipe navigation opens and closes both panels and goes back from a conversation. It follows the finger at 60 fps with no accidental opens while scrolling.
 - A mention or DM reaches an Android phone and an iPhone with the app installed to the home screen, and tapping it opens the right message.
 - No open bugs rated severe after the beta's last week.
 - Beta testers say they would move their chat over. We ask them directly.
