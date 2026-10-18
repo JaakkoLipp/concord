@@ -474,8 +474,11 @@ export class Session {
 
   // ---------- sending (m2a-plan.md task 2) ----------
 
-  /** Send a message optimistically. It shows at once as pending and is replaced when Stoat confirms it. */
-  async send(channel: Id, content: string, replies: PendingMessage['replies'] = [], files: { file: Blob; name: string; preview?: string | undefined }[] = []): Promise<void> {
+  /**
+   * Send a message optimistically. It shows at once as pending and is replaced when Stoat confirms it. Resolves to why it
+   * failed, the backend's error type or `network`, or null once sent.
+   */
+  async send(channel: Id, content: string, replies: PendingMessage['replies'] = [], files: { file: Blob; name: string; preview?: string | undefined }[] = []): Promise<string | null> {
     // A message sent from older history would land outside the window, so go to the present first.
     if (!this.store.windows.get(channel)?.atNewest) await this.loadLatest(channel).catch(() => {});
     const key = ulid();
@@ -483,6 +486,8 @@ export class Session {
     const pendingFiles = files.map((f) => ({ file: f.file, name: f.name, size: f.file.size, preview: f.preview, progress: 0 }));
     this.store.pending.set(key, { key, channel, content, replies, attachments: [], files: pendingFiles, state: 'sending' });
     await this.deliver(key);
+    const after = this.store.pending.get(key);
+    return after?.state === 'failed' ? (after.error ?? 'network') : null;
   }
 
   /** Upload a pending message's files that have no ID yet, updating their progress. Throws if any failed. */

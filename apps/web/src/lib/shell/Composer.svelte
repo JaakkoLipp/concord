@@ -52,9 +52,18 @@
     return () => clearInterval(t);
   });
   const wait = $derived(slowUntil > clock ? Math.ceil((slowUntil - clock) / 1000) : 0);
-  /** Starts the wait at once, before Stoat's own event confirms it, so a quick second message isn't sent to be refused. */
-  function startWait() {
-    if (slow && channel) store.slowUntil.set(channel.id, Date.now() + slow * 1000);
+  /**
+   * Starts the wait at once, before Stoat's own event confirms it, so a quick second message isn't sent to be refused. A send
+   * that fails for any other reason than slow mode takes it back, or one failure could lock the composer for hours.
+   */
+  function startWait(sending: Promise<string | null>) {
+    if (!slow || !channel) return;
+    const id = channel.id;
+    const until = Date.now() + slow * 1000;
+    store.slowUntil.set(id, until);
+    void sending.then((error) => {
+      if (error && error !== 'InSlowmode' && store.slowUntil.get(id) === until) store.slowUntil.delete(id);
+    });
   }
 
   let host = $state<HTMLDivElement>();
@@ -81,8 +90,7 @@
     const files = compose.takeFiles(channel.id).map((c) => ({ file: c.file, name: c.file.name, preview: c.preview }));
     session.stopTyping(channel.id);
     compose.presentRequest++;
-    startWait();
-    void session.send(channel.id, out, reply ? [reply] : [], files);
+    startWait(session.send(channel.id, out, reply ? [reply] : [], files));
     compose.clearReply(channel.id);
     editor.clear();
   }
@@ -194,8 +202,7 @@
   function sendGif(gif: FavouriteGif) {
     gifsOpen = false;
     if (!channel || block || wait) return;
-    startWait();
-    void session.send(channel.id, gif.url, reply ? [reply] : []);
+    startWait(session.send(channel.id, gif.url, reply ? [reply] : []));
     compose.clearReply(channel.id);
     editor?.focus();
   }

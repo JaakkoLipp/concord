@@ -48,4 +48,4 @@ export function mapChannelPatch(d: Record<string, unknown>): Record<string, unkn
   return out;
 }
 
-export const CHANNEL_FIELDS: Record<string, string[]> = { Description: ['description'], Icon: ['icon'], DefaultPermissions: ['defaultPermissions'], Voice: ['voice'] };
+export const CHANNEL_FIELDS: Record<string, string[]> = { Description: ['description'], Icon: ['icon'], DefaultPermissions: ['defaultPermissions'], Voice: ['voice'], Slowmode: ['slowmode'] };

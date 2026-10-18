@@ -6,6 +6,7 @@ import type {
 import { JoinCallError, type JoinFailure } from '@concord/domain/errors';
 import type { components } from './api/types.ts';
 import { capabilitiesFor } from './capabilities.ts';
+import { reasonHeader } from './reason.ts';
 import { mapChannel } from './map/channel.ts';
 import { mapEmoji } from './map/emoji.ts';
 import { mapFile } from './map/file.ts';
@@ -537,16 +538,16 @@ export class StoatBackend implements Backend {
     if (edit.canPublish !== undefined) body.can_publish = edit.canPublish;
     if (edit.canReceive !== undefined) body.can_receive = edit.canReceive;
     if (edit.timeout !== undefined) body.timeout = edit.timeout;
-    await this.rest.request('PATCH', `/servers/${server}/members/${user}`, body, reason ? { 'X-Audit-Log-Reason': reason } : {});
+    await this.rest.request('PATCH', `/servers/${server}/members/${user}`, body, reasonHeader(reason));
   }
 
   async kick(server: string, user: string, reason?: string): Promise<void> {
-    await this.rest.request('DELETE', `/servers/${server}/members/${user}`, undefined, reason ? { 'X-Audit-Log-Reason': reason } : {});
+    await this.rest.request('DELETE', `/servers/${server}/members/${user}`, undefined, reasonHeader(reason));
   }
 
   async ban(server: string, user: string, reason?: string, deleteSeconds?: number): Promise<void> {
     const body = { ...(reason ? { reason } : {}), ...(deleteSeconds ? { delete_message_seconds: deleteSeconds } : {}) };
-    await this.rest.request('PUT', `/servers/${server}/bans/${user}`, body, reason ? { 'X-Audit-Log-Reason': reason } : {});
+    await this.rest.request('PUT', `/servers/${server}/bans/${user}`, body, reasonHeader(reason));
   }
 
   async unban(server: string, user: string): Promise<void> {
