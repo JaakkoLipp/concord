@@ -4,7 +4,7 @@
    * for custom emoji, then Unicode categories, with a preview footer. In reaction mode it offers only
    * what Stoat accepts. Shift+click picks without closing, as on Discord.
    */
-  import { duration, Popover } from '@concord/ui';
+  import { duration, Popover, Spinner } from '@concord/ui';
   import Apple from '@lucide/svelte/icons/apple';
   import Cat from '@lucide/svelte/icons/cat';
   import Clock from '@lucide/svelte/icons/clock';
@@ -187,7 +187,7 @@
             </div>
           </section>
         {:else}
-          <p class="empty">{query && all.length && (req?.mode !== 'react' || allowed) ? m.emoji.noResults : m.app.loading}</p>
+          <p class="empty">{#if query && all.length && (req?.mode !== 'react' || allowed)}{m.emoji.noResults}{:else}<Spinner label={m.app.loading} />{/if}</p>
         {/each}
       </div>
     </div>

@@ -6,7 +6,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import type { Message, Session } from '@concord/domain';
-  import { Avatar, IconButton } from '@concord/ui';
+  import { Avatar, IconButton, Spinner } from '@concord/ui';
   import X from '@lucide/svelte/icons/x';
   import Markdown from '$lib/markdown/Markdown.svelte';
   import { setMarkdownContext } from '$lib/markdown/context.ts';
@@ -76,7 +76,7 @@
     {:else}
       {#if status === 'done'}<p class="empty">{mode === 'pins' ? m.find.noPins : m.find.noResults}</p>{/if}
     {/each}
-    {#if status === 'loading'}<p class="empty">{m.find.searching}</p>{/if}
+    {#if status === 'loading'}<p class="empty"><Spinner label={m.find.searching} /></p>{/if}
     {#if status === 'failed'}<p class="empty">{m.find.failed}</p>{/if}
     {#if status === 'done' && more}<button class="more" onclick={() => load(found.at(-1)?.id)}>{m.find.loadMore}</button>{/if}
   </div>

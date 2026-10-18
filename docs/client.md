@@ -347,6 +347,7 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
   --dur-meter: 60ms; --dur-loop: 1.2s; --dur-flash: 2s; --jump-highlight-hold: 2s;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1); --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-standard: cubic-bezier(0.2, 0, 0, 1); --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-spinner: cubic-bezier(0.42, 0, 0.58, 1);   /* CSS ease-in-out, the wandering cubes' curve */
   --motion: 1;   /* 0 under reduced motion; duration tokens also become zero in base.css */
 }
 ```
@@ -386,7 +387,7 @@ Tokens are CSS custom properties in `packages/ui/tokens.css`. Components use tok
 3. **Enter and exit timings follow the spec.** Menus and general popovers exit at `--dur-exit`. Tooltips crossfade at `--dur-tooltip`, without delay or growth. Profile popouts open, retarget and close instantly. Settings opens and closes with its own fade and scale.
 4. **Origin follows the trigger.** Menus grow from the nearest corner; dialogs and the settings modal stay centred. Tooltips only fade.
 5. **Small movements.** General popovers, dialogs and call tiles start at 0.98 scale; the settings modal starts at 0.97. Rises are `--space-2`, and a pressed button scales to 0.98.
-6. **Curves are tokens.** Use `--ease-out`, `--ease-in-out`, the spec's `--ease-standard` and `--ease-out-cubic`. Linear is for meters. A critically damped spring is allowed for scrolling; it keeps velocity on retarget and stops for wheel or touch input.
+6. **Curves are tokens.** Use `--ease-out`, `--ease-in-out`, the spec's `--ease-standard` and `--ease-out-cubic`, and `--ease-spinner` for the spinner. Linear is for meters. A critically damped spring is allowed for scrolling; it keeps velocity on retarget and stops for wheel or touch input.
 7. **Durations are tokens.** Scrolling reaches 99% in about 520–550 ms, accordion changes take 300 ms, and the loading spinner loops at 1.8 s. Only the spinner, typing/ringing loops and message jump highlight exceed 550 ms.
 8. **Reduced motion makes durations zero**, fades included. CSS and JS read the same tokens. Springs jump. Typing dots and ringing pulses stop. The loading spinner keeps turning; a message jump keeps a static 2 s highlight so its destination remains visible.
 9. **Exits keep their content.** Closing surfaces retain their content, ignore the pointer and return focus. At zero duration they still finish closing and return focus.

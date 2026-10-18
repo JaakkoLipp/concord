@@ -6,6 +6,7 @@
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { app } from '$lib/session/app.svelte.ts';
+  import { Spinner } from '@concord/ui';
   import { m } from '$lib/i18n/index.ts';
   import type { Snippet } from 'svelte';
   import { titleFor, unreadTotal } from '$lib/shell/title.ts';
@@ -51,7 +52,7 @@
 {#if onLogin || onInvite || onWelcome || onBeta || app.status === 'signed-in'}
   {@render children()}
 {:else}
-  <div class="splash" aria-live="polite">{m.app.loading}</div>
+  <div class="splash"><Spinner label={m.app.loading} /></div>
 {/if}
 
 <style>

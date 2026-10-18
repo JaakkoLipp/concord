@@ -5,7 +5,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
-  import { Button } from '@concord/ui';
+  import { Button, Spinner } from '@concord/ui';
   import { StoatError, fileUrl } from '@concord/stoat';
   import { memberKey, type Id, type InvitePreview } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
@@ -96,7 +96,7 @@
     {:else if error}
       <p class="error" role="alert">{error}</p>
     {:else}
-      <p class="sub" aria-live="polite">{m.invitePage.loading}</p>
+      <Spinner label={m.invitePage.loading} />
     {/if}
   </div>
 </main>

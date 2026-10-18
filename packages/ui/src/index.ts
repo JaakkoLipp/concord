@@ -6,6 +6,7 @@ export { default as IconButton } from './IconButton.svelte';
 export { default as Menu } from './Menu.svelte';
 export { default as Popover } from './Popover.svelte';
 export { default as Presence } from './Presence.svelte';
+export { default as Spinner } from './Spinner.svelte';
 export { default as Tabs } from './Tabs.svelte';
 export { default as TextField } from './TextField.svelte';
 export type { MenuAction, MenuCheck, MenuItem, MenuRange, MenuRow, MenuSub, MenuSubItem, PresenceState, Tab } from './types.ts';
