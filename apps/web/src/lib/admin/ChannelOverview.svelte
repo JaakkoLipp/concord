@@ -1,7 +1,7 @@
 <script lang="ts">
   /**
    * A channel's name and description (m2c-plan.md, channel settings), a voice channel's user limit (m4.5-plan.md task 8),
-   * and slow mode, which a voice channel's chat has too (m4.7-plan.md task 6).
+   * slow mode, which a voice channel's chat has too (m4.7-plan.md task 6), and age restriction (M4.8 task 14b).
    */
   import type { ChannelEdit, Session } from '@concord/domain';
   import { TextField } from '@concord/ui';
@@ -15,8 +15,8 @@
   const voice = $derived(info?.kind === 'text' && !!info.voice);
   /** The limit as the field shows it: 0 for none. */
   const saved = () => (info?.kind === 'text'
-    ? { name: info.name, description: info.description ?? '', limit: String(info.voice?.maxUsers ?? 0), slowmode: info.slowmode ?? 0 }
-    : { name: '', description: '', limit: '0', slowmode: 0 });
+    ? { name: info.name, description: info.description ?? '', limit: String(info.voice?.maxUsers ?? 0), slowmode: info.slowmode ?? 0, nsfw: info.nsfw }
+    : { name: '', description: '', limit: '0', slowmode: 0, nsfw: false });
   /** Discord's slow mode steps, in seconds (m4.7-plan.md decision 8). Stoat takes up to 6 hours. */
   const SLOWMODES = [0, 5, 10, 30, 60, 5 * 60, 10 * 60, 60 * 60, 6 * 60 * 60];
   const MAX_LIMIT = 99;
@@ -32,7 +32,7 @@
   const valid = $derived(!errors.name && !errors.description && (!voice || !errors.limit));
   const original = $derived(saved());
   const dirty = $derived(draft.name.trim() !== original.name || draft.description !== original.description
-    || (voice && Number(draft.limit) !== Number(original.limit)) || draft.slowmode !== original.slowmode);
+    || (voice && Number(draft.limit) !== Number(original.limit)) || draft.slowmode !== original.slowmode || draft.nsfw !== original.nsfw);
 
   const reset = () => { draft = saved(); };
   guardUnsaved(() => dirty, reset);
@@ -49,6 +49,7 @@
       }
       if (voice && Number(draft.limit) !== Number(original.limit)) change.maxUsers = Number(draft.limit) || null;
       if (draft.slowmode !== original.slowmode) change.slowmode = draft.slowmode;
+      if (draft.nsfw !== original.nsfw) change.nsfw = draft.nsfw;
       await session.admin.editChannel(channel, change);
       draft = { ...draft, name: draft.name.trim(), limit: String(Number(draft.limit)) };
       toasts.show(m.admin.saved, 'info');
@@ -77,6 +78,16 @@
     </select>
     <p class="note" id="channel-slowmode-note">{m.admin.channelOverview.slowmodeHint}</p>
   </div>
+  <div class="row">
+    <div class="text">
+      <span class="name" id="channel-nsfw">{m.admin.channelOverview.nsfw}</span>
+      <span class="note">{m.admin.channelOverview.nsfwHint}</span>
+    </div>
+    <label class="switch">
+      <input type="checkbox" role="switch" aria-labelledby="channel-nsfw" bind:checked={draft.nsfw} />
+      <span class="track" aria-hidden="true"></span>
+    </label>
+  </div>
   {#if voice}
     <TextField label={m.admin.channelOverview.limit} bind:value={draft.limit} inputmode="numeric" error={errors.limit} hint={m.admin.channelOverview.limitHint} />
   {/if}
@@ -96,4 +107,14 @@
   textarea:focus-visible, select:focus-visible { outline: none; border-color: var(--accent); }
   .note { margin: 0; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
   .error { color: var(--danger); }
+  .row { display: flex; align-items: center; gap: var(--space-5); }
+  .text { flex: 1; display: grid; gap: 2px; }
+  .name { color: var(--text-strong); font: 500 var(--text-md) var(--font-sans); }
+  .switch { position: relative; flex: none; display: inline-flex; cursor: pointer; }
+  .switch input { position: absolute; inset: 0; z-index: 1; opacity: 0; margin: 0; cursor: inherit; }
+  .track { width: 2.5rem; height: 1.5rem; border-radius: var(--radius-full); background: var(--surface-5); position: relative; }
+  .track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 1.125rem; height: 1.125rem; border-radius: var(--radius-full); background: var(--text-strong); transition: translate calc(var(--dur-state) * var(--motion)) var(--ease-out); }
+  .switch input:checked + .track { background: var(--status-online); }
+  .switch input:checked + .track::after { translate: 1rem 0; }
+  .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>

@@ -483,6 +483,7 @@ export class StoatBackend implements Backend {
       // Never removed: in Stoat 0.15 the voice field is what makes a channel a voice channel (m4.5-results.md).
       ...(change.maxUsers !== undefined ? { voice: { max_users: change.maxUsers } } : {}),
       ...(change.slowmode !== undefined ? { slowmode: change.slowmode } : {}),
+      ...(change.nsfw !== undefined ? { nsfw: change.nsfw } : {}),
     };
     await this.rest.request('PATCH', `/channels/${channel}`, body);
   }

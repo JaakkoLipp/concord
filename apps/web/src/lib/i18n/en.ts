@@ -281,6 +281,10 @@ export const en = {
     group: { online: 'Online', offline: 'Offline' },
   },
   conversation: {
+    nsfwTitle: 'Age-restricted channel',
+    nsfwBody: (channel: string) => `#${channel} is marked as age-restricted and may hold content that isn’t for everyone. Continue only if you are 18 or older.`,
+    nsfwContinue: 'Continue',
+    nsfwBack: 'Go back',
     messages: 'Messages',
     welcome: (name: string) => (name ? `Welcome to #${name}` : 'This is the start of your conversation'),
     welcomeGroup: (name: string) => `Welcome to ${name}`,
@@ -1284,6 +1288,8 @@ export const en = {
       slowmodeOff: 'Off',
       slowmodeEvery: (seconds: number) => length(seconds),
       slowmodeHint: 'How long each member waits between messages. Members with Bypass slow mode don’t wait.',
+      nsfw: 'Age-restricted channel',
+      nsfwHint: 'Members confirm they are 18 or older before they see it, once on each device.',
     },
     roles: {
       title: 'Roles',

@@ -12,6 +12,9 @@
   import { attachFiles } from '$lib/composer/files.ts';
   import CallView from '$lib/call/CallView.svelte';
   import { shell, WIDE_STAGE } from '$lib/view/shell.svelte.ts';
+  import { nsfwConfirmed } from '$lib/view/nsfw.svelte.ts';
+  import { Button } from '@concord/ui';
+  import ShieldAlert from '@lucide/svelte/icons/shield-alert';
 
   let { channel, message }: { channel: string; message?: string | undefined } = $props();
   const session = $derived(app.session!);
@@ -79,6 +82,8 @@
     (info?.kind === 'dm' || info?.kind === 'group') && !!app.voice
     && (store.voice.has(channel) || (app.voice.channel === channel && app.voice.status !== 'none' && app.voice.status !== 'disconnected')),
   );
+  /** An age-restricted channel asks once on this device before showing anything (M4.8 task 14b). */
+  const gated = $derived(info?.kind === 'text' && info.nsfw && !nsfwConfirmed.has(channel));
   const placeholder = $derived(info ? (info.kind === 'dm' ? m.shell.messageUser(channelName(store, info)) : m.shell.messageChannel(channelName(store, info))) : '');
 </script>
 
@@ -89,7 +94,17 @@
   ondragleave={() => (dragDepth = Math.max(0, dragDepth - 1))}
   ondrop={(e) => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth = 0; if (info) attachFiles(store, info, [...(e.dataTransfer?.files ?? [])]); }}>
   <ChatHeader {store} channel={info} />
-  {#if voice && app.voice}
+  {#if gated && info}
+    <div class="gate" role="alertdialog" aria-labelledby="nsfw-title" aria-describedby="nsfw-body">
+      <ShieldAlert size={48} aria-hidden="true" />
+      <h2 id="nsfw-title">{m.conversation.nsfwTitle}</h2>
+      <p id="nsfw-body">{m.conversation.nsfwBody(channelName(store, info))}</p>
+      <div class="gate-actions">
+        <Button variant="secondary" onclick={() => void goto(resolve('/app/channels/@me'))}>{m.conversation.nsfwBack}</Button>
+        <Button onclick={() => nsfwConfirmed.confirm(channel)}>{m.conversation.nsfwContinue}</Button>
+      </div>
+    </div>
+  {:else if voice && app.voice}
     <CallView {session} voice={app.voice} {channel} />
   {:else}
     {#if dmCall && app.voice}<CallView {session} voice={app.voice} {channel} compact />{/if}
@@ -98,7 +113,7 @@
     </div>
     <Composer {placeholder} {session} channel={info} />
   {/if}
-  {#if dragDepth > 0 && info && !voice}
+  {#if dragDepth > 0 && info && !voice && !gated}
     <div class="drop" aria-hidden="true">
       <div class="drop-card">
         <Upload size={40} />
@@ -112,6 +127,13 @@
 <style>
   .conversation { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .gate {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-4);
+    padding: var(--space-8) var(--space-5); text-align: center; color: var(--text-secondary);
+  }
+  .gate h2 { margin: 0; color: var(--text-strong); font: 700 var(--text-xl) var(--font-sans); }
+  .gate p { margin: 0; max-width: 28rem; color: var(--text-normal); font: var(--text-md) var(--font-sans); }
+  .gate-actions { display: flex; gap: var(--space-3); margin-top: var(--space-3); }
   .drop { position: absolute; inset: 0; z-index: 20; display: grid; place-items: center; background: var(--scrim); pointer-events: none; }
   .drop-card {
     display: flex; flex-direction: column; align-items: center; gap: var(--space-3); padding: var(--space-8) var(--space-10);

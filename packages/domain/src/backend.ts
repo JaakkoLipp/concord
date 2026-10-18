@@ -221,6 +221,8 @@ export interface ChannelEdit {
   maxUsers?: number | null;
   /** Slow mode in seconds, 0 for off. */
   slowmode?: number;
+  /** Age-restricted: members confirm before seeing it (M4.8 task 14b). */
+  nsfw?: boolean;
 }
 
 export interface Capabilities {
