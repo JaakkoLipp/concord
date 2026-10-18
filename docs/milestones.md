@@ -20,6 +20,7 @@ Every milestone ends with a demo on Jaakko's real devices. A milestone is done w
 | M4 | Voice and 1080p60 screen share in the browser | M3 | client.md voice section |
 | M4.1 | UI alignment fixes from Jaakko's review | M4 | none |
 | M4.2 | Motion and polish: a written motion spec and a pass over the UI | M4.1 | client.md section 9, motion |
+| M4.3 | Discord feature gaps: whole-server search, spoiler attachments, display and motion switches, status expiry, image cropper, category mute, votes, streamer mode, who reacted, and small extras | M4.8 | m4.3 plan |
 | M4.4 | Concord's own layer beside Stoat: sessions, permissions, storage, live events | M4 | architecture section 11 |
 | M4.5 | Discord-style menus, GIFs, quick voice controls, server tags | M4.4 | m4.5 plan |
 | M4.6 | UI motion and design parity with Discord, from a measured spec | M4.5 | [discord-ui-motion-spec.md](design/discord-ui-motion-spec.md) |
@@ -185,6 +186,49 @@ Added on 2026-10-15 at Jaakko's request, after M4.1. Plan: [m4.2-plan.md](m4.2-p
 - **A pass over the UI**: menus, popovers and dialogs opening and closing, hover and press states, messages arriving, the voice panel, joins and leaves in a call, and toasts.
 
 **Acceptance criteria**: Jaakko signs off the feel on production. With reduced motion on, nothing moves but fades. No animation drops a frame in Chrome's performance panel on the reference machine.
+
+## M4.3: Discord feature gaps
+
+Added on 2026-10-18 at Jaakko's request, from [discord-gap-research.md](discord-gap-research.md). It takes the number left free between M4.2 and M4.4, but runs after M4.8 and before M5. A plan, `m4.3-plan.md`, is written before work starts. Testing stays light: unit tests for risky core logic, `pnpm verify` before every commit, Jaakko on production.
+
+**Scope**, the research's top 10 in its order:
+1. **Search the whole server.** Fan out over the channels a member can read, with a cap, and say which channels were searched. Add `has:` (link, image, file, video), `mentions:` and `in:`, and oldest/relevance sort. Content filters scan pages within a bound and say when coverage is incomplete. A server-wide search in Stoat stays the upstream fix.
+2. **Phone calls in the background: a probe, not a fix.** On Android and iPhone, with the installed app, check whether a call survives a locked screen and switching apps. The result goes into M7's scope. No fix is promised before it.
+3. **Display and motion switches** in Appearance and a new Accessibility page:
+   - an in-app Reduced motion switch that overrides the OS setting,
+   - Play GIFs automatically, and Play animated emoji (always, on hover, never),
+   - link and image previews, and reactions, on or off,
+   - spoiler reveal (on click, on hover in channels I moderate, always).
+4. **Custom status "clear after"**: 30 minutes, 1 hour, 4 hours, today, or never. The expiry lives in a `concord:` key, and any client that sees it passed clears the status. It is late when every device was closed.
+5. **Spoiler attachments**: a spoiler toggle per attachment in the composer, stored by a filename prefix like Discord's (`SPOILER_`). Concord blurs them until clicked.
+6. **A cropper for avatars, banners and server icons**: drag and zoom before upload, cropped in the browser, no new dependency.
+7. **Categories: mute and mark as read**, from the category's menu, applied to every channel in it. New channels added later follow the category's mute through a `concord:` key.
+8. **A vote helper**: a composer action that posts a question with numbered options and seeds their reactions. Results show live under it. It is an informal vote: one reaction per option, no deadline, no secrecy, and the UI says so.
+9. **Streamer mode**: a switch and a keybind. While on, it hides email, invite links and codes, and notification contents, and silences sounds.
+10. **Who reacted**: clicking a reaction opens the full list, with a tab per emoji.
+
+**Small extras**, each client only and about a day:
+- **Role icons**: upload in the role editor, shown beside names in chat and the member list. Stoat has the field.
+- **Transfer server ownership** in server settings, through M4.8's MFA ticket helper.
+- **An unread badge on the installed app's icon** (Badging API), and a dot on the favicon.
+- **Editable keybinds for every shortcut**, not only voice, in the existing Keybinds list.
+- **Apply to every channel in a category**: in the channel permission editor, copy one override to the category's other channels, which stands in for category permissions.
+
+**Left out, from the research**:
+- threads, forums and native polls: Stoat has none;
+- webhooks: cut in M4.7;
+- AutoMod, scheduled events, onboarding and connections: each needs the layer and is large;
+- video backgrounds, picture-in-picture and phone screen share: large or platform-bound;
+- Discord's underline and subtext markdown: it would change how `__text__` renders in existing messages.
+
+**Acceptance criteria**:
+- A search typed once finds a message in any channel of the server the member can read, and the panel names the channels it covered.
+- Each switch in item 3 changes what a reload shows, and Reduced motion on in the app matches the OS setting's result.
+- A status set to clear after 30 minutes is gone on the next client to open after that.
+- A spoiler image, a cropped avatar, a muted category, a vote, streamer mode and the who-reacted list each work on production, as Jaakko checks.
+- The background-call probe's results for both phones are written down.
+
+**Device tests**: an Android phone and an iPhone for item 2, and a second device for the status expiry.
 
 ## M4.4: Concord's own layer
 
