@@ -109,6 +109,8 @@ export class Store {
   folders = $state<Folder[]>([]);
   /** Servers whose @everyone and role mentions this account ignores, from `concord:mentions` (M4.8 task 11). */
   ignoredMentions = $state<Record<Id, boolean>>({});
+  /** Private notes on people, by user (M4.8 task 13), synced as `concord:notes`. */
+  notes = $state<Record<Id, string>>({});
 
   readonly users = new SvelteMap<Id, User>();
   readonly servers = new SvelteMap<Id, Server>();
@@ -771,5 +773,6 @@ export class Store {
     this.chosenStatus = null;
     this.folders = [];
     this.ignoredMentions = {};
+    this.notes = {};
   }
 }

@@ -14,6 +14,7 @@ import { HOLD_MS, Latest } from './latest.ts';
 import { orderingFor, writeOrdering } from './layout.ts';
 import { FOLDERS_KEY, flatten, foldersOf, parseFolders, writeFolders, type Folder, type RailItem } from './folders.ts';
 import { ulid, ulidTime } from './ulid.ts';
+import { NOTES_KEY, applyNotes, parseNotes, writeNotes } from './notes.ts';
 import { SvelteSet } from 'svelte/reactivity';
 
 const PAGE = 100;
@@ -86,6 +87,8 @@ export const parseStatus = (raw: string | undefined): Presence | null => (PRESEN
 
 /** Synced-settings key for favourite GIFs (m4.5 follow-up). */
 export const GIFS_KEY = 'concord:gifs';
+/** The pause after typing in a note before it is written. */
+const NOTE_SAVE_MS = 800;
 /** Favourite GIFs kept: the newest this many, to keep the synced setting small. */
 export const GIFS_KEPT = 100;
 
@@ -221,6 +224,10 @@ export class Session {
     this.rawSettings = {};
     this.settingsLoaded = false;
     this.settingsFailures = 0;
+    if (this.notesSave) clearTimeout(this.notesSave);
+    this.notesSave = null;
+    this.noteEdits.clear();
+    this.noteWaiters = [];
     if (this.settingsRetry) clearTimeout(this.settingsRetry);
     this.settingsRetry = null;
     this.selfQueue.clear();
@@ -266,7 +273,7 @@ export class Session {
     if (this.settingsRetry) clearTimeout(this.settingsRetry);
     this.settingsRetry = null;
     const fetchedAt = Date.now();
-    const fetched = await this.backend.settings(['notifications', 'ordering', 'concord:hiddenMutedChannels', EMOJI_KEY, GIFS_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY, FOLDERS_KEY, MENTIONS_KEY]).catch(() => null);
+    const fetched = await this.backend.settings(['notifications', 'ordering', 'concord:hiddenMutedChannels', EMOJI_KEY, GIFS_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY, FOLDERS_KEY, MENTIONS_KEY, NOTES_KEY]).catch(() => null);
     // A failed fetch keeps what this session has, rather than resetting the chosen status or favourites.
     if (!fetched) {
       if (!this.settingsLoaded && this.gateway) {
@@ -294,6 +301,8 @@ export class Session {
     if (keepOrder) delete settings.ordering;
     if (keepFolders) delete settings[FOLDERS_KEY];
     if (keepIgnored) delete settings[MENTIONS_KEY];
+    // Notes keep edits not yet written on top; the raw value they merge into must not go back in time.
+    if (newer(this.notesEditedAt, this.noteWrites)) delete settings[NOTES_KEY];
     const active = Number(settings[ACTIVE_KEY]?.value);
     if (active) this.idle.remote(active);
     if (!this.statusSaving) this.store.chosenStatus = parseStatus(settings[STATUS_KEY]?.value);
@@ -305,6 +314,7 @@ export class Session {
     if (this.gifsChangedAt < fetchedAt) this.store.favouriteGifs = parseFavouriteGifs(settings[GIFS_KEY]?.value);
     if (!keepFolders) this.store.folders = parseFolders(settings[FOLDERS_KEY]?.value);
     if (!keepIgnored) this.store.ignoredMentions = parseIgnoredMentions(settings[MENTIONS_KEY]?.value);
+    this.store.notes = applyNotes(parseNotes(this.rawSettings[NOTES_KEY]?.value), this.noteEdits);
   }
 
   /** Refuses a write of the rail or the ignored mentions before settings were read, and asks for them again. */
@@ -930,6 +940,8 @@ export class Session {
       if (!this.folderWrites.holding) this.store.folders = parseFolders(values[FOLDERS_KEY].value);
       else setTimeout(() => { if (!this.folderWrites.holding) this.store.folders = parseFolders(this.rawSettings[FOLDERS_KEY]?.value); }, HOLD_MS + 100);
     }
+    // Another device's notes, with this one's edits not yet written on top.
+    if (values[NOTES_KEY]) this.store.notes = applyNotes(parseNotes(values[NOTES_KEY].value), this.noteEdits);
     if (values[CLOSED_DMS_KEY] && !this.closedSaving) this.store.closedDms = parseClosedDms(values[CLOSED_DMS_KEY].value);
     if (values[STATUS_KEY] && !this.statusSaving) this.store.chosenStatus = parseStatus(values[STATUS_KEY].value);
     // Another device was used, or this one's own write came back: either way, someone is here.
@@ -1001,6 +1013,42 @@ export class Session {
   });
   private foldersChangedAt = 0;
   private foldersEditedAt = 0;
+
+  /** Edits to notes not yet written, by user ('' removes the note). A write merges them into what is stored. */
+  private readonly noteEdits = new Map<Id, string>();
+  private notesEditedAt = 0;
+  private notesSave: ReturnType<typeof setTimeout> | null = null;
+  private readonly noteWrites = new Latest<Map<Id, string>>(async (edits) => {
+    const value = writeNotes(applyNotes(parseNotes(this.rawSettings[NOTES_KEY]?.value), edits));
+    await this.backend.setSettings({ [NOTES_KEY]: value });
+    this.rawSettings = { ...this.rawSettings, [NOTES_KEY]: { value } };
+    for (const [user, text] of edits) if (this.noteEdits.get(user) === text) this.noteEdits.delete(user);
+  });
+
+  /**
+   * A private note on a person (M4.8 task 13), written after a short pause. Only this person's note changes in what
+   * is stored, so notes written on another device meanwhile survive. Resolves once written.
+   */
+  setNote(user: Id, text: string): Promise<void> {
+    const refused = this.settingsReady();
+    if (refused) return refused;
+    this.notesEditedAt = Date.now();
+    this.noteEdits.set(user, text);
+    this.store.notes = applyNotes(parseNotes(this.rawSettings[NOTES_KEY]?.value), this.noteEdits);
+    if (this.notesSave) clearTimeout(this.notesSave);
+    this.notesSave = setTimeout(() => this.flushNotes(), NOTE_SAVE_MS);
+    return new Promise((resolve, reject) => this.noteWaiters.push({ resolve, reject }));
+  }
+  private noteWaiters: { resolve: () => void; reject: (e: unknown) => void }[] = [];
+
+  /** Writes notes still waiting for their pause now, as the card closes or the page hides. */
+  flushNotes(): void {
+    if (!this.notesSave) return;
+    clearTimeout(this.notesSave);
+    this.notesSave = null;
+    const waiting = this.noteWaiters.splice(0);
+    this.noteWrites.set(new Map(this.noteEdits)).then(() => waiting.forEach((w) => w.resolve()), (e: unknown) => waiting.forEach((w) => w.reject(e)));
+  }
 
   /**
    * The rail after a change to its folders (M4.8 task 10b): the folders as `concord:folders`, and the order of

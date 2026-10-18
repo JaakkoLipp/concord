@@ -7,6 +7,7 @@
   import { fileUrl } from '@concord/stoat';
   import { memberKey, type Session, type Store } from '@concord/domain';
   import PersonActions from './PersonActions.svelte';
+  import NoteField from './NoteField.svelte';
   import type { ProfilePreview } from './preview.ts';
   import Markdown from '$lib/markdown/Markdown.svelte';
   import { setMarkdownContext } from '$lib/markdown/context.ts';
@@ -84,6 +85,10 @@
           {#if roleMenu}<li><span bind:this={roleAnchor}><IconButton size="sm" label={m.admin.roles.memberRoles} aria-haspopup="menu" onclick={() => (rolesOpen = !rolesOpen)}><Plus size={16} /></IconButton></span></li>{/if}
         </ul>
       </section>
+    {/if}
+
+    {#if session && !preview && user !== store.selfId}
+      <section><h3>{m.people.note}</h3><NoteField {session} {user} {name} /></section>
     {/if}
   </div>
 </div>
