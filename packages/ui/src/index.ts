@@ -12,4 +12,4 @@ export { default as TextField } from './TextField.svelte';
 export type { MenuAction, MenuCheck, MenuItem, MenuRange, MenuRow, MenuSub, MenuSubItem, PresenceState, Tab } from './types.ts';
 export { tooltip } from './tooltip.ts';
 export type { TooltipContent, TooltipOptions, TooltipPlacement } from './tooltip.ts';
-export { cancelSpringScroll, springScrolling, springScrollTo, dialogLeave, duration, enter, fadeIn, fromKeyboard, leave, moving, settle, slide } from './motion.ts';
+export { cancelSpringScroll, springScrolling, springScrollTo, dialogLeave, duration, enter, fadeIn, fromKeyboard, leave, moving, settingsLeave, settle, slide } from './motion.ts';

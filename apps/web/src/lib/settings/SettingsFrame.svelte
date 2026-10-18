@@ -59,18 +59,22 @@
     </div>
   </nav>
   <main class="content">
-    <div class="column" class:wide>
+    <!-- A 48 px row with the page's title and the close button, above the scroller (motion spec 4.11). -->
+    <header class="head">
       <h1>{heading}</h1>
-      {@render children()}
+      <IconButton label={m.settings.close} placement="bottom" onclick={() => void settingsModal.close()}><X /></IconButton>
+    </header>
+    <div class="scroller">
+      <div class="column" class:wide>
+        {@render children()}
+      </div>
     </div>
-    <div class="close"><IconButton label={m.settings.close} onclick={() => void settingsModal.close()}><X /></IconButton></div>
   </main>
 </div>
 
 <style>
-  /* Full-screen over the mounted shell until task 16b insets it. It fades in when opened, without a scale, and closes at once. */
-  .settings { position: fixed; inset: 0; z-index: 800; display: flex; background: var(--surface-0); animation: page-in var(--dur-modal) var(--ease-out); }
-  @keyframes page-in { from { opacity: 0; } }
+  /* It fills SettingsHost's modal, which insets it over the app and animates it. */
+  .settings { display: flex; height: 100%; background: var(--surface-0); }
   .nav { flex: 1 0 auto; display: flex; justify-content: flex-end; background: var(--surface-1); overflow-y: auto; }
   .nav-inner { display: grid; align-content: start; gap: var(--space-1); width: var(--settings-nav-w); padding: var(--space-10) var(--space-3) var(--space-5) var(--space-5); }
   h2 { margin: 0 0 var(--space-3); padding: 0 var(--space-3); color: var(--text-secondary); font: 700 var(--text-xs) var(--font-sans); text-transform: uppercase; letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -79,18 +83,24 @@
   .item.active { background: var(--surface-5); color: var(--text-strong); }
   .separator { height: 1px; margin: var(--space-3); background: var(--border-default); }
   .nav-inner :global(.button) { justify-content: flex-start; padding: 0 var(--space-3); font-size: var(--text-md); }
-  .content { flex: 1 1 calc(var(--settings-col-w) + 10rem); display: flex; align-items: flex-start; overflow-y: auto; }
+  .content { flex: 1 1 calc(var(--settings-col-w) + 10rem); display: flex; flex-direction: column; min-width: 0; }
+  .head {
+    display: flex; align-items: center; gap: var(--space-4); flex: none; min-height: var(--header-h); padding: 0 var(--space-3) 0 var(--space-8);
+    border-bottom: 1px solid var(--border-faint);
+  }
+  .head :global(.icon-button) { margin-left: auto; }
+  @media (hover: hover) { .head :global(.icon-button:hover) { background: var(--surface-5); } }
+  .scroller { flex: 1; display: flex; overflow-y: auto; }
   /* A container, so a section can lay itself out by the room it really has (ProfileEditor). */
-  .column { width: min(var(--settings-col-w), 100%); padding: var(--space-10) var(--space-8) var(--space-8); container: settings / inline-size; }
+  .column { width: min(var(--settings-col-w), 100%); padding: var(--space-7) var(--space-8) var(--space-8); container: settings / inline-size; }
   .column.wide { width: min(var(--settings-col-wide-w), 100%); }
-  h1 { margin: 0 0 var(--space-7); color: var(--text-strong); font: 700 var(--text-xl) var(--font-sans); }
-  .close { position: sticky; top: 0; padding: var(--space-10) var(--space-5) 0; }
+  h1 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 600 var(--text-md) var(--font-sans); }
   @media (max-width: 800px) {
     .settings { flex-direction: column; }
     .nav { flex: none; justify-content: flex-start; }
     .nav-inner { width: 100%; padding: var(--space-5) var(--space-4); grid-auto-flow: column; justify-content: start; align-items: center; overflow-x: auto; }
     h2, .separator { display: none; }
     .column { padding: var(--space-5) var(--space-4); }
-    .close { position: absolute; top: var(--space-3); right: var(--space-3); padding: 0; }
+    .head { padding-left: var(--space-4); }
   }
 </style>

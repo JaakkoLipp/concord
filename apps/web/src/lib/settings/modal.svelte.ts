@@ -58,6 +58,8 @@ class SettingsModal {
    * Raw, not a proxy, since it goes back into history state, which must be cloneable.
    */
   shown = $state.raw<SettingsTarget | null>(null);
+  /** The next close skips its fade, for Log out, which must not leave settings' pages over a closing session. */
+  instant = $state(false);
   /** A SettingsHost is mounted, so a shallow push has something to draw it. */
   hosted = false;
   private opener: HTMLElement | null = null;
@@ -92,6 +94,7 @@ class SettingsModal {
   follow(wanted: SettingsTarget | undefined): void {
     if (wanted) {
       if (!this.shown) popout.close();
+      this.instant = false;
       this.shown = wanted;
       return;
     }
@@ -112,9 +115,13 @@ class SettingsModal {
 
   /** Log out from settings: the modal goes at once, before the account its pages read is gone. */
   async dismiss(): Promise<void> {
+    this.instant = true;
     this.shown = null;
     this.opener = null;
     await tick();
+    // A zero-length outro still ends on a later frame.
+    await new Promise(requestAnimationFrame);
+    await new Promise(requestAnimationFrame);
   }
 
   /** The channels layout is going, on sign-out or another route: nothing is shown or waiting any more. */

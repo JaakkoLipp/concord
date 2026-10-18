@@ -54,6 +54,19 @@ export function leave(_node: HTMLElement, { instant = false }: { instant?: boole
   };
 }
 
+/**
+ * `out:settingsLeave`: the settings modal fades and shrinks to 0.97 from its centre over --dur-settings-modal, its
+ * backdrop (`shrink: false`) fading with it (motion spec 4.11). Its opening is CSS, since it waits on a delay.
+ */
+export function settingsLeave(_node: Element, { shrink = true, instant = false }: { shrink?: boolean; instant?: boolean } = {}) {
+  const to = shrink && moving() ? 0.03 : 0;
+  return {
+    duration: instant ? 0 : duration('--dur-settings-modal'),
+    easing: quintOut,
+    css: (t: number) => `opacity: ${t}; scale: ${1 - to * (1 - t)}; pointer-events: none;`,
+  };
+}
+
 interface ScrollSpring {
   start: SpringState;
   target: number;

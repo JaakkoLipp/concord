@@ -254,20 +254,20 @@ for (const mode of modes) {
     check(await p.locator('dialog.viewer[open]').count() === 0, `${mode}: a click beside the image closes the viewer`);
   } else check(false, `${mode}: no image to open in the viewer`);
 
-  // Settings fades in as a page, a change of section doesn't replay it, and closing is instant.
-  const page = (seen: Seen[]) => seen.filter((x) => x.what.includes('.settings')).length;
+  // Settings is an inset modal (m4.6-plan.md task 16b): its backdrop fades in, then the modal fades and grows; a change
+  // of section replays neither; closing fades and shrinks both.
+  const modal = (seen: Seen[]) => seen.filter((x) => /\.(backdrop|layer)\b/.test(x.what)).length;
   const opened = await step(p, mode, 'settings opens', () => p.getByRole('button', { name: 'User settings' }).click(), { some: true });
-  check(page(opened) === (mode === 'reduce' ? 0 : 1), `${mode}: settings ${mode === 'reduce' ? 'opens instantly' : 'fades in'}`);
+  check(modal(opened) === (mode === 'reduce' ? 0 : 2), `${mode}: settings ${mode === 'reduce' ? 'opens instantly' : 'opens with its backdrop and modal animations'}`);
   const moved = await step(p, mode, 'settings changes section', () => p.getByRole('link', { name: 'Notifications' }).click());
-  check(page(moved) === 0, `${mode}: a change of section doesn't fade the page`);
-  // Settings is over the shell now (m4.6-plan.md task 16a): Esc puts keyboard focus back on the gear, whose
-  // tooltip shows, so only that tooltip's fade may run. Task 16b gives the close its own motion.
-  // The pointer leaves the section links first: over the rail below them, the shell's hover would come back on close.
+  check(modal(moved) === 0, `${mode}: a change of section doesn't replay them`);
+  // Esc puts keyboard focus back on the gear, whose tooltip shows. The pointer leaves the section links first: over
+  // the rail below them, the shell's hover would come back on close.
   await p.mouse.move(900, 450);
   const closing = await step(p, mode, 'settings closes', () => p.keyboard.press('Escape'));
   if (mode !== 'reduce') {
-    const others = closing.filter((x) => !x.what.includes('.concord-tooltip'));
-    check(!others.length, `${mode}: settings closes without motion besides the gear's tooltip${others.length ? ` (${others.map((x) => x.what).join('; ')})` : ''}`);
+    const others = closing.filter((x) => !x.what.includes('.concord-tooltip') && !/\.(backdrop|layer)\b/.test(x.what));
+    check(modal(closing) === 2 && !others.length, `${mode}: settings closes with its modal and backdrop fading, nothing else${others.length ? ` (${others.map((x) => x.what).join('; ')})` : ''}`);
   }
 
   // Voice: the panel, someone joining and leaving, grid and focus, and leaving.
