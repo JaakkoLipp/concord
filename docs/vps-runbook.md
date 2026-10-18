@@ -196,9 +196,9 @@ From M4.7 (m4.7-plan.md tasks 10 and 12). A channel deleted, or messages deleted
 5. If it went wrong: the `pre-restore` snapshot is a full `mongodump --archive --gzip`. Stop the stack's `api`, `events` and `crond`, `mongorestore --drop --archive --gzip` it into the database container, and start them again.
 
 **Before the first real use, the drill** (task 10's done-check), on the local stack: seed a channel with 200 messages and 10 attachments, two uploaded after the last nightly backup, delete it, bulk-delete 50 messages in another channel, dry-run then restore both, check them in the app after reconnecting, and run the restore again to no effect. Things to confirm in that drill, since they were written from Stoat's source, not watched:
-- that `mongosh` reads the script from stdin in the database container, and `mongorestore --nsFrom 'revolt.*' --nsTo 'concord_restore.*'` takes an archive of one collection,
-- the storage layout: a file's object is keyed by its `hash`, through `attachment_hashes`' `bucket_id` and `path`, and lives in `data/minio/<bucket>/<key>/`,
-- that the temporary storage container serves a partial copy of `data/minio`, and Stoat's `mc` image copies from it,
+- confirmed on 2026-10-18: the script goes to `mongosh` as one `--eval` (stdin is read as an interactive shell), `mongorestore --nsFrom 'revolt.*' --nsTo 'concord_restore.*'` takes one-collection archives, and a file's object is `data/minio/revolt-uploads/<hash>/`, through `attachment_hashes`,
+- still to show: that the temporary storage container serves a copy of `data/minio` and Stoat's `mc` image copies a purged file back. Wait until Stoat has purged a deleted message's file before restoring,
+- `tools/live/src/history-drill.ts` runs the drill without restic, with `history-snapshot.sh --to` and `restore-history.sh --from`,
 - how long the dumps take within the database container’s 768 MB, and the sizes listed in m4.7-results.md task 10.
 
 **The history guard** (`deploy/guard/`, its own container, no ports), when it is switched on:
