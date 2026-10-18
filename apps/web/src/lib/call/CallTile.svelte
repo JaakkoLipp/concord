@@ -10,6 +10,7 @@
   import { untrack } from 'svelte';
   import { Avatar, enter, leave, type MenuItem } from '@concord/ui';
   import MicOff from '@lucide/svelte/icons/mic-off';
+  import ScreenShare from '@lucide/svelte/icons/screen-share';
   import { m } from '$lib/i18n/index.ts';
   import { menuOn } from '$lib/view/contextmenu.svelte.ts';
   import type { Feed } from '$lib/voice/call.ts';
@@ -74,8 +75,10 @@
     <span class="avatar"><Avatar src={avatar} size={small ? 40 : 80} /></span>
   {/if}
   {@render children?.()}
+  {#if screen && small}<span class="live" aria-hidden="true">{m.call.live}</span>{/if}
   <span class="label">
-    {#if muted}<MicOff size={16} aria-hidden="true" />{/if}
+    {#if muted}<MicOff class="muted-mark" size={16} aria-hidden="true" />{/if}
+    {#if screen}<ScreenShare size={16} aria-hidden="true" />{/if}
     <span>{screen ? m.call.screenOf(name) : name}</span>
     {#if volume !== 100}<span class="volume" title={m.call.volumeMark(volume)} aria-hidden="true">{#if volume === 0}<VolumeX size={16} />{:else}<Volume1 size={16} />{/if}</span>{/if}
   </span>
@@ -110,7 +113,13 @@
   }
   .small .label { left: var(--space-2); bottom: var(--space-2); max-width: calc(100% - 2 * var(--space-2)); padding: 0 var(--space-2); font: 500 var(--text-xs) var(--font-sans); }
   .label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .label :global(svg) { flex: none; color: var(--danger); }
+  .label :global(svg) { flex: none; }
+  .label :global(svg.muted-mark) { color: var(--danger); }
+  /* A stream in the strip (m4.6-plan.md task 12b). */
+  .live {
+    position: absolute; top: var(--space-2); right: var(--space-2); padding: 0 var(--space-2); border-radius: var(--radius-xs);
+    background: var(--danger-fill); color: var(--on-danger); font: 700 0.625rem/1rem var(--font-sans); letter-spacing: 0.02em;
+  }
   .hit { position: absolute; inset: 0; z-index: 1; padding: 0; border: 0; border-radius: inherit; background: none; cursor: pointer; }
   .hit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
   .volume { display: inline-grid; color: var(--text-secondary); }

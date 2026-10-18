@@ -5,7 +5,10 @@
    * Before joining, it shows who is in the channel and a Join button. Video comes from LiveKit through the voice
    * controller's feeds; who is in the channel comes from Stoat, as in the sidebar.
    */
-  import { Avatar, Button, fadeIn, tooltip, type MenuItem } from '@concord/ui';
+  import { Avatar, Button, Menu, fadeIn, tooltip, type MenuItem } from '@concord/ui';
+  import ChevronDown from '@lucide/svelte/icons/chevron-down';
+  import ChevronUp from '@lucide/svelte/icons/chevron-up';
+  import Maximize from '@lucide/svelte/icons/maximize';
   import { fileUrl } from '@concord/stoat';
   import { memberKey, type Id, type Session } from '@concord/domain';
   import Mic from '@lucide/svelte/icons/mic';
@@ -28,7 +31,8 @@
   import CallTile from './CallTile.svelte';
   import { participantMenu, streamVolumeItem } from './menu.ts';
   import { streamVolumeKey } from '$lib/voice/settings.ts';
-  import { shareDialog } from './share.svelte.ts';
+  import { shareDialog, stageView } from './share.svelte.ts';
+  import { deviceMenu, shareMenu, type DeviceMenuKind } from '$lib/voice/quickMenus.ts';
 
   /** `compact`: at the top of a DM or group, above its messages, rather than filling the column. */
   let { session, voice, channel, compact = false }: { session: Session; voice: VoiceController; channel: Id; compact?: boolean } = $props();
@@ -89,6 +93,37 @@
   let overlay = $state(loadVoiceSettings().statsOverlay);
   $effect(() => onVoiceSettings((s) => (overlay = s.statsOverlay)));
 
+  // Watching a stream (m4.6-plan.md task 12b): the stage's header names it and shows what arrives, read each second
+  // from the stats the overlay already uses.
+  const stream = $derived(focused?.screen && focused.feed?.watching ? focused.feed : undefined);
+  let streamStats = $state<{ width: number; height: number; fps: number } | null>(null);
+  $effect(() => {
+    const f = stream;
+    streamStats = null;
+    if (!f) return;
+    let live = true;
+    const read = async () => {
+      const s = await f.stats();
+      if (!live) return;
+      const top = s?.sharer?.layers.reduce<(typeof s.sharer.layers)[number] | undefined>((a, l) => (!a || l.width > a.width ? l : a), undefined);
+      streamStats = s?.viewer ? { width: s.viewer.width, height: s.viewer.height, fps: s.viewer.fps } : top ? { width: top.width, height: top.height, fps: top.fps } : null;
+    };
+    void read();
+    const timer = setInterval(() => void read(), 1000);
+    return () => { live = false; clearInterval(timer); };
+  });
+
+  /** The quick menus behind the bar's chevrons. */
+  let quick = $state<{ items: MenuItem[]; anchor: HTMLElement } | null>(null);
+  async function openQuick(kind: DeviceMenuKind | 'share', anchor: HTMLElement) {
+    if (quick?.anchor === anchor) return void (quick = null);
+    quick = { items: kind === 'share' ? shareMenu(voice) : await deviceMenu(kind), anchor };
+  }
+  let mainTile = $state<HTMLElement | null>(null);
+  function fullscreenFocused() {
+    void mainTile?.querySelector<HTMLElement>('.tile')?.requestFullscreen().catch(() => {});
+  }
+
   function menu(t: Tile, node: HTMLElement, fullscreen: () => void): MenuItem[] {
     const feed = t.feed;
     if (t.screen && feed) {
@@ -114,6 +149,11 @@
   }
 </script>
 
+{#snippet chevron(kind: DeviceMenuKind | 'share', label: string)}
+  <button class="chevron" aria-label={label} aria-haspopup="menu" aria-expanded={!!quick && quick.anchor.dataset.kind === kind} data-kind={kind}
+    onclick={(e) => void openQuick(kind, e.currentTarget)}><ChevronDown size={14} aria-hidden="true" /></button>
+{/snippet}
+
 {#snippet tile(t: Tile, small = false)}
   {@const talking = here && voice.speaking.has(t.user)}
   {@const muted = !t.screen && isMuted(t.user)}
@@ -133,13 +173,30 @@
 <section class="call" class:compact aria-label={info ? m.call.view(channelName(store, info)) : undefined}>
   {#if !compact}
     <!-- The stage's own header row: how many are in the channel (motion spec 4.9). -->
-    <div class="stage-head"><span class="count" aria-label={m.call.count(participants.length)} use:tooltip={{ text: m.call.count(participants.length), placement: 'bottom' }}><Users size={18} aria-hidden="true" />{participants.length}</span></div>
+    <div class="stage-head">
+      {#if stream && focused}
+        <span class="streamer"><Avatar src={avatar(focused.user)} size={24} /><span>{m.call.screenOf(store.displayName(focused.user, server))}</span></span>
+        {#if streamStats}<span class="quality">{m.call.streamQuality(m.call.size(streamStats.width, streamStats.height), m.call.fpsValue(streamStats.fps))}</span>{/if}
+        <span class="live">{m.call.live}</span>
+      {/if}
+      <span class="count" aria-label={m.call.count(participants.length)} use:tooltip={{ text: m.call.count(participants.length), placement: 'bottom' }}><Users size={18} aria-hidden="true" />{participants.length}</span>
+    </div>
   {/if}
   {#if here}
     {#if focused}
       <div class="stage">
-        <div class="main-tile">{@render tile(focused)}</div>
-        {#if rest.length}<div class="strip">{#each rest as t (t.id)}<div class="small">{@render tile(t, true)}</div>{/each}</div>{/if}
+        <div class="main-tile" bind:this={mainTile}>{@render tile(focused)}</div>
+        {#if rest.length}
+          {@const label = stageView.membersHidden ? m.call.showMembers : m.call.hideMembers}
+          <!-- On the strip's top edge: folds it away so the focused tile takes its height, for the session. -->
+          <div class="strip-edge">
+            <button class="fold" aria-label={label} aria-expanded={!stageView.membersHidden} use:tooltip={{ text: label, placement: 'top' }}
+              onclick={() => (stageView.membersHidden = !stageView.membersHidden)}>
+              {#if stageView.membersHidden}<ChevronUp size={16} aria-hidden="true" />{:else}<ChevronDown size={16} aria-hidden="true" />{/if}<Users size={16} aria-hidden="true" />
+            </button>
+          </div>
+          {#if !stageView.membersHidden}<div class="strip">{#each rest as t (t.id)}<div class="small">{@render tile(t, true)}</div>{/each}</div>{/if}
+        {/if}
       </div>
     {:else}
       <div class="grid">
@@ -148,18 +205,34 @@
     {/if}
     {#if !voice.rights.listen && !voice.serverDeafened}<p class="notice" role="status">{m.voice.cantHear}</p>{/if}
     <div class="bar" role="toolbar" aria-label={m.call.controls}>
+      <span></span>
+      <div class="controls">
+      <span class="pair">
       <button class="control" class:off={voice.muted || !!voice.micLock} class:locked={!!voice.micLock} aria-label={muteLabel} aria-disabled={!!voice.micLock} use:tooltip={muteLabel} onclick={() => voice.toggleMute()}>
         {#if voice.muted || voice.micLock}<MicOff />{:else}<Mic />{/if}
       </button>
+      {@render chevron('input', m.voice.inputOptions)}
+      </span>
+      <span class="pair">
       <!-- Locked rather than disabled, so the tooltip still says why. -->
       <button class="control" class:on={voice.camera} class:dim={!!voice.videoLock} aria-label={cameraLabel} use:tooltip={cameraLabel} aria-disabled={!!voice.videoLock}
         disabled={voice.status !== 'connected'} onclick={() => { if (!voice.videoLock) voice.toggleCamera(); }}>
         {#if voice.camera}<Video />{:else}<VideoOff />{/if}
       </button>
+      {@render chevron('camera', m.call.cameraOptions)}
+      </span>
+      <span class="pair">
       <button class="control" class:on={voice.sharing} class:dim={!!voice.videoLock} aria-label={shareLabel} use:tooltip={shareLabel} aria-disabled={!!voice.videoLock}
         disabled={voice.status !== 'connected'} onclick={() => { if (!voice.videoLock) { if (voice.sharing) voice.stopShare(); else shareDialog.open = true; } }}><ScreenShare /></button>
+      {@render chevron('share', m.call.shareOptions)}
+      </span>
       <button class="control leave" aria-label={m.voice.disconnect} use:tooltip={m.voice.disconnect} onclick={() => voice.leave()}><PhoneOff /></button>
+      </div>
+      <div class="end">
+        {#if focused}<button class="control" aria-label={m.call.fullscreen} use:tooltip={m.call.fullscreen} onclick={fullscreenFocused}><Maximize /></button>{/if}
+      </div>
     </div>
+    <Menu open={!!quick} onclose={() => (quick = null)} items={quick?.items ?? []} anchor={quick?.anchor ?? null} label={m.voice.voiceSettings} />
   {:else}
     <div class="lobby">
       {#if participants.length}
@@ -201,7 +274,11 @@
         color-mix(in srgb, var(--accent) 24%, var(--surface-0)) 60%, color-mix(in srgb, var(--accent) 38%, var(--surface-0)) 85%, color-mix(in srgb, var(--accent) 42%, var(--surface-0)) 100%);
   }
   .compact { flex: none; height: min(26rem, 45%); margin: 0; border-radius: 0; border-bottom: 1px solid var(--border-subtle); background: var(--surface-0); }
-  .stage-head { display: flex; justify-content: flex-end; padding: var(--space-4) var(--space-5) 0; }
+  .stage-head { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); padding: var(--space-4) var(--space-5) 0; color: var(--text-strong); font: 600 var(--text-sm) var(--font-sans); }
+  .streamer { display: inline-flex; align-items: center; gap: var(--space-3); min-width: 0; margin-right: auto; }
+  .streamer span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .quality { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .live { padding: 0 var(--space-2); border-radius: var(--radius-xs); background: var(--danger-fill); color: var(--on-danger); font: 700 var(--text-xs) var(--font-sans); letter-spacing: 0.02em; }
   .count { display: inline-flex; align-items: center; gap: var(--space-2); color: var(--text-strong); font: 600 var(--text-sm) var(--font-sans); font-variant-numeric: tabular-nums; }
   .empty-title { display: flex; align-items: center; gap: var(--space-4); color: var(--text-strong); }
   .empty-title h2 { margin: 0; font: 700 var(--text-xl) var(--font-sans); }
@@ -215,9 +292,25 @@
   .stage { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-5); }
   .main-tile { flex: 1; min-height: 0; display: grid; place-items: center; }
   .main-tile :global(.tile) { max-width: 100%; max-height: 100%; width: auto; height: 100%; }
+  .strip-edge { flex: none; display: flex; justify-content: center; margin-bottom: calc(-1 * var(--space-2)); }
+  .fold {
+    display: inline-flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-3); border: 0; border-radius: var(--radius-full);
+    background: var(--scrim); color: var(--text-strong); cursor: pointer;
+  }
+  @media (hover: hover) { .fold:hover { background: var(--surface-5); } }
+  .fold:focus-visible, .chevron:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .strip { flex: none; display: flex; gap: var(--space-3); overflow-x: auto; justify-content: center; }
   .small { flex: none; width: 10rem; }
-  .bar { display: flex; justify-content: center; gap: var(--space-4); padding: var(--space-3) var(--space-5) var(--space-5); }
+  /* The controls in the middle, full screen at the right. */
+  .bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-5) var(--space-5); }
+  .controls { display: flex; align-items: center; gap: var(--space-4); }
+  .end { display: flex; justify-content: flex-end; }
+  .pair { display: flex; align-items: center; }
+  .chevron {
+    display: grid; place-items: center; width: 1.25rem; height: 2rem; margin-left: calc(-1 * var(--space-1)); padding: 0; border: 0;
+    border-radius: var(--radius-xs); background: none; color: var(--text-secondary); cursor: pointer;
+  }
+  @media (hover: hover) { .chevron:hover { background: var(--hover-overlay); color: var(--text-strong); } }
   .control {
     display: grid; place-items: center; width: 3rem; height: 3rem; padding: 0; border: 0; border-radius: var(--radius-full);
     background: var(--surface-4); color: var(--text-strong); cursor: pointer;

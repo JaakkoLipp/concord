@@ -1,9 +1,8 @@
 <script lang="ts">
   import { Avatar, Button, IconButton, Menu, Popover, Presence, type MenuItem } from '@concord/ui';
   import ChevronDown from '@lucide/svelte/icons/chevron-down';
-  import { deviceOptions } from '$lib/settings/devices.ts';
-  import { listDevices, maxOutputVolume, outputSelectable } from '$lib/voice/audio/output.ts';
-  import { loadVoiceSettings, saveVoiceSettings } from '$lib/voice/settings.ts';
+  import { deviceMenu } from '$lib/voice/quickMenus.ts';
+  import { loadVoiceSettings } from '$lib/voice/settings.ts';
   import { matches } from '$lib/voice/keybinds.ts';
   import type { Presence as PresenceName, Store } from '@concord/domain';
   import Headphones from '@lucide/svelte/icons/headphones';
@@ -32,26 +31,11 @@
   const chosen = $derived(store.chosenStatus ?? self?.presence ?? 'Online');
 
   // Quick voice controls (m4.5-plan.md task 4): a device, volume and settings menu beside the microphone and the
-  // headphones. A running call follows the saved settings at once.
+  // headphones.
   let options = $state<{ items: MenuItem[]; anchor: HTMLElement } | null>(null);
   async function openOptions(kind: 'input' | 'output', anchor: HTMLElement) {
     if (options?.anchor === anchor) return void (options = null);
-    const s = loadVoiceSettings();
-    const t = m.settings.voice;
-    const items: MenuItem[] = [];
-    if (kind === 'input' || outputSelectable()) {
-      const list = await listDevices(kind === 'input' ? 'audioinput' : 'audiooutput');
-      const chosen = kind === 'input' ? s.inputDevice : s.outputDevice;
-      for (const o of deviceOptions(list)) {
-        items.push({ kind: 'check', label: o.label, checked: o.id === chosen, onselect: () => saveVoiceSettings(kind === 'input' ? { inputDevice: o.id } : { outputDevice: o.id }) });
-      }
-      items.push('separator');
-    }
-    items.push(kind === 'input'
-      ? { kind: 'range', label: t.inputVolume, value: s.inputVolume, min: 0, max: 200, format: t.percent, oninput: (v) => saveVoiceSettings({ inputVolume: v }) }
-      : { kind: 'range', label: t.outputVolume, value: s.outputVolume, min: 0, max: maxOutputVolume(), format: t.percent, oninput: (v) => saveVoiceSettings({ outputVolume: v }) });
-    items.push('separator', { label: m.voice.voiceSettings, onselect: () => openSettings({ kind: 'user', section: 'voice' }) });
-    options = { items, anchor };
+    options = { items: await deviceMenu(kind), anchor };
   }
 
   /** The mute and deafen keybinds from Voice and video settings, Ctrl+Shift+M and Ctrl+Shift+D unless changed. */

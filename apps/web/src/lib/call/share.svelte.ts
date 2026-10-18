@@ -4,3 +4,10 @@ class ShareDialogState {
 }
 
 export const shareDialog = new ShareDialogState();
+
+/** Whether the strip under a focused tile is folded away (m4.6-plan.md task 12b), for the rest of the session. */
+class StageViewState {
+  membersHidden = $state(false);
+}
+
+export const stageView = new StageViewState();

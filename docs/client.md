@@ -504,8 +504,11 @@ Voice code loads only on the first join, through `import()`: `livekit-client` is
 - **Tiles**:
   - a grid with one tile per participant, plus one per camera or screen share,
   - an audio tile shows the avatar, name, speaking ring and mute icon,
-  - clicking a tile focuses it, and double-clicking makes it fullscreen.
-- **Bottom bar**: microphone, camera, share screen and disconnect.
+  - clicking a tile focuses it, and double-clicking makes it fullscreen,
+  - a focused tile has the others in a strip under it, which "Hide members" folds away for the session,
+  - a screen share's label has a screen icon, and in the strip a LIVE mark.
+- **Watching a stream**: the stage's header names the sharer's screen, with the resolution and frame rate that arrive and a LIVE mark.
+- **Bottom bar**: microphone, camera, share screen and disconnect, chevrons beside the first three for devices or the share's quality, and full screen for a focused tile.
 - **The channel's text chat** is a 456 px side panel where the member list would be. Above 1,360 px it opens with the stage, beside it; narrower it overlays the stage and waits for the header's chat button. Closed, it stays closed until the next voice channel (M4.6).
 - **Not yet in the call**: the view shows who is in it, with a Join button.
 

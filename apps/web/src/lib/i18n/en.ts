@@ -650,6 +650,13 @@ export const en = {
     join: 'Join voice',
     tile: (name: string, states: string[]) => [name, ...states].join(', '),
     screenOf: (name: string) => `${name}’s screen`,
+    /** Watching a stream (m4.6-plan.md task 12b). */
+    hideMembers: 'Hide members',
+    showMembers: 'Show members',
+    live: 'LIVE',
+    streamQuality: (size: string, fps: string) => `${size}, ${fps}`,
+    cameraOptions: 'Camera options',
+    shareOptions: 'Screen share options',
     you: 'you',
     focused: 'focused',
     tileHelp: 'Enter focuses, F goes full screen.',
