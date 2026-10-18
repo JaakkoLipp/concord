@@ -78,7 +78,14 @@
       <Avatar src={avatarUrl(self)} size={32} presence={presenceOf(self)} presenceLabel={m.presence[presenceOf(self)]} />
       <span class="text">
         <span class="name">{self.displayName ?? self.username}</span>
-        <span class="sub">{self.statusText || `${self.username}#${self.discriminator}`}</span>
+        <!-- Hovering the panel slides the status out and the username in (m4.6-plan.md task 13). With no custom
+             status the line shows presence, so there is always something to slide. -->
+        <span class="sub">
+          <span class="lines">
+            <span class="line status">{self.statusText || m.presence[presenceOf(self)]}</span>
+            <span class="line tag" aria-hidden="true">{self.username}#{self.discriminator}</span>
+          </span>
+        </span>
       </span>
     </button>
     {#if app.voice}
@@ -152,9 +159,15 @@
     border: 0; border-radius: var(--radius-xs); background: none; color: var(--text-secondary);
   }
   .chevron :global(svg) { width: 0.875rem; height: 0.875rem; }
-  @media (hover: hover) { .chevron:hover { background: var(--hover-overlay); color: var(--text-strong); } }
+  @media (hover: hover) { .chevron:hover { background: var(--surface-5); color: var(--text-strong); } }
   .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans); }
-  .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
+  /* One line tall, holding two: the status, then the username below it. */
+  .sub { height: 1rem; overflow: hidden; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
+  .lines { display: grid; grid-auto-rows: 1rem; transition: translate var(--dur-user-panel) var(--ease-in-out); }
+  .line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dock:hover .lines, .me:focus-visible .lines { translate: 0 -1rem; }
+  /* Discord's icon buttons take the selected row's background on hover, at once. */
+  @media (hover: hover) { .dock :global(.icon-button:hover:not(:disabled)) { background: var(--surface-5); } }
   .menu { display: grid; gap: var(--space-3); width: 17rem; padding: var(--space-4); }
   .statuses, .custom { display: grid; gap: var(--space-1); padding-top: var(--space-3); border-top: 1px solid var(--border-default); }
   .statuses button, .custom button {

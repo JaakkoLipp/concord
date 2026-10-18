@@ -107,7 +107,7 @@
   }
   /* The voice panel and the user dock share one panel, as on Discord. It ends level with the composer. */
   .dock { grid-area: dock; padding: var(--space-3); }
-  .dock-panel { border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--surface-1); overflow: hidden; }
+  .dock-panel { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-1); overflow: hidden; }
   .main { grid-area: main; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   .side-panel { grid-area: panel; min-height: 0; border-left: 1px solid var(--border-subtle); background: var(--surface-0); }
   .scrim { display: none; }
