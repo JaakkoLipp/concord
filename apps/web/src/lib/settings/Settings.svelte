@@ -14,6 +14,7 @@
   import AccountSection from './AccountSection.svelte';
   import AppearanceSection from './AppearanceSection.svelte';
   import { USER_SECTIONS, settingsModal, type UserSection } from './modal.svelte.ts';
+  import { tagChoices } from '$lib/layer/tags.svelte.ts';
   import type { FrameItem, FrameSection } from './SettingsFrame.svelte';
 
   let { session, section }: { session: Session; section: UserSection } = $props();
@@ -21,7 +22,8 @@
   const ACCOUNT: readonly UserSection[] = ['account', 'profile'];
   /** Pages whose sections the sidebar lists, by their headings' ids (decision 6). */
   const SECTIONS: Partial<Record<UserSection, () => FrameSection[]>> = {
-    profile: () => [{ id: 'profile-editor', label: m.settings.sections.profile }, { id: 'tag-heading', label: m.settings.tag.heading }],
+    // Server tag only while TagChooser shows, so the entry always has somewhere to go.
+    profile: () => [{ id: 'profile-editor', label: m.settings.sections.profile }, ...(tagChoices(session.store).length ? [{ id: 'tag-heading', label: m.settings.tag.heading }] : [])],
     voice: () => {
       const t = m.settings.voice;
       return [

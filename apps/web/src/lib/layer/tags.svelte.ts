@@ -71,3 +71,6 @@ function replace(map: SvelteMap<Id, ServerTag>, next: Record<Id, ServerTag>): vo
 }
 
 export const tags = new Tags();
+
+/** The tags this account could wear: those of servers it is in. Profile settings shows its chooser only when there are some. */
+export const tagChoices = (store: Store): ServerTag[] => [...tags.servers.values()].filter((tag) => store.servers.has(tag.server));

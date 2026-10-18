@@ -6,13 +6,13 @@
   import type { Session } from '@concord/domain';
   import { m } from '$lib/i18n/index.ts';
   import { app } from '$lib/session/app.svelte.ts';
-  import { tags } from '$lib/layer/tags.svelte.ts';
+  import { tagChoices, tags } from '$lib/layer/tags.svelte.ts';
   import { customEmojiUrl } from '$lib/markdown/emoji.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
 
   let { session }: { session: Session } = $props();
   const t = m.settings.tag;
-  const choices = $derived([...tags.servers.values()].filter((tag) => session.store.servers.has(tag.server)));
+  const choices = $derived(tagChoices(session.store));
   const worn = $derived(session.store.selfId ? tags.worn.get(session.store.selfId)?.server ?? null : null);
   let busy = $state(false);
 
