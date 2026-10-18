@@ -16,4 +16,6 @@ export interface MessageActions {
   openUrl(url: string): void; copyUrl(url: string): void;
   copyImage(src: string): void; saveImage(src: string, name: string): void;
   isFavouriteGif(url: string): boolean; toggleFavouriteGif(gif: FavouriteGif): void;
+  /** Start selecting messages to delete together, from this one, for server admins only (m4.7-plan.md task 7). */
+  pick?: ((m: Message) => void) | undefined;
 }

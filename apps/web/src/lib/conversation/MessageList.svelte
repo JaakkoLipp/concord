@@ -10,6 +10,9 @@
   import type { QuickEmoji } from './menu.ts';
   import { resolve } from '$app/paths';
   import { permissionsIn } from '$lib/view/channels.ts';
+  import { isServerAdmin } from '$lib/view/admin.ts';
+  import { confirm } from '$lib/view/confirm.svelte.ts';
+  import { Button } from '@concord/ui';
   import { compose } from '$lib/view/compose.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
   import type { MessageActions } from './actions.ts';
@@ -51,6 +54,41 @@
   });
   let selected = $state<string | null>(null);
   let confirming = $state<Message | null>(null);
+
+  // Deleting many messages (m4.7-plan.md task 7): for server admins only, at Jaakko's request, though Stoat lets anyone with
+  // Manage messages do it over its API. Up to 100 at once, each under 7 days old, as Stoat takes them.
+  const canBulk = $derived(info?.kind === 'text' && has(perms, Permission.ManageMessages) && isServerAdmin(store, info.server));
+  const BULK_MAX = 100;
+  const BULK_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+  let picked = $state<SvelteSet<string> | null>(null);
+  let deleting = $state(false);
+  $effect(() => { void channel; picked = null; });
+  $effect(() => { if (!canBulk) picked = null; });
+  const pickRefusal = (msg: Message): string | null => {
+    if (Date.now() - ulidTime(msg.id).getTime() >= BULK_AGE_MS - 60_000) return m.actions.tooOld;
+    if (picked && picked.size >= BULK_MAX && !picked.has(msg.id)) return m.actions.pickLimit;
+    return null;
+  };
+  function togglePick(msg: Message) {
+    if (!picked) return;
+    if (picked.has(msg.id)) picked.delete(msg.id);
+    else if (!pickRefusal(msg)) picked.add(msg.id);
+  }
+  async function deletePicked() {
+    const ids = picked ? [...picked].filter((id) => store.messages.has(id)) : [];
+    if (!ids.length || deleting) return;
+    const n = ids.length;
+    if (!(await confirm.ask({ title: m.actions.deleteManyTitle(n), body: m.actions.deleteManyBody, confirm: m.actions.deleteMany(n), danger: true }))) return;
+    deleting = true;
+    try {
+      await session.deleteMessages(channel, ids);
+      picked = null;
+    } catch {
+      toasts.show(m.actions.deleteManyFailed);
+    } finally {
+      deleting = false;
+    }
+  }
   async function copy(text: string) {
     try {
       await navigator.clipboard.writeText(text);
@@ -144,6 +182,7 @@
     toggleFavouriteGif: (gif) => session.toggleFavouriteGif(gif),
     copyImage: (src) => void copyImage(src).then(() => toasts.show(m.actions.copied, 'info'), () => toasts.show(m.actions.copyImageFailed)),
     saveImage: (src, name) => void saveImage(src, name).catch(() => toasts.show(m.actions.saveImageFailed)),
+    pick: canBulk ? (msg) => { picked = new SvelteSet(pickRefusal(msg) ? [] : [msg.id]); } : undefined,
   });
 
   // Messages sent from here and not yet confirmed, shown after the newest message (client.md section 4.3).
@@ -397,6 +436,14 @@
   });
 </script>
 
+<svelte:window onkeydown={(e) => { if (picked && e.key === 'Escape' && !confirm.current && !e.defaultPrevented) picked = null; }} />
+{#if picked}
+  <div class="pick-bar" role="toolbar" aria-label={m.actions.selectMessages}>
+    <span role="status">{m.actions.selected(picked.size)}</span>
+    <Button variant="ghost" size="sm" onclick={() => (picked = null)}>{m.actions.cancelSelect}</Button>
+    <Button variant="danger" size="sm" busy={deleting} disabled={!picked.size} onclick={deletePicked}>{m.actions.deleteMany(picked.size)}</Button>
+  </div>
+{/if}
 {#if unreadLabel && store.isUnread(channel)}
   <div class="unread-bar">
     <button class="unread-jump" onclick={present}>{unreadLabel}<ArrowDown size={16} /></button>
@@ -453,7 +500,8 @@
         <MessageItem message={row.message} pending={row.pending} {store} {server} continuation={row.continuation && row.blocked?.first !== row.message.id} highlighted={highlighted === row.message.id} {onjump}
           onretry={(key) => void session.retry(key)} ondiscard={(key) => session.discard(key)}
           actions={row.pending || row.message.system ? undefined : actions} editing={compose.editing === row.message.id} selected={selected === row.message.id}
-          {quick} tabbable={row.message.id === tabbableId} canMarkUnread={row.message.id !== win?.ids[0] || !!win?.atOldest} />
+          {quick} tabbable={row.message.id === tabbableId} canMarkUnread={row.message.id !== win?.ids[0] || !!win?.atOldest}
+          picking={picked && !row.pending ? { checked: picked.has(row.message.id), refusal: pickRefusal(row.message), toggle: () => togglePick(row.message) } : undefined} />
       {/if}
     {/each}
     <div class="end"></div>
@@ -466,6 +514,13 @@
 {/if}
 
 <style>
+  /* Over the list rather than in its flow, so opening it doesn't move the messages or unstick them from the bottom. */
+  .pick-bar {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 6; box-shadow: var(--shadow-popover);
+    display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-5);
+    border-bottom: 1px solid var(--border-default); background: var(--surface-2); color: var(--text-strong); font: 500 var(--text-sm) var(--font-sans);
+  }
+  .pick-bar span { flex: 1; }
   .unread-bar { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-5); background: var(--accent); color: var(--on-accent); }
   .unread-bar button { border: 0; padding: 0; background: none; color: inherit; font: 500 var(--text-sm) var(--font-sans); }
   .unread-jump { display: flex; align-items: center; gap: var(--space-3); flex: 1; text-align: start; }

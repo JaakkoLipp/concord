@@ -264,6 +264,8 @@ export interface Backend {
   ackServer(server: Id): Promise<void>;
   editMessage(channel: Id, message: Id, content: string): Promise<Message>;
   deleteMessage(channel: Id, message: Id): Promise<void>;
+  /** Delete up to 100 messages at once, each under 7 days old, with Manage messages (m4.7-plan.md task 7). */
+  deleteMessages(channel: Id, messages: Id[]): Promise<void>;
   pinMessage(channel: Id, message: Id, pinned: boolean): Promise<void>;
   react(channel: Id, message: Id, emoji: string, add: boolean): Promise<void>;
   /**

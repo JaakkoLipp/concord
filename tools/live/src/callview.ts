@@ -3,7 +3,7 @@
  * fake microphone and camera. Ben turns his camera on. Checks:
  * - before joining, emma's call view lists who is in Olohuone and offers Join,
  * - each of the three sees three tiles, and the others see ben's camera playing,
- * - a volume set in eetu's participant menu for ben is still there after a reload, in the sidebar's menu.
+ * - a volume set in eetu's participant menu for ben is still stored after a reload.
  * Review screenshots: the lobby, the grid with the camera, a focused tile, the chat panel and the menu.
  * Usage: node tools/live/src/callview.ts [screenshot-dir]
  */
@@ -103,17 +103,19 @@ try {
   await shot(eetu.page, 'menu');
   await eetu.page.keyboard.press('Escape');
   await eetu.page.reload();
-  // A reload doesn't rejoin: ben's row in the sidebar has the same menu.
-  const row = eetu.page.getByRole('list', { name: 'In Olohuone' }).getByRole('button', { name: /^Ben Carter/ });
-  await row.waitFor({ timeout: 15_000 });
-  await row.click({ button: 'right' });
-  const after = await eetu.page.getByRole('menu').getByRole('slider').inputValue().catch(() => 'none');
+  // A reload leaves the call, and the volume item is offered only in a shared call (m4.7-plan.md task 4), so read what
+  // this device stored for ben.
+  await eetu.page.getByRole('list', { name: 'In Olohuone' }).getByRole('button', { name: /^Ben Carter/ }).waitFor({ timeout: 15_000 });
+  const after = await eetu.page.evaluate(() => {
+    const stored = JSON.parse(localStorage.getItem('concord:voice') ?? 'null') as { volumes?: Record<string, number> } | null;
+    return Object.values(stored?.volumes ?? {}).map(String).join(',') || 'none';
+  });
   check(after === '60', `ben's volume for eetu survives a reload (${after})`);
-  await eetu.page.keyboard.press('Escape');
   // Back to 100 %, so later runs start clean.
-  await row.click({ button: 'right' });
-  await eetu.page.getByRole('menu').getByRole('slider').fill('100');
-  await eetu.page.keyboard.press('Escape');
+  await eetu.page.evaluate(() => {
+    const stored = JSON.parse(localStorage.getItem('concord:voice') ?? 'null') as { volumes?: Record<string, number> } | null;
+    if (stored) localStorage.setItem('concord:voice', JSON.stringify({ ...stored, volumes: {} }));
+  });
 
   for (const s of [ben, emma]) await s.page.getByRole('button', { name: 'Disconnect' }).first().click();
   // LiveKit warns while a call it is closing renegotiates; that one is expected.

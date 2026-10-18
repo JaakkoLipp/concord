@@ -587,6 +587,12 @@ export class Session {
     }
   }
 
+  /** Delete many messages in one request. Unlike one message, they go only once Stoat agrees, since there is no undoing it. */
+  async deleteMessages(channel: Id, ids: Id[]): Promise<void> {
+    await this.backend.deleteMessages(channel, ids);
+    this.store.apply({ type: 'messageBulkDelete', channel, ids });
+  }
+
   /** Pin or unpin. Stoat's echo updates the message, and its system message says who did it. */
   pinMessage(channel: Id, id: Id, pinned: boolean): Promise<void> {
     return this.backend.pinMessage(channel, id, pinned);

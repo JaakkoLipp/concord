@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Message, PendingMessage, Store } from '@concord/domain';
-  import { Avatar, duration } from '@concord/ui';
+  import { Avatar, duration, tooltip } from '@concord/ui';
   import Markdown from '$lib/markdown/Markdown.svelte';
   import { fullDate, timeOfDay, ulidTime } from '$lib/markdown/time.ts';
   import { m } from '$lib/i18n/index.ts';
@@ -34,8 +34,10 @@
     tabbable?: boolean;
     /** Whether "Mark unread" can be offered: not when the message before it isn't loaded. */
     canMarkUnread?: boolean;
+    /** While selecting messages to delete together: ticked or not, and why it can't be, if it can't (m4.7-plan.md task 7). */
+    picking?: { checked: boolean; refusal: string | null; toggle: () => void } | undefined;
   }
-  let { message, store, server, continuation, highlighted, onjump, pending, onretry, ondiscard, actions, editing = false, selected = false, quick = [], tabbable = false, canMarkUnread = true }: Props = $props();
+  let { message, store, server, continuation, highlighted, onjump, pending, onretry, ondiscard, actions, editing = false, selected = false, quick = [], tabbable = false, canMarkUnread = true, picking }: Props = $props();
   let staticHighlight = $state(false);
   $effect(() => {
     if (!highlighted) { staticHighlight = false; return; }
@@ -58,6 +60,11 @@
   const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
   /** On touch screens there is no hover: a tap on the message shows its actions. */
   function tap(e: MouseEvent) {
+    // While selecting, a click anywhere on the message ticks it, links and buttons aside.
+    if (picking) {
+      if (!(e.target as HTMLElement).closest('a, button, input, video')) picking.toggle();
+      return;
+    }
     if (!touch || !actions || (e.target as HTMLElement).closest('a, button, img, video, input, .cm-editor')) return;
     actions.select(selected ? null : message.id);
   }
@@ -87,7 +94,7 @@
   <!-- A message is focusable, one at a time, so the keyboard reaches its actions and context menu (m4.5-plan.md task 2). -->
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions, a11y_no_noninteractive_tabindex -->
   <article class="row message" class:continuation class:mentioned class:highlighted class:static-highlight={staticHighlight} class:sending={pending?.state === 'sending'} class:failed={pending?.state === 'failed'} aria-busy={pending?.state === 'sending' || undefined}
-    class:selected class:menu-open={menuOpen} class:editing onclick={tap} id="message-{message.id}" data-id={message.id} aria-labelledby={continuation ? undefined : `author-${message.id}`} aria-label={continuation ? name : undefined} aria-describedby="content-{message.id}"
+    class:selected class:menu-open={menuOpen} class:editing class:picking={!!picking} class:picked={picking?.checked} onclick={tap} id="message-{message.id}" data-id={message.id} aria-labelledby={continuation ? undefined : `author-${message.id}`} aria-label={continuation ? name : undefined} aria-describedby="content-{message.id}"
     tabindex={tabbable ? 0 : -1} use:menuOn={messageContextMenu}>
     {#each message.replies as reply (reply)}
       <ReplyPreview id={reply} {store} {server} {onjump} />
@@ -142,7 +149,12 @@
         {/if}
       </div>
     </div>
-    {#if actions && !pending && !editing}
+    {#if picking}
+      <label class="pick" use:tooltip={picking.refusal ?? m.actions.pickLabel}>
+        <input type="checkbox" checked={picking.checked} disabled={!!picking.refusal && !picking.checked} aria-label={picking.refusal ?? m.actions.pickLabel}
+          onclick={(e) => { e.stopPropagation(); e.preventDefault(); picking.toggle(); }} />
+      </label>
+    {:else if actions && !pending && !editing}
       <div class="actions">
         <ActionBar canReact={actions.react} onreact={(anchor) => actions.pickReaction(message, anchor)} {quick} onquick={(key) => actions.quickReact(message, key)} canReply={actions.send} canEdit={own && !!message.content} canDelete={own || actions.manage} canPin={actions.manage} pinned={message.pinned}
           onreply={() => actions.reply(message)} onedit={() => actions.edit(message)} ondelete={(skip) => actions.delete(message, skip)}
@@ -199,5 +211,11 @@
   .not-sent { margin: var(--space-1) 0 0; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
   .not-sent button { margin-left: var(--space-2); padding: 0; border: 0; background: none; color: var(--link); font: inherit; cursor: pointer; }
   @media (hover: hover) { .not-sent button:hover { text-decoration: underline; } }
+  /* Selecting messages to delete together: the whole message ticks its box. */
+  .picking { cursor: pointer; padding-right: calc(var(--space-5) * 2 + 1rem); }
+  .picked { background: var(--accent-wash); }
+  .pick { position: absolute; top: var(--space-2); right: var(--space-5); display: grid; place-items: center; width: 1.5rem; height: 1.5rem; }
+  .pick input { width: 1rem; height: 1rem; margin: 0; accent-color: var(--accent); cursor: inherit; }
+  .pick input:disabled { cursor: not-allowed; }
   .edited { margin-left: var(--space-2); color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
 </style>

@@ -273,6 +273,10 @@ export class StoatBackend implements Backend {
     await this.rest.request('DELETE', `/channels/${channel}/messages/${message}`);
   }
 
+  async deleteMessages(channel: string, messages: string[]): Promise<void> {
+    await this.rest.request('DELETE', `/channels/${channel}/messages/bulk`, { ids: messages });
+  }
+
   async pinMessage(channel: string, message: string, pinned: boolean): Promise<void> {
     await this.rest.request(pinned ? 'POST' : 'DELETE', `/channels/${channel}/messages/${message}/pin`);
   }

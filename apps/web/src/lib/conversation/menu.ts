@@ -93,6 +93,10 @@ export function messageMenu(msg: Message, a: MessageActions, o: Options): MenuIt
       { label: m.actions.openOriginal, onselect: () => a.openUrl(image.original) },
     ]);
   }
-  if (o.own || a.manage) groups.push([{ label: m.actions.delete, danger: true, onselect: () => a.delete(msg, false) }]);
+  const removal: MenuItem[] = [];
+  const pick = a.pick;
+  if (pick) removal.push({ label: m.actions.selectMessages, onselect: () => pick(msg) });
+  if (o.own || a.manage) removal.push({ label: m.actions.delete, danger: true, onselect: () => a.delete(msg, false) });
+  if (removal.length) groups.push(removal);
   return groups.flatMap((g, i) => (i ? ['separator' as const, ...g] : g));
 }

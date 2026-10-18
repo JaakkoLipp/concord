@@ -73,6 +73,8 @@ try {
   check(!(await page.getByText('said before').isVisible()), 'and shows nothing from before');
   await p.owner.call('POST', `/channels/${p.text}/messages`, { content: 'said now' });
   check(await visible(page, 'said now'), 'a message sent now still shows');
+  await deny(0n);
+  check(await visible(page, 'said before'), 'granted while open, the history loads without a reload');
 
   // 2. Upload files.
   await deny(P.UploadFiles);
