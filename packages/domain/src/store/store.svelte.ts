@@ -4,7 +4,7 @@
  * Entries are replaced, never mutated, so a component reading one key re-renders only when that key changes.
  */
 import type { Folder } from '../folders.ts';
-import { emptyNotifications, mentionsYou, muteActive, type NotificationLevel, type NotificationSettings } from '../notify.ts';
+import { emptyNotifications, Flags, mentionsYou, muteActive, type NotificationLevel, type NotificationSettings } from '../notify.ts';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 import type { ConnectionState, DomainEvent } from '../backend.ts';
 import type { Channel, Emoji, Id, Member, Message, NodeInfo, Presence, Profile, Relationship, Ring, Server, Unread, User, VoiceState } from '../entities.ts';
@@ -601,6 +601,8 @@ export class Store {
   /**
    * Whether a message counts as a mention of this account, for badges and the inbox: anything in a DM or group, a
    * mention of you, and in a server one of your roles, `@everyone` or `@online`, unless the server ignores those.
+   * Those broad mentions also don't count where they wouldn't notify: a muted channel or server, the level
+   * "nothing", or a message sent with notifications suppressed.
    */
   mentionsSelf(m: Message): boolean {
     const self = this.selfId;
@@ -609,6 +611,7 @@ export class Store {
     if (c?.kind === 'dm' || c?.kind === 'group') return true;
     if (m.mentions.includes(self)) return true;
     if (c?.kind !== 'text' || this.ignoredMentions[c.server]) return false;
+    if (((m.flags ?? 0) & Flags.SuppressNotifications) || this.notificationsMuted(m.channel) || this.channelLevel(m.channel) === 'none') return false;
     const roles = this.members.get(memberKey(c.server, self))?.roles ?? [];
     return mentionsYou(m, self, roles);
   }

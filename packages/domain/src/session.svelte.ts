@@ -219,6 +219,10 @@ export class Session {
     for (const t of this.ringTimers.values()) clearTimeout(t.timer);
     this.ringTimers.clear();
     this.rawSettings = {};
+    this.settingsLoaded = false;
+    this.settingsFailures = 0;
+    if (this.settingsRetry) clearTimeout(this.settingsRetry);
+    this.settingsRetry = null;
     this.selfQueue.clear();
     this.idle.stop();
     this.acks.clear();
@@ -239,22 +243,75 @@ export class Session {
   /** After Ready: settings, the open server's members, and fresh history for the open channel. */
   private async coldStart(): Promise<void> {
     const windowAtReady = this.openChannelId ? this.store.windows.get(this.openChannelId) : undefined;
+    await this.loadSettings();
+    await this.coldStartRest(windowAtReady);
+  }
+
+  /**
+   * Whether synced settings have been read once since sign-in. Until then the rail's folders, the server order and
+   * the ignored mentions are only defaults, and writing them would replace what is stored, so those writes wait.
+   */
+  private settingsLoaded = false;
+  private settingsLoading: Promise<boolean> | null = null;
+  private settingsRetry: ReturnType<typeof setTimeout> | null = null;
+  private settingsFailures = 0;
+
+  /** Fetch the synced settings. A failure before the first success tries again, 5 s and then up to a minute later. */
+  private loadSettings(): Promise<boolean> {
+    this.settingsLoading ??= this.fetchSettings().finally(() => (this.settingsLoading = null));
+    return this.settingsLoading;
+  }
+
+  private async fetchSettings(): Promise<boolean> {
+    if (this.settingsRetry) clearTimeout(this.settingsRetry);
+    this.settingsRetry = null;
     const fetchedAt = Date.now();
     const fetched = await this.backend.settings(['notifications', 'ordering', 'concord:hiddenMutedChannels', EMOJI_KEY, GIFS_KEY, CLOSED_DMS_KEY, STATUS_KEY, ACTIVE_KEY, FOLDERS_KEY, MENTIONS_KEY]).catch(() => null);
     // A failed fetch keeps what this session has, rather than resetting the chosen status or favourites.
-    if (!fetched) return this.coldStartRest(windowAtReady);
-    const settings: Record<string, { value: string }> = fetched;
+    if (!fetched) {
+      if (!this.settingsLoaded && this.gateway) {
+        const wait = Math.min(60_000, 5_000 * 2 ** this.settingsFailures++);
+        this.settingsRetry = setTimeout(() => void this.loadSettings(), wait);
+      }
+      return false;
+    }
+    this.applyFetchedSettings(fetched, fetchedAt);
+    this.settingsLoaded = true;
+    this.settingsFailures = 0;
+    return true;
+  }
+
+  /**
+   * Settings fetched at `fetchedAt`. A value this client changed since then is newer than the fetch, so it is kept,
+   * in the raw JSON that later writes merge into as well as in the store: a slow fetch can't undo it.
+   */
+  private applyFetchedSettings(fetched: Record<string, { value: string }>, fetchedAt: number): void {
+    const settings: Record<string, { value: string }> = { ...fetched };
+    const newer = (editedAt: number, writes: { holding: boolean }) => editedAt >= fetchedAt || writes.holding;
+    const keepOrder = newer(this.serverOrderEditedAt, this.serverOrderWrites);
+    const keepFolders = newer(this.foldersEditedAt, this.folderWrites);
+    const keepIgnored = newer(this.ignoredEditedAt, this.ignoredWrites);
+    if (keepOrder) delete settings.ordering;
+    if (keepFolders) delete settings[FOLDERS_KEY];
+    if (keepIgnored) delete settings[MENTIONS_KEY];
     const active = Number(settings[ACTIVE_KEY]?.value);
     if (active) this.idle.remote(active);
     if (!this.statusSaving) this.store.chosenStatus = parseStatus(settings[STATUS_KEY]?.value);
     if (settings[CLOSED_DMS_KEY]) this.store.closedDms = parseClosedDms(settings[CLOSED_DMS_KEY].value);
     this.rawSettings = { ...this.rawSettings, ...settings };
-    this.store.settings = parseSettings(this.rawSettings);
+    const parsed = parseSettings(this.rawSettings);
+    this.store.settings = keepOrder ? { ...parsed, serverOrder: this.store.settings.serverOrder } : parsed;
     if (this.emojiChangedAt < fetchedAt) this.store.emojiPrefs = parseEmojiPrefs(settings[EMOJI_KEY]?.value);
     if (this.gifsChangedAt < fetchedAt) this.store.favouriteGifs = parseFavouriteGifs(settings[GIFS_KEY]?.value);
-    if (!this.folderWrites.holding) this.store.folders = parseFolders(settings[FOLDERS_KEY]?.value);
-    if (!this.ignoredWrites.holding) this.store.ignoredMentions = parseIgnoredMentions(settings[MENTIONS_KEY]?.value);
-    await this.coldStartRest(windowAtReady);
+    if (!keepFolders) this.store.folders = parseFolders(settings[FOLDERS_KEY]?.value);
+    if (!keepIgnored) this.store.ignoredMentions = parseIgnoredMentions(settings[MENTIONS_KEY]?.value);
+  }
+
+  /** Refuses a write of the rail or the ignored mentions before settings were read, and asks for them again. */
+  private settingsReady(): Promise<void> | null {
+    if (this.settingsLoaded) return null;
+    void this.loadSettings();
+    return Promise.reject(new Error('synced settings have not loaded yet'));
   }
 
   /** The open server's members and fresh history for the open channel. */
@@ -907,6 +964,7 @@ export class Session {
     this.rawSettings = { ...this.rawSettings, ordering: { value } };
   });
   private serverOrderChangedAt = 0;
+  private serverOrderEditedAt = 0;
 
   private readonly ignoredWrites = new Latest<Record<Id, boolean>>(async (next) => {
     const value = writeIgnoredMentions(next);
@@ -914,12 +972,17 @@ export class Session {
     this.rawSettings = { ...this.rawSettings, [MENTIONS_KEY]: { value } };
   });
   private ignoredChangedAt = 0;
+  /** When this client last changed it: a settings fetch started before then is older. */
+  private ignoredEditedAt = 0;
 
   /**
    * Ignore @everyone and role mentions in a server (M4.8 task 11), synced as `concord:mentions`. They then neither
    * notify, sound, nor count as mentions; only a mention of this account does.
    */
   setIgnoreBroadMentions(server: Id, ignore: boolean): Promise<void> {
+    const refused = this.settingsReady();
+    if (refused) return refused;
+    this.ignoredEditedAt = Date.now();
     const changedAt = ++this.ignoredChangedAt;
     const next = { ...this.store.ignoredMentions };
     if (ignore) next[server] = true;
@@ -937,12 +1000,16 @@ export class Session {
     this.rawSettings = { ...this.rawSettings, [FOLDERS_KEY]: { value } };
   });
   private foldersChangedAt = 0;
+  private foldersEditedAt = 0;
 
   /**
    * The rail after a change to its folders (M4.8 task 10b): the folders as `concord:folders`, and the order of
    * their servers into Stoat's `ordering`, each key last write wins across devices.
    */
   setRail(items: RailItem[]): Promise<void> {
+    const refused = this.settingsReady();
+    if (refused) return refused;
+    this.foldersEditedAt = Date.now();
     const changedAt = ++this.foldersChangedAt;
     const folders = foldersOf(items);
     this.store.folders = folders;
@@ -958,6 +1025,9 @@ export class Session {
    * servers that aren't shown now keep their places after them.
    */
   setServerOrder(shown: Id[]): Promise<void> {
+    const refused = this.settingsReady();
+    if (refused) return refused;
+    this.serverOrderEditedAt = Date.now();
     const changedAt = ++this.serverOrderChangedAt;
     const next = orderingFor(shown, this.store.settings.serverOrder);
     this.store.settings = { ...this.store.settings, serverOrder: next };

@@ -58,7 +58,7 @@ export function watchNotifications(session: Session): () => void {
     }
   };
 
-  let lastSound = 0;
+  const lastSound = { message: 0, mention: 0 };
   const show = (message: Message) => {
     const store = session.store;
     const self = store.self;
@@ -80,9 +80,11 @@ export function watchNotifications(session: Session): () => void {
     });
     if (!ok) return;
     const mention = mentionsYou(message, self.id, roles, !!server && !!store.ignoredMentions[server]);
-    if (soundPrefs.on && Date.now() - lastSound > SOUND_GAP_MS) {
-      lastSound = Date.now();
-      playMessageSound(mention ? 'mention' : 'message', soundPrefs.volume);
+    // A burst makes one sound a second, but a mention isn't held back by an ordinary message's sound.
+    const kind = mention ? 'mention' : 'message';
+    if (soundPrefs.on && Date.now() - lastSound[kind] > SOUND_GAP_MS && playMessageSound(kind, soundPrefs.volume)) {
+      lastSound[kind] = Date.now();
+      if (mention) lastSound.message = lastSound.mention;
     }
     if (!notifyPrefs.active) return;
     const author = store.users.get(message.author);

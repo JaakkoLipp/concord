@@ -86,11 +86,12 @@ export function play(sound: Sound): void {
   playNotes(SOUNDS[sound]);
 }
 
-/** A message or mention sound at `volume` (0 to 100), through the chosen speaker like the rest. */
-export function playMessageSound(kind: keyof typeof MESSAGE_SOUNDS, volume: number): void {
+/** A message or mention sound at `volume` (0 to 100), through the chosen speaker like the rest. False if it couldn't play. */
+export function playMessageSound(kind: keyof typeof MESSAGE_SOUNDS, volume: number): boolean {
   // Before the first click or key on the page, browsers won't start audio, and say so in the console.
-  if (typeof navigator !== 'undefined' && navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
+  if (typeof navigator !== 'undefined' && navigator.userActivation && !navigator.userActivation.hasBeenActive) return false;
   playNotes(MESSAGE_SOUNDS[kind], LEVEL * (Math.max(0, Math.min(100, volume)) / 100));
+  return true;
 }
 
 /** Loop the ring tone until the returned function is called (DM calls, client.md section 10.8). */
