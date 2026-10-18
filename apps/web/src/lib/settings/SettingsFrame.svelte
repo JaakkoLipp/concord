@@ -179,14 +179,15 @@
   .version { margin: var(--space-3) 0 0; padding: 0 var(--space-3); color: var(--text-muted); font: var(--text-xs) var(--font-sans); }
   .separator { height: 1px; margin: var(--space-3); background: var(--border-default); }
   .nav-inner :global(.button) { justify-content: flex-start; padding: 0 var(--space-3); font-size: var(--text-md); }
-  .content { flex: 1 1 calc(var(--settings-col-w) + 10rem); display: flex; flex-direction: column; min-width: 0; }
+  .content { flex: 1 1 calc(var(--settings-col-w) + 10rem); display: flex; flex-direction: column; min-width: 0; min-height: 0; }
   .head {
     display: flex; align-items: center; gap: var(--space-4); flex: none; min-height: var(--header-h); padding: 0 var(--space-3) 0 var(--space-8);
     border-bottom: 1px solid var(--border-faint);
   }
   .head :global(.icon-button) { margin-left: auto; }
   @media (hover: hover) { .head :global(.icon-button:hover) { background: var(--surface-5); } }
-  .scroller { flex: 1; display: flex; overflow-y: auto; }
+  /* flex-start, so the column is as tall as its content and an editor's sticky save bar holds to the bottom. */
+  .scroller { flex: 1; display: flex; align-items: flex-start; min-height: 0; overflow-y: auto; }
   /* A container, so a section can lay itself out by the room it really has (ProfileEditor). */
   .column { width: min(var(--settings-col-w), 100%); padding: var(--space-7) var(--space-8) var(--space-8); container: settings / inline-size; }
   .column.wide { width: min(var(--settings-col-wide-w), 100%); }

@@ -9,7 +9,7 @@
    * whose facing side it keeps `gap` from, in place of the anchor's, such as the member list's.
    */
   import type { Snippet } from 'svelte';
-  import { tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
   import { fromKeyboard, leave } from './motion.ts';
 
   interface Props {
@@ -46,9 +46,15 @@
     origin = `${Math.round(x - left)}px ${Math.round(y - top)}px`;
   }
 
+  /** Where focus goes back on close: what had it at opening, or the trigger it last moved to. */
+  let returnTo: HTMLElement | null = null;
+  let placedAt: HTMLElement | null = null;
+
   $effect(() => {
     if (!open) return;
-    const returnTo = document.activeElement as HTMLElement | null;
+    returnTo = document.activeElement as HTMLElement | null;
+    // Untracked: a new anchor moves it (below), it doesn't reopen it.
+    placedAt = untrack(() => anchor);
     still = instant || fromKeyboard();
     void tick().then(() => {
       place();
@@ -71,12 +77,16 @@
       window.removeEventListener('resize', place);
       resized.disconnect();
       returnTo?.focus?.();
+      returnTo = placedAt = null;
     };
   });
 
-  // A new anchor while open: move there before the next paint, without closing.
+  // A new anchor while open: move there before the next paint, without closing, and give focus back to it later.
   $effect(() => {
-    if (open && anchor) void tick().then(place);
+    if (!open || !anchor) return;
+    if (placedAt && anchor !== placedAt) returnTo = anchor;
+    placedAt = anchor;
+    void tick().then(place);
   });
 </script>
 

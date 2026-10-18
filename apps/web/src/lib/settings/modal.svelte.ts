@@ -118,10 +118,8 @@ class SettingsModal {
     this.instant = true;
     this.shown = null;
     this.opener = null;
+    // A zero-length outro ends synchronously, so the pages are gone after this.
     await tick();
-    // A zero-length outro still ends on a later frame.
-    await new Promise(requestAnimationFrame);
-    await new Promise(requestAnimationFrame);
   }
 
   /** The channels layout is going, on sign-out or another route: nothing is shown or waiting any more. */

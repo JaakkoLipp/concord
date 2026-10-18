@@ -83,7 +83,7 @@
         <span class="sub">
           <span class="lines">
             <span class="line status">{self.statusText || m.presence[presenceOf(self)]}</span>
-            <span class="line tag" aria-hidden="true">{self.username}#{self.discriminator}</span>
+            <span class="line tag">{self.username}#{self.discriminator}</span>
           </span>
         </span>
       </span>
