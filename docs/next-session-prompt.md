@@ -84,6 +84,7 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 **Reviews on production**:
 - M4.4: the settings sidebar shows "Can create servers · System admin".
 - M4.5: right-click menus, Mark unread, the dock's chevrons and the keybinds in voice settings, Watch stream, the user limit, server tags in server settings and profile settings, and favourite GIFs.
+- M4.6: the motion and layout parity, with reduced motion on and off, then the final 30 fps recording beside the spec's video. The list and the live runs still owed are in m4.6-results.md, task 19.
 - M4.1 and M4.2 if not reviewed yet: the feel with reduced motion on and off, and one Chrome performance recording including the emoji picker's first open.
 
 **Decisions:**

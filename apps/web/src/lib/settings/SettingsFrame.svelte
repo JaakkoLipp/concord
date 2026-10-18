@@ -69,16 +69,31 @@
     return el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 24;
   }
 
+  /**
+   * After a click the bar stays on the clicked section until the reader scrolls themselves: the spring's last scroll
+   * event comes after it ends, and near the page's end would otherwise mark the last section instead.
+   */
+  let pinned = false;
+  const unpin = () => (pinned = false);
+  const INPUT = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const;
+  $effect(() => {
+    const el = scroller;
+    if (!el) return;
+    for (const type of INPUT) el.addEventListener(type, unpin, { passive: true });
+    return () => { for (const type of INPUT) el.removeEventListener(type, unpin); };
+  });
+
   /** A section's row: the bar moves at once, even when the content can't scroll further, and the content springs there. */
   function jump(id: string) {
     current = id;
+    pinned = true;
     const top = offset(id);
     if (scroller && top !== undefined) springScrollTo(scroller, top);
   }
 
   /** Scroll-spy for wheel and keyboard scrolling: the last section whose top has passed, or the last one at the end. */
   function spy() {
-    if (!scroller || springScrolling(scroller) || !sections.length) return;
+    if (!scroller || pinned || springScrolling(scroller) || !sections.length) return;
     if (scroller.scrollTop >= scroller.scrollHeight - scroller.clientHeight - 1) return void (current = sections.at(-1)!.id);
     let found = sections[0]!.id;
     for (const s of sections) {
