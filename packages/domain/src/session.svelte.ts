@@ -1322,7 +1322,7 @@ export class Session {
    * A page of search results, newest first. The messages stay out of the store's windows: the results
    * panel keeps them, and reads newer copies from the store when they are loaded there.
    */
-  async search(channel: Id, q: Pick<SearchQuery, 'query' | 'pinned' | 'before'>, limit = 50): Promise<Message[]> {
+  async search(channel: Id, q: Pick<SearchQuery, 'query' | 'pinned' | 'before' | 'after'>, limit = 50): Promise<Message[]> {
     const page = await this.backend.search(channel, { ...q, limit, sort: 'Latest' });
     this.absorb(page);
     return [...page.messages].sort((a, b) => (a.id < b.id ? 1 : -1));

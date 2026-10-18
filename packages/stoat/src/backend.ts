@@ -380,7 +380,10 @@ export class StoatBackend implements Backend {
 
   async search(channel: string, q: SearchQuery): Promise<MessagePage> {
     // Stoat refuses `pinned` together with `query`, so a pins search sends only `pinned`.
-    const body = { ...(q.pinned ? { pinned: true } : { query: q.query }), limit: q.limit, sort: q.sort, include_users: true, ...(q.before ? { before: q.before } : {}) };
+    const body = {
+      ...(q.pinned ? { pinned: true } : q.query ? { query: q.query } : {}), limit: q.limit, sort: q.sort, include_users: true,
+      ...(q.before ? { before: q.before } : {}), ...(q.after ? { after: q.after } : {}),
+    };
     const r = await this.rest.request<{ messages: WMessage[]; users: WUser[]; members?: WMember[] }>('POST', `/channels/${channel}/search`, body);
     return { messages: r.messages.map(mapMessage), users: r.users.map(mapUser), members: (r.members ?? []).map(mapMember) };
   }

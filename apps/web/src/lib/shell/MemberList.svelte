@@ -9,9 +9,25 @@
   import { participantMenu } from '$lib/call/menu.ts';
   import TagBadge from '$lib/people/TagBadge.svelte';
   import TimeoutMark from '$lib/people/TimeoutMark.svelte';
+  import { rank } from '$lib/composer/rank.ts';
 
   let { store, server }: { store: Store; server: string } = $props();
-  const groups = $derived(store.memberGroups(server));
+  // The filter box narrows the groups by nickname, display name or username (m4.8-plan.md task 12).
+  let filter = $state('');
+  $effect.pre(() => {
+    void server;
+    filter = '';
+  });
+  const groups = $derived.by(() => {
+    const all = store.memberGroups(server);
+    const q = filter.trim();
+    if (!q) return all;
+    const matches = (user: string, nickname?: string) => {
+      const u = store.users.get(user);
+      return [nickname, u?.displayName, u?.username].some((n) => !!n && rank(n, q) >= 0);
+    };
+    return all.map((g) => ({ ...g, members: g.members.filter((mm) => matches(mm.user, mm.nickname)) })).filter((g) => g.members.length);
+  });
   // Until the list loads, its group headers stand in for it, from the server's hoisted roles, without rows (motion spec 4.7).
   const loaded = $derived(store.memberListLoaded.has(server));
   const headers = $derived.by(() => {
@@ -21,6 +37,8 @@
 </script>
 
 <aside class="members" aria-label={m.shell.memberList} aria-busy={!loaded || undefined}>
+  <input class="filter" type="search" placeholder={m.shell.filterMembers} aria-label={m.shell.filterMembers} bind:value={filter}
+    onkeydown={(e) => { if (e.key === 'Escape' && filter) { filter = ''; e.stopPropagation(); } }} />
   {#if !loaded}
     {#each headers as title, i (i)}<h3 class="skeleton">{title}</h3>{/each}
   {/if}
@@ -45,12 +63,21 @@
       {/each}
     </ul>
   {/each}
+  {#if loaded && filter.trim() && !groups.length}<p class="none">{m.shell.noMembersMatch}</p>{/if}
 </aside>
 
 <style>
   .members { overflow-y: auto; padding: var(--space-3) var(--space-3) var(--space-5); height: 100%; }
+  .filter {
+    width: 100%; min-height: 1.75rem; padding: 0 var(--space-3);
+    border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-1); color: var(--text-normal);
+    font: var(--text-sm) var(--font-sans);
+  }
+  .filter::placeholder { color: var(--text-secondary); }
+  .filter:focus-visible { outline: none; border-color: var(--accent); }
+  .none { margin: var(--space-6) var(--space-3); color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
   h3 { margin: var(--space-6) var(--space-3) var(--space-2); color: var(--text-secondary); font: 500 var(--text-sm) var(--font-sans); }
-  h3:first-child { margin-top: var(--space-4); }
+  h3:first-of-type { margin-top: var(--space-4); }
   ul { list-style: none; margin: 0; padding: 0; }
   .member {
     display: flex; align-items: center; gap: var(--space-4); width: 100%; min-height: var(--row-member); padding: var(--space-1) var(--space-3);

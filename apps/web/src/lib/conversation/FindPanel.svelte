@@ -14,8 +14,13 @@
   import { m } from '$lib/i18n/index.ts';
   import { avatarUrl } from '$lib/view/users.ts';
   import { shell } from '$lib/view/shell.svelte.ts';
+  import { untrack } from 'svelte';
+  import { bounds, collect, type FindFilters } from './find.ts';
 
   const PAGE = 50;
+  /** "From someone" reads whole pages and keeps a page of matches, stopping after this many pages a click. */
+  const SCAN_PAGE = 100;
+  const SCAN_PAGES = 10;
   let { session, channel, mode, query }: { session: Session; channel: string; mode: 'pins' | 'search'; query: string } = $props();
   const store = $derived(session.store);
   const info = $derived(store.channels.get(channel));
@@ -23,25 +28,52 @@
   setMarkdownContext(() => ({ store, server }));
 
   let found = $state<Message[]>([]);
-  let status = $state<'loading' | 'done' | 'failed'>('loading');
-  let more = $state(false);
+  let status = $state<'loading' | 'done' | 'failed' | 'idle'>('loading');
+  let next = $state<string | undefined>();
+  let scanned = $state(0);
+  let filters = $state<FindFilters>({});
+  // Filters belong to the channel they were set in.
+  $effect.pre(() => {
+    void channel;
+    filters = {};
+  });
+  const filtered = $derived(!!(filters.from || filters.after || filters.before));
+  const empty = $derived(mode === 'search' && !query && !filtered);
 
+  /** Whom "From" offers: the server's members, or the conversation's people, by name. */
+  const people = $derived.by(() => {
+    const ids = info?.kind === 'dm' || info?.kind === 'group' ? info.recipients
+      : [...store.members.values()].filter((mm) => mm.server === server).map((mm) => mm.user);
+    return ids.map((id) => ({ id, name: store.displayName(id, server) })).sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  let run = 0;
   async function load(before?: string) {
+    const mine = ++run;
+    if (empty) {
+      status = 'idle';
+      return;
+    }
     status = 'loading';
     try {
-      const q = mode === 'pins' ? { pinned: true } : { query };
-      const page = await session.search(channel, before ? { ...q, before } : q, PAGE);
-      found = before ? [...found, ...page] : page;
-      more = page.length === PAGE;
+      const base = mode === 'pins' ? { pinned: true } : { ...(query ? { query } : {}), ...bounds(filters) };
+      const from = mode === 'search' ? filters.from : undefined;
+      const r = await collect((b) => session.search(channel, b ? { ...base, before: b } : base, from ? SCAN_PAGE : PAGE), {
+        limit: from ? SCAN_PAGE : PAGE, want: PAGE, maxPages: from ? SCAN_PAGES : 1, before, keep: (msg) => !from || msg.author === from,
+      });
+      if (mine !== run) return;
+      found = before ? [...found, ...r.matches] : r.matches;
+      scanned = (before ? scanned : 0) + r.scanned;
+      next = r.next;
       status = 'done';
     } catch {
-      status = 'failed';
+      if (mine === run) status = 'failed';
     }
   }
   $effect(() => {
-    void channel; void mode; void query;
+    void channel; void mode; void query; void filters.from; void filters.after; void filters.before;
     found = [];
-    void load();
+    void untrack(() => load());
   });
 
   const shown = $derived(found
@@ -57,9 +89,21 @@
 
 <section class="find" aria-labelledby="find-title">
   <header>
-    <h2 id="find-title">{mode === 'pins' ? m.find.pins : m.find.results(shown.length, more)}</h2>
+    <h2 id="find-title">{mode === 'pins' ? m.find.pins : empty ? m.find.title : m.find.results(shown.length, !!next)}</h2>
     <IconButton size="sm" placement="bottom" label={m.find.close} onclick={() => (shell.find = null)}><X size={18} /></IconButton>
   </header>
+  {#if mode === 'search'}
+    <div class="filters">
+      <label>{m.find.from}
+        <select value={filters.from ?? ''} onchange={(e) => (filters.from = e.currentTarget.value || undefined)}>
+          <option value="">{m.find.anyone}</option>
+          {#each people as person (person.id)}<option value={person.id}>{person.name}</option>{/each}
+        </select>
+      </label>
+      <label>{m.find.after}<input type="date" value={filters.after ?? ''} max={filters.before} onchange={(e) => (filters.after = e.currentTarget.value || undefined)} /></label>
+      <label>{m.find.before}<input type="date" value={filters.before ?? ''} min={filters.after} onchange={(e) => (filters.before = e.currentTarget.value || undefined)} /></label>
+    </div>
+  {/if}
   <div class="list">
     {#each shown as msg (msg.id)}
       {@const sent = ulidTime(msg.id)}
@@ -76,9 +120,11 @@
     {:else}
       {#if status === 'done'}<p class="empty">{mode === 'pins' ? m.find.noPins : m.find.noResults}</p>{/if}
     {/each}
+    {#if status === 'idle'}<p class="empty">{m.find.hint}</p>{/if}
     {#if status === 'loading'}<p class="empty"><Spinner label={m.find.searching} /></p>{/if}
     {#if status === 'failed'}<p class="empty">{m.find.failed}</p>{/if}
-    {#if status === 'done' && more}<button class="more" onclick={() => load(found.at(-1)?.id)}>{m.find.loadMore}</button>{/if}
+    {#if status === 'done' && mode === 'search' && filters.from}<p class="scanned">{m.find.scanned(scanned)}</p>{/if}
+    {#if status === 'done' && next}<button class="more" onclick={() => load(next)}>{filters.from && mode === 'search' ? m.find.searchFurther : m.find.loadMore}</button>{/if}
   </div>
 </section>
 
@@ -86,6 +132,15 @@
   .find { display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--surface-1); }
   header { display: flex; align-items: center; justify-content: space-between; min-height: var(--header-h); padding: 0 var(--space-4); border-bottom: 1px solid var(--border-subtle); }
   h2 { margin: 0; color: var(--text-strong); font: 700 var(--text-md) var(--font-sans); }
+  .filters { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); }
+  .filters label { display: grid; gap: var(--space-1); min-width: 0; color: var(--text-secondary); font: 500 var(--text-xs) var(--font-sans); }
+  .filters label:first-child { grid-column: 1 / -1; }
+  .filters select, .filters input {
+    min-width: 0; min-height: 2rem; padding: 0 var(--space-3); border: 1px solid var(--border-control); border-radius: var(--radius-md);
+    background: var(--surface-0); color: var(--text-normal); font: var(--text-sm) var(--font-sans);
+  }
+  .filters select:focus-visible, .filters input:focus-visible { outline: none; border-color: var(--accent); }
+  .scanned { margin: 0; text-align: center; color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
   .list { flex: 1; min-height: 0; overflow-y: auto; padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
   .result { position: relative; padding: var(--space-3) var(--space-4); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-0); }
   .head { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }

@@ -143,12 +143,17 @@ export interface OutgoingMessage {
   attachments: Id[];
 }
 
-/** Per-channel search: text, or the pinned messages, newest first unless sorted otherwise. */
+/**
+ * Per-channel search: text, or the pinned messages, newest first unless sorted otherwise. Without
+ * `query` or `pinned` Stoat returns every message, which the date bounds and a client-side author
+ * filter narrow (m4.8-plan.md task 12).
+ */
 export interface SearchQuery {
   query?: string;
   pinned?: boolean;
   limit: number;
   before?: Id;
+  after?: Id;
   sort: 'Latest' | 'Oldest' | 'Relevance';
 }
 

@@ -69,7 +69,8 @@
     <input class="search" type="search" placeholder={m.shell.search} aria-label={m.shell.search} bind:value={searchText}
       onkeydown={(e) => {
         const q = searchText.trim();
-        if (e.key === 'Enter' && q) shell.openFind(channel.id, 'search', q.slice(0, 64));
+        // An empty search opens the panel for its filters alone (m4.8-plan.md task 12).
+        if (e.key === 'Enter') shell.openFind(channel.id, 'search', q.slice(0, 64));
         if (e.key === 'Escape') { searchText = ''; if (shell.find?.mode === 'search') shell.find = null; }
       }} />
   {/if}
