@@ -190,7 +190,7 @@ Added on 2026-10-15 at Jaakko's request, after M4.1. Plan: [m4.2-plan.md](m4.2-p
 
 ## M4.3: Discord feature gaps
 
-Added on 2026-10-18 at Jaakko's request, from [discord-gap-research.md](discord-gap-research.md). It takes the number left free between M4.2 and M4.4, but runs after M4.8 and before M5. A plan, `m4.3-plan.md`, is written before work starts. Testing stays light: unit tests for risky core logic, `pnpm verify` before every commit, Jaakko on production.
+Added on 2026-10-18 at Jaakko's request, from [discord-gap-research.md](discord-gap-research.md), and approved the same day. It takes the number left free between M4.2 and M4.4. **Plan only for now**: `m4.3-plan.md` is written now, and building starts once M4.6, M4.7 and M4.8 are all done. It runs before M4.9 and M5. Testing stays light: unit tests for risky core logic, `pnpm verify` before every commit, Jaakko on production.
 
 **Scope**, the research's top 10 in its order:
 1. **Search the whole server.** Fan out over the channels a member can read, with a cap, and say which channels were searched. Add `has:` (link, image, file, video), `mentions:` and `in:`, and oldest/relevance sort. Content filters scan pages within a bound and say when coverage is incomplete. A server-wide search in Stoat stays the upstream fix.
