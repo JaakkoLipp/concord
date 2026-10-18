@@ -105,13 +105,18 @@
   });
   const recorded = $derived(recording ? Math.max(0, Math.floor((recordClock - recording.rec.started) / 1000)) : 0);
   const clockText = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  /** Bumped by every cancel, so a recording that starts after its channel or this composer is gone stops at once. */
+  let generation = 0;
   async function startRecording() {
-    if (!channel || recording || starting) return;
+    const ch = channel;
+    if (!ch || recording || starting) return;
+    const gen = generation;
     starting = true;
     try {
       const rec = await startVoiceRecording();
+      if (gen !== generation) return rec.cancel();
       recordClock = Date.now();
-      recording = { rec, channel };
+      recording = { rec, channel: ch };
     } catch (e) {
       toasts.show(e instanceof DOMException && e.name === 'NotAllowedError' ? m.composer.micRefused : m.composer.recordFailed);
     } finally {
@@ -126,6 +131,7 @@
     if (file) attachFiles(store, r.channel, [file]);
   }
   function cancelRecording() {
+    generation++;
     recording?.rec.cancel();
     recording = null;
   }

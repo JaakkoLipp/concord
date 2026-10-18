@@ -14,9 +14,9 @@
   // Embeds come from senders; only http and https become links (client.md section 6.2).
   const safe = (url: string | undefined) => (url && /^https?:\/\//i.test(url) ? url : undefined);
   const link = $derived(embed.kind === 'website' || embed.kind === 'text' ? safe(embed.url) : undefined);
-  // A link preview's address is the one in the message, so it never asks. A sender's own embed can title a link
-  // with anything, so its links are checked like masked ones (M4.8 task 14a).
-  const shownAs = $derived(embed.kind === 'website' ? link : undefined);
+  // A link preview stands for the link in the message, its original address: it asks only if it now goes elsewhere.
+  // A sender's own embed can title a link with anything, so its links are checked like masked ones (M4.8 task 14a).
+  const shownAs = $derived(embed.kind === 'website' ? embed.originalUrl ?? link : undefined);
   const guard = (e: MouseEvent) => guardLink(e, shownAs);
   const colour = $derived(embed.kind === 'website' || embed.kind === 'text' ? embed.colour : undefined);
   // January marks GIF sites (KLIPY, Giphy, Tenor) as special GIFs, with the animation as a video or an image.

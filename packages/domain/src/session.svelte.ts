@@ -228,6 +228,7 @@ export class Session {
     this.notesSave = null;
     this.noteEdits.clear();
     this.noteWaiters = [];
+    this.notesEcho = undefined;
     if (this.settingsRetry) clearTimeout(this.settingsRetry);
     this.settingsRetry = null;
     this.selfQueue.clear();
@@ -903,7 +904,16 @@ export class Session {
    * Settings written by any session of this account, this one's own writes included. A local change still
    * waiting to be saved is newer than any echo, so it is kept.
    */
-  private settingsChanged(values: Record<string, { value: string }>): void {
+  private settingsChanged(incoming: Record<string, { value: string }>): void {
+    let values = incoming;
+    // Notes merge into the stored value, so an echo arriving while our write is held must not replace it yet:
+    // it is taken once the hold ends, as the folders' echo is.
+    if (incoming[NOTES_KEY] && this.noteWrites.holding) {
+      const { [NOTES_KEY]: echo, ...rest } = incoming;
+      this.notesEcho = echo;
+      values = rest;
+      this.takeNotesEchoLater();
+    }
     this.rawSettings = { ...this.rawSettings, ...values };
     if ('notifications' in values || 'ordering' in values || 'concord:hiddenMutedChannels' in values) {
       const next = parseSettings(this.rawSettings);
@@ -941,7 +951,10 @@ export class Session {
       else setTimeout(() => { if (!this.folderWrites.holding) this.store.folders = parseFolders(this.rawSettings[FOLDERS_KEY]?.value); }, HOLD_MS + 100);
     }
     // Another device's notes, with this one's edits not yet written on top.
-    if (values[NOTES_KEY]) this.store.notes = applyNotes(parseNotes(values[NOTES_KEY].value), this.noteEdits);
+    if (values[NOTES_KEY]) {
+      this.notesEcho = undefined;
+      this.store.notes = applyNotes(parseNotes(values[NOTES_KEY].value), this.noteEdits);
+    }
     if (values[CLOSED_DMS_KEY] && !this.closedSaving) this.store.closedDms = parseClosedDms(values[CLOSED_DMS_KEY].value);
     if (values[STATUS_KEY] && !this.statusSaving) this.store.chosenStatus = parseStatus(values[STATUS_KEY].value);
     // Another device was used, or this one's own write came back: either way, someone is here.
@@ -1013,6 +1026,19 @@ export class Session {
   });
   private foldersChangedAt = 0;
   private foldersEditedAt = 0;
+
+  /** The last notes echo that came while our write was held, taken when the hold ends. */
+  private notesEcho: { value: string } | undefined;
+  private takeNotesEchoLater(): void {
+    setTimeout(() => {
+      if (!this.notesEcho) return;
+      if (this.noteWrites.holding) return this.takeNotesEchoLater();
+      const echo = this.notesEcho;
+      this.notesEcho = undefined;
+      this.rawSettings = { ...this.rawSettings, [NOTES_KEY]: echo };
+      this.store.notes = applyNotes(parseNotes(echo.value), this.noteEdits);
+    }, HOLD_MS + 100);
+  }
 
   /** Edits to notes not yet written, by user ('' removes the note). A write merges them into what is stored. */
   private readonly noteEdits = new Map<Id, string>();

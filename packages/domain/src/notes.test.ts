@@ -81,4 +81,23 @@ describe('setNote', () => {
       vi.useRealTimers();
     }
   });
+
+  it('holds a stale echo that arrives while our write is held, so the next write keeps our note', async () => {
+    vi.useFakeTimers();
+    try {
+      const { session, written } = await fake(async () => ({ [NOTES_KEY]: { value: writeNotes({ a: 'old' }) } }));
+      const saved = session.setNote('b', 'mine');
+      await vi.advanceTimersByTimeAsync(1_000);
+      await saved;
+      // An echo from before our write, without our note, while the hold lasts.
+      receive(session, { [NOTES_KEY]: { value: writeNotes({ a: 'old' }) } });
+      expect(session.store.notes).toEqual({ a: 'old', b: 'mine' });
+      const again = session.setNote('c', 'third');
+      session.flushNotes();
+      await again;
+      expect(written()).toEqual({ a: 'old', b: 'mine', c: 'third' });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

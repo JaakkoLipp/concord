@@ -58,16 +58,25 @@ export async function startVoiceRecording(): Promise<VoiceRecording> {
   const format = voiceFormat();
   if (!format) throw new Error('recording is not supported here');
   const stream = await microphone();
-  const recorder = new MediaRecorder(stream, { mimeType: format.mime, audioBitsPerSecond: 48_000 });
-  const chunks: Blob[] = [];
-  recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
   const release = () => stream.getTracks().forEach((t) => t.stop());
+  const chunks: Blob[] = [];
+  let recorder: MediaRecorder;
+  try {
+    recorder = new MediaRecorder(stream, { mimeType: format.mime, audioBitsPerSecond: 48_000 });
+    recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+    recorder.start(1000);
+  } catch (e) {
+    release();
+    throw e;
+  }
   const started = Date.now();
-  recorder.start(1000);
   return {
     started,
     stop: () => new Promise((resolve) => {
-      if (recorder.state === 'inactive') return resolve(null);
+      if (recorder.state === 'inactive') {
+        release();
+        return resolve(null);
+      }
       recorder.onstop = () => {
         release();
         const type = format.mime.split(';')[0]!;
