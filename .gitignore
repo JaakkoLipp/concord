@@ -15,3 +15,17 @@ apps/web/static/app/emoji/
 .claude/worktrees/
 # The layer store of `pnpm dev` (apps/web/src/hooks.server.ts).
 apps/web/.data/
+# Python bytecode (deploy/account-runner.py).
+__pycache__/
+*.pyc
+# Local probe scripts and screenshots at the repo root; committed probes live in tools/live/src/.
+/probe-*
+# Server-only configuration and secrets. None belongs in git; these are defence in depth.
+.env*
+*.env
+!.env.example
+host.env
+livekit.env
+secrets.env
+Revolt.toml
+.allow-wipe

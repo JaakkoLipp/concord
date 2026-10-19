@@ -14,7 +14,7 @@ We target **Stoat 0.15.5**, the version Stoat's self-hosted repo supports, publi
 | Client | Svelte 5 and SvelteKit. One web app serves both the website and the chat client from one origin. |
 | Desktop | Electron shell loading the hosted client. Windows via an NSIS installer, Linux via Flatpak. |
 | Native client | Rust, committed as the milestone after launch. |
-| Hosting | `concord.jaalip.com` on one Hetzner Cloud VPS in Helsinki, Docker Compose, Caddy in front. The same VPS is the development backend until M3 turns it into production. |
+| Hosting | `concord.jaalip.com` on one VPS, Docker Compose, Caddy in front. The same VPS is the development backend until M3 turns it into production. |
 | Registration | Invite-only, enforced by our website server and a Caddy rule, not by Stoat's own invite-only mode. Only server admins create invites. Only global admins create servers. |
 | Notifications | Web push through Stoat's push daemon to the installed web app on phones, plus browser and desktop notifications. |
 | License | AGPL-3.0. |
@@ -77,7 +77,7 @@ concord/
 - **Onboarding**: before a user picks a username, every user route returns 401. The client calls `GET /onboard/hello` first so it never mistakes onboarding for a dead session.
 - **TOTP enrolment** needs a fresh password-validated ticket for each protected step. Enabling TOTP does not create recovery codes, so the flow must generate them explicitly and make the user save them.
 - **Rate limit**: auth routes share one bucket of 15 requests per 10 seconds, keyed by session when signed in and by client IP otherwise. Failed logins lock the account for 1 minute after three tries, rising to an hour.
-- **Email**: required in practice, because password reset only works with SMTP configured. Hetzner blocks outbound ports 25 and 465, so Stoat sends through an EU transactional relay on 587. Email text comes from templates compiled into Stoat and cannot be customised.
+- **Email**: required in practice, because password reset only works with SMTP configured. The VPS provider blocks outbound ports 25 and 465, so Stoat sends through an EU transactional relay on 587. Email text comes from templates compiled into Stoat and cannot be customised.
 - **Session storage**: the client keeps the token in IndexedDB, in both the browser and the desktop app, so there is one code path. Electron's encrypted storage would add little, because on Linux it silently falls back to a fixed key when no keyring is available.
 
 ### 4.2 Invite-only registration
@@ -99,8 +99,8 @@ Admins invite people by creating ordinary server invites, revocable as on Discor
 - Jaakko's `deploy/account-link.sh` writes a one-time password token into the account and prints a `/app/welcome/<token>` link. Jaakko sends that link to the person directly. It can carry an invite.
 - The same script resets a forgotten password. Stoat's own "Forgot password" fails without SMTP.
 - The email-link steps 4 and 5 above need real email, which M6 adds:
-  - Cloudflare Email Sending through a small bridge, because its SMTP uses port 465, which Hetzner blocks,
-  - or our own sender, once Hetzner unblocks port 25.
+  - Cloudflare Email Sending through a small bridge, because its SMTP uses port 465, which the VPS provider blocks,
+  - or our own sender, once the provider unblocks port 25.
 
   Until then, the invite page at `/app/invite/<code>` serves existing accounts (m3-results.md).
 
@@ -229,7 +229,7 @@ Stoat's default LiveKit config has TURN disabled. Without it, members on network
 The VPS milestone, M3, enables LiveKit's built-in TURN on `turn.concord.jaalip.com`:
 
 - **TURN over TLS on port 443.** This is the part that rescues locked-down networks. LiveKit's sample config says the TLS port must be 443 unless a load balancer terminates TLS in front of it.
-- **A second public IPv4.** Caddy already owns 443 on the main address. We attach a Hetzner floating IP, configure it persistently in the OS, point `turn.concord.jaalip.com` at it, and bind LiveKit's TURN listener to it. This costs a few euros a month and avoids running a TLS-sniffing proxy in front of Caddy.
+- **A second public IPv4.** Caddy already owns 443 on the main address. We attach a floating IP, configure it persistently in the OS, point `turn.concord.jaalip.com` at it, and bind LiveKit's TURN listener to it. This costs a few euros a month and avoids running a TLS-sniffing proxy in front of Caddy.
 - **TURN over UDP on 3478**, cheap to add alongside. It goes on the **main** IP, with relay ports 30000 to 30100. LiveKit hands clients `turn:<node IP>:3478`, and the node IP is the main IP. Only `turns:<domain>:443` uses the floating IP (m3-plan.md, checked in M3).
 - **Outbound traffic stays on the main IP.** LiveKit learns its node IP from the address its traffic leaves from. After a reboot, Docker sent from the floating IP, which broke voice. `com.docker.network.host_ipv4` on the stack's network pins it (m3-results.md task 3).
 - **Certificate**: Caddy also listens on port 80 of the floating IP, so it can answer the certificate challenge for `turn.concord.jaalip.com`. LiveKit mounts Caddy's certificate directory read-only. A weekly job at a quiet hour restarts it when the certificate has been renewed, about every two months. A restart drops calls in progress and leaves Stoat's voice state unreliable for a while (m4-results.md, task 9), which is why it runs at night and only when needed.
@@ -288,17 +288,17 @@ Account management stays reachable on the website without installing anything, a
 
 ## 8. Hosting and operations
 
-- **VPS**: the current server has 2 shared vCPU, 3.7 GB RAM and 4 GB swap, in Helsinki. It runs Ubuntu 26.04. Idle, the stack uses 1.6 GB. The estimate for production is 4 vCPU and 8 GB, and the M3 voice session decides whether more is needed. If so, the VPS is resized rather than moving the stack to Jaakko's home server. Stoat's own guidance asks for 2 GB minimum, third-party guides suggest 4 GB with voice, and LiveKit needs CPU headroom for several 1080p60 streams. Each viewer of a 1080p60 share pulls roughly 6 to 10 Mbps, well within Hetzner's included traffic at our scale.
+- **VPS**: the current server has 2 shared vCPU, 3.7 GB RAM and 4 GB swap. It runs Ubuntu 26.04. Idle, the stack uses 1.6 GB. The estimate for production is 4 vCPU and 8 GB, and the M3 voice session decides whether more is needed. If so, the VPS is resized rather than moving the stack to Jaakko's home server. Stoat's own guidance asks for 2 GB minimum, third-party guides suggest 4 GB with voice, and LiveKit needs CPU headroom for several 1080p60 streams. Each viewer of a 1080p60 share pulls roughly 6 to 10 Mbps, well within the VPS's included traffic at our scale.
 - **Addresses**: a main IPv4 and IPv6, plus one floating IPv4 for TURN.
 - **Exact steps** for addresses, ports, files and backups live in [vps-runbook.md](vps-runbook.md). This section states the rules.
 - **Port bindings**:
   - Caddy binds the main IPv4 and IPv6 on 80 and 443 over TCP, and 443 over UDP for HTTP/3. It also binds port 80 on the floating IP for certificate challenges.
   - LiveKit binds 7881 over TCP and 50000 to 50100 over UDP on the main address. TURN binds 443 over TCP on the floating IP, and 3478 plus relay ports 30000 to 30100 over UDP on the main address.
-  - The Hetzner Cloud firewall opens the union of these ports, since its inbound rules don't filter by destination address. Docker's per-IP bindings keep each service on its own address. The firewall matters, because ports Docker publishes bypass ufw.
+  - A cloud firewall in front of the VPS opens the union of these ports, since its inbound rules don't filter by destination address. Docker's per-IP bindings keep each service on its own address. The firewall matters, because ports Docker publishes bypass ufw. Operator details live in the private ops notes.
   - No address is committed: they live in the server-only `concord/host.env`, which the `dc` wrapper reads.
 - **Our deployment files never use names Stoat's generator touches.** When rerun with overwrite, Stoat's generator renames `compose.override.yml`, `livekit.yml`, `Revolt.toml` and `.env.web`. So our compose file is `deploy/concord.compose.yml`. It replaces Stoat's Caddyfile and LiveKit config with our versions from `deploy/`, adds our web app, and rebinds ports. The LiveKit API key and secret stay out of git in a server-only environment file. A wrapper script runs every compose command with both files, so nobody forgets the second `-f`. Our edits to `Revolt.toml` are kept as a documented diff in `deploy/`, without secrets, and the upgrade script reapplies it.
 - **Version pinning**: our compose file sets every Stoat image tag explicitly. MongoDB is pinned to 7.0.43, because MongoDB 8 refuses to start on the VPS's kernel 7.0. 7.0 is supported until August 2027. The reasons and the path to 8.0 are in `deploy/concord.compose.yml`. Upgrades are a reviewed pull request here, applied by a script that backs up first and reruns the adapter's contract tests.
-- **Backups**: run nightly with restic. Since M3 they go to the VPS's own disk, and a Hetzner Storage Box is to be added as a second repository. They cover a MongoDB dump, the object storage data, `secrets.env`, `Revolt.toml`, the LiveKit keys file, `.env.web` and Caddy's data directory. `secrets.env` holds the file encryption key, and losing it makes every attachment unreadable. The restore drill moved from M3 to M4.
+- **Backups**: run nightly with restic. They cover a MongoDB dump, the object storage data, `secrets.env`, `Revolt.toml`, the LiveKit keys file, `.env.web` and Caddy's data directory. `secrets.env` holds the file encryption key, and losing it makes every attachment unreadable. The restore drill moved from M3 to M4.
 - **Monitoring**: an external uptime check on the API and WebSocket, plus disk and memory alerts, in M8. Until then backups and the disk are logged under `concord` and shown by `deploy/status.sh`.
 
 ## 9. Gaps and upstream candidates

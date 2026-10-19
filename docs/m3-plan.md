@@ -10,11 +10,11 @@ Working agreement, as in M2:
 
 ## Checked while planning
 
-Read-only checks of the VPS and DNS, one reversible TURN probe on the VPS, and four Sonnet research agents covering Stoat's mail code, email relays, Hetzner and LiveKit's TURN source.
+Read-only checks of the VPS and DNS, one reversible TURN probe on the VPS, and four Sonnet research agents covering Stoat's mail code, email relays, the VPS provider and LiveKit's TURN source.
 
 | Question | Answer |
 |---|---|
-| What is on the VPS already? | A Hetzner Cloud server in `hel1-dc2`: 2 vCPU, 3.7 GB, Ubuntu 26.04, kernel 7.0. It already has fail2ban with the sshd jail, unattended security upgrades without automatic reboot, key-only SSH with root login off, and ufw. **Runbook section 1 step 5 is done.** |
+| What is on the VPS already? | A cloud server with 2 vCPU, 3.7 GB, Ubuntu 26.04, kernel 7.0. It already has fail2ban with the sshd jail, unattended security upgrades without automatic reboot, key-only SSH with root login off, and ufw. **Runbook section 1 step 5 is done.** |
 | Does HTTP/3 work? | No. Caddy advertises `h3` in `Alt-Svc`, but UDP 443 is not published, so browsers try it and fall back. The port rebinding in task 1 fixes this. |
 | DNS | Cloudflare, DNS only, with an A record for `concord.jaalip.com`. There is **no AAAA record**, no `turn.` record, and no SPF, DKIM or DMARC. |
 | Unknown `/app` paths | `/app/nope` still answers 500. |
@@ -25,7 +25,7 @@ Read-only checks of the VPS and DNS, one reversible TURN probe on the VPS, and f
 | LiveKit's TURN | Stoat's LiveKit image `v1.9.14` is a fork of LiveKit 1.13.4. With TURN on, LiveKit hands clients `turns:<domain>:443` (port 443 is hard-coded) and `turn:<node IP>:3478`. The node IP is the main IP, never the floating one. **So UDP 3478 must be on the main IP**, unlike runbook section 4 and architecture sections 5.3 and 8. The relay ports default to 30000–40000, so we set 30000–30100 and publish them. LiveKit reads the certificate once at start and **refuses to start if the file is missing**, which takes all voice down. |
 | TURN inside Docker's bridge network | Risky in theory: the TURN relay inside the container sends media to the main IP's published ports, a hairpin through Docker's NAT. **Probed on the VPS**: UDP TURN on the main IP, then a headless relay-only join through the test page with a fake 1080p60 share. It connected through `turn:<main IP>:3478`, and 5 MB of video went through the relay in 12 seconds. Chrome reports the selected candidate as `prflx` with `relayProtocol: udp`, not as `relay`, so checks look at `relayProtocol` and the TURN URL. Bridge networking works, and LiveKit doesn't need host networking. |
 | Caddy's certificate for `turn.` | Stored at `certificates/acme-v02.api.letsencrypt.org-directory/turn.concord.jaalip.com/` under Caddy's data directory. Caddy falls back to ZeroSSL, which would change the path. So the site block pins Let's Encrypt and turns off the TLS-ALPN challenge, which can't work while LiveKit owns 443 on that address. In bridge mode Caddy can't `bind` the floating IP. Docker publishes `<floating IP>:80` to Caddy instead. |
-| Hetzner | Floating IPv4: €3.00 a month. Cloud Firewall: free. It filters inbound traffic by source only and applies per server, so it opens the union of all ports. Storage Box BX11: 1 TB, about €3.20 a month, available in Helsinki, restic over SFTP on port 23. CX23 (2 vCPU, 4 GB): €5.49 a month or €0.0088 an hour. CX33 (4 vCPU, 8 GB): €8.49. Prices rose on 15 June 2026, and resizing an existing server moves it to the new prices. CX plans may be out of stock in Helsinki, but a drill machine can run anywhere. |
+| The provider | A floating IPv4 costs a few euros a month and the cloud firewall is free. The firewall filters inbound traffic by source only and applies per server, so it opens the union of all ports. Plans and prices are in the private ops notes. |
 | Upstream | The self-hosted repo still pins 0.15.5 at `9af5e90`. Stoat 0.16.0-rc.1 came out on 13 October. |
 | Docs out of date | `deploy/revolt-changes.md` section 3 names an ID that is no longer the one in `Revolt.toml`, which today is `dev-admin`. |
 
@@ -37,25 +37,19 @@ Read-only checks of the VPS and DNS, one reversible TURN probe on the VPS, and f
 
 A Sonnet challenger reviewed the first draft, and this version includes its fixes.
 
-**Changed after sign-off, 2026-10-14**: Jaakko can't use Scaleway or another outside mail provider, and the Storage Box waits until later.
-- **No email in M3.** Production runs without an SMTP server, so Stoat creates accounts already verified. `account-link.sh` writes a one-time password link into the account, and Jaakko sends that link to the person. The new task 2 has the details. Real email moves to M6: Cloudflare Email Sending through a small bridge, or our own sender once Hetzner unblocks port 25.
-- **Backups go to the VPS's own disk.** The Storage Box comes later as a second copy.
+**Changed after sign-off, 2026-10-14**: Jaakko can't use Scaleway or another outside mail provider.
+- **No email in M3.** Production runs without an SMTP server, so Stoat creates accounts already verified. `account-link.sh` writes a one-time password link into the account, and Jaakko sends that link to the person. The new task 2 has the details. Real email moves to M6: Cloudflare Email Sending through a small bridge, or our own sender once the provider unblocks port 25.
 
 ## Jaakko's part, in order
 
 Items 2 and 3 can be done now, in any order. Items 5 to 8 come when a task asks. Added monthly cost: €3 for the floating IP.
 
 1. Dropped: Scaleway. There is no email in M3, as described above.
-2. **Hetzner console**:
+2. **Provider console**:
    1. **Floating IP**: done on 2026-10-14. The address lives only in `host.env` on the server.
    2. **DNS**: done on 2026-10-14. `turn.concord` points at the floating IP and `ref.concord` at the main IP.
-   3. **Firewall**: Firewalls → Create "concord":
-      - Inbound TCP 22, 80, 443 and 7881.
-      - Inbound UDP 443, 3478, 30000-30100 and 50000-50100.
-      - Inbound ICMP.
-      - Apply it to the server.
-   4. **Storage Box**: later, as a second copy of the backups.
-3. **A second address**: Jaakko's other Outlook address, for a second account. A `+` or dotted variant won't work, because Stoat treats those as the same address. No mail is sent to it in M3.
+   3. **Firewall**: a cloud firewall opening SSH, ICMP and the ports the stack publishes, applied to the server. Operator details live in the private ops notes.
+3. **A second address**: another of Jaakko's own addresses, for a second account. A `+` or dotted variant won't work, because Stoat treats those as the same address. No mail is sent to it in M3.
 4. Dropped: healthchecks.io. Decision 9 explains.
 5. **Your accounts after the wipe**, in task 5:
    - Make a link for your own account and one for your second address, with one command each, and set both passwords through them.
@@ -63,7 +57,7 @@ Items 2 and 3 can be done now, in any order. Items 5 to 8 come when a task asks.
    - Create the community server in our client.
    - Post a few messages and an image, and set an avatar. The restore drill checks these.
 6. **A temporary machine for the restore drill**, in task 6:
-   - A CX23 in any location, Ubuntu 26.04, with your SSH key. It costs cents.
+   - A small VPS in any location, Ubuntu 26.04, with your SSH key. It costs cents.
    - An A record `drill.concord` → its address.
    - Delete both after the drill.
 7. **Before the tester evening**: M0's encoder runs 1 to 4, Chrome on Windows, from m0-results.md section 3. You can do them alone, with your two accounts after the wipe or with personas before it.
@@ -90,7 +84,7 @@ Items 2 and 3 can be done now, in any order. Items 5 to 8 come when a task asks.
    - If the wipe comes first, you run the check once with your second account.
    - The tester evening proves the forced-relay criterion either way.
 5. **No permanent check account on production.** Agents check production through HTTP and the database, and through your accounts only when you run a check yourself.
-6. **The dev stack moves to M4**, as M4's first task. It would be a CX23 at `dev.concord.jaalip.com`, about €5.49 a month, where the seed and live checks point by default.
+6. **The dev stack moves to M4**, as M4's first task. It would be a small VPS at `dev.concord.jaalip.com`, where the seed and live checks point by default.
    - M3 keeps the seed working for it: the stack's dev parts are switched by one marker, and the seed refuses any stack without it.
    - Recommended: it keeps M3 to production. Until M4, nothing needs personas.
 7. **No Stoat upgrade in M3.** 0.16 is a release candidate and the self-hosted repo still pins 0.15.5. If the self-hosted repo moves its pin during M3, the upgrade drill runs on the drill machine. Any upgrade must re-check the two Stoat bugs in client.md section 7.
@@ -146,7 +140,7 @@ The default order is below. Task 1 needs nothing from Jaakko, and the others sta
 
 ### 3. Floating IP, firewall and TURN (needs item 2)
 
-- **Floating IP**: it goes in `/etc/netplan/60-floating-ip.yaml`, following Hetzner's guide, applied with `netplan try`. Then reboot once and confirm the address is present and every container is up.
+- **Floating IP**: it goes in `/etc/netplan/60-floating-ip.yaml`, following the provider's guide, applied with `netplan try`. Then reboot once and confirm the address is present and every container is up.
 - **Firewall check**: publish a throwaway container on a port the firewall doesn't open, on the main IPv4, the IPv6 and the floating IP. All three must time out from WSL or the drill machine. Remove the container afterwards.
 - **Certificate for `turn.`**:
   - A `turn.concord.jaalip.com` block that returns 404, pinned to Let's Encrypt with TLS-ALPN off.
@@ -176,7 +170,7 @@ The default order is below. Task 1 needs nothing from Jaakko, and the others sta
   - The committed files in `deploy/` are not backed up, because git has them.
   - Retention per decision 10, and a weekly `restic check`.
   - The disk check and the log entries, per decision 9.
-- **Where**: a restic repository on the VPS's own disk, under `/var/backups/concord`, owned by root. The Storage Box is added later as a second repository. Until then, a backup doesn't survive losing the VPS.
+- **Where**: a restic repository on the server, owned by root (`deploy/backup.sh`).
 
 - **Done when**:
   - The first snapshot is listed and `restic check` passes.
@@ -249,10 +243,10 @@ Jaakko wants invites working before testers join. This pulls part of M6 forward,
    - Echo is noted, but it is a client issue.
 3. Screen share on the test page:
    - **Windows to two viewers on other home networks**, with the codec chosen from the encoder runs. Pass: at least one viewer gets 1920 × 1080 at an average of 55 fps or more over two minutes. Measure the downlink of any viewer who gets less.
-   - **Forced relay with UDP 3478 closed in the Hetzner firewall.** Pass: the test page shows the connection going `via tls`, and video plays. It may say `prflx` rather than `relay`, which still counts. Reopen the port afterwards.
+   - **Forced relay with UDP 3478 closed in the cloud firewall.** Pass: the test page shows the connection going `via tls`, and video plays. It may say `prflx` rather than `relay`, which still counts. Reopen the port afterwards.
    - **A phone or throttled viewer.** Pass: it steps down a layer within about ten seconds and never freezes for more than two seconds.
 
-**Done when** each pass is recorded or its failure explained. The VPS is resized to a CX33 only if dev-environment.md section 2's thresholds are crossed.
+**Done when** each pass is recorded or its failure explained. The VPS is resized to 4 vCPU and 8 GB only if dev-environment.md section 2's thresholds are crossed.
 
 ### 9. Results, docs and decision gate part B
 

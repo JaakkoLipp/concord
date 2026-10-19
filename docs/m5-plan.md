@@ -23,7 +23,7 @@ From what is known of Electron, Chromium, Windows and the XDG portals, with the 
 | Share audio, Windows | Electron's `audio: 'loopback'` has recorded all system output, the call included. Chromium added a Windows loopback mode that leaves out Chrome's own audio in 2025 (`kLoopbackWithoutChromeId`). Whether our Electron's `loopback` uses it is a desk check of Electron's source, then a *probe*. `loopbackWithMute` mutes local output, which is not what we want. The sure route is the **process loopback API** with `EXCLUDE_TARGET_PROCESS_TREE` on Concord's main process, whose tree includes Chromium's audio process. It needs a small native addon. Microsoft's sample names build 20348, but OBS uses the same API on Windows 10 2004 and later, so we detect it by trying, not by build number. |
 | Share audio, Linux | Not in M5. It needs a PipeWire virtual microphone that leaves out Concord's own nodes, as Vesktop's `venmic` does. Stays with architecture 5.2: may slip past the MVP. |
 | Hardware encoding, Linux | Chromium's VA-API encoder is off by default and is turned on by command-line features before the app starts. The M0 spike used `VaapiVideoEncoder,VaapiVideoDecodeLinuxGL` with `ignore-gpu-blocklist`. Names drift between Chromium versions. Intel and AMD on Mesa may work, and Intel in a Flatpak needs the `org.freedesktop.Platform.VAAPI.Intel` extension. NVIDIA has no VA-API encoder. *Probe.* |
-| Updates | electron-updater reads `latest.yml` from GitHub Releases. **The source repo is private**, and the updater can't read a private repo's releases without a token in the app. `releases/latest` is repo-wide, so desktop releases shouldn't share a repo with any other releases. |
+| Updates | electron-updater reads `latest.yml` from GitHub Releases. **The source repo was private** when this was planned, and the updater can't read a private repo's releases without a token in the app. `releases/latest` is repo-wide, so desktop releases shouldn't share a repo with any other releases. |
 | Windows trust | An unsigned installer shows SmartScreen's "Windows protected your PC" until the user clicks More info, then Run anyway. **Smart App Control**, on some fresh Windows 11 installs, blocks unsigned programs with no way past. Unsigned Electron with a keyboard hook may also trip Defender's heuristics. An EV certificate no longer skips SmartScreen since 2024. Prices are in decision 12. |
 
 ## Decisions (recommended defaults)
@@ -121,6 +121,7 @@ Each is a recommendation that sign-off accepts unless Jaakko says otherwise.
     - **Making `JaakkoLipp/concord` public is a separate choice.** SignPath (decision 12) and Flathub (decision 13) need it.
       - Before that, a scan of the history: secrets, personal data, and what the docs reveal about infrastructure, hostnames and the community.
       - While the source stays private, AGPL's offer of source to users is met by attaching a source archive to each release.
+      - **Update, 2026-10-19**: the source repo is being made public under AGPL-3.0, after that scan. Operator details moved to private ops notes.
 
 12. **Code signing on Windows: unsigned for the closed beta.** Apply to SignPath Foundation once the project qualifies.
     - **Unsigned**: free.

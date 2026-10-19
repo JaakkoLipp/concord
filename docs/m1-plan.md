@@ -11,7 +11,7 @@ Status: signed off 2026-10-12, then revised the same day to Jaakko's testing dir
 - the existing M0 contract tests,
 - one scripted reconnect check against the live deployment.
 
-There are no new fixture scenarios, no screenshot-diff suite and no gallery. CI runs `pnpm verify` on GitHub Actions in the private repository `JaakkoLipp/concord`.
+There are no new fixture scenarios, no screenshot-diff suite and no gallery. CI runs `pnpm verify` on GitHub Actions in the repository `JaakkoLipp/concord`.
 
 ## Agent tasks, in order
 
@@ -35,7 +35,7 @@ There are no new fixture scenarios, no screenshot-diff suite and no gallery. CI 
 
 ## Decisions, 2026-10-12
 
-1. **CI**: private GitHub repository `JaakkoLipp/concord`. Actions run `pnpm verify`.
+1. **CI**: the GitHub repository `JaakkoLipp/concord`. Actions run `pnpm verify`.
 2. **Playwright**: pinned to the Chromium build already in Jaakko's user cache, used for review screenshots and the reconnect check only.
 3. **`Subscribe`**: on for 0.15.5 through the capability table. Sent when a server opens and every 10 minutes while it stays open. Later versions fall back to polling.
 4. **Markdown**: no fixtures recorded from Stoat's client. The parser tests are hand-written cases, using Stoat's renderer as the reference.

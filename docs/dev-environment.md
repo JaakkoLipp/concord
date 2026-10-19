@@ -78,7 +78,7 @@ Public sign-up is blocked by Caddy, so accounts are created on the VPS over the 
 
 The same script is how real people get accounts after M3: Jaakko creates each one by hand until they decide to open registration, as architecture section 4.2 describes.
 
-1. Open the Mailpit tunnel: `ssh -N -L 8025:127.0.0.1:8025 jaakko@concord.jaalip.com`, then browse to `http://127.0.0.1:8025`.
+1. Open the Mailpit tunnel: `ssh -N -L 8025:127.0.0.1:8025 <user>@concord.jaalip.com`, then browse to `http://127.0.0.1:8025`.
 2. Create the account: `~/stoat/concord/create-account.sh <email> <password>` on the VPS. Success is HTTP 204.
 3. Verify by opening the `/login/verify/<token>` link from the mail.
    - Scripts call `POST /api/auth/account/verify/{token}` instead. It returns a ticket, and `POST /api/auth/session/login` with `mfa_ticket` set to that ticket signs in without a password.
@@ -99,7 +99,7 @@ Pitfalls, from Stoat's source:
 - running `set-server-creators.sh`, which edits `restrict_server_creation` and restarts `api`,
 - running `reset-data.sh`. Without `--reset` the seed refuses to run against a database that already has accounts.
 
-`CONCORD_SSH` overrides the SSH destination. The IDs from the last run are saved in the gitignored `tools/seed/.state.json`, which `seed hold`, `seed check` and the recorder read.
+`CONCORD_SSH` overrides the SSH destination, and `CONCORD_SSH_USER` only its user (default `jaakko`). The IDs from the last run are saved in the gitignored `tools/seed/.state.json`, which `seed hold`, `seed check` and the recorder read.
 
 **Bootstrap**, run first after every reset:
 

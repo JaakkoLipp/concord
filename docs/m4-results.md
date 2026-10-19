@@ -4,7 +4,7 @@ Plan: [m4-plan.md](m4-plan.md). Written task by task.
 
 ## Task 1: the dev stack, on this machine, 2026-10-14
 
-Jaakko chose a local stack over a CX23. It runs in Docker Desktop at `http://localhost`, laid out like production's `~/stoat`, with every port on `127.0.0.1`. Nothing was installed in WSL. dev-environment.md's appendix has the setup.
+Jaakko chose a local stack over a second VPS. It runs in Docker Desktop at `http://localhost`, laid out like production's `~/stoat`, with every port on `127.0.0.1`. Nothing was installed in WSL. dev-environment.md's appendix has the setup.
 
 | Check | Result |
 |---|---|

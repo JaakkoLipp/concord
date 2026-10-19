@@ -1,6 +1,6 @@
 # Concord: handoff for the next session
 
-You are continuing Concord, a Discord-style chat client on a self-hosted, unmodified Stoat 0.15.5 backend, for a ~200-person community in Finland. Jaakko directs the product, reviews on the live client and tests on real devices. Coding agents do most implementation. Jaakko's pronouns are not stated: use the name or they/them.
+You are continuing Concord, a Discord-style chat client on a self-hosted, unmodified Stoat 0.15.5 backend, for a ~200-person community in Finland. Jaakko directs the product, reviews on the live client and tests on real devices. Coding agents do most implementation.
 
 **On production** at `https://concord.jaalip.com/app`:
 - **M4**, voice: the call view, camera, 1080p60 screen share, DM calls with ringing, and voice settings with RNNoise and push-to-talk. What's left of M4 needs people and devices (below). `docs/m4-results.md`.
@@ -9,7 +9,6 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
   - It lives in `concord-web`, under `/app/api/v1/`.
   - It provides the session check, the permission check, the server-creator and admin gates, limits, and a SQLite store at `~/stoat/concord/data/`.
   - The store is in the nightly backup through `layer-copy.sh`.
-  - `ADMIN_USER_IDS` on production holds Jaakko's admin account.
 - **M4.5**, 2026-10-15: `docs/m4.5-results.md`. Built:
   - message, link and image menus with Mark unread,
   - Mark as read for a server, and unread counts in the tab's title,
@@ -79,34 +78,11 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 - If voice-ingress answers LiveKit's webhooks with 500 and nobody shows in a call, restart the local LiveKit: `~/stoat/concord/dc restart livekit`. It happened during M4.2 after a reloaded page rejoined a call (m4.2-results.md). It isn't understood, so watch for it at the voice evening.
 - Locally `[hosts] january` must be `http://january:14705`, or link previews never arrive.
 
-## Open with Jaakko
+Personal to-dos, reviews owed, open decisions and operator notes are kept in Jaakko's private ops notes, not in this repository.
 
-**Reviews on production**:
-- M4.4: the settings sidebar shows "Can create servers · System admin".
-- M4.5: right-click menus, Mark unread, the dock's chevrons and the keybinds in voice settings, Watch stream, the user limit, server tags in server settings and profile settings, and favourite GIFs.
-- M4.6: the motion and layout parity, with reduced motion on and off, then the final 30 fps recording beside the spec's video. The list and the live runs still owed are in m4.6-results.md, task 19.
-- M4.1 and M4.2 if not reviewed yet: the feel with reduced motion on and off, and one Chrome performance recording including the emoji picker's first open.
-
-**Decisions:**
-- **The admin panel**: Jaakko wants it to do, as a GUI in the web client, what they do over SSH during the beta, with its scope kept small. Some of those tasks need root or Docker, which the layer must never have: changing server creators restarts `api` and restarting LiveKit. (Creating accounts by email is done without root: closed-beta invitations, architecture section 4.2. Admins and moderators make them under Mentions in the DM sidebar; the layer creates the account over the internal network. Members ask for beta invitations and for server invites in the Invite to beta view; admins approve in Administration. Administration also lists the platform's people and changes the admin and moderator roles, makes password links and suspends accounts, through the account runner, a host-side service the layer only asks (architecture section 11.5; it needs `pnpm deploy:stack:prod` on the VPS, which has not been run yet). Still open there: revoking an approved invitation, carrying a server invite on a beta link, and deleting accounts.) The recommendation is a small root-side runner on the VPS that does only a fixed list of actions the panel requests. Its plan, in another session's worktree (`.claude/worktrees/concord-admin-panel-9b4095/docs/admin-panel-plan.md`, uncommitted), predates the layer and reads MongoDB directly; it should move onto `/app/api/v1/admin/*` and the layer's admin gate.
-- **The browser tab icon** is white on transparent, as asked, and may be faint on light tab bars.
+## Open items
 
 **Mute and deafen keybinds** are in Voice and video settings, Ctrl+Shift+M and Ctrl+Shift+D by default, so a combination a browser keeps for itself can be changed (m4.5-results.md, follow-up).
-
-**Jaakko's tasks for M4:**
-1. Encoder runs 1 to 4 on Windows Chrome, on `/spike/`.
-2. A real-microphone check on production.
-3. A Wi-Fi switch during a call.
-4. The voice evening: five or more people for 30 minutes, a game share from Windows Chrome, a Firefox sharer and viewer, and a forced-relay run with UDP 3478 closed briefly. It completes decision gate part B.
-5. The restore drill, now with the layer's store (vps-runbook.md section 7).
-
-**Carried from M3:**
-- M2's device checks with a tester.
-- Before the 21st, delete `~/stoat/data-dev-2026-10-14/` on the VPS.
-- Save the restic password in a password manager.
-- Remove `/spike/` from production after the voice evening.
-
-**Other sessions**: an end-to-end encryption session for DMs was told about the layer.
 
 **Upstream candidates** (architecture section 9):
 - January and the Instagram embed fixers: the pull request text and its tested pattern are in m4.5-results.md task 9, for Jaakko to file.

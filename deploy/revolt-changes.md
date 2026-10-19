@@ -29,7 +29,7 @@ password = ""
 from_address = "noreply@concord.jaalip.com"
 ```
 
-Real email waits for M6: Cloudflare Email Sending through a small bridge, because its SMTP uses port 465 and Hetzner blocks it, or our own sender once Hetzner unblocks port 25. In that case use `use_starttls = true` on 587, as Stoat's lettre setup requires.
+Real email waits for M6: Cloudflare Email Sending through a small bridge, because its SMTP uses port 465 and the VPS provider blocks it, or our own sender once the provider unblocks port 25. In that case use `use_starttls = true` on 587, as Stoat's lettre setup requires.
 
 **Dev stack**: Mailpit, which `dev.compose.yml` adds when `.allow-wipe` exists. Stoat always sends credentials, so Mailpit accepts any login without TLS.
 

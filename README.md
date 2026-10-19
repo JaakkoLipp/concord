@@ -12,7 +12,7 @@ One SvelteKit app holds the chat client today and the website from M6, and the s
 
 Concord is built milestone by milestone; [docs/milestones.md](docs/milestones.md) is the roadmap. Running on production at `concord.jaalip.com/app`:
 
-- **M0 to M4**: the Stoat stack on a Hetzner VPS in Helsinki; login with TOTP; the read-only client; text chat, DMs, friends, reactions, search, attachments, notifications; server administration; voice channels and DM calls with camera and 1080p60 screen share.
+- **M0 to M4**: the Stoat stack on a single VPS; login with TOTP; the read-only client; text chat, DMs, friends, reactions, search, attachments, notifications; server administration; voice channels and DM calls with camera and 1080p60 screen share.
 - **M4.1, M4.2, M4.4, M4.5**: UI alignment fixes; a motion spec; Concord's own layer beside Stoat (its own sessions, permissions, gates and a SQLite store); right-click menus, GIFs, quick voice controls, server tags.
 
 Landing task by task now:
@@ -32,7 +32,7 @@ Ahead: **M5** desktop apps, **M6** the website, **M7** Finnish locale, PWA and c
 | Backend | Stoat 0.15.5, every image pinned, run unmodified. MongoDB, Valkey, RabbitMQ, Silo, Caddy in front. |
 | Concord's layer | A server-side layer inside the web app under `/app/api/v1/`: the Stoat session check, permissions, the admin gates and a SQLite store with migrations. For whatever Stoat has no place for, starting with server tags, reports and beta invitations. |
 | Desktop | Electron shell loading the hosted client (M5). Windows NSIS installer, Linux Flatpak. |
-| Hosting | One Hetzner Cloud VPS in Helsinki, Docker Compose, nightly restic backups. |
+| Hosting | One VPS, Docker Compose, nightly restic backups. Operator details live in the private ops notes. |
 
 ## Repository layout
 
@@ -95,4 +95,11 @@ Every milestone keeps a plan and a results file in `docs/`, named `m<N>-plan.md`
 
 ## Licence
 
-Concord's own code is AGPL-3.0. Stoat, LiveKit and every other dependency keep their own licences.
+Concord's own code is licensed under the GNU Affero General Public License v3.0; the full text is in [LICENSE](LICENSE). If you run a modified version as a network service, the AGPL asks you to offer its source to that service's users.
+
+- **Vendored Stoat files**: `packages/stoat/api/0.15.5/openapi.json` and `packages/stoat/data/unicode_emoji-0.15.5.txt` are copied unchanged from [Stoat](https://github.com/stoatchat/stoatchat), which is AGPL-3.0, and keep their upstream notices.
+- **Emoji images**: [Twemoji](https://github.com/jdecked/twemoji) graphics (`@twemoji/svg`), CC-BY 4.0, copied in from the npm package at build time and not stored here.
+- **Dependencies**: Stoat, LiveKit and every other dependency keep their own licences.
+- **Name and logo**: the Concord name and logo (`apps/web/static/app/brand/`) are not covered by the licence. All rights reserved.
+
+Security issues: see [SECURITY.md](SECURITY.md).

@@ -103,7 +103,7 @@ Starting targets, to be confirmed with measurements in the first client mileston
 
 ## Constraints
 
-- Backend: Stoat, self-hosted on one Hetzner VPS in Helsinki at `concord.jaalip.com`, unmodified. AGPL-3.0.
+- Backend: Stoat, self-hosted on one VPS at `concord.jaalip.com`, unmodified. AGPL-3.0.
 - Development runs against the Stoat stack on the VPS, with the client built and served locally on Jaakko's machine. Other people get accounts from M3, when the VPS becomes production.
 - Our code: AGPL-3.0.
 - Implementation is done mostly by coding agents. Jaakko reviews the experience and tests on real devices, so every milestone ends with a device test list.

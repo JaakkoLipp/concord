@@ -1,7 +1,8 @@
 /**
  * Which stack the tools talk to (m4-plan.md task 1): the local stack in Docker Desktop at http://localhost, unless
  * CONCORD_HOST names another. Production is reached only on purpose, as `pnpm deploy:web` does with
- * CONCORD_HOST=concord.jaalip.com. CONCORD_SSH, CONCORD_BACKEND and CONCORD_APP still override one part each;
+ * CONCORD_HOST=concord.jaalip.com. CONCORD_SSH (or just its user, CONCORD_SSH_USER), CONCORD_BACKEND and CONCORD_APP
+ * still override one part each;
  * sameHost() refuses a mix.
  */
 import { homedir } from 'node:os';
@@ -11,8 +12,9 @@ export const PRODUCTION_HOST = 'concord.jaalip.com';
 
 export const HOST = process.env.CONCORD_HOST ?? LOCAL_HOST;
 export const LOCAL = HOST === LOCAL_HOST;
-/** Jaakko's login through the public hostname, so no address is written down. `local` runs commands on this machine. */
-export const SSH = process.env.CONCORD_SSH ?? (LOCAL ? 'local' : `jaakko@${HOST}`);
+/** The operator's login through the public hostname, so no address is written down. `local` runs commands on this machine. */
+const SSH_USER = process.env.CONCORD_SSH_USER ?? 'jaakko';
+export const SSH = process.env.CONCORD_SSH ?? (LOCAL ? 'local' : `${SSH_USER}@${HOST}`);
 export const BACKEND = process.env.CONCORD_BACKEND ?? `${LOCAL ? 'http' : 'https'}://${HOST}`;
 export const APP = process.env.CONCORD_APP ?? `${BACKEND}/app`;
 

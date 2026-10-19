@@ -4,28 +4,27 @@ Goal: put Stoat and our client on `concord.jaalip.com`, prove the media path on 
 
 **Already done in M0, October 2026**, with results in [m0-results.md](m0-results.md):
 
-- **Section 1**: the VPS at 2 vCPU and 3.7 GB, ufw instead of the cloud firewall, Docker.
+- **Section 1**: the VPS, ufw instead of the cloud firewall, Docker.
 - **Section 2**: Stoat at 0.15.5 with our compose file, the Caddyfile with the registration block, Mailpit for mail, and the admin bootstrap.
 - **Section 3**: the registration gate, tested on every path variant.
 - **Section 5**: step 5, the presence check.
 
 **Done in M3, October 2026**, with results in [m3-results.md](m3-results.md) and the plan in [m3-plan.md](m3-plan.md):
 
-- **Section 1**: the floating IP, the Hetzner Cloud firewall, automatic reboots for security updates at 05:30, and outbound traffic pinned to the main IP. fail2ban and unattended upgrades were already running.
+- **Section 1**: the floating IP, the cloud firewall, automatic reboots for security updates at 05:30, and outbound traffic pinned to the main IP. fail2ban and unattended upgrades were already running.
 - **Section 2**:
   - Caddy binds only the main addresses, with HTTP/3, and the addresses live in the server-only `concord/host.env`.
   - The `/app` route, with the main domain redirecting to it and Stoat's own client moved to `ref.<domain>`.
   - **No email relay.** Production runs without SMTP, and people get one-time password links from `account-link.sh` (section 3).
 - **Section 4**: TURN, with the layout corrected below.
-- **Section 7**: nightly restic backups, to the VPS's own disk for now.
+- **Section 7**: nightly restic backups.
 - **The swap to production**: the dev data was moved aside rather than wiped. Then Jaakko's account was bootstrapped and the community server created in our client.
 
 **Carried into M4**:
 - section 5's voice session and section 6's screen-share runs, merged into M4's voice evening,
-- section 7's restore drill,
-- the Storage Box as a second backup repository.
+- section 7's restore drill.
 
-**Carried into M6**: real email, with Cloudflare Email Sending through a bridge or our own sender once Hetzner unblocks port 25.
+**Carried into M6**: real email, with Cloudflare Email Sending through a bridge or our own sender once the provider unblocks port 25.
 
 Estimated effort: two to four evenings, plus one group voice session.
 
@@ -36,16 +35,16 @@ You need to decide or buy these. Nothing else in M3 can start without the first 
 | Item | Notes |
 |---|---|
 | DNS access for `jaalip.com` | The app is served at `concord.jaalip.com`, TURN at `turn.concord.jaalip.com`, and later Stoat's reference client at `ref.concord.jaalip.com`. Email is sent from an address on `concord.jaalip.com`, so its SPF, DKIM and DMARC records go there. |
-| Hetzner Cloud account | Project in Helsinki. |
+| VPS provider account | One with floating IPs and a cloud firewall. Operator details live in the private ops notes. |
 | Transactional email relay | EU-based, SMTP on port 587, free tier is enough. Needs SPF, DKIM and DMARC records on the domain. |
-| Hetzner Storage Box | Smallest size, for backups. |
+| Off-site backup storage | Smallest size, as a second backup repository. |
 | Testers | At least three people for the voice session, ideally one on a restrictive network such as a workplace or school. |
 
 ## 1. Provision
 
-1. Create a VPS in Helsinki, latest Ubuntu LTS, SSH key only. The current one has 2 vCPU and 3.7 GB, with base setup from `deploy/server-setup.sh`. Resize to 4 vCPU and 8 GB if the voice session in section 5 shows memory or CPU pressure.
-2. Attach a floating IPv4 for TURN. Configure it persistently in the OS network config, following Hetzner's floating IP guide. Reboot once and confirm the address is still present. Docker cannot bind a port to an address that is missing at boot, and voice would be down.
-3. Create a Hetzner Cloud firewall that opens TCP 22, 80, 443 and 7881, UDP 443, 3478, 30000 to 30100 and 50000 to 50100, and ICMP. Inbound rules can't be limited per destination address, so Docker's bindings enforce the per-address split. The form takes a range's first port in "Port" and its last in "Port range".
+1. Create a VPS close to the community, latest Ubuntu LTS, SSH key only. Start at about 2 vCPU and 4 GB, with base setup from `deploy/server-setup.sh`. Resize to 4 vCPU and 8 GB if the voice session in section 5 shows memory or CPU pressure.
+2. Attach a floating IPv4 for TURN. Configure it persistently in the OS network config, following the provider's floating IP guide. Reboot once and confirm the address is still present. Docker cannot bind a port to an address that is missing at boot, and voice would be down.
+3. Create a cloud firewall that opens SSH, ICMP and only the ports the stack publishes (`deploy/concord.compose.yml` and `deploy/turn.compose.yml`). Inbound rules can't be limited per destination address, so Docker's bindings enforce the per-address split. Docker-published ports bypass ufw, so this firewall is what closes everything else. Operator details live in the private ops notes.
 4. DNS records:
    - `concord.jaalip.com`: A and AAAA to the main addresses.
    - `turn.concord.jaalip.com`: A to the floating IP.
@@ -147,7 +146,7 @@ The test page and the M0 encoder runs are specified in section 7 of [dev-environ
 ## 7. Operations checks
 
 1. Record memory and CPU per container at idle and during the voice session, using `deploy/dc stats`.
-2. Set up nightly backups with restic, done in M3 by `deploy/backup.sh` to the VPS's own disk. The Storage Box is to be added as a second repository. They cover a MongoDB dump, the object storage data, `secrets.env`, `Revolt.toml`, `livekit.yml`, the LiveKit keys file, `.env.web` and Caddy's data directory. `secrets.env` is critical, because it holds the key that decrypts every stored file. Take the dump and the object-storage copy back to back, because `crond` deletes files from storage on its own schedule.
+2. Set up nightly backups with restic, done in M3 by `deploy/backup.sh`. They cover a MongoDB dump, the object storage data, `secrets.env`, `Revolt.toml`, `livekit.yml`, the LiveKit keys file, `.env.web` and Caddy's data directory. `secrets.env` is critical, because it holds the key that decrypts every stored file. Take the dump and the object-storage copy back to back, because `crond` deletes files from storage on its own schedule.
 3. **Restore drill**: restore last night's backup onto a fresh small VPS or a local machine and start the stack. Log in to an existing account and check that its message history is intact, an image attachment opens, and avatars render. Delete the drill machine afterwards.
    - **Concord's own layer** (architecture section 11.5): put the snapshot's `concord/data/layer-backup.db` in place as `concord/data/layer.db`, with no `-wal` or `-shm` beside it, owned by uid 1000, before `dc up -d`. `/app/api/v1/health` then answers 200, and the settings sidebar shows Jaakko's gates.
 4. **Concord's own layer** (architecture section 11.5):

@@ -146,7 +146,7 @@ Detailed in [vps-runbook.md](vps-runbook.md).
 | 5, restore drill | Carried into M4 |
 | 6, decision gate part B | Provisional |
 
-- The plan changed with Jaakko: no email in M3, because people get one-time password links. The dev data was swapped out rather than wiped. Backups go to the VPS disk until a Storage Box is added.
+- The plan changed with Jaakko: no email in M3, because people get one-time password links. The dev data was swapped out rather than wiped.
 - The invite page and the move of Stoat's client to `ref.` came forward from M6.
 
 ## M4: Voice and screen share in the browser
@@ -162,7 +162,7 @@ Detailed in [vps-runbook.md](vps-runbook.md).
 **Device tests**: a real voice evening with at least five people, including one screen share of a game. Include one Firefox sharer and one Firefox viewer.
 
 **Carried in from M3**:
-- **First task**: a separate dev stack, a CX23 at `dev.concord.jaalip.com` with a fresh seed (m3-plan.md decision 6).
+- **First task**: a separate dev stack, a small VPS at `dev.concord.jaalip.com` with a fresh seed (m3-plan.md decision 6).
 - **The voice evening also covers M3's criteria 2 to 4**: 30 minutes of voice with four or more people on different networks, the screen-share runs on the test page, and a forced relay with UDP 3478 closed. Its results complete decision gate part B.
 - **The restore drill** from vps-runbook.md section 7.
 

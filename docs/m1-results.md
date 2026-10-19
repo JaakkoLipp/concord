@@ -74,7 +74,7 @@ Measured by `tools/live/src/perf.ts` from WSL to the VPS, in headless Chromium w
 | Scrolling | 60 fps with 1,000 messages | **60 fps** average over 240 scroll steps through yleinen's history, while pages load. The worst frame was 50 ms, when a page of 100 arrived. The DOM never holds more than 200 messages, so 1,000 loaded messages means walking through five pages. |
 | Idle memory, Electron, one server | under 300 MB | Not measurable before M5. The browser tab's JS heap is **17 MB** after the scroll walk. |
 
-The cold start is fast partly because the VPS is in Helsinki, close to Jaakko. It should be measured again on a phone over mobile data.
+The cold start is fast partly because the VPS is close to Jaakko. It should be measured again on a phone over mobile data.
 
 ## 6. Stoat behaviour found during M1
 

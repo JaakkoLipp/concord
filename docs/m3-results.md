@@ -19,7 +19,7 @@ Production runs at `https://concord.jaalip.com` with Jaakko's two accounts and t
 **Resources at idle** with two accounts, from `dc stats` after the swap:
 - **Host**: 1.75 GB used, 2.06 GB available of 3.7 GB. The load average is about 0.6 on 2 vCPU.
 - **Largest containers**: RabbitMQ 107 MB, MongoDB 90 MB, Autumn 56 MB, Stoat's client 54 MB, MinIO 51 MB, concord-web 44 MB, LiveKit 44 MB and the API 43 MB.
-- **Under load**: no voice load was measured. That comes with M4's evening, and it decides the resize to a CX33.
+- **Under load**: no voice load was measured. That comes with M4's evening, and it decides whether the VPS is resized.
 
 **Manual repairs and surprises**, for criterion 3:
 
@@ -101,10 +101,8 @@ The go or no-go is recorded after M4's voice evening. Until then nothing points 
 | `tools/live/src/turn.ts`, relay only, `turns:` server only | Connected through `turns:turn.concord.jaalip.com:443?transport=tcp` with `relayProtocol: tls`. 5.2 MB of video in 12 s. |
 | `restart-livekit.sh`, run by hand | Certificate found, LiveKit restarted, logged under `concord` |
 | Direct voice join after the restart | Connected over UDP, without the relay |
-| Firewall, before | **No Hetzner Cloud firewall yet.** A throwaway container on port 9999 answered from outside on the main and the floating IP. Docker-published ports bypass ufw, so only the cloud firewall can stop them. |
-| Firewall, after Jaakko created "concord" | The same container times out from outside on the main and the floating IPv4. SSH, `routes.ts`, `h3.ts`, `turn.ts` and a direct UDP voice join all still pass. IPv6 couldn't be tested from WSL and is checked from the drill machine in task 6. |
-
-Hetzner's form takes a port range as the first port in "Port" and the last in "Port range", not as `30000-30100` in one box.
+| Firewall, before | **No cloud firewall yet.** A throwaway container on port 9999 answered from outside on the main and the floating IP. Docker-published ports bypass ufw, so only the cloud firewall can stop them. |
+| Firewall, after the cloud firewall was applied | The same container times out from outside on the main and the floating IPv4. SSH, `routes.ts`, `h3.ts`, `turn.ts` and a direct UDP voice join all still pass. |
 
 ## Task 7: invites, first part, 2026-10-14
 
@@ -148,12 +146,12 @@ All pass.
 Jaakko can't use an outside mail provider, so M3 sends no email.
 
 **What we found first**:
-- **Outbound mail ports**: from the VPS, ports 25 and 465 are blocked, as Hetzner Cloud does by default. 587 and 443 are open.
+- **Outbound mail ports**: from the VPS, ports 25 and 465 are blocked, as the provider does by default. 587 and 443 are open.
 - **Stoat with no mail server**: when `[api.smtp] host` is empty, Stoat creates accounts already verified and sends no mail. Its "Forgot password" fails with `OperationFailed`, because it stores the reset token only after sending.
 - **Reset tokens**: `PATCH /auth/account/reset_password` looks up the token in the account's `password_reset` field. Stoat's own upstream test writes that field directly, and so does our script.
   - **Probed on the dev stack**: a written token set the password (204), and using it again got 401.
   - The expiry is stored as an ISO-8601 string, compared as text.
-- **Cloudflare**: researched as an alternative. Email Sending is in public beta since April 2026 and needs Workers Paid, about $5 a month. Its SMTP is on port 465 only, which Hetzner blocks, so it would need a bridge to Cloudflare's HTTPS API. Left for M6.
+- **Cloudflare**: researched as an alternative. Email Sending is in public beta since April 2026 and needs Workers Paid, about $5 a month. Its SMTP is on port 465 only, which the provider blocks, so it would need a bridge to Cloudflare's HTTPS API. Left for M6.
 
 **Built**:
 - **`deploy/account-link.sh <email> [invite]`** on the server:
@@ -172,7 +170,7 @@ Jaakko can't use an outside mail provider, so M3 sends no email.
 ## Task 4: backups, 2026-10-14
 
 **Setup**:
-- **Where**: restic 0.18.1 from Ubuntu's packages, with the repository on the VPS's own disk at `/var/backups/concord/restic`, owned by root. A Storage Box becomes a second repository later. Until then, a backup doesn't survive losing the VPS.
+- **Where**: restic 0.18.1 from Ubuntu's packages, with the repository on the server, owned by root (paths in `deploy/backup.sh`).
 - **When**: `backup.sh` runs nightly at 03:30 from `/etc/cron.d/concord`.
 - **What**, two snapshots taken back to back:
   - `db`: restic runs `mongodump` itself, so a failed dump is never saved.
@@ -190,11 +188,7 @@ Jaakko can't use an outside mail provider, so M3 sends no email.
 
 **Bug found by the forced failure**: the first version made a new password whenever the password file was empty. That would replace the real one and hide that it was gone. Now only a brand-new repository gets a password, and an existing one without its password stops the backup.
 
-**For Jaakko**: keep the repository password in your password manager. Print it with:
-
-```bash
-ssh -t jaakko@concord.jaalip.com 'sudo cat /root/.config/concord/restic-password'
-```
+**The repository password** must also be kept off the server: without it the backups can't be read. Reading it is in the private ops notes.
 
 **At the wipe**: the snapshots of dev data are forgotten, so production's backups start clean.
 
@@ -255,10 +249,9 @@ A Sonnet review of `65fcb29..HEAD` found no data-destroying or injection bug. It
 - **Docs**: runbook section 3 still described email verification and "Forgot password". It now describes `account-link.sh`.
 
 **Carried to M4**:
-- **IPv6 before the AAAA record**: Docker forwards published IPv6 ports to the IPv4 bridge through docker-proxy. Every IPv6 client may then reach Caddy, and Stoat's per-IP rate limits, from one address, and the IPv6 firewall is still untested. Test both from the drill machine before adding AAAA.
+- **IPv6 before the AAAA record**: Docker forwards published IPv6 ports to the IPv4 bridge through docker-proxy. Every IPv6 client may then reach Caddy, and Stoat's per-IP rate limits, from one address. Test it from the drill machine before adding AAAA.
 - **The seed guard checks over `CONCORD_SSH`, while API calls use `CONCORD_BACKEND`.** Once there are two stacks, assert they name the same host.
 - **`livekit-turn.yml` names the production TURN host**, so TURN can't start on another domain. That is fine while only production has a floating IP.
-- **`/spike/` is still public on production.** It is needed for the encoder runs and the voice evening. Remove it after M4's evening.
 - **A reset link doesn't remove TOTP**, so recovery codes are the only way back from a lost authenticator.
 
-**Not changed, by Jaakko's earlier choice**: commit author metadata carries Jaakko's personal address (memory, 2026-10-12). The repo is private.
+**Not changed, by Jaakko's earlier choice**: commit author metadata carries Jaakko's personal address (memory, 2026-10-12).

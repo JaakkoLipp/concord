@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Nightly backup with restic (m3-plan.md task 4), run as root by concord-cron at 03:30.
-# The repository is on the VPS's own disk for now; a Storage Box becomes a second repository later. Until then a
-# backup doesn't survive losing the VPS. The repository password is in /root/.config/concord/restic-password and
-# in Jaakko's password manager: without it the backups can't be read.
+# The repository and its password file are the paths below. Keep a copy of the password off the server too:
+# without it the backups can't be read.
 #
 # Two snapshots a night, taken back to back because crond deletes stored files on its own schedule:
 #   tag db:    a MongoDB dump, made by restic itself, so a failed dump is never saved

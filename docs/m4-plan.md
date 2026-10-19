@@ -36,7 +36,7 @@ Each task lists what is built and its done-check. The live checks run with Playw
 
 ### 1. The dev stack, on this machine
 
-Changed on 2026-10-14 at Jaakko's request: the dev stack runs locally in Docker Desktop at `http://localhost` instead of on a CX23, so nothing new is paid for or exposed. Browsers treat `localhost` as secure, so voice works without TLS.
+Changed on 2026-10-14 at Jaakko's request: the dev stack runs locally in Docker Desktop at `http://localhost` instead of on a second VPS, so nothing new is paid for or exposed. Browsers treat `localhost` as secure, so voice works without TLS.
 
 **Built**:
 - `~/stoat` in WSL, laid out like production's: `compose.yml` from Stoat's repo at `9af5e90`, used as data only, and our `deploy/` files with `.allow-wipe`. Nothing is installed on the machine. Docker Desktop's WSL integration is the only requirement.
@@ -215,13 +215,13 @@ The evening also covers M3's criteria 2 to 4:
 - 30 minutes of voice with four or more people on different networks,
 - a forced relay with UDP 3478 closed.
 
-`dc stats` is taken under load, which decides the resize to a CX33.
+`dc stats` is taken under load, which decides whether the VPS is resized.
 
 Each result records which client it came from. M3's voice criterion was written for Stoat's own client. If voice misbehaves in ours, the same people repeat a few minutes on `ref.`, so decision gate criterion 5 can tell Stoat's problems from ours.
 
 ### 11. Restore drill, any time after task 1
 
-**Built**: vps-runbook.md section 7's drill on a temporary CX23 with `drill.concord`. From the same machine, the IPv6 checks M3 carried over: the IPv6 firewall, and whether Docker makes every IPv6 client one address to Stoat's rate limits.
+**Built**: vps-runbook.md section 7's drill on a temporary small VPS with `drill.concord`. From the same machine, the IPv6 checks M3 carried over.
 
 **Done when**:
 - accounts, messages, attachments and avatars come back on the drill machine,
@@ -231,7 +231,7 @@ The machine is deleted afterwards.
 
 ## Jaakko's part, in order
 
-1. Dropped: the dev stack's CX23 and DNS. The dev stack runs on this machine (task 1).
+1. Dropped: the dev stack's VPS and DNS. The dev stack runs on this machine (task 1).
 2. **Before task 7**: encoder runs 1 to 4 on the test page, Windows Chrome, with your two production accounts (m0-results.md section 3). Run 11 too if a Linux Firefox is at hand.
 3. **After task 5**: a real-microphone check in Windows Chrome: RNNoise on and off, both sensitivity modes and push-to-talk.
 4. **After task 9**: device tests:
@@ -243,12 +243,10 @@ The machine is deleted afterwards.
    - a game share from Windows Chrome,
    - a Firefox sharer and a Firefox viewer.
 
-   You close UDP 3478 in the Hetzner firewall for the forced-relay run, then reopen it.
-6. **Any time**: the restore drill's CX23 and the `drill.concord` record (task 11).
+   You close UDP 3478 in the cloud firewall for the forced-relay run, then reopen it.
+6. **Any time**: the restore drill's VPS and the `drill.concord` record (task 11).
 7. **Carried from M3**:
-   - M2's device checks on production with your two accounts and a tester,
-   - before the 21st, delete `~/stoat/data-dev-2026-10-14/` on the VPS,
-   - save the restic password in your password manager.
+   - M2's device checks on production with your two accounts and a tester.
 
 ## Decisions
 
