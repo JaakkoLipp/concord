@@ -121,7 +121,8 @@ Each is a recommendation that sign-off accepts unless Jaakko says otherwise.
     - **Making `JaakkoLipp/concord` public is a separate choice.** SignPath (decision 12) and Flathub (decision 13) need it.
       - Before that, a scan of the history: secrets, personal data, and what the docs reveal about infrastructure, hostnames and the community.
       - While the source stays private, AGPL's offer of source to users is met by attaching a source archive to each release.
-      - **Update, 2026-10-19**: the source repo is being made public under AGPL-3.0, after that scan. Operator details moved to private ops notes.
+      - **Update, 2026-10-19**: done. `JaakkoLipp/concord` is public under AGPL-3.0-or-later after that scan, with operator details moved to private ops notes, old Actions runs deleted, and secret scanning, push protection and private vulnerability reporting on.
+      - **Open for sign-off**: with the source public, releases could live on `JaakkoLipp/concord` itself, which has no other releases, saving a repo and a token. The separate repo still keeps CI's write token away from the source. Recommendation: the source repo, unless Jaakko prefers the separation.
 
 12. **Code signing on Windows: unsigned for the closed beta.** Apply to SignPath Foundation once the project qualifies.
     - **Unsigned**: free.
