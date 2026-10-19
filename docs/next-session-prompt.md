@@ -1,97 +1,51 @@
 # Concord: handoff for the next session
 
-You are continuing Concord, a Discord-style chat client on a self-hosted, unmodified Stoat 0.15.5 backend, for a ~200-person community in Finland. Jaakko directs the product, reviews on the live client and tests on real devices. Coding agents do most implementation.
+You are continuing Concord, a Discord-style chat client on a self-hosted, unmodified Stoat 0.15.5 backend, for a ~200-person community in Finland. Jaakko directs the product, reviews on the live client and tests on real devices. Coding agents do most implementation. The repository is public (AGPL-3.0-or-later) since 2026-10-19; personal to-dos, open decisions and operator details live in Jaakko's private ops notes, which the main session reads alongside this file.
 
-**On production** at `https://concord.jaalip.com/app`:
-- **M4**, voice: the call view, camera, 1080p60 screen share, DM calls with ringing, and voice settings with RNNoise and push-to-talk. What's left of M4 needs people and devices (below). `docs/m4-results.md`.
-- **M4.1 and M4.2**, alignment and motion: `docs/m4.1-results.md` and `docs/m4.2-results.md`. Motion rules are in client.md section 9, enforced by `tools/lint/motion.ts`.
-- **M4.4, Concord's own layer**, 2026-10-15: `docs/m4.4-results.md` and architecture section 11.
-  - It lives in `concord-web`, under `/app/api/v1/`.
-  - It provides the session check, the permission check, the server-creator and admin gates, limits, and a SQLite store at `~/stoat/concord/data/`.
-  - The store is in the nightly backup through `layer-copy.sh`.
-- **M4.5**, 2026-10-15: `docs/m4.5-results.md`. Built:
-  - message, link and image menus with Mark unread,
-  - Mark as read for a server, and unread counts in the tab's title,
-  - quick voice controls and shortcuts,
-  - per-user and per-stream volume,
-  - streams that start unwatched,
-  - a voice channel user limit,
-  - sounds through the chosen speaker,
-  - Speak gained mid-call,
-  - the January pull request text,
-  - server tags, the layer's first feature,
-  - favourite GIFs without search: a star on GIFs in chat, and a GIF button in the composer,
-  - mute and deafen keybinds in Voice and video settings.
-- **Since then**, the server menu has Mute server and Server settings swapped, at Jaakko's request (`b029c05`).
+**On production** at `https://concord.jaalip.com/app`, everything through M4.8:
+- **M4** voice, **M4.1–M4.2** alignment and motion, **M4.4** Concord's own layer, **M4.5** menus, GIFs and quick voice controls: see their `docs/m4*-results.md`.
+- **M4.6**, UI motion and design parity with `docs/design/discord-ui-motion-spec.md`: settings as an inset modal over the app, tooltips, the rail pill, the action bar, skeletons, the voice stage and stream view, the profile popout, the spinner. `docs/m4.6-results.md` task 19 lists the browser runs still owed and Jaakko's reviews.
+- **M4.7**, moderation: moving people between calls, server mute and deafen, Discord-style menus, every permission saying why it's missing, timeouts, slow mode, bulk delete, the audit log, reports, permission guardrails, the upstream pull request text. Hourly history snapshots and the restore tool are live and drilled. The history guard bot is built and drilled locally, waiting for its bot account (`docs/m4.7-results.md` task 12).
+- **M4.8**, everyday usability: shortcuts and the quick switcher, opening at the first unread, the mentions inbox, the offline banner, drafts, My Account with two-factor, server order and folders, message sounds, search filters, notes, image zoom, masked links, age-restricted channels, appearance, voice messages.
+- **Built outside the plans** (2026-10-18, other sessions): closed-beta invitations and server invites on request through the layer, Administration (people, roles, password links, suspensions) through the host-side account runner (architecture section 11.5), dragging channels between categories, roles on the profile card, member feedback and bug reports.
 
-**Planned next**, all in `docs/milestones.md` (renumbered 2026-10-16):
-- **M4.6, UI motion and design parity.** It follows `docs/design/discord-ui-motion-spec.md`, a measured spec of Discord's motion, popups and layout, whose section 9 is the acceptance checklist.
-  - **A guide, not a copy**: behaviour, timings and layout follow the spec; colours stay Concord's. Cyan stays, text keeps its contrast, and settings becomes a modal over the app. These are decided.
-  - The roadmap entry has 18 sub-tasks in dependency order, a token mapping and a deferred list, from a Sonnet audit against the spec.
-  - **The spec overrides M4.2's motion rules** where they differ, so sub-task 1 changes client.md section 9 and `tools/lint/motion.ts` first.
-  - The plan is `docs/m4.6-plan.md`, challenger-reviewed and awaiting Jaakko's sign-off.
-- **M4.7, moderation, voice and text.** The plan is `docs/m4.7-plan.md`, challenger-reviewed twice and awaiting Jaakko's sign-off. It covers:
-  - moving people between calls,
-  - server mute and deafen, enforced by Concord clients because of Stoat's bug,
-  - menus laid out as Discord's,
-  - permissions that work,
-  - timeouts, slow mode and bulk delete for server admins,
-  - the audit log and reports through the layer,
-  - protecting history: hourly snapshots and a restore tool, permission guardrails, and a guard bot,
-  - the upstream pull request text.
-- **M4.8, everyday usability**: the quick switcher and shortcuts, opening at the first unread, a mentions inbox, My Account in the app, server folders and more. Roadmap entry only.
+**Planned next**, in `docs/milestones.md`:
+- **M5, desktop apps for Windows and Wayland** (X11 out of scope): `docs/m5-plan.md`, challenger-reviewed, **awaiting Jaakko's sign-off and answers** (the app name, the machines, an unsigned beta, where releases live). Next to build.
+- **M4.3, Discord feature gaps**: `docs/m4.3-plan.md`, plan only, from `docs/discord-gap-research.md`. Accessibility is out of its scope for now. Built after M5 is under way, once Jaakko signs it off.
+- **M4.9, a Supporter role** with custom profile-card CSS and server creation: roadmap entry only.
+- **M6** website, **M7** polish, PWA (with swipe navigation) and the closed beta, **M8** launch, **M9** native Linux client.
 
-**This session's job:**
-1. **Jaakko's review** of M4.4 and M4.5 on production, and of M4.1 and M4.2 if not given yet.
-2. **The M4.6 plan**, `docs/m4.6-plan.md`, from its roadmap entry:
-   - probes where needed,
-   - tasks with done-checks,
-   - the audit table, re-checked against the code,
-   - a Sonnet challenger review.
-
-   Then stop for sign-off and build. M4.7 follows once Jaakko signs off its plan.
+**The next session's job**: get M5 signed off and build it task by task; set up the guard bot on production once Jaakko has made its account; run the browser checks owed from M4.6–M4.8 on the local stack.
 
 ## How to work
 
-- **Plan first.** Ordered tasks, each with a done-check, then Jaakko's part and the decisions. Stop for sign-off. Recommend rather than list. Keep documents short and plain.
-- **The dev stack is local**: `~/stoat` in WSL on Docker Desktop at `http://localhost`, seeded with personas. The tools default to it (`tools/target.ts`).
-  - Production is reached only through `pnpm deploy:web`, `pnpm deploy:stack:prod` and `pnpm live:prod <check>`.
-  - Ask Jaakko for servers only for what localhost can't show.
-  - Never install system software in WSL.
-- **Production holds real people.**
-  - The seed and the persona checks refuse any stack but the local one.
-  - Deploys to `/app` are fine. `deploy:web` runs `routes.ts` afterwards.
-- **Commit and push at the end of each finished task**, after `pnpm verify`, run right before the commit.
-- **Testing stays light**: unit tests for the risky core, and scripted live checks in `tools/live/src/`.
-  - M4 is covered by `voice`, `callview`, `dm-call`, `share` and `voice-restart`, M4.4 by `layer`, and M4.5 by `menus`, `server-read`, `voice-controls`, `voice-channel`, `tags` and `gifs`.
-  - The call checks play `media.ts`'s speech-like fake microphone, which Chromium's audio processing still learns to filter within a minute or so, so keep each call check short. New ones share `calls.ts`.
-- **The layer**: a new table is a new numbered file in `apps/web/src/lib/server/layer/migrations/`, imported by name in `migrations.ts`. A unit test fails if one is missing. Every endpoint goes through `endpoint()` in `http.ts`.
-- **Design direction**: Concord should feel like Discord and keep its own identity. Take structure, ordering, timings and behaviour from Discord references, never their colours or brand. UI checks use "no hard-coded colours, tokens only" in place of "colours match Discord".
-- **Sonnet subagents** (`model: "sonnet"`) do research, the challenger review of each plan, and the review of the session's diff before handing over. Keep synthesis and final writing in the main session. Never run scripts or build tools inside downloaded clones.
-- **Private addresses**: Jaakko's admin email must never appear in files or commit messages. `pnpm verify` fails on personal mail addresses.
+- **Plan first.** Ordered tasks, each with a done-check, then Jaakko's part and the decisions. A Sonnet challenger reviews each plan. Stop for sign-off. Recommend rather than list. Keep documents short and plain.
+- **Agents build, the main session steers.** One agent per milestone in its own git worktree, task by task, committing and pushing small commits to `main` after a rebase. The main session reviews, deploys and talks to Jaakko. If agents are interrupted, resume the same ones; a new Claude Code session can't, so brief fresh agents from the last reports.
+- **Testing is light** (Jaakko, 2026-10-18): write the code; unit tests only for risky core logic (sync, data loss, permissions, privacy); live checks only where they guard data or privacy. `pnpm verify` runs before every commit. Jaakko reviews on production.
+- **Review before deploying.** A Sonnet agent reads the diff since the last deploy for bugs that hurt real users; fix what blocks, then deploy. This has caught real bugs every time.
+- **Deploying.** Jaakko prefers finished work on production quickly. Production `/app` is deployed from `main` only: `pnpm verify` on a clean checkout of the same commit (never piped, so a failure stops the deploy), then `pnpm deploy:web`, which runs `routes.ts`. A new layer migration applies on startup; check one that adds a constraint against production's data first. `pnpm deploy:stack:prod` changes the VPS: run it only for reviewed `deploy/` changes.
+- **The dev stack is local**: `~/stoat` at `http://localhost`, seeded with personas, set up as `docs/dev-environment.md` describes. The tools default to it (`tools/target.ts`). Production is reached only through `deploy:web`, `deploy:stack:prod` and `live:prod`. The seed and persona checks refuse any stack but the local one.
+- **Production holds real people.** Agents never seed, probe or test there.
+- **The layer**: a new table is a new numbered file in `apps/web/src/lib/server/layer/migrations/`, imported by name in `migrations.ts`. Every endpoint goes through `endpoint()` in `http.ts`.
+- **Synced settings** follow M4.8's six-step `concord:` recipe, with a hold against stale echoes and no writes before settings have loaded (commit c7034ac).
+- **Design direction**: Concord should feel like Discord and keep its own identity. Take structure, timings and behaviour from Discord, never their colours or brand. Tokens only, `m.*` strings, the motion rules of client.md section 9.
+- **The repo is public.** No personal addresses, IPs, hostnames beyond the public domain, firewall or backup details, or community data in files or commit messages. Operator details go to the private ops notes. `pnpm verify` fails on personal mail addresses; GitHub's secret scanning and push protection are on.
+- **Never run scripts or build tools inside downloaded clones.**
 
-## Docker Desktop quirks, all handled in `deploy/`
+## Local stack quirks, handled in `deploy/`
 
-- Containers never get the end of stdin, so `create-account.sh` mounts its body as a file.
-- A single-file bind mount follows the file it first saw, so scripts edit `Revolt.toml` in place, never with `sed -i`.
-- After a long cut, its UDP forwarding can rewrite ports and leave a call with no audio. This is not expected on production. Jaakko's Wi-Fi switch there decides it.
-- If voice-ingress answers LiveKit's webhooks with 500 and nobody shows in a call, restart the local LiveKit: `~/stoat/concord/dc restart livekit`. It happened during M4.2 after a reloaded page rejoined a call (m4.2-results.md). It isn't understood, so watch for it at the voice evening.
+- Under Docker Desktop, containers never get the end of stdin (so `create-account.sh` mounts its body as a file), a single-file bind mount follows the file it first saw (so scripts edit `Revolt.toml` in place, never with `sed -i`), WSL's `/tmp` can't be mounted, and UDP forwarding can rewrite ports after a long cut. Native Docker Engine has none of these; the workarounds are harmless there.
+- If voice-ingress answers LiveKit's webhooks with 500 and nobody shows in a call, `~/stoat/concord/dc restart livekit`. Not understood; watch for it at the voice evening.
 - Locally `[hosts] january` must be `http://january:14705`, or link previews never arrive.
-
-Personal to-dos, reviews owed, open decisions and operator notes are kept in Jaakko's private ops notes, not in this repository.
+- After a rebase that touches a workspace package, restart Vite with `--force`. Under `vite dev` the reaction list's `?raw` import breaks reactions, so check reactions on a built preview.
+- Running `voice.ts` straight after `layer.ts` gets 429s on `/me` from the layer's flood test.
 
 ## Open items
 
-**Mute and deafen keybinds** are in Voice and video settings, Ctrl+Shift+M and Ctrl+Shift+D by default, so a combination a browser keeps for itself can be changed (m4.5-results.md, follow-up).
+- **Upstream candidates** (architecture section 9): January and the Instagram embed fixers (m4.5-results.md task 9); voice-ingress's state after LiveKit restarts; voice moderation acting on the moderator (text in m4.7-results.md task 13, to be built and tested before filing).
+- **Known, not fixed**: a screen-share viewer whose downlink was squeezed can stay at 360p for minutes (m4.5-results.md task 1).
 
-**Upstream candidates** (architecture section 9):
-- January and the Instagram embed fixers: the pull request text and its tested pattern are in m4.5-results.md task 9, for Jaakko to file.
-- voice-ingress's state after LiveKit restarts.
-- Voice moderation acting on the moderator instead of the target. M4.7 task 13 writes the pull request text; the source lines are in the m4.7 plan's appendix.
-
-**Known, not fixed**: a screen-share viewer whose downlink was squeezed can stay at 360p for minutes. Send-side estimation didn't help (m4.5-results.md task 1).
-
-## Commands (WSL, from the repo root)
+## Commands (from the repo root)
 
 | Task | Command |
 |---|---|
