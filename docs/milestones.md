@@ -556,15 +556,17 @@ Added on 2026-10-18 at Jaakko's request. **Plan only**: nothing is built until `
 
 ## M5: Desktop apps
 
-**Scope**: Electron shell loading the hosted client, screen and window picker, push-to-talk on Windows, X11 and Wayland where supported, screen-share audio on Windows without re-broadcasting the call, Linux hardware encoding setting, tray and notifications, deep links, Windows installer with auto-update and a Flatpak bundle published on GitHub Releases, then Flathub submission. The M6 downloads page links to these releases.
+**Scope**: Electron shell loading the hosted client, screen and window picker, global push-to-talk on Windows and on Linux under Wayland through the XDG GlobalShortcuts portal where the compositor supports it, screen and window capture on Wayland through PipeWire, screen-share audio on Windows without re-broadcasting the call, Linux hardware encoding setting, tray and notifications, deep links, Windows installer with auto-update and a Flatpak bundle published on GitHub Releases, then Flathub submission. The M6 downloads page links to these releases. Plan: [m5-plan.md](m5-plan.md).
+
+**Platforms**: Windows, and Linux on Wayland (Jaakko, 2026-10-19). X11 is not supported in M5; it may run through XWayland as-is, untested.
 
 **Acceptance criteria**:
 
-- Fresh install on Windows and on Linux through Flatpak, log in, join voice, share a window, use push-to-talk while a game has focus.
+- Fresh install on Windows and on Linux on Wayland through Flatpak, log in, join voice, share a window, use push-to-talk while a game has focus.
 - Idle memory within the product brief's budget, measured.
 - An auto-update on Windows from one shell version to the next.
 
-**Device tests**: Windows PC, Linux machine on Wayland and on X11 if available.
+**Device tests**: Windows PC, Linux machine on Wayland.
 
 ## M6: Website
 
