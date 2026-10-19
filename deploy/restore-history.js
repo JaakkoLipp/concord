@@ -37,7 +37,8 @@ function flush() {
   missing.length = 0;
 }
 
-// A message's files: the file record, marked deleted when the message went, and its stored object, which crond purges.
+// A message's files. Stoat 0.15.5 marks a singly deleted message's file deleted, and crond then removes its record, hash
+// and object within seconds (the drill, 2026-10-19). Bulk and channel deletion leave the files untouched.
 function restoreFile(id) {
   const file = snap.attachments.findOne({ _id: id });
   if (!file) return;

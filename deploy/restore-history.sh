@@ -3,6 +3,7 @@
 # Run as root on the VPS, over SSH, by an admin (architecture section 11.3: the one bulk write to Stoat's database):
 #   sudo ~/stoat/concord/restore-history.sh --channel <channel ID> --at <time, such as 2026-10-18T14:30> [--dry-run]
 # For a drill without restic: --from <folder>, a copy made by `history-snapshot.sh --to <folder>`, in place of --at.
+#   In WSL with Docker Desktop, keep the folder out of /tmp: it is a tmpfs Docker can't mount.
 # Works for a deleted channel and for messages deleted in bulk from one that still exists. It:
 #   1. picks the newest history snapshot taken before --at,
 #   2. restores its dumps into a temporary database beside Stoat's, `concord_restore`,
@@ -127,8 +128,9 @@ if [ "${#files[@]}" -gt 0 ]; then
   pass="$(docker exec "$live" printenv MINIO_ROOT_PASSWORD)"
   temp="$(head -c 24 /dev/urandom | base64 | tr -dc A-Za-z0-9)"
   store="concord-restore-store-$$"
-  docker run -d --name "$store" --network "$network" -e MINIO_ROOT_USER=restore -e MINIO_ROOT_PASSWORD="$temp" \
-    -v "$objects:/data" "$image" server /data >/dev/null
+  # As the caller, so what it writes in the copy can be cleaned up by them (a drill's folder belongs to its user).
+  docker run -d --name "$store" --network "$network" --user "$(id -u):$(id -g)" \
+    -e MINIO_ROOT_USER=restore -e MINIO_ROOT_PASSWORD="$temp" -v "$objects:/data" "$image" server /data >/dev/null
   sleep 3
   printf '%s\n' "${files[@]}" | docker run --rm -i --network "$network" --entrypoint sh \
     -e SRC="http://$store:9000" -e TEMP="$temp" -e DST="http://minio:9000" -e USER="$user" -e PASS="$pass" "$mc" -c '

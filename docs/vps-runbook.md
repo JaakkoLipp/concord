@@ -197,7 +197,7 @@ From M4.7 (m4.7-plan.md tasks 10 and 12). A channel deleted, or messages deleted
 
 **Before the first real use, the drill** (task 10's done-check), on the local stack: seed a channel with 200 messages and 10 attachments, two uploaded after the last nightly backup, delete it, bulk-delete 50 messages in another channel, dry-run then restore both, check them in the app after reconnecting, and run the restore again to no effect. Things to confirm in that drill, since they were written from Stoat's source, not watched:
 - confirmed on 2026-10-18: the script goes to `mongosh` as one `--eval` (stdin is read as an interactive shell), `mongorestore --nsFrom 'revolt.*' --nsTo 'concord_restore.*'` takes one-collection archives, and a file's object is `data/minio/revolt-uploads/<hash>/`, through `attachment_hashes`,
-- still to show: that the temporary storage container serves a copy of `data/minio` and Stoat's `mc` image copies a purged file back. Wait until Stoat has purged a deleted message's file before restoring,
+- confirmed on 2026-10-19: the temporary storage container serves the copy of `data/minio`, and Stoat's `mc` image copies purged files back, which then open. What Stoat 0.15.5 purges: a message deleted on its own has its file marked deleted at once (it stops opening), and crond removes the file's record, hash and object within seconds. Bulk deletion, channel deletion and server deletion leave the files as they were, so their images keep opening by link and nothing needs copying back,
 - `tools/live/src/history-drill.ts` runs the drill without restic, with `history-snapshot.sh --to` and `restore-history.sh --from`,
 - how long the dumps take within the database container’s 768 MB, and the sizes listed in m4.7-results.md task 10.
 
