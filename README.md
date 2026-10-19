@@ -95,7 +95,7 @@ Every milestone keeps a plan and a results file in `docs/`, named `m<N>-plan.md`
 
 ## Licence
 
-Concord's own code is licensed under the GNU Affero General Public License v3.0; the full text is in [LICENSE](LICENSE). If you run a modified version as a network service, the AGPL asks you to offer its source to that service's users.
+Concord's own code is licensed under the GNU Affero General Public License, version 3 or (at your option) any later version (`AGPL-3.0-or-later`); the full text is in [LICENSE](LICENSE). If you run a modified version as a network service, the AGPL asks you to offer its source to that service's users.
 
 - **Vendored Stoat files**: `packages/stoat/api/0.15.5/openapi.json` and `packages/stoat/data/unicode_emoji-0.15.5.txt` are copied unchanged from [Stoat](https://github.com/stoatchat/stoatchat), which is AGPL-3.0, and keep their upstream notices.
 - **Emoji images**: [Twemoji](https://github.com/jdecked/twemoji) graphics (`@twemoji/svg`), CC-BY 4.0, copied in from the npm package at build time and not stored here.
