@@ -67,6 +67,8 @@ describe('tallies', () => {
 describe('limits and pruning', () => {
   it('reads limits from host.env, keeping the defaults for nonsense', () => {
     expect(limitsFrom({ GUARD_MESSAGES_10M: '10', GUARD_BANS_10M: 'many' })).toEqual({ ...DEFAULT_LIMITS, messages10m: 10 });
+    // As compose passes an unset one.
+    expect(limitsFrom({ GUARD_MESSAGES_10M: '', GUARD_BULK_10M: ' ', GUARD_BANS_10M: '0' })).toEqual({ ...DEFAULT_LIMITS, bans10m: 0 });
   });
   it('forgets what is older than a day', () => {
     expect(prune([tally('message', 0), tally('message', 2000)], at(2000) + MIN).map((t) => t.entry)).toEqual(['2000']);

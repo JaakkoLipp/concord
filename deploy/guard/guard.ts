@@ -51,11 +51,18 @@ function save(): void {
   renameSync(`${DATA}/guard.json.tmp`, `${DATA}/guard.json`);
 }
 
+/**
+ * A reason as Concord's client sends it (packages/stoat/src/reason.ts, which this container can't import): a header is
+ * Latin-1 only, and fetch throws on anything past it, such as the ’ in "others’", so everything outside printable
+ * ASCII is percent-encoded and the audit log view decodes it. Found in the local drill.
+ */
+const reasonHeader = (text: string) => [...text].map((c) => (/^[\x20-\x24\x26-\x7e]$/.test(c) ? c : encodeURIComponent(c))).join('');
+
 async function api<T>(method: string, path: string, body?: unknown, reason?: string): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     const headers: Record<string, string> = { 'x-bot-token': TOKEN };
     if (body !== undefined) headers['content-type'] = 'application/json';
-    if (reason) headers['x-audit-log-reason'] = reason;
+    if (reason) headers['x-audit-log-reason'] = reasonHeader(reason);
     const res = await fetch(`${API}${path}`, { method, headers, ...(body !== undefined ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(10_000) });
     if (res.status === 429 && attempt < 10) {
       const after = Number(res.headers.get('x-ratelimit-reset-after')) || 1_000;
@@ -138,8 +145,11 @@ async function readLog(): Promise<void> {
     for (const e of entries) {
       if (e.user !== owner && e.user !== me) {
         for (const t of tallies(e)) {
-          const verdict = judge(state.history, t, LIMITS);
-          state.history.push(t);
+          // An entry read again, after a strip that failed, is judged again but counted once.
+          const same = (h: Tally) => h.entry === t.entry && h.kind === t.kind;
+          const seen = state.history.some(same);
+          const verdict = judge(seen ? state.history.filter((h) => !same(h)) : state.history, t, LIMITS);
+          if (!seen) state.history.push(t);
           if (verdict.action === 'strip') await strip(t, verdict.reason);
           else if (verdict.action === 'alert') await alert(`**Guard**: <@${t.user}> ${verdict.reason}. A second in 24 hours takes their roles.\n${restoreHint(t)}`);
         }

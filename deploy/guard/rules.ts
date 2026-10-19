@@ -21,7 +21,11 @@ export const DEFAULT_LIMITS: Limits = { messages10m: 25, messages24h: 150, bulk1
 /** Limits from the environment (host.env), falling back to the defaults for anything missing or not a whole number. */
 export function limitsFrom(env: Record<string, string | undefined>): Limits {
   const n = (key: string, fallback: number) => {
-    const v = Number(env[key]);
+    // Compose passes an unset limit as an empty string, which Number() reads as 0: a limit of 0 would strip on the
+    // first deletion (found in the local drill).
+    const raw = env[key]?.trim();
+    if (!raw) return fallback;
+    const v = Number(raw);
     return Number.isInteger(v) && v >= 0 ? v : fallback;
   };
   return {
