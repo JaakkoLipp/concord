@@ -1,6 +1,6 @@
 # M5 plan: desktop apps for Windows and Linux
 
-Status: draft for Jaakko's sign-off, revised after a Sonnet challenger review. Implements the M5 section of [milestones.md](milestones.md), to architecture.md section 6. Results go in `docs/m5-results.md`.
+Status: **signed off by Jaakko on 2026-10-19** with every recommended default, after a Sonnet challenger review: an unsigned beta, desktop releases on the public `JaakkoLipp/concord` repo (decision 11 resolved that way), and "Concord" as the working name until Jaakko picks the final one, which must happen before the first public release because it feeds the app ID, the URL scheme and the data folders. Building waits for Jaakko's go. Implements the M5 section of [milestones.md](milestones.md), to architecture.md section 6. Results go in `docs/m5-results.md`.
 
 **Platforms**: Windows 10 and 11, and Linux on Wayland through Flatpak. Changed on 2026-10-19 at Jaakko's request: global push-to-talk, capture and testing are planned for Windows and Wayland only. X11 is not supported in M5; it may run through XWayland as-is, untested.
 
@@ -115,14 +115,14 @@ Each is a recommendation that sign-off accepts unless Jaakko says otherwise.
     - **Linux**: the updater is off inside Flatpak. Testers install the `.flatpak` bundle from GitHub Releases and reinstall to update; after Flathub, `flatpak update` and the software centres do it.
     - **Releases are drafts** until Jaakko publishes, and only published releases reach the updater.
 
-11. **Desktop releases live in a public releases-only repo**, `JaakkoLipp/concord-releases`.
-    - **The release job writes there** with a fine-grained token limited to that repo's contents, held in the approval-gated environment.
-    - **Why there**: it works whether or not the source is public, and nothing else in it can become "latest". It also keeps CI away from the production VPS.
+11. **Desktop releases live on the source repo**, `JaakkoLipp/concord` (decided at sign-off, 2026-10-19; originally a separate releases-only repo).
+    - **The release job writes there** with the workflow's own `GITHUB_TOKEN` (`contents: write`), only in the approval-gated release environment. No personal token is stored.
+    - **Why there**: the repo is public and has no other releases, so `releases/latest` is always the desktop app. It also keeps CI away from the production VPS.
     - **Making `JaakkoLipp/concord` public is a separate choice.** SignPath (decision 12) and Flathub (decision 13) need it.
       - Before that, a scan of the history: secrets, personal data, and what the docs reveal about infrastructure, hostnames and the community.
       - While the source stays private, AGPL's offer of source to users is met by attaching a source archive to each release.
       - **Update, 2026-10-19**: done. `JaakkoLipp/concord` is public under AGPL-3.0-or-later after that scan, with operator details moved to private ops notes, old Actions runs deleted, and secret scanning, push protection and private vulnerability reporting on.
-      - **Open for sign-off**: with the source public, releases could live on `JaakkoLipp/concord` itself, which has no other releases, saving a repo and a token. The separate repo still keeps CI's write token away from the source. Recommendation: the source repo, unless Jaakko prefers the separation.
+      - **Decided at sign-off, 2026-10-19**: releases live on `JaakkoLipp/concord` itself, which has no other releases, so no separate repo or cross-repo token is needed. The release job uses the workflow's own `GITHUB_TOKEN` with `contents: write`, only in the approval-gated release environment. Read the rest of decision 11 with that in mind.
 
 12. **Code signing on Windows: unsigned for the closed beta.** Apply to SignPath Foundation once the project qualifies.
     - **Unsigned**: free.
@@ -268,7 +268,7 @@ Results go in m5-results.md as each comes back.
   - the code-signing step, dormant until a key exists,
   - the Ed25519 update signature, `latest.yml` and the blockmap.
 - **Linux** on `ubuntu-24.04`: the `.tar.gz`, then `flatpak/flatpak-github-actions` in the Freedesktop image builds the testers' `.flatpak` from it.
-- **Everything goes to one draft release** in `concord-releases`. Actions are pinned by hash.
+- **Everything goes to one draft release** on `JaakkoLipp/concord`. Actions are pinned by hash.
 - **electron-updater with its signature check** is wired in from this first build (decision 10).
 
 **Done when**:
@@ -399,9 +399,9 @@ A Sonnet agent reviews the whole diff against decision 3. Then come the device t
 Before building:
 1. Sign off this plan and its decisions.
 2. **The final name** (decision 14).
-3. **Create `JaakkoLipp/concord-releases`**, and the release environment with yourself as the approver (decision 11). Whether to make the source repo public can wait until task 12.
+3. **Create the release environment** on `JaakkoLipp/concord` with yourself as the approver (decision 11). The source repo is public since 2026-10-19.
 4. **Tell us the Linux machine**: the distribution, the desktop and its version (KDE Plasma or GNOME), and the GPU. **And the Windows build** (`winver`), and whether Smart App Control is on. These settle decisions 4, 6 and 7.
-5. **Agree to an unsigned beta** (decision 12), and check whether a toiminimi would qualify for Azure Trusted Signing.
+5. ~~Agree to an unsigned beta~~ agreed 2026-10-19 (decision 12). Still check whether a toiminimi would qualify for Azure Trusted Signing.
 
 During M5:
 6. Run probe 0 on both machines, with a second person or device for 0.3.
@@ -417,7 +417,7 @@ Still open from M4, and needed here: encoder runs 1 to 4 and the voice evening. 
 ## Coordination
 
 - **M4.9 (supporter cards)**: card CSS runs in the same page under the same CSP and can't reach the bridge. Decision 3's key limits assume the page may be hostile anyway. Both milestones touch `en.ts` and the settings sections: rebase before each commit.
-- **M6**: the download page links `releases/latest/download/Concord-Setup-x64.exe` in `concord-releases`, the `.flatpak`, and later Flathub. M6's invite page gets the "Open in the desktop app" button from task 9. SignPath's application follows M6's download page.
+- **M6**: the download page links `releases/latest/download/Concord-Setup-x64.exe` on `JaakkoLipp/concord`, the `.flatpak`, and later Flathub. M6's invite page gets the "Open in the desktop app" button from task 9. SignPath's application follows M6's download page.
 - **M7**:
   - It skips web push in the app (decision 16).
   - Its performance pass owns the cold-start budget, using task 13's figure.
