@@ -5,7 +5,7 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 **On production** at `https://concord.jaalip.com/app`, everything through M4.8:
 - **M4** voice, **M4.1–M4.2** alignment and motion, **M4.4** Concord's own layer, **M4.5** menus, GIFs and quick voice controls: see their `docs/m4*-results.md`.
 - **M4.6**, UI motion and design parity with `docs/design/discord-ui-motion-spec.md`: settings as an inset modal over the app, tooltips, the rail pill, the action bar, skeletons, the voice stage and stream view, the profile popout, the spinner. `docs/m4.6-results.md` task 19 lists the browser runs still owed and Jaakko's reviews.
-- **M4.7**, moderation: moving people between calls, server mute and deafen, Discord-style menus, every permission saying why it's missing, timeouts, slow mode, bulk delete, the audit log, reports, permission guardrails, the upstream pull request text. Hourly history snapshots and the restore tool are live and drilled. The history guard bot is built and drilled locally, waiting for its bot account (`docs/m4.7-results.md` task 12).
+- **M4.7**, moderation: moving people between calls, server mute and deafen, Discord-style menus, every permission saying why it's missing, timeouts, slow mode, bulk delete, the audit log, reports, permission guardrails, the upstream pull request text. Hourly history snapshots and the restore tool are live and drilled. The history guard bot runs on production since 2026-10-19, watching the community server (`docs/m4.7-results.md` task 12); audit log entries are kept a year.
 - **M4.8**, everyday usability: shortcuts and the quick switcher, opening at the first unread, the mentions inbox, the offline banner, drafts, My Account with two-factor, server order and folders, message sounds, search filters, notes, image zoom, masked links, age-restricted channels, appearance, voice messages.
 - **Built outside the plans** (2026-10-18, other sessions): closed-beta invitations and server invites on request through the layer, Administration (people, roles, password links, suspensions) through the host-side account runner (architecture section 11.5), dragging channels between categories, roles on the profile card, member feedback and bug reports.
 
@@ -15,7 +15,7 @@ You are continuing Concord, a Discord-style chat client on a self-hosted, unmodi
 - **M4.9, a Supporter role** with custom profile-card CSS and server creation: roadmap entry only.
 - **M6** website, **M7** polish, PWA (with swipe navigation) and the closed beta, **M8** launch, **M9** native Linux client.
 
-**The next session's job**: get M5 signed off and build it task by task; set up the guard bot on production once Jaakko has made its account; run the browser checks owed from M4.6–M4.8 on the local stack.
+**The next session's job**: get M5 signed off and build it task by task; run the browser checks owed from M4.6–M4.8 on the local stack.
 
 ## How to work
 
