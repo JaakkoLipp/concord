@@ -57,11 +57,11 @@ On the dev stack the ID is the seeded `dev-admin`, set by the seed. On productio
 
 ## 4. Audit log kept a year
 
-From M4.7 (m4.7-plan.md task 12, decision 12). Stoat keeps audit log entries 30 days by default; the history guard and the moderators read them, so keep a year. The value is a duration in Stoat's config format; check the generated file's existing `[api.audit_logs]` section, if any, for the unit it uses before editing.
+From M4.7 (m4.7-plan.md task 12, decision 12). Stoat keeps audit log entries 30 days by default; the history guard and the moderators read them, so keep a year. The value is an integer number of **seconds**: Stoat 0.15.5's default config has `expires_after = 2592000  # 30d`. A string such as `"365d"` is not accepted.
 
 ```toml
 [api.audit_logs]
-expires_after = "365d"
+expires_after = 31536000  # 365 days
 ```
 
-Apply with `concord/dc restart api`. Not yet applied anywhere.
+Apply with `concord/dc restart api`. Applied on production 2026-10-19 (appended to `Revolt.toml`, `api` restarted cleanly).
