@@ -18,6 +18,7 @@
     "deploy:stack:prod": "CONCORD_HOST=concord.jaalip.com node tools/deploy/stack.ts",
     "live:prod": "CONCORD_HOST=concord.jaalip.com node",
     "dev": "pnpm --filter @concord/web dev",
+    "local:setup": "bash tools/local/setup.sh",
     "verify": "node tools/verify.ts"
   },
   "devDependencies": {

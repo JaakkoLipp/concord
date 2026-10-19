@@ -2,6 +2,7 @@
  * `pnpm deploy:stack` (the local stack) or `pnpm deploy:stack:prod`: copy deploy/ to ~/stoat/concord on that stack and apply it.
  *
  * Server-only files there (host.env, livekit.env, .allow-wipe, web/, spike/, data/) are never touched: no --delete.
+ * deploy/local/ holds the local stack's config templates, which tools/local/setup.sh writes; it is not copied.
  * data/ holds the layer's store; this makes it, owned by uid 1000, the node user of concord-web's image.
  * Don't run it around 03:30: it rewrites backup.sh in place, which a running backup may still be reading.
  * --inplace matters: compose bind-mounts single files such as the Caddyfile, and a file replaced by rename
@@ -18,8 +19,8 @@ const run = (cmd: string, args: string[]) => execFileSync(cmd, args, { cwd: ROOT
 
 sameHost();
 console.log(`applying deploy/ on ${SSH}`);
-run('rsync', ['-a', '--inplace', '--itemize-changes', '--exclude', 'web/', '--exclude', 'spike/', '--exclude', 'data/', 'deploy/', `${stackPath('stoat/concord')}/`]);
-// The local stack runs in Docker Desktop: nothing is installed on the machine itself.
+run('rsync', ['-a', '--inplace', '--itemize-changes', '--exclude', 'web/', '--exclude', 'spike/', '--exclude', 'data/', '--exclude', 'local/', 'deploy/', `${stackPath('stoat/concord')}/`]);
+// The local stack runs in Docker, Desktop or Engine: nothing is installed on the machine itself.
 const host = LOCAL ? [] : [
   // The host-level files: cron jobs, automatic reboots, the sysctl for addresses that aren't up yet.
   'sudo install -m 0644 concord/concord-cron /etc/cron.d/concord',

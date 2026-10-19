@@ -1,22 +1,22 @@
 # Concord: development environment
 
-Status: signed off 2026-10-12, layer 3. Covers M0. Sections 1, 9 and the appendix describe the local dev stack from M4. Read [architecture.md](architecture.md) and [milestones.md](milestones.md) first. Results go in [m0-results.md](m0-results.md).
+Status: signed off 2026-10-12, layer 3. Covers M0. Sections 1, 9 and 10 describe the local dev stack from M4; section 10 and `tools/local/setup.sh` build it. Read [architecture.md](architecture.md) and [milestones.md](milestones.md) first. Results go in [m0-results.md](m0-results.md).
 
 ## 1. Shape
 
 **Since M4, the dev stack runs on Jaakko's machine** (m4-plan.md task 1). Production on the VPS holds real people, so agents never seed or test there.
 
 ```
-Jaakko's machine (WSL, Docker Desktop)
+Jaakko's machine (native Linux with Docker Engine, or WSL with Docker Desktop)
   pnpm dev  (Vite, http://localhost:5173)  ──►  http://localhost: Caddy ──► api, events, autumn, january, gifbox, livekit
   tools/seed, tools/live  ─────────────────►   (same routes as production, plain HTTP)
   Mailpit on http://127.0.0.1:8025, Stoat's own client on http://ref.localhost
 ```
 
-- **Where**: `~/stoat` in WSL, laid out like production's `~/stoat`, so `concord/dc` and every script in `deploy/` work the same. Commands that the tools sent over SSH run on this machine instead.
+- **Where**: `~/stoat`, built by `pnpm local:setup` (section 10) and laid out like production's `~/stoat`, so `concord/dc` and every script in `deploy/` work the same. Commands that the tools sent over SSH run on this machine instead.
 - **The tools' target** comes from `tools/target.ts`: the local stack unless `CONCORD_HOST` names another. Production is reached only through `pnpm deploy:web`, `pnpm deploy:stack:prod` and `pnpm live:prod <check>`.
 - **Plain HTTP** is enough, because browsers treat `localhost` and `*.localhost` as secure contexts, so microphones, cameras and screen capture work.
-- **Ports** are bound to `127.0.0.1` only. Docker Desktop publishes on the Windows host, so a wider binding would be reachable from the LAN.
+- **Ports** are bound to `127.0.0.1` only, on native Linux as in WSL. Docker Desktop publishes on the Windows host, and Docker Engine's published ports bypass ufw, so a wider binding would be reachable from the LAN either way.
 - **What it can't show**: real networks, TURN, phones and other people. Production and the voice evening cover those.
 
 From M0 to M3 the dev stack ran on the VPS that became production. Sections 2 and 8 describe that layout, which production still uses.
@@ -264,10 +264,11 @@ Results go in m0-results.md, per run: resolution and framerate achieved, bitrate
 
 ## 9. Daily commands
 
-On the local stack, from the repo root in WSL:
+On the local stack, from the repo root:
 
 | Task | Command |
 |---|---|
+| Set up the stack on a new machine | `pnpm local:setup --start` (section 10) |
 | Start the stack | `~/stoat/concord/dc up -d` |
 | Check the version | `curl -s http://localhost/api/ \| jq -r .revolt` |
 | Stop, keeping data | `~/stoat/concord/dc stop` |
@@ -287,7 +288,57 @@ On the local stack, from the repo root in WSL:
 
 `ADMIN_USER_IDS` in the local `host.env` holds the `dev-admin` persona's ID, so the layer's admin gate can be tried locally. After a `pnpm seed --reset`, put the new ID there and run `~/stoat/concord/dc up -d concord-web`.
 
+## 10. Native Linux
+
+From 2026-10-19 the local stack is built from the repo, so it moves from WSL to native Linux with a clone and one command. The appendix describes the steps it automates.
+
+**Prerequisites**, installed by Jaakko:
+
+- **Docker Engine with the compose plugin**, from Docker's apt repository as `deploy/server-setup.sh` installs it, with the user in the `docker` group (`sudo usermod -aG docker $USER`, then log in again). Rootless Docker isn't covered.
+- **Node 26 with pnpm**: the official tarball unpacked to `~/.local/node`, its `bin` on `PATH`, then `corepack enable`.
+- **ffmpeg** for the seed's video and audio, with libx264, aac and libvorbis, which Ubuntu's build has.
+- **Chromium for the live checks**: `pnpm --filter @concord/live exec playwright-core install chromium` downloads the build that the pinned `playwright-core` expects. `pnpm --filter @concord/live exec playwright-core install-deps chromium` installs its system libraries with sudo; on Ubuntu 26.04 the distro packages `libnss3 libnspr4 libasound2t64` are enough.
+- **openssl, rsync, jq, git and python3**. python3 runs the account runner.
+- **uid 1000**: concord-web and the guard run as uid 1000 and write to `concord/data`, `concord/guard-data` and `concord/spool/in`, which the script makes as the current user. Ubuntu's first user is 1000. Otherwise, `chown` those folders to 1000; the script warns.
+
+**Setup**:
+
+```sh
+git clone <repo> ~/concord && cd ~/concord
+pnpm install --frozen-lockfile
+pnpm local:setup --start
+```
+
+- **`pnpm local:setup`** runs `tools/local/setup.sh`. It refuses if `~/stoat` exists, unless `--force`. Then it rewrites the config from the templates, in place, and keeps `secrets.env` and the data.
+- **Without `--start`** it only writes the files and prints the remaining steps from appendix step 4.
+- **`--dir <path>`** writes the tree somewhere else, to try the script next to a running stack. The tools only use `~/stoat`, so `--start` refuses it.
+- **Then check** as in appendix step 5.
+
+What it writes:
+
+| In `~/stoat` | From |
+|---|---|
+| `compose.yml`, `Caddyfile` | `stoatchat/self-hosted` at `9af5e90`, cloned to a scratch folder. Nothing in the clone is run. |
+| `.env`, `.env.web`, `stoat.json`, `Revolt.toml` | `deploy/local/env.local`, `env.web.local`, `stoat.local.json`, `Revolt.local.toml` |
+| `secrets.env`, mode 600 | Generated once, as `generate_config.sh` would: the VAPID pair, the file key and the LiveKit secret under key id `2c2e5918ca20` |
+| `concord/` | `deploy/`, without `deploy/local/`, as `pnpm deploy:stack` copies it |
+| `concord/host.env` | `deploy/local/host.env.local`, with `ADMIN_USER_IDS` empty |
+| `concord/livekit.env`, mode 600 | The LiveKit secret from `secrets.env` |
+| `concord/.allow-wipe` and the bind-mount folders | Made empty |
+
+`--start` then runs `dc up -d`, `pnpm deploy:stack` (which also starts the account runner), `deploy:web:dev`, `deploy:spike:dev`, `seed --reset`, and `seed account tuuli` and `onni`. Last, it writes `dev-admin`'s ID into `ADMIN_USER_IDS` and recreates concord-web.
+
+**Docker Desktop and WSL quirks that don't apply natively.** Their workarounds stay in `deploy/` and `tools/live/`, since they're harmless on Docker Engine:
+
+- **stdin's end**: Docker Desktop never passes it on, so `create-account.sh` mounts its request body as a file. Docker Engine passes it on.
+- **Single-file bind mounts**: on Docker Desktop, a file replaced by `sed -i` leaves the containers unable to restart. On Docker Engine a running container still reads the old file until it restarts, so scripts keep editing `Revolt.toml` in place.
+- **WSL's `/tmp`** is a tmpfs that Docker Desktop can't mount, so the restore and its drill work in `/var/tmp`. Native `/tmp` mounts.
+- **UDP port rewriting**: after a cut, Docker Desktop's UDP forwarding rewrote LiveKit's source port (m4-results.md), so the voice probes take a new browser per scenario. Docker Engine does plain NAT on fixed ports.
+- **Ports** are still bound to `127.0.0.1` (section 1).
+
 ## Appendix: setting up the local stack
+
+**Superseded by `tools/local/setup.sh`** (section 10), which does steps 1 to 4. This appendix stays as the reference for what it does and why.
 
 Done on 2026-10-14, and again on 2026-10-17 on a fresh WSL distro (Ubuntu 26.04). Docker Desktop's WSL integration, turned on for the distro, is the main requirement.
 
@@ -302,14 +353,14 @@ Done on 2026-10-14, and again on 2026-10-17 on a fresh WSL distro (Ubuntu 26.04)
    - `stoat.json` as `{"api":"http://localhost/api"}`,
    - `secrets.env`: `secrets.env.example` plus `REVOLT__PUSHD__VAPID__PRIVATE_KEY`, `REVOLT__PUSHD__VAPID__PUBLIC_KEY`, `REVOLT__FILES__ENCRYPTION_KEY`, `REVOLT__API__LIVEKIT__NODES__WORLDWIDE__KEY` and `REVOLT__API__LIVEKIT__NODES__WORLDWIDE__SECRET`, all single-quoted. Make the VAPID pair with the generator's openssl commands, the file key with `openssl rand -base64 32`, and the LiveKit secret with `openssl rand -hex 24`. The key id is `2c2e5918ca20`, as in `deploy/livekit.yml`.
    - `Revolt.toml` with the hosts, `[hosts.livekit] worldwide = "ws://localhost/livekit"`, both video tiers at 2560 × 1440, Mailpit as SMTP, and the `restrict_server_creation` placeholder. `january` is `http://january:14705`: the API fetches link previews from it inside Docker, where `localhost` is the API's own container. Our client uses the relative `/january` path anyway.
-3. **Our files**: `rsync -a --inplace --exclude web/ --exclude spike/ --exclude data/ deploy/ ~/stoat/concord/`. `pnpm deploy:stack` can't be the first step, because it runs `docker compose exec caddy` on a running stack. Add:
+3. **Our files**: `rsync -a --inplace --exclude web/ --exclude spike/ --exclude data/ --exclude local/ deploy/ ~/stoat/concord/`. `pnpm deploy:stack` can't be the first step, because it runs `docker compose exec caddy` on a running stack. Add:
    - `host.env` holding `MAIN_IPV4=127.0.0.1`, `MAIN_IPV6=::1`, `TURN=off`, `LOCAL=on` and an empty `ADMIN_USER_IDS=`,
    - `livekit.env` holding `LIVEKIT_KEYS="2c2e5918ca20: <secret>"`,
    - an empty `.allow-wipe`,
-   - the bind-mount folders, made before the first start, or Docker makes them as root and later rsyncs fail: `mkdir -p ~/stoat/concord/web ~/stoat/concord/spike` and `install -d -m 0700 ~/stoat/concord/data`.
+   - the bind-mount folders, made before the first start, or Docker makes them as root and later rsyncs fail: `mkdir -p ~/stoat/concord/web ~/stoat/concord/spike`, `install -d -m 0700 ~/stoat/concord/data ~/stoat/concord/guard-data ~/stoat/concord/spool/in` and `install -d -m 0755 ~/stoat/concord/spool/out`.
 4. **Start**: `~/stoat/concord/dc up -d`, then `pnpm deploy:web:dev`, `pnpm deploy:spike:dev`, `pnpm seed --reset`, `pnpm seed account tuuli` and `pnpm seed account onni`. Then put `dev-admin`'s ID in `host.env`'s `ADMIN_USER_IDS` and run `~/stoat/concord/dc up -d concord-web`.
 5. **Check**: `pnpm seed check`, `node tools/live/src/routes.ts`, `node tools/live/src/layer.ts`, then `voice.ts` a few minutes later. Run straight after the layer check's flood test, it gets 429s on `/me`.
 
-**Docker Desktop quirks**, both handled in `deploy/`:
+**Docker Desktop quirks**, both handled in `deploy/` (section 10 says which apply natively):
 - It never passes on the end of a container's stdin, so `create-account.sh` mounts its request body as a file.
 - A single-file bind mount follows the file it first saw. A file replaced by `sed -i` leaves containers unable to restart, so scripts edit `Revolt.toml` in place.

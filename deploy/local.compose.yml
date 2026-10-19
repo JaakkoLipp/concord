@@ -1,6 +1,6 @@
-# The local stack in Docker Desktop at http://localhost (m4-plan.md task 1), added by ./concord/dc when host.env says
-# LOCAL=on. Docker Desktop publishes ports on the Windows host, so every one is bound to 127.0.0.1: nothing on the
-# LAN can reach this stack. Plain HTTP: browsers treat localhost as a secure context, so voice works without TLS.
+# The local stack at http://localhost (m4-plan.md task 1), added by ./concord/dc when host.env says LOCAL=on. Docker
+# Desktop publishes ports on the Windows host and Docker Engine's bypass ufw, so every one is bound to 127.0.0.1:
+# nothing on the LAN can reach this stack. Plain HTTP: browsers treat localhost as a secure context, so voice works without TLS.
 services:
   caddy:
     ports: !override

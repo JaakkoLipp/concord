@@ -56,7 +56,7 @@ docs/              Product brief, architecture, specs, and every milestone's pla
 
 ## Development
 
-Needs Node 24 or newer (CI uses 26; Node runs the TypeScript tools directly), pnpm 10.34.5 through corepack, and Docker Desktop on WSL 2 for the local Stoat stack. [docs/dev-environment.md](docs/dev-environment.md) has the full setup, including an appendix that builds the stack from scratch.
+Needs Node 24 or newer (CI uses 26; Node runs the TypeScript tools directly), pnpm 10.34.5 through corepack, and Docker for the local Stoat stack: Docker Engine on native Linux, or Docker Desktop on WSL 2. `pnpm local:setup --start` builds that stack in `~/stoat` from the templates in `deploy/local/`. [docs/dev-environment.md](docs/dev-environment.md) section 10 has the prerequisites and the full setup.
 
 ```sh
 pnpm install
@@ -66,7 +66,7 @@ pnpm dev      # the client on http://localhost:5173, against the local stack
 pnpm test     # unit and contract tests only
 ```
 
-Routine commands, from the repo root in WSL:
+Routine commands, from the repo root:
 
 | Command | What it does |
 |---|---|

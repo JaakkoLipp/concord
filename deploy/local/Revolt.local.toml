@@ -1,0 +1,40 @@
+# ~/stoat/Revolt.toml on the local stack, written by tools/local/setup.sh: generate_config.sh's shape for localhost
+# (http and ws), plus deploy/revolt-changes.md. The secrets are in secrets.env, which the script generates.
+# january is the internal address: the API fetches link previews inside Docker, where localhost is its own container.
+[hosts]
+app = "http://localhost"
+api = "http://localhost/api"
+events = "ws://localhost/ws"
+autumn = "http://localhost/autumn"
+january = "http://january:14705"
+gifbox = "http://localhost/gifbox"
+
+[hosts.livekit]
+worldwide = "ws://localhost/livekit"
+
+[api.livekit.nodes.worldwide]
+url = "http://livekit:7880"
+lat = 0.0
+lon = 0.0
+
+# Mailpit (deploy/dev.compose.yml), which accepts any login: this password guards nothing.
+[api.smtp]
+host = "mailpit"
+port = 1025
+username = "concord"
+password = "concord"
+from_address = "noreply@concord.jaalip.com"
+use_tls = false
+use_starttls = false
+
+[features.limits.new_user]
+video_resolution = [2560, 1440]
+video_aspect_ratio = [0.3, 10]
+
+[features.limits.default]
+video_resolution = [2560, 1440]
+video_aspect_ratio = [0.3, 10]
+
+# The placeholder that matches nobody. The seed writes dev-admin's ID here (deploy/revolt-changes.md).
+[features.limits.global]
+restrict_server_creation = ["00000000000000000000000000"]

@@ -1,5 +1,5 @@
 /**
- * Which stack the tools talk to (m4-plan.md task 1): the local stack in Docker Desktop at http://localhost, unless
+ * Which stack the tools talk to (m4-plan.md task 1): the local stack in Docker at http://localhost, unless
  * CONCORD_HOST names another. Production is reached only on purpose, as `pnpm deploy:web` does with
  * CONCORD_HOST=concord.jaalip.com. CONCORD_SSH (or just its user, CONCORD_SSH_USER), CONCORD_BACKEND and CONCORD_APP
  * still override one part each;
