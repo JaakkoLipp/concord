@@ -302,6 +302,8 @@ From 2026-10-19 the local stack is built from the repo, so it moves from WSL to 
 - **openssl, rsync, jq, git and python3**. python3 runs the account runner.
 - **uid 1000**: concord-web and the guard run as uid 1000 and write to `concord/data`, `concord/guard-data` and `concord/spool/in`, which the script makes as the current user. Ubuntu's first user is 1000. Otherwise, `chown` those folders to 1000; the script warns.
 
+**On Arch** (done on 2026-10-24): `pacman -S docker docker-compose docker-buildx`, `systemctl enable --now docker.service` and the group as above. Arch's `nodejs` has no corepack, so pnpm goes in with `npm install -g --prefix ~/.local pnpm@10.34.5`. Its ffmpeg has the three codecs, and Chromium runs on the system's nss, nspr and alsa-lib, so `install-deps` isn't needed. A shell opened before joining the group reaches Docker through `newgrp docker`.
+
 **Setup**:
 
 ```sh
@@ -313,7 +315,7 @@ pnpm local:setup --start
 - **`pnpm local:setup`** runs `tools/local/setup.sh`. It refuses if `~/stoat` exists, unless `--force`. Then it rewrites the config from the templates, in place, and keeps `secrets.env` and the data.
 - **Without `--start`** it only writes the files and prints the remaining steps from appendix step 4.
 - **`--dir <path>`** writes the tree somewhere else, to try the script next to a running stack. The tools only use `~/stoat`, so `--start` refuses it.
-- **Then check** as in appendix step 5.
+- **Then check** as in appendix step 5. On 2026-10-24, on Arch, all four passed, once `layer.ts` clicked the settings modal's own sections and checked the layer every 3.5 s: native Docker answers fast enough that every 3 s reached the layer's limit of 20 writes a minute.
 
 What it writes:
 
