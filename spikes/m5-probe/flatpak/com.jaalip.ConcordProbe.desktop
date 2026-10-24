@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Concord Probe
+Comment=Probe shell for the Concord desktop app
+Exec=concord-probe %U
+Icon=com.jaalip.ConcordProbe
+Terminal=false
+Categories=Network;

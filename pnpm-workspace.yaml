@@ -3,3 +3,5 @@ packages:
   - packages/*
   - tools/*
   - spikes/*
+  # The M5 probe keeps its own npm lockfile: electron-builder packs native modules from a flat node_modules.
+  - '!spikes/m5-probe'

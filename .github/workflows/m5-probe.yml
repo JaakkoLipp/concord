@@ -1,0 +1,96 @@
+name: m5-probe
+# docs/m5-plan.md task 0: builds the probe shell for Windows (zip) and as a Flatpak bundle, and attaches both to a
+# draft release. Started by hand only; the probe holds no keys, so it needs no approval environment.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+defaults:
+  run:
+    working-directory: spikes/m5-probe
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      # Third-party actions are pinned to commit SHAs; the comment names the tag each one was.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: spikes/m5-probe/package-lock.json
+      - run: npm ci
+      - run: npm run dist:win
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: probe-windows
+          path: spikes/m5-probe/dist/Concord-Probe-win-x64.zip
+          if-no-files-found: error
+
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: spikes/m5-probe/package-lock.json
+      - run: npm ci
+      - run: npm run dist:linux
+      # A tarball keeps the executable bits, which an artifact's zip would drop.
+      - run: tar -czf linux-unpacked.tar.gz -C dist linux-unpacked
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: linux-unpacked
+          path: spikes/m5-probe/linux-unpacked.tar.gz
+          if-no-files-found: error
+
+  flatpak:
+    needs: linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions@sha256:6ed6921bb5a9e1a916989971844f159b854b7b225880c381fa34f7a158863039 # freedesktop-26.08
+      options: --privileged
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: linux-unpacked
+          path: spikes/m5-probe/flatpak
+      - uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6.8
+        with:
+          manifest-path: spikes/m5-probe/flatpak/com.jaalip.ConcordProbe.yml
+          bundle: Concord-Probe.flatpak
+          artifact-name: probe-flatpak
+
+  release:
+    needs: [windows, flatpak]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: probe-*
+          path: out
+          merge-multiple: true
+      - run: >-
+          gh release create "m5-probe-${{ github.run_number }}" out/* --draft --target "${{ github.sha }}"
+          --repo "${{ github.repository }}" --title "M5 probe ${{ github.run_number }}"
+          --notes "Probe shell for docs/m5-plan.md task 0, from ${{ github.sha }}. Not the app: never publish this draft."
+        env:
+          GH_TOKEN: ${{ github.token }}

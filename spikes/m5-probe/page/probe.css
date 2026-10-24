@@ -1,0 +1,17 @@
+:root { color-scheme: dark; }
+body { margin: 0; padding: 16px; background: #1e1f22; color: #dbdee1; font: 14px/1.4 system-ui, sans-serif; }
+h1 { font-size: 18px; margin: 0 0 4px; }
+h2 { font-size: 15px; margin: 0 0 8px; }
+section { border-top: 1px solid #3f4147; padding: 12px 0; }
+.note { color: #949ba4; margin: 0 0 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+button, input, select { font: inherit; color: inherit; background: #2b2d31; border: 1px solid #4e5058; border-radius: 4px; padding: 4px 8px; }
+button:hover { background: #35373c; cursor: pointer; }
+#source-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.source { width: 240px; background: #2b2d31; border: 2px solid transparent; border-radius: 4px; padding: 4px; cursor: pointer; }
+.source.chosen { border-color: #5865f2; }
+.source img { width: 240px; height: 135px; object-fit: contain; display: block; }
+.source span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#camera { width: 320px; background: #000; }
+#log { background: #111214; padding: 8px; max-height: 420px; overflow: auto; white-space: pre-wrap; font: 12px/1.4 ui-monospace, monospace; }
+body:not(.is-win) .win, body:not(.is-linux) .linux { display: none; }

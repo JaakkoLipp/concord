@@ -1,0 +1,39 @@
+# The probe as a testers' Flatpak (docs/m5-plan.md decision 13): electron-builder's linux-unpacked, repackaged on
+# the Electron base app, with the permissions the real shell plans to ask for.
+app-id: com.jaalip.ConcordProbe
+runtime: org.freedesktop.Platform
+runtime-version: '26.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '26.08'
+command: concord-probe
+separate-locales: false
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --device=all
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.kde.StatusNotifierWatcher
+modules:
+  - name: concord-probe
+    buildsystem: simple
+    build-commands:
+      - cp -a linux-unpacked /app/main
+      - install -Dm755 concord-probe.sh /app/bin/concord-probe
+      - install -Dm644 com.jaalip.ConcordProbe.desktop /app/share/applications/com.jaalip.ConcordProbe.desktop
+      - install -Dm644 com.jaalip.ConcordProbe.svg /app/share/icons/hicolor/scalable/apps/com.jaalip.ConcordProbe.svg
+    sources:
+      - type: archive
+        path: linux-unpacked.tar.gz
+        dest: linux-unpacked
+      - type: file
+        path: com.jaalip.ConcordProbe.desktop
+      - type: file
+        path: com.jaalip.ConcordProbe.svg
+      - type: script
+        dest-filename: concord-probe.sh
+        commands:
+          - exec zypak-wrapper /app/main/concord-probe --ozone-platform-hint=auto "$@"

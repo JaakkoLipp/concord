@@ -1,0 +1,38 @@
+{
+  "name": "concord-m5-probe",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Probe shell for docs/m5-plan.md task 0",
+  "license": "AGPL-3.0-or-later",
+  "main": "main.cjs",
+  "desktopName": "com.jaalip.ConcordProbe.desktop",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
+  },
+  "build": {
+    "appId": "com.jaalip.ConcordProbe",
+    "productName": "Concord Probe",
+    "asar": false,
+    "npmRebuild": false,
+    "files": ["main.cjs", "preload.cjs", "portal.cjs", "page/**"],
+    "directories": { "output": "dist" },
+    "artifactName": "Concord-Probe-${os}-${arch}.${ext}",
+    "win": { "target": [{ "target": "zip", "arch": "x64" }], "files": ["keys-win.cjs"] },
+    "linux": {
+      "target": [{ "target": "dir", "arch": "x64" }],
+      "executableName": "concord-probe",
+      "files": ["main.cjs", "preload.cjs", "portal.cjs", "page/**", "!node_modules/uiohook-napi/**", "!node_modules/node-gyp-build/**", "!node_modules/koffi/**", "!node_modules/@koromix/**"]
+    }
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0"
+  },
+  "dependencies": {
+    "dbus-native": "0.16.2",
+    "koffi": "3.3.3",
+    "uiohook-napi": "1.5.5"
+  }
+}

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob: mediastream:">
+  <title>Concord probe</title>
+  <link rel="stylesheet" href="probe.css">
+</head>
+<body>
+  <header>
+    <h1>Concord M5 probe</h1>
+    <p id="info"></p>
+    <button id="copy-all">Copy everything</button>
+  </header>
+
+  <section>
+    <h2>0.2, 0.3, 0.6 Capture</h2>
+    <p class="note">The next screen share anywhere in this shell gets the chosen source. On Wayland the system's own picker opens instead, and "List sources" opens it too.</p>
+    <div class="row">
+      <button id="sources">List sources</button>
+      <label class="win">Audio <select id="audio-mode"><option>none</option><option>loopback</option><option>loopbackWithMute</option></select></label>
+      <input id="url" value="https://concord.jaalip.com/app" size="40">
+      <button id="open">Open</button>
+      <button id="open-spike">Open test page</button>
+    </div>
+    <div id="source-list"></div>
+  </section>
+
+  <section class="win">
+    <h2>0.3 Share audio without Concord</h2>
+    <p class="note">Pause other audio first. Each button plays a 440 Hz tone from this page and captures system audio for 3 s with Electron's loopback. restrictOwnAudio supported here: <b id="restrict-supported"></b>.</p>
+    <div class="row">
+      <button id="echo-on">Echo test, restrictOwnAudio on</button>
+      <button id="echo-off">Echo test, restrictOwnAudio off</button>
+    </div>
+  </section>
+
+  <section class="win">
+    <h2>0.4 Global keys</h2>
+    <p class="note">Start one or both, then press keys in a game and in an elevated window (an administrator Command Prompt).</p>
+    <div class="row">
+      <button id="hook-on">Start hook</button><button id="hook-off">Stop hook</button>
+      <button id="raw-on">Start Raw Input</button><button id="raw-off">Stop Raw Input</button>
+    </div>
+  </section>
+
+  <section class="linux">
+    <h2>0.5 GlobalShortcuts portal</h2>
+    <div class="row">
+      <button id="portal-version">Portal version</button>
+      <label>ptt <input id="t-ptt" value="F9" size="8"></label>
+      <label>mute <input id="t-mute" value="SHIFT+F9" size="8"></label>
+      <label>deafen <input id="t-deafen" value="CTRL+F9" size="8"></label>
+      <button id="portal-bind">Bind</button>
+      <button id="portal-list">List bound</button>
+    </div>
+  </section>
+
+  <section class="linux">
+    <h2>0.6 Hardware encoding flags</h2>
+    <div class="row">
+      <label><input type="checkbox" id="flags-on"> apply</label>
+      <label>enable-features <input id="flags-features" size="40"></label>
+      <label><input type="checkbox" id="flags-blocklist"> ignore-gpu-blocklist</label>
+      <button id="flags-save">Save and restart</button>
+      <button id="gpu">GPU info</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>0.7 Basics</h2>
+    <div class="row">
+      <button id="media-on">Microphone and camera</button><button id="media-off">Stop</button>
+      <span id="mic-level"></span>
+    </div>
+    <video id="camera" autoplay muted playsinline></video>
+    <div class="row">
+      <button id="web-notification">Web notification</button>
+      <button id="tray">Show tray</button>
+      <label>badge <input id="badge-count" type="number" value="3" min="0" max="99"></label><button id="badge">Set badge</button>
+      <button id="flash">Flash and native notification in 5 s</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>0.8 Memory</h2>
+    <p class="note">Sign in to /app in its own window, open one server, close nothing else, wait 5 minutes idle, then press.</p>
+    <button id="memory">Measure</button>
+  </section>
+
+  <section>
+    <h2>Log</h2>
+    <button id="clear">Clear</button>
+    <pre id="log"></pre>
+  </section>
+  <script src="probe.js"></script>
+</body>
+</html>
