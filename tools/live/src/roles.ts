@@ -48,17 +48,25 @@ const roles = async () => Object.values((await admin!.call<{ roles: Record<strin
 
 const MOD = ['KickMembers', 'BanMembers', 'TimeoutMembers', 'ManageNicknames', 'RemoveAvatars', 'ManageMessages', 'MuteMembers', 'DeafenMembers', 'MoveMembers', 'MentionEveryone', 'MentionRoles'] as const;
 const TEST = ['ManageRole', 'ManagePermissions', 'AssignRoles'] as const;
+/** The client's DANGEROUS (apps/web/src/lib/admin/permissions.ts). */
+const DANGEROUS: readonly string[] = ['ManageChannel', 'ManageMessages', 'BanMembers', 'ManageServer', 'ManageRole', 'ManagePermissions'];
 
 async function createRole(name: string, colour: string | undefined, hoist: boolean, perms: readonly string[]) {
   await a.page.getByRole('button', { name: 'Create role' }).click();
   await a.page.locator('dialog[open]').getByLabel('Role name').fill(name);
   await a.page.locator('dialog[open]').getByRole('button', { name: 'Create role' }).click();
   await a.page.getByRole('button', { name: 'Back to roles' }).waitFor();
+  // The editor opens under the dialog's closing animation, which keeps the page inert: a fill then goes nowhere.
+  await a.page.locator('dialog[open]').waitFor({ state: 'detached' });
   if (colour) await a.page.getByRole('textbox', { name: 'Colour' }).fill(colour);
   if (hoist) await a.page.getByLabel('Show members separately').check();
   if (perms.length) {
     await a.page.getByRole('tab', { name: 'Permissions' }).click();
-    for (const k of perms) await perm(a.page, k, 'Allow').click();
+    for (const k of perms) {
+      await perm(a.page, k, 'Allow').click();
+      // Granting a dangerous one asks first (m4.7-results.md task 11).
+      if (DANGEROUS.includes(k)) await a.page.locator('dialog[open]').getByRole('button', { name: 'Give it' }).click();
+    }
   }
   if (colour || hoist || perms.length) {
     await a.page.getByRole('button', { name: 'Save changes' }).click();
@@ -106,17 +114,24 @@ results.testimodApi = (await roles()).map((r) => r.name);
 
 // 4. Roles through the member menu: tuuli gets Pelaajat, and shows in that group for onni.
 await a.page.goto(`${APP}/channels/${s.id}/${s.general}`, { waitUntil: 'networkidle' });
-/** Change a member's roles through the menu. Returns when the request left, for timing what follows. */
+/**
+ * Change a member's roles through the menu's Roles submenu, where each tick saves at once (m4.7-results.md task 4).
+ * Returns when the last request left, for timing what follows.
+ */
 async function setRoles(page: Page, user: string, names: { on: string[]; off?: string[] }): Promise<number> {
   await page.locator('aside[aria-label="Members"] button', { hasText: user }).click({ button: 'right' });
-  await page.getByRole('menuitem', { name: 'Roles…' }).click();
-  const d = page.locator('dialog[open]');
-  for (const n of names.on) await d.getByLabel(n, { exact: true }).check();
-  for (const n of names.off ?? []) await d.getByLabel(n, { exact: true }).uncheck();
-  const sent = page.waitForRequest((r) => r.method() === 'PATCH' && r.url().includes('/members/'), { timeout: 60_000 }).then(() => performance.now());
-  await d.getByRole('button', { name: 'Save changes' }).click();
-  const at = await sent;
-  await d.waitFor({ state: 'hidden', timeout: 30_000 });
+  await page.getByRole('menuitem', { name: 'Roles', exact: true }).click();
+  let at = performance.now();
+  const ticks = [...names.on.map((n) => [n, true] as const), ...(names.off ?? []).map((n) => [n, false] as const)];
+  for (const [n, on] of ticks) {
+    const item = page.getByRole('menuitemcheckbox', { name: n, exact: true });
+    if ((await item.getAttribute('aria-checked')) === String(on)) continue;
+    const sent = page.waitForRequest((r) => r.method() === 'PATCH' && r.url().includes('/members/'), { timeout: 60_000 }).then(() => performance.now());
+    await item.click();
+    at = await sent;
+  }
+  for (let i = 0; i < 3 && await page.getByRole('menu').count(); i++) await page.keyboard.press('Escape');
+  await page.getByRole('menu').first().waitFor({ state: 'detached', timeout: 5_000 });
   return at;
 }
 const group = (page: Page, title: string) => page.locator('aside[aria-label="Members"] h3', { hasText: title });

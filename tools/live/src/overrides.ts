@@ -82,9 +82,21 @@ await until(async () => (await shown(a.page)).includes('salainen'), 30_000);
 await a.page.locator('nav[aria-label="Channels"] a.channel', { hasText: 'salainen' }).click({ button: 'right' });
 await a.page.getByRole('menuitem', { name: 'Move up' }).click();
 await until(async () => (await shown(a.page)) === 'Yleinen: General, salainen, säännöt', 30_000);
+const shownAt = performance.now();
 await new Promise((r) => setTimeout(r, 3_000));
 results.tuuliSeesPrivate = (await shown(t.page)).includes('salainen');
-const salainen = (await admin!.call<{ categories: { channels: string[] }[] }>('GET', `/servers/${s.id}`)).categories[0]!.channels[1]!;
+// The client saves the move at once, but behind Stoat's bucket for the server (5 per 10 s), which this check keeps
+// busy: the API may have it seconds after the sidebar. Read as onni, a member with a separate bucket, so the
+// polling doesn't hold dev-admin's save back.
+const categories = async () => (await onni!.call<{ categories: { channels: string[] }[] }>('GET', `/servers/${s.id}`)).categories[0]!.channels;
+let order = await categories();
+const names = new Map(await Promise.all(order.map(async (id) => [id, (await admin!.call<{ name: string }>('GET', `/channels/${id}`)).name] as const)));
+const named = () => order.map((id) => names.get(id) ?? id).join(', ');
+while (named() !== 'General, salainen, säännöt' && performance.now() - shownAt < 20_000) {
+  await new Promise((r) => setTimeout(r, 2_500));
+  order = await categories();
+}
+results.afterAdminMove = `${named()}, read ${Math.round(performance.now() - shownAt)} ms after the sidebar showed it`;
 const startRole = performance.now();
 await admin!.call('PATCH', `/servers/${s.id}/members/${tuuli!.id}`, { roles: [s.admin] });
 results.appearsWithRoleMs = await timedFrom(startRole, async () => (await shown(t.page)).includes('salainen'));
@@ -99,8 +111,7 @@ await o.page.getByRole('menuitem', { name: 'Move up' }).click();
 await until(async () => (await shown(o.page)) === 'Yleinen: säännöt, General', 15_000);
 await new Promise((r) => setTimeout(r, 3_000));
 const cats = (await admin!.call<{ categories: { title: string; channels: string[] }[] }>('GET', `/servers/${s.id}`)).categories;
-const names: Record<string, string> = { [s.general]: 'General', [saannot]: 'säännöt', [salainen]: 'salainen' };
-results.afterOnniMove = cats.map((c) => `${c.title}: ${c.channels.map((id) => names[id] ?? id).join(', ')}`);
+results.afterOnniMove = cats.map((c) => `${c.title}: ${c.channels.map((id) => names.get(id) ?? id).join(', ')}`);
 
 // 4. Remove Moderaattori's override: gone from the list, also after a reload.
 await a.page.goto(`${APP}/channel-settings/${saannot}/permissions`, { waitUntil: 'networkidle' });

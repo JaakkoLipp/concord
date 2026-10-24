@@ -39,13 +39,18 @@ const open = async () => {
   await page.goto(`${APP}/channels/${st.serverId}/${st.channels.yleinen}`, { waitUntil: 'networkidle' });
   return { page, problems };
 };
+// dev's avatar shows by its file ID, or by dev's ID when there is none: a server avatar, then the account's own.
+const devMember = await dev.call<{ avatar?: { _id: string } }>('GET', `/servers/${st.serverId}/members/${dev.id}`);
+const devUser = await dev.call<{ avatar?: { _id: string } }>('GET', `/users/${dev.id}`);
+const devAvatar = devMember.avatar?._id ?? devUser.avatar?._id ?? dev.id;
 /** Opens dev's profile from the member list and returns its note field. */
 const profileNote = async (page: Page) => {
   await page.locator(`aside.members button.member`).filter({ has: page.locator('.name') }).first().waitFor();
   const name = await page.evaluate((id) => [...document.querySelectorAll<HTMLElement>('aside.members button.member')]
-    .find((b) => b.querySelector('img')?.getAttribute('src')?.includes(id))?.getAttribute('aria-label') ?? '', dev.id);
-  const button = name ? page.getByRole('button', { name, exact: true }) : page.locator('aside.members button.member').first();
-  await button.first().click();
+    .find((b) => b.querySelector('img')?.getAttribute('src')?.includes(id))?.getAttribute('aria-label') ?? '', devAvatar);
+  // Any other member could be this account itself, whose own profile has no note.
+  if (!name) throw new Error(`dev isn't in the member list (avatar ${devAvatar})`);
+  await page.getByRole('button', { name, exact: true }).first().click();
   const note = page.getByRole('textbox', { name: /^Note about / });
   await note.waitFor();
   return note;

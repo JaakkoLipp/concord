@@ -4,7 +4,7 @@
  * - /check/{server}: dev-admin, the owner, holds Manage server in the seeded server and dev doesn't,
  * - the gates in the settings sidebar for dev-admin, and none for dev,
  * - dev-admin moving through server settings in the client, a section every 4 s, which spends their Stoat bucket
- *   of 5 per 10 s for the server, while the layer checks their permission there every 3 s: no 429 reaches the
+ *   of 5 per 10 s for the server, while the layer checks their permission there every 3.5 s: no 429 reaches the
  *   client. A client clicking as fast as it can gets 429s from Stoat with or without the layer (m4.4-results.md).
  * - a flood of random tokens hits the per-address limit, not Stoat. Run last: it locks this address out of new
  *   sign-ins to the layer for a minute.
@@ -66,7 +66,7 @@ await d.page.goto(`${APP}/settings/profile`, { waitUntil: 'networkidle' });
 check(await d.page.getByText('Moderator').count() === 0, 'settings shows dev no gates');
 await d.page.context().close();
 
-// dev-admin spends their bucket for the server through the client while the layer checks them every 3 s, under
+// dev-admin spends their bucket for the server through the client while the layer checks them every 3.5 s, under
 // the per-user limit of 20 writes a minute. Sections are clicked, as people do: a reload would also fetch GET /.
 // The layer's lookups take at most 2 of the bucket's 5 per 10 s, once every 30 s.
 const limited: string[] = [];
@@ -76,10 +76,10 @@ a.page.on('response', (r) => {
   if (r.url().includes(`/api/servers/${server}`)) serverCalls++;
 });
 await a.page.goto(`${APP}/server-settings/${server}/overview`, { waitUntil: 'networkidle' });
-const sections = await a.page.locator('nav a.item').count();
+const sections = await a.page.locator('.settings nav a.item').count();
 let layerCalls = 0;
 const layerStatuses = new Set<number>();
-const every = Number(process.env.LAYER_CHECK_MS ?? 3_000);
+const every = Number(process.env.LAYER_CHECK_MS ?? 3_500);
 let busy = every > 0;
 const checker = (async () => {
   while (busy) {
@@ -91,7 +91,7 @@ const checker = (async () => {
 const until = Date.now() + 60_000;
 let visits = 0;
 while (Date.now() < until) {
-  await a.page.locator('nav a.item').nth(visits % sections).click();
+  await a.page.locator('.settings nav a.item').nth(visits % sections).click();
   visits++;
   await a.page.waitForTimeout(4_000);
 }

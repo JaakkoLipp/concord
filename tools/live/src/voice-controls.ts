@@ -76,13 +76,13 @@ try {
     el.dispatchEvent(new Event('input', { bubbles: true }));
   }, value);
   const menuOpen = () => aino.page.getByRole('menu').waitFor({ timeout: 5_000 });
-  await aino.page.getByRole('button', { name: 'Microphone options' }).click();
+  await aino.page.locator('.dock').getByRole('button', { name: 'Microphone options' }).click();
   await menuOpen();
   const deviceItems = await aino.page.getByRole('menuitemcheckbox').count();
   await aino.page.getByRole('menuitemcheckbox').first().click();
   check(deviceItems >= 1 && (await settings()).inputDevice === '', `the microphone menu lists devices (${deviceItems}) and choosing one saves it`);
   await aino.page.getByRole('menu').waitFor({ state: 'detached' });
-  await aino.page.getByRole('button', { name: 'Microphone options' }).click();
+  await aino.page.locator('.dock').getByRole('button', { name: 'Microphone options' }).click();
   await menuOpen();
   await setRange(0);
   await aino.page.waitForTimeout(1_000);
@@ -93,7 +93,7 @@ try {
   await aino.page.keyboard.press('Escape');
   await aino.page.getByRole('menu').waitFor({ state: 'detached' });
   check(silenced < talking / 10 && restored > talking / 2, `the menu's input volume at 0 silences the call: ${silenced} B/s, at 100 % ${restored} B/s`);
-  await aino.page.getByRole('button', { name: 'Speaker options' }).click();
+  await aino.page.locator('.dock').getByRole('button', { name: 'Speaker options' }).click();
   await menuOpen();
   const outputMenu = aino.page.getByRole('menu');
   const hasVolume = await outputMenu.getByText('Output volume').count() > 0 && await outputMenu.getByRole('menuitem', { name: 'Voice and video settings' }).count() > 0;
@@ -125,8 +125,10 @@ try {
   await dev.page.keyboard.press('Escape');
   const marked = await passes(row(dev.page, /Aino Virtanen.*Volume 40%/).waitFor({ timeout: 3_000 }));
   check(marked, 'a volume of 40 % set in the member list marks aino in the call');
+  // A reload leaves the call, and a person's menu offers their volume only in a shared call (m4.7 task 4).
   await dev.page.reload();
-  await dev.page.getByText('Voice connected').waitFor({ timeout: 20_000 }).catch(() => {});
+  await join(dev);
+  await dev.page.getByRole('link', { name: /^pelit/ }).click();
   const kept = await passes(row(dev.page, /Aino Virtanen.*Volume 40%/).waitFor({ timeout: 15_000 }));
   await members.getByRole('button', { name: /Aino Virtanen/ }).first().click({ button: 'right' });
   await devMenu.waitFor({ timeout: 5_000 });
@@ -145,7 +147,8 @@ try {
   check(problems.length === 0, `no failed requests or console errors${problems.length ? `: ${problems.slice(0, 6).join('; ')}` : ''}`);
 } catch (e) {
   failures.push(String(e));
-  console.log(`FAIL ${String(e).split('\n')[0]}`);
+  // The first line, and the locator it was waiting for from the call log.
+  console.log(`FAIL ${String(e).split('\n')[0]}${String(e).match(/waiting for (.*)/)?.[1] ? ` (${String(e).match(/waiting for (.*)/)![1]})` : ''}`);
   for (const [i, s] of seats.entries()) {
     await shot(s.page, `failed-${i}`).catch(() => {});
     console.log(`  seat ${i}: ${[...s.problems.failed, ...s.problems.console].slice(0, 5).join('; ') || 'no problems logged'}`);

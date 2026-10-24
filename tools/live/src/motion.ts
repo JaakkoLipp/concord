@@ -122,7 +122,9 @@ async function step(p: Page, mode: string, name: string, act: () => Promise<void
     check(!timed.length, `${mode}: ${name} has no positive duration${timed.length ? ` (${JSON.stringify(timed)})` : ''}`);
   } else {
     const allowed = expect.moves === false ? FADES : [...MOVES, ...FADES];
-    const bad = seen.filter((s) => s.props.some((x) => !allowed.includes(x)));
+    // client.md section 9, rule 1: only the settings navigation's accordion may animate grid-template-rows.
+    const ok = (s: Seen, x: string) => allowed.includes(x) || (x === 'grid-template-rows' && /\bdiv\.subnav\b/.test(s.what));
+    const bad = seen.filter((s) => s.props.some((x) => !ok(s, x)));
     check(!bad.length, `${mode}: ${name} animates ${props.join(', ') || 'nothing'}${bad.length ? ` (not allowed: ${JSON.stringify(bad)})` : ''}`);
     if (expect.some !== undefined) check(expect.some === seen.length > 0, `${mode}: ${name} ${expect.some ? 'animates' : "doesn't animate"}${!expect.some && seen.length ? ` (${seen.map((s) => s.what).join('; ')})` : ''}`);
   }
@@ -199,9 +201,10 @@ for (const mode of modes) {
   await step(p, mode, 'context menu closes', () => p.keyboard.press('Escape'), { some: true });
 
   const member = p.getByRole('button', { name: /^Open .*profile/ }).first();
-  await step(p, mode, 'profile popout opens', () => member.click(), { some: true });
+  // Instant since M4.6 task 14: full opacity in the first frame (motion spec 4.16).
+  await step(p, mode, 'profile popout opens', () => member.click(), { some: false });
   if (out && mode === 'no-preference') await p.screenshot({ path: `${out}/popout.png` });
-  await step(p, mode, 'profile popout closes', () => p.keyboard.press('Escape'), { some: true });
+  await step(p, mode, 'profile popout closes', () => p.keyboard.press('Escape'), { some: false });
 
   // The picker's first open in a session decodes its images, about 500 ms headless, in native code. Later opens are what's checked.
   const emoji = p.locator('.composer').getByRole('button', { name: 'Choose an emoji' });
