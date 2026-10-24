@@ -1,0 +1,21 @@
+# docs/m5-plan.md decisions 3 and 14. The installer and Flatpak targets come with the release pipeline (task 2).
+appId: com.jaalip.Concord
+productName: Concord
+directories:
+  output: dist/release
+  buildResources: resources
+files:
+  - dist/main/**
+  - dist/preload.cjs
+  - static/**
+asar: true
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  grantFileProtocolExtraPrivileges: false
+  onlyLoadAppFromAsar: true
+  enableEmbeddedAsarIntegrityValidation: true
+  enableCookieEncryption: true
+linux:
+  executableName: concord

@@ -8,6 +8,7 @@
   "include": [
     "packages/domain/src",
     "packages/stoat/src",
+    "apps/desktop/src",
     "tools/**/*.ts",
     "deploy/guard/*.ts"
   ]

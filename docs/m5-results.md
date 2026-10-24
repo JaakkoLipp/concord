@@ -51,3 +51,32 @@ Arch, KDE Plasma 6.8.1 on Wayland, AMD Radeon RX 9070 (Navi 48) on Mesa 26.2.5, 
 | 0.8 Idle memory with `/app` signed in, and Discord beside it | Both | |
 
 Also needed from Jaakko: the Windows build (`winver`) and whether Smart App Control is on.
+
+The `m5-probe` workflow's first run, on 2026-10-24, built both: draft release "M5 probe 1" holds `Concord-Probe-win-x64.zip` (155 MB) and `Concord-Probe.flatpak` (93 MB). So 0.1 is done; whether they run is 0.2 onwards.
+
+## 1. The shell
+
+`apps/desktop`, a workspace package in TypeScript, built with `tsc` to `dist/`: an ESM main process and a CommonJS preload, which a sandboxed preload needs. "Concord" and `com.jaalip.Concord` are the working name, as signed off, until Jaakko picks the final one, which must happen before the first public release.
+
+- **The window**: the client in the `persist:concord` partition, sandboxed everywhere (`app.enableSandbox()`), and a black background (`--surface-0`) so it never flashes white. A second launch focuses the first.
+- **Links** (`main/links.ts`):
+  - The client's own `/app` pages and our `/invite/<code>` links (mapped to `/app/invite/<code>`) load in the window.
+  - Every other `https:`, `http:` and `mailto:` link opens in the system browser, the website's own pages included.
+  - Anything else is dropped.
+  - The same rule covers new windows (all denied), main-frame navigations and redirects.
+- **Permissions**: granted only to the client's origin, and only the six of decision 3. Device access is always denied.
+  - Electron passes the checking origin to the check handler as a URL ("http://localhost/"), so it is parsed, not compared as a string. A first try that compared strings had the camera report "denied".
+- **The bridge**: `window.concordDesktop` = `{version, platform, capabilities: []}`, frozen, with the version passed on the preload's command line. `main/sender.ts` is the sender check every IPC handler will use from task 3.
+- **Offline**: a main-frame load that fails, or answers 500 or more, shows `static/offline.html`. It goes back to the client on `online`, on Retry, and after 15 s, then 30 s, then every 60 s.
+- **Packaging**: `electron-builder.yml` sets the fuses of decision 3. Read back from the packaged binary: RunAsNode, NODE_OPTIONS, the inspect arguments and file-protocol privileges off; asar-only loading, asar integrity and cookie encryption on. `ELECTRON_RUN_AS_NODE=1` starts the app instead of Node.
+- **Deferred to task 3**: the shell's own config file, because nothing reads it before the bridge's get and set for the shell's options. The Windows AppUserModelID comes with the installer and notifications (tasks 2 and 8).
+
+**Checked on 2026-10-24**, on the Plasma 6.8.1 machine, unpackaged against the local stack and packaged against production:
+- 14 unit tests cover the URL rules (lookalike hosts, other ports and schemes, `/invite/../`, over-long codes) and the sender check, a missing `senderFrame` included.
+- `window.concordDesktop` reads `{"version":"0.1.0","platform":"linux","capabilities":[]}`, frozen and not replaceable, with no `require`, `process` or `module` in the page.
+- `window.open` of another site and a navigation to it both went to the system opener, and the window stayed put. Our invite link opened `/app/invite/AbC123` in the window, and a navigation to `file://` was dropped.
+- The camera's permission reads granted, and geolocation's denied.
+- With nothing listening at the client's address, the offline page showed. Once a stand-in server came up, the next timed try loaded it.
+- The packaged build (`pnpm --filter @concord/desktop pack`) opened production's `/app/login`.
+
+Not yet seen by Jaakko: the window itself on Windows, which needs task 2's installer.

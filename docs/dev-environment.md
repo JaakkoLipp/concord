@@ -280,6 +280,7 @@ On the local stack, from the repo root:
 | M0 verifications | `pnpm seed check` |
 | Reseed from scratch | `pnpm seed --reset` |
 | Client | `pnpm dev` |
+| The desktop shell on the local client | `CONCORD_URL=http://localhost/app pnpm --filter @concord/desktop start`. A packaged build ignores `CONCORD_URL` |
 | Record fixtures, then test | `pnpm --filter @concord/stoat record && pnpm test` |
 | Memory | `~/stoat/concord/dc stats --no-stream` |
 | Concord's own layer | `curl -s http://localhost/app/api/v1/health`, then `node tools/live/src/layer.ts` |

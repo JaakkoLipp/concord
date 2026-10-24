@@ -247,19 +247,22 @@ A third quirk affects our UI: Stoat uses one "screen sharing" flag for both scre
 
 ## 6. Desktop shell
 
-**Electron loads `https://concord.jaalip.com/app`** instead of bundling the client, the same model Stoat's own desktop app uses. UI fixes ship on the next web deploy. Desktop releases are needed only when the shell changes.
+**Electron loads `https://concord.jaalip.com/app`** instead of bundling the client, the same model Stoat's own desktop app uses. UI fixes ship on the next web deploy. Desktop releases are needed only when the shell changes. The shell is `apps/desktop`, planned in m5-plan.md.
 
-- **Offline start**: a native offline screen with retry.
-- **Safety**: context isolation, sandboxed renderer, no Node APIs in the page, navigation locked to our origin, and external links opened in the system browser.
-- **Version skew**: the preload bridge exposes a version and a capability list. The client feature-detects rather than assuming.
+**Platforms**: Windows 10 and 11, and Linux on Wayland through Flatpak. X11 is not supported; it may run through XWayland, untested.
+
+- **Offline start**: a local offline page that retries on its own and on Retry.
+- **Safety**: context isolation, sandboxed renderer, no Node APIs in the page, permissions only for our origin, main-frame navigation locked to the client's pages, and every other link opened in the system browser.
+- **The bridge**: the preload exposes one frozen object, `window.concordDesktop`, of named values and functions, never `ipcRenderer`. Every IPC handler checks that the call came from the client's main frame on our origin. The page is assumed hostile, so nothing on the bridge reads files, runs programs, opens arbitrary URLs or sees the screen.
+- **Version skew**: the bridge exposes a version and a capability list. The client feature-detects rather than assuming.
 
 | Capability | Mechanism |
 |---|---|
-| Screen and window picker | `setDisplayMediaRequestHandler` with our own picker. Wayland uses the system portal picker. |
-| Push-to-talk | Electron's global shortcuts see only key presses, not releases. We use a native key hook on Windows and X11, and the GlobalShortcuts portal on Wayland where the compositor supports it. Otherwise push-to-talk works only while the window is focused. |
-| Screen-share audio | Windows loopback with the call's own audio excluded, as in section 5.2. Linux through a PipeWire virtual microphone. |
-| Linux hardware encoding | Chromium VA-API encoder feature flag, as a setting. |
-| Tray, notifications, badge, start on login, single instance | Standard Electron APIs. |
+| Screen and window picker | `setDisplayMediaRequestHandler` with our own picker, drawn by the shell in a small local window, so thumbnails and window titles never reach the page. Wayland uses the system portal picker. |
+| Push-to-talk | Electron's global shortcuts see only key presses, not releases. On Windows a low-level key hook reports only the bound keys, at most three. On Wayland, the GlobalShortcuts portal where the compositor supports it. Otherwise push-to-talk works only while the window is focused. |
+| Screen-share audio | Windows 11: Chromium's loopback without its own audio, so the call is left out (m5-results.md, task 0). Windows 10: none. Linux: not in M5; later a PipeWire virtual microphone. |
+| Linux hardware encoding | Chromium's `AcceleratedVideoEncoder` feature flag, as a setting. |
+| Tray, notifications, badge, single instance | Standard Electron APIs. |
 | Invite deep links | `concord://invite/<code>` forwarded to the client. The Flatpak and desktop app ID is `com.jaalip.Concord`. |
 
 **Packaging**:
