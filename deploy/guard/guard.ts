@@ -102,15 +102,27 @@ async function strip(t: Tally, reason: string): Promise<void> {
   if (state.strips.some((s) => s.user === t.user && !s.restored && s.at > t.at - 10 * 60_000)) return;
   const member = await api<WireMember>('GET', `/servers/${SERVER}/members/${t.user}`).catch(() => null);
   const roles = member?.roles ?? [];
-  if (roles.length) await api('PATCH', `/servers/${SERVER}/members/${t.user}`, { remove: ['Roles'] }, `Concord guard: ${reason}`);
-  state.strips.push({ user: t.user, roles, at: t.at, reason });
+  // A strip Stoat refuses, as when the guard's role has slipped below theirs, must still reach the owner, and must not
+  // hold up the rest of the log: the owner is told it failed, and nothing is recorded as taken.
+  let failed = '';
+  if (roles.length) {
+    try {
+      await api('PATCH', `/servers/${SERVER}/members/${t.user}`, { remove: ['Roles'] }, `Concord guard: ${reason}`);
+    } catch (e) {
+      failed = String(e).slice(0, 200);
+    }
+  }
+  state.strips.push({ user: t.user, roles: failed ? [] : roles, at: t.at, reason });
   save();
-  log('stripped', t.user, roles, reason);
-  await alert([
+  log(failed ? 'strip FAILED' : 'stripped', t.user, roles, reason, failed);
+  await alert((failed ? [
+    `**Guard**: <@${t.user}> ${reason}. **I couldn't take their roles** (${failed}). Act now: remove their roles yourself.`,
+    restoreHint(t),
+  ] : [
     `**Guard**: <@${t.user}> ${reason}. I took their roles${roles.length ? '' : ' (they had none)'}, so they can't go on.`,
     restoreHint(t),
     `If this was a mistake, reply \`restore ${t.user}\` and I'll give the roles back.`,
-  ].filter(Boolean).join('\n'));
+  ]).filter(Boolean).join('\n'));
 }
 
 /** Reads every audit log entry after the last one read, oldest first, and judges each. One at a time. */
@@ -132,13 +144,25 @@ function readSoon(): void {
 async function readLog(): Promise<void> {
   const owner = (await server()).owner;
   for (;;) {
-    const q = new URLSearchParams({ limit: '100' });
-    if (state.lastEntry) q.set('after', state.lastEntry);
-    const page = await api<{ audit_logs: WireEntry[] }>('GET', `/servers/${SERVER}/audit_logs?${q}`);
-    const entries = page.audit_logs.sort((a, b) => (a._id < b._id ? -1 : 1));
+    const fetchPage = async (before?: string) => {
+      const q = new URLSearchParams({ limit: '100' });
+      if (state.lastEntry) q.set('after', state.lastEntry);
+      if (before) q.set('before', before);
+      return (await api<{ audit_logs: WireEntry[] }>('GET', `/servers/${SERVER}/audit_logs?${q}`)).audit_logs;
+    };
+    const entries = await fetchPage();
+    const oldest = () => entries.reduce((min, e) => (e._id < min ? e._id : min), entries[0]!._id);
+    // A full page may be the newest 100 rather than the next 100: read back towards the last entry, so none between
+    // is skipped. If Stoat gave the next 100, the first step back is empty and the outer loop carries on from them.
+    for (let more = entries.length === 100 && !!state.lastEntry; more;) {
+      const older = await fetchPage(oldest());
+      entries.push(...older);
+      more = older.length === 100;
+    }
+    entries.sort((a, b) => (a._id < b._id ? -1 : 1));
     // The first run starts from now: the past isn't judged, only what follows.
     if (!state.lastEntry) {
-      state.lastEntry = entries.at(-1)?._id ?? '0';
+      state.lastEntry = entries.at(-1)?._id ?? '0'.repeat(26);
       save();
       return;
     }
@@ -217,6 +241,9 @@ async function checkHealth(): Promise<void> {
   save();
 }
 
+/** Whether a channel is a DM, asked once each: a channel's type never changes. Only messages that read as a command ask. */
+const isDm = new Map<string, boolean>();
+
 function connect(): void {
   const ws = new WebSocket(`${WS}/?version=1&format=json`);
   let ping: ReturnType<typeof setInterval> | undefined;
@@ -234,10 +261,12 @@ function connect(): void {
       // Deletions, bans and role deletions: read the log now, coalesced with any read under way.
       if (['MessageDelete', 'BulkMessageDelete', 'ChannelDelete', 'ServerMemberLeave', 'ServerRoleDelete'].includes(f.type)) readSoon();
       // Never act on our own messages, and only DMs reach commands.
-      if (f.type === 'Message' && f.author !== me && typeof f.content === 'string') {
-        void api<{ channel_type: string }>('GET', `/channels/${String(f.channel)}`)
-          .then((c) => { if (c.channel_type === 'DirectMessage') return command(String(f.author), String(f.channel), String(f.content)); })
-          .catch(() => {});
+      if (f.type === 'Message' && f.author !== me && typeof f.content === 'string' && /^restore\s/i.test(f.content.trim())) {
+        const channel = String(f.channel);
+        const known = isDm.get(channel);
+        const dm = known !== undefined ? Promise.resolve(known)
+          : api<{ channel_type: string }>('GET', `/channels/${channel}`).then((c) => { const d = c.channel_type === 'DirectMessage'; isDm.set(channel, d); return d; });
+        void dm.then((d) => { if (d) return command(String(f.author), channel, String(f.content)); }).catch(() => {});
       }
     }
   };

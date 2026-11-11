@@ -13,6 +13,7 @@ export function accountError(e: unknown): string {
       case 'ShortPassword': return t.short;
       case 'CompromisedPassword': return t.compromised;
       case 'IncorrectData': return t.email;
+      case 'UsernameTaken': case 'InvalidUsername': case 'FailedValidation': return t.username;
     }
     return t.unknown;
   }

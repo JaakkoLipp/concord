@@ -5,7 +5,9 @@
    */
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import type { Message, Session } from '@concord/domain';
+  import { Permission, has, type Channel, type Message, type Session } from '@concord/domain';
+  import { permissionsIn } from '$lib/view/channels.ts';
+  import { nsfwConfirmed } from '$lib/view/nsfw.svelte.ts';
   import { Avatar, IconButton, Spinner } from '@concord/ui';
   import X from '@lucide/svelte/icons/x';
   import Markdown from '$lib/markdown/Markdown.svelte';
@@ -37,6 +39,22 @@
     void channel;
     filters = {};
   });
+  /**
+   * Whole-server search (m4.3-plan.md task 9, kept simple): Stoat searches one channel, so the same search goes to each
+   * channel this account can read, four at a time, at most SERVER_CHANNELS of them, and the newest matches of each are
+   * merged. Age-restricted channels are searched only once confirmed on this device.
+   */
+  const SERVER_CHANNELS = 50;
+  let scope = $state<'channel' | 'server'>('channel');
+  $effect.pre(() => { if (!server) scope = 'channel'; });
+  const readable = $derived.by(() => {
+    if (!server) return [] as Channel[];
+    const need = Permission.ViewChannel | Permission.ReadMessageHistory;
+    return (store.servers.get(server)?.channels ?? []).map((id) => store.channels.get(id))
+      .filter((c): c is Channel => c?.kind === 'text' && has(permissionsIn(store, c), need) && (!c.nsfw || nsfwConfirmed.has(c.id)));
+  });
+  let searchedChannels = $state(0);
+  const wide = $derived(mode === 'search' && scope === 'server' && !!server);
   const filtered = $derived(!!(filters.from || filters.after || filters.before));
   const empty = $derived(mode === 'search' && !query && !filtered);
 
@@ -55,6 +73,7 @@
       return;
     }
     status = 'loading';
+    if (wide) return void loadServer(mine);
     try {
       const base = mode === 'pins' ? { pinned: true } : { ...(query ? { query } : {}), ...bounds(filters) };
       const from = mode === 'search' ? filters.from : undefined;
@@ -70,8 +89,31 @@
       if (mine === run) status = 'failed';
     }
   }
+  async function loadServer(mine: number) {
+    const base = { ...(query ? { query } : {}), ...bounds(filters) };
+    const from = filters.from;
+    const queue = readable.slice(0, SERVER_CHANNELS);
+    const all: Message[] = [];
+    let failed = 0;
+    const worker = async () => {
+      for (let c = queue.shift(); c && mine === run; c = queue.shift()) {
+        try {
+          all.push(...(await session.search(c.id, base, PAGE)).filter((msg) => !from || msg.author === from));
+        } catch {
+          failed++;
+        }
+      }
+    };
+    const total = queue.length;
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    if (mine !== run) return;
+    found = all.sort((a, b) => (a.id < b.id ? 1 : -1));
+    searchedChannels = total - failed;
+    next = undefined;
+    status = total && failed === total ? 'failed' : 'done';
+  }
   $effect(() => {
-    void channel; void mode; void query; void filters.from; void filters.after; void filters.before;
+    void channel; void mode; void query; void filters.from; void filters.after; void filters.before; void wide;
     found = [];
     void untrack(() => load());
   });
@@ -80,9 +122,9 @@
     .map((f) => store.messages.get(f.id) ?? f)
     .filter((msg) => !store.deleted.has(msg.id) && (mode !== 'pins' || msg.pinned)));
 
-  function jump(id: string) {
+  function jump(id: string, where = channel) {
     void goto(info?.kind === 'text'
-      ? resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server: info.server, channel, message: id })
+      ? resolve('/(app)/app/channels/[server]/[channel]/[[message]]', { server: info.server, channel: where, message: id })
       : resolve('/(app)/app/channels/@me/[channel]/[[message]]', { channel, message: id }));
   }
 </script>
@@ -94,7 +136,15 @@
   </header>
   {#if mode === 'search'}
     <div class="filters">
-      <label>{m.find.from}
+      {#if server}
+        <label class="whole">{m.find.scope}
+          <select bind:value={scope}>
+            <option value="channel">{m.find.thisChannel}</option>
+            <option value="server">{m.find.thisServer}</option>
+          </select>
+        </label>
+      {/if}
+      <label class="whole">{m.find.from}
         <select value={filters.from ?? ''} onchange={(e) => (filters.from = e.currentTarget.value || undefined)}>
           <option value="">{m.find.anyone}</option>
           {#each people as person (person.id)}<option value={person.id}>{person.name}</option>{/each}
@@ -112,8 +162,9 @@
           <Avatar src={avatarUrl(store.users.get(msg.author) ?? { id: msg.author })} size={24} />
           <strong style:color={server ? store.roleColour(msg.author, server) : undefined}>{store.displayName(msg.author, server)}</strong>
           <time datetime={sent.toISOString()} title={fullDate(sent)}>{shortDate(sent)}</time>
-          <button class="jump" onclick={() => jump(msg.id)}>{m.find.jump}</button>
+          <button class="jump" onclick={() => jump(msg.id, msg.channel)}>{m.find.jump}</button>
         </div>
+        {#if wide}{@const where = store.channels.get(msg.channel)}<p class="where">#{where?.kind === 'text' ? where.name : ''}</p>{/if}
         {#if msg.content}<div class="content"><Markdown source={msg.content} /></div>{/if}
         {#if msg.attachments.length}<p class="files">{msg.attachments.map((a) => a.filename).join(', ')}</p>{/if}
       </article>
@@ -123,7 +174,8 @@
     {#if status === 'idle'}<p class="empty">{m.find.hint}</p>{/if}
     {#if status === 'loading'}<p class="empty"><Spinner label={m.find.searching} /></p>{/if}
     {#if status === 'failed'}<p class="empty">{m.find.failed}</p>{/if}
-    {#if status === 'done' && mode === 'search' && filters.from}<p class="scanned">{m.find.scanned(scanned)}</p>{/if}
+    {#if status === 'done' && wide}<p class="scanned">{m.find.searchedChannels(searchedChannels, readable.length)}</p>{/if}
+    {#if status === 'done' && mode === 'search' && filters.from && !wide}<p class="scanned">{m.find.scanned(scanned)}</p>{/if}
     {#if status === 'done' && next}<button class="more" onclick={() => load(next)}>{filters.from && mode === 'search' ? m.find.searchFurther : m.find.loadMore}</button>{/if}
   </div>
 </section>
@@ -134,7 +186,8 @@
   h2 { margin: 0; color: var(--text-strong); font: 700 var(--text-md) var(--font-sans); }
   .filters { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); }
   .filters label { display: grid; gap: var(--space-1); min-width: 0; color: var(--text-secondary); font: 500 var(--text-xs) var(--font-sans); }
-  .filters label:first-child { grid-column: 1 / -1; }
+  .filters .whole { grid-column: 1 / -1; }
+  .where { margin: var(--space-1) 0 0; color: var(--text-muted); font: 500 var(--text-xs) var(--font-sans); }
   .filters select, .filters input {
     min-width: 0; min-height: 2rem; padding: 0 var(--space-3); border: 1px solid var(--border-control); border-radius: var(--radius-md);
     background: var(--surface-0); color: var(--text-normal); font: var(--text-sm) var(--font-sans);

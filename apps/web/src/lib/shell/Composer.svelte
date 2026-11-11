@@ -11,6 +11,9 @@
   import CircleX from '@lucide/svelte/icons/circle-x';
   import FileText from '@lucide/svelte/icons/file-text';
   import Trash from '@lucide/svelte/icons/trash-2';
+  import Eye from '@lucide/svelte/icons/eye';
+  import EyeOff from '@lucide/svelte/icons/eye-off';
+  import { isSpoiler, withSpoiler } from '$lib/conversation/spoiler.ts';
   import { attachFiles } from '$lib/composer/files.ts';
   import TypingIndicator from './TypingIndicator.svelte';
   import SendHorizontal from '@lucide/svelte/icons/send-horizontal';
@@ -351,10 +354,12 @@
   {#if chosen.length && channel}
     <ul class="tiles" class:after-reply={!!reply || !!recording}>
       {#each chosen as c (c.key)}
-        <li class="tile" class:voice={!!c.audio}>
+        <li class="tile" class:voice={!!c.audio} class:spoiler={isSpoiler(c.file.name)}>
           {#if c.preview}<img src={c.preview} alt="" />{:else if c.audio}<span class="file-icon"><Mic size={32} /></span><audio controls preload="metadata" src={c.audio}></audio>{:else}<span class="file-icon"><FileText size={32} /></span>{/if}
           <span class="file-name">{c.file.name}</span>
           <span class="file-size">{m.files.size(c.file.size)}</span>
+          {#if !c.audio}<span class="mark"><IconButton size="sm" label={isSpoiler(c.file.name) ? m.files.unspoiler : m.files.spoiler} active={isSpoiler(c.file.name)} aria-pressed={isSpoiler(c.file.name)}
+            onclick={() => channel && compose.renameFile(channel.id, c.key, withSpoiler(c.file.name, !isSpoiler(c.file.name)))}>{#if isSpoiler(c.file.name)}<EyeOff size={16} />{:else}<Eye size={16} />{/if}</IconButton></span>{/if}
           <span class="remove"><IconButton size="sm" label={m.files.remove(c.file.name)} onclick={() => channel && compose.removeFile(channel.id, c.key)}><Trash size={16} /></IconButton></span>
         </li>
       {/each}
@@ -429,6 +434,8 @@
   .file-icon { display: grid; place-items: center; height: 8rem; color: var(--text-secondary); }
   .file-name { margin-top: var(--space-2); color: var(--text-normal); font: var(--text-sm) var(--font-sans); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .file-size { color: var(--text-secondary); font: var(--text-xs) var(--font-sans); }
+  .mark { position: absolute; top: var(--space-1); right: calc(var(--space-1) + 2rem); border-radius: var(--radius-md); background: var(--surface-3); }
+  .tile.spoiler img { filter: blur(12px); }
   .remove { position: absolute; top: var(--space-1); right: var(--space-1); border-radius: var(--radius-md); background: var(--surface-3); }
   .suggestions {
     position: absolute; left: var(--space-3); right: var(--space-3); bottom: 100%; z-index: 10; margin: 0 0 var(--space-2); padding: var(--space-2);

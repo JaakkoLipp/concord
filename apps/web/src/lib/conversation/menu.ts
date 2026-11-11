@@ -82,6 +82,7 @@ export function messageMenu(msg: Message, a: MessageActions, o: Options): MenuIt
   if (a.send) main.push({ label: m.actions.reply, onselect: () => a.reply(msg) });
   if (a.manage) main.push({ label: msg.pinned ? m.actions.unpin : m.actions.pin, onselect: () => a.pin(msg) });
   if (o.canMarkUnread) main.push({ label: m.actions.markUnread, onselect: () => a.markUnread(msg) });
+  if (Object.values(msg.reactions).some((users) => users.length)) main.push({ label: m.reactions.title, onselect: () => a.showReactions(msg) });
   if (msg.content) main.push({ label: m.actions.copyText, onselect: () => a.copyText(msg) });
   main.push({ label: m.actions.copyLink, onselect: () => a.copyLink(msg) }, { label: m.actions.copyId, onselect: () => a.copyId(msg) });
   groups.push(main);

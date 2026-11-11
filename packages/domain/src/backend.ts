@@ -3,7 +3,7 @@
  * Events are already mapped to domain shapes, so the store never sees a Stoat frame.
  */
 import type {
-  AuditEntry, Ban, Category, Channel, Emoji, Id, Invite, InvitePreview, Member, Message, NodeInfo, Override, Presence, Profile, Relationship, Role, Server,
+  AuditEntry, Ban, Bot, Category, Channel, Emoji, Id, Invite, InvitePreview, Member, Message, NodeInfo, Override, Presence, Profile, PublicBot, Relationship, Role, Server,
   SystemChannels, Unread, User, VoiceFlags, VoiceState,
 } from './entities.ts';
 
@@ -250,6 +250,8 @@ export interface Backend {
   changePassword(current: string, next: string, ticket?: string): Promise<void>;
   /** Needs a ticket only with TOTP on. Applies once the link mailed to the new address is followed. */
   changeEmail(email: string, current: string, ticket?: string): Promise<void>;
+  /** A new username, with the current password. The user comes back with the number Stoat gave it. */
+  changeUsername(username: string, password: string): Promise<User>;
   sessions(): Promise<AccountSession[]>;
   revokeSession(id: Id, ticket: string): Promise<void>;
   /** Every session but the caller's. */
@@ -285,6 +287,8 @@ export interface Backend {
   deleteMessages(channel: Id, messages: Id[]): Promise<void>;
   pinMessage(channel: Id, message: Id, pinned: boolean): Promise<void>;
   react(channel: Id, message: Id, emoji: string, add: boolean): Promise<void>;
+  /** With Manage messages: take one person's reaction off a message, or with no user everyone's of that emoji. */
+  removeReaction(channel: Id, message: Id, emoji: string, user?: Id): Promise<void>;
   /**
    * The form the backend stores a reaction under, or null if it refuses the emoji: a custom emoji's ID, or
    * the allowlist's spelling of a Unicode emoji, so every client's 👍 lands on one chip. Loaded on first use.
@@ -370,6 +374,22 @@ export interface Backend {
   createEmoji(file: Id, server: Id, name: string): Promise<Emoji>;
   renameEmoji(emoji: Id, name: string): Promise<void>;
   deleteEmoji(emoji: Id): Promise<void>;
+
+  // ---------- bots (m4.3-plan.md review point N) ----------
+  /** This account's own bots. Their users come back too, for the store. */
+  ownedBots(): Promise<{ bots: Bot[]; users: User[] }>;
+  /** A new private bot. Stoat allows 2 in an account's first 72 hours and 5 after. */
+  createBot(name: string): Promise<{ bot: Bot; user: User }>;
+  editBot(id: Id, change: { name?: string; public?: boolean }): Promise<{ bot: Bot; user: User }>;
+  /** The bot's token: a credential, fetched only when its owner asks to see or copy it. */
+  botToken(id: Id): Promise<string>;
+  /** A new token, which the old one stops working for. */
+  resetBotToken(id: Id): Promise<string>;
+  deleteBot(id: Id): Promise<void>;
+  /** A bot's public face. Refused for someone else's private bot. */
+  publicBot(id: Id): Promise<PublicBot>;
+  /** Add a bot to a server (needs Manage server) or a group (needs Invite others). */
+  inviteBot(id: Id, to: { server: Id } | { group: Id }): Promise<void>;
 
   // ---------- voice (m4-plan.md task 4) ----------
   /**

@@ -1,6 +1,6 @@
 /** The Stoat implementation of the domain's Backend interface. */
 import type {
-  AccountSession, AuditQuery, Backend, Capabilities, MfaMethod, MfaProof, MfaStatus, Channel, ChannelEdit, Emoji, Gateway, GatewayHandlers, GroupEdit, Id, Invite, InvitePreview, LoginResult, Member, MemberEdit, SelfEdit, SelfField, Message,
+  AccountSession, AuditQuery, Backend, Bot, Capabilities, PublicBot, MfaMethod, MfaProof, MfaStatus, Channel, ChannelEdit, Emoji, Gateway, GatewayHandlers, GroupEdit, Id, Invite, InvitePreview, LoginResult, Member, MemberEdit, SelfEdit, SelfField, Message,
   MessagePage, MessageQuery, NodeInfo, OutgoingMessage, Override, Role, RoleEdit, SearchQuery, Server, ServerEdit, User, VideoLimit,
 } from '@concord/domain';
 import { JoinCallError, type JoinFailure } from '@concord/domain/errors';
@@ -41,6 +41,9 @@ const videoLimit = (l: WVideoLimit | undefined): VideoLimit => {
   const [w, h] = l?.video_resolution ?? [1080, 720];
   return { enabled: l?.video ?? true, area: w * h, aspect: l?.video_aspect_ratio ?? [0.3, 2.5] };
 };
+type WBot = { _id: string; owner: string; public: boolean; token: string };
+/** A bot without its token. */
+const bot = (b: WBot): Bot => ({ id: b._id, owner: b.owner, public: b.public });
 const mapInvite = (i: WInvite): Invite => ({ code: i._id, server: i.server, channel: i.channel, creator: i.creator });
 
 /** `join_call`'s refusals in 0.15.5 (delta/src/routes/channels/voice_join.rs). */
@@ -155,6 +158,10 @@ export class StoatBackend implements Backend {
 
   async changeEmail(email: string, current: string, ticket?: string): Promise<void> {
     await this.rest.request('PATCH', '/auth/account/change/email', { email, current_password: current }, mfa(ticket));
+  }
+
+  async changeUsername(username: string, password: string): Promise<User> {
+    return mapUser(await this.rest.request<WUser>('PATCH', '/users/@me/username', { username, password }));
   }
 
   async sessions(): Promise<AccountSession[]> {
@@ -285,6 +292,10 @@ export class StoatBackend implements Backend {
 
   async react(channel: string, message: string, emoji: string, add: boolean): Promise<void> {
     await this.rest.request(add ? 'PUT' : 'DELETE', `/channels/${channel}/messages/${message}/reactions/${encodeURIComponent(emoji)}`);
+  }
+
+  async removeReaction(channel: string, message: string, emoji: string, user?: string): Promise<void> {
+    await this.rest.request('DELETE', `/channels/${channel}/messages/${message}/reactions/${encodeURIComponent(emoji)}?${user ? `user_id=${user}` : 'remove_all=true'}`);
   }
 
   private reactionForms: Promise<(emoji: string) => string | null> | null = null;
@@ -589,6 +600,45 @@ export class StoatBackend implements Backend {
 
   async deleteEmoji(emoji: string): Promise<void> {
     await this.rest.request('DELETE', `/custom/emoji/${emoji}`);
+  }
+
+  // ---------- bots (m4.3-plan.md review point N) ----------
+  // Every bot response from Stoat carries the bot's token. `bot()` below drops it, so it reaches no store.
+
+  async ownedBots(): Promise<{ bots: Bot[]; users: User[] }> {
+    const r = await this.rest.request<{ bots: WBot[]; users: WUser[] }>('GET', '/bots/@me');
+    return { bots: r.bots.map(bot), users: r.users.map(mapUser) };
+  }
+
+  async createBot(name: string): Promise<{ bot: Bot; user: User }> {
+    const r = await this.rest.request<WBot & { user: WUser }>('POST', '/bots/create', { name });
+    return { bot: bot(r), user: mapUser(r.user) };
+  }
+
+  async editBot(id: string, change: { name?: string; public?: boolean }): Promise<{ bot: Bot; user: User }> {
+    const r = await this.rest.request<WBot & { user: WUser }>('PATCH', `/bots/${id}`, change);
+    return { bot: bot(r), user: mapUser(r.user) };
+  }
+
+  async botToken(id: string): Promise<string> {
+    return (await this.rest.request<{ bot: WBot }>('GET', `/bots/${id}`)).bot.token;
+  }
+
+  async resetBotToken(id: string): Promise<string> {
+    return (await this.rest.request<WBot>('PATCH', `/bots/${id}`, { remove: ['Token'] })).token;
+  }
+
+  async deleteBot(id: string): Promise<void> {
+    await this.rest.request('DELETE', `/bots/${id}`);
+  }
+
+  async publicBot(id: string): Promise<PublicBot> {
+    const r = await this.rest.request<{ _id: string; username: string; avatar?: string | null; description?: string | null }>('GET', `/bots/${id}/invite`);
+    return { id: r._id, username: r.username, ...(r.avatar ? { avatar: r.avatar } : {}), ...(r.description ? { description: r.description } : {}) };
+  }
+
+  async inviteBot(id: string, to: { server: string } | { group: string }): Promise<void> {
+    await this.rest.request('POST', `/bots/${id}/invite`, to);
   }
 
   // ---------- voice (m4-plan.md task 4) ----------

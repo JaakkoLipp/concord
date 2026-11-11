@@ -13,7 +13,7 @@ const LIVEKIT_DATA = [
 const LIVEKIT_DATA_MESSAGE = 'Never send LiveKit data: voice-ingress disconnects anyone who does (client.md section 10.2).';
 
 export default ts.config(
-  { ignores: ['**/node_modules/', '**/build/', '**/dist/', '**/.svelte-kit/', 'packages/stoat/fixtures/', 'spikes/', '.claude/'] },
+  { ignores: ['**/node_modules/', '**/build/', '**/dist/', '**/.svelte-kit/', 'packages/stoat/fixtures/', 'spikes/', '.claude/', 'probe-*'] },
   ...ts.configs.recommended,
   ...svelte.configs.recommended,
   {

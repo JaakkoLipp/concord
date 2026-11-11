@@ -8,12 +8,15 @@
   import SmilePlus from '@lucide/svelte/icons/smile-plus';
   import { customEmojiUrl, twemojiUrl } from '$lib/markdown/emoji.ts';
   import { m } from '$lib/i18n/index.ts';
+  import { menuOn } from '$lib/view/contextmenu.svelte.ts';
 
   interface Props {
     reactions: Record<string, string[]>; store: Store; server: string | undefined;
     canReact?: boolean; ontoggle?: ((emoji: string) => void) | undefined; onadd?: ((anchor: HTMLElement) => void) | undefined;
+    /** Opens the full list of who reacted, from a chip's own menu (m4.3-plan.md task 4). */
+    onwho?: ((emoji: string) => void) | undefined;
   }
-  let { reactions, store, server, canReact = false, ontoggle, onadd }: Props = $props();
+  let { reactions, store, server, canReact = false, ontoggle, onadd, onwho }: Props = $props();
   const CUSTOM = /^[0-9A-HJKMNP-TV-Z]{26}$/;
   const entries = $derived(Object.entries(reactions).filter(([, users]) => users.length));
   /** Emoji newer than our Twemoji images show as text, as in messages. */
@@ -25,7 +28,7 @@
   {#each entries as [emoji, users] (emoji)}
     {@const mine = !!store.selfId && users.includes(store.selfId)}
     {@const name = CUSTOM.test(emoji) ? `:${store.emojis.get(emoji)?.name ?? emoji}:` : emoji}
-    <button class="chip" class:mine use:tooltip={m.conversation.reactedWith(who(users), name)} aria-pressed={mine}
+    <button class="chip" class:mine use:menuOn={() => (onwho ? [{ label: m.reactions.whoReacted, onselect: () => onwho(emoji) }] : [])} use:tooltip={m.conversation.reactedWith(who(users), name)} aria-pressed={mine}
       aria-label={m.conversation.reactionLabel(name, users.length, mine)} disabled={!ontoggle || (!mine && !canReact)} onclick={() => ontoggle?.(emoji)}>
       {#if failed[emoji]}<span class="text-emoji">{emoji}</span>{:else}<img src={CUSTOM.test(emoji) ? customEmojiUrl(emoji) : twemojiUrl(emoji)} alt="" draggable="false" onerror={() => (failed = { ...failed, [emoji]: true })} />{/if}
       <span class="count">{users.length}</span>

@@ -34,6 +34,8 @@ export async function requestInvitation(layer: Layer, caller: Caller, input: unk
   const now = Date.now();
   // Expired approvals no longer reserve an address.
   layer.store.prepare("UPDATE beta_invitations SET status = 'declined', token_hash = NULL WHERE status = 'approved' AND expires_at <= ?").run(now);
+  // A claim cut short by a restart would hold its address for good: after its week it fails, as an unanswered one does.
+  layer.store.prepare("UPDATE beta_invitations SET status = 'failed', token_hash = NULL WHERE status = 'claiming' AND expires_at <= ?").run(now);
   const count = layer.store.prepare('SELECT count(*) AS n FROM beta_invitations WHERE requested_by = ? AND created_at > ?').get(caller.id, now - 24 * 60 * 60_000) as { n: number };
   if (count.n >= 10) throw new LayerError(429, 'InvitationLimit');
   if (layer.store.prepare("SELECT id FROM beta_invitations WHERE email = ? AND status IN ('pending', 'approved', 'claiming')").get(email)) throw new LayerError(409, 'InvitationPending');

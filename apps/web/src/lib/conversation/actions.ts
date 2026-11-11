@@ -13,6 +13,8 @@ export interface MessageActions {
   /** The context menu's extras (m4.5-plan.md task 2). `key` is a quick reaction's emoji, as the picker hands it over. */
   quickReact(m: Message, key: string): void;
   markUnread(m: Message): void; copyText(m: Message): void;
+  /** The list of who reacted, opened at one emoji when given (m4.3-plan.md task 4). */
+  showReactions(m: Message, emoji?: string): void;
   /** Opens a web address; with the text it was shown as, a masked link asks first. */
   openUrl(url: string, text?: string): void; copyUrl(url: string): void;
   copyImage(src: string): void; saveImage(src: string, name: string): void;

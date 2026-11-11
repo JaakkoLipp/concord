@@ -24,6 +24,11 @@ class Compose {
     this.files = { ...this.files, [channel]: (this.files[channel] ?? []).filter((c) => c.key !== key) };
   }
 
+  /** Mark a chosen file as a spoiler, or not: its name carries the mark (conversation/spoiler.ts). */
+  renameFile(channel: Id, key: string, name: string): void {
+    this.files = { ...this.files, [channel]: (this.files[channel] ?? []).map((c) => (c.key === key ? { ...c, file: new File([c.file], name, { type: c.file.type, lastModified: c.file.lastModified }) } : c)) };
+  }
+
   /** Hand the chosen files to a message. Their previews now belong to the pending message. */
   takeFiles(channel: Id): Chosen[] {
     const taken = this.files[channel] ?? [];

@@ -32,6 +32,10 @@ class App {
   /** This device's session, as `Backend.sessions()` lists it. Unknown for a browser signed in before M4.8. */
   sessionId = $state<string | null>(null);
 
+  /** The stored session couldn't be tried: Stoat is unreachable. The splash says so while `restore` keeps trying. */
+  unreachable = $state(false);
+  private restoreFailures = 0;
+
   async restore(): Promise<void> {
     if (this.session) return;
     const token = await loadToken();
@@ -40,14 +44,22 @@ class App {
       return;
     }
     this.sessionId = (await loadSessionId()) ?? null;
-    await this.start(token).catch(async (e: unknown) => {
-      // A rejected token means signed out. Anything else (offline, server down) keeps the token for a retry.
-      // Its drafts go too, as on logout: the device may have been logged out from another one.
+    await this.start(token).then(() => {
+      this.unreachable = false;
+      this.restoreFailures = 0;
+    }, async (e: unknown) => {
+      // A rejected token means signed out. Its drafts go too, as on logout: the device may have been logged out from another one.
       if (e instanceof StoatError && e.status === 401) {
         await clearToken();
         drafts.clear();
+        this.unreachable = false;
+        this.status = 'signed-out';
+        return;
       }
-      this.status = 'signed-out';
+      // Anything else (offline, Stoat restarting) keeps the token and tries again: 2 s, then up to 30 s apart. Showing
+      // the login page instead would make a second session of a few seconds' outage.
+      this.unreachable = true;
+      setTimeout(() => void this.restore(), Math.min(30_000, 2_000 * 2 ** this.restoreFailures++));
     });
   }
 

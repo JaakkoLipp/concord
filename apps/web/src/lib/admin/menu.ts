@@ -126,12 +126,22 @@ export function folderMenu(session: Session, folder: string): MenuItem[] {
 }
 
 export function categoryMenu(session: Session, server: Id, category: string): MenuItem[] {
-  if (!canManageChannels(session, server)) return [];
-  const s = session.store.servers.get(server);
+  const store = session.store;
+  const s = store.servers.get(server);
   if (!s) return [];
   const i = s.categories.findIndex((c) => c.id === category);
   const title = s.categories[i]?.title ?? '';
+  // For everyone (m4.3-plan.md task 7): read and mute the category's channels, those this account sees, as they are now.
+  const channels = (s.categories[i]?.channels ?? []).filter((id) => { const c = store.channels.get(id); return !!c && canView(store, c); });
+  const muted = channels.length > 0 && channels.every((id) => store.isMuted(id));
+  const own: MenuItem[] = [
+    { label: m.notify.markRead, disabled: !channels.some((id) => store.isUnread(id) || store.mentionCount(id)), onselect: () => channels.forEach((id) => session.markRead(id)) },
+    { label: muted ? m.notify.unmuteCategory : m.notify.muteCategory, disabled: !channels.length, onselect: () => void session.setMutes(channels, muted ? false : null).catch(() => toasts.show(m.notify.failed)) },
+  ];
+  if (!canManageChannels(session, server)) return own;
   return [
+    ...own,
+    'separator',
     { label: m.admin.createChannel, onselect: () => adminDialogs.open({ kind: 'createChannel', server, category }) },
     { label: m.admin.renameCategory, onselect: () => adminDialogs.open({ kind: 'category', server, id: category }) },
     { label: m.admin.moveUp, disabled: i <= 0, onselect: () => writeCategories(session, server, moveCategory(s.categories, category, -1)) },

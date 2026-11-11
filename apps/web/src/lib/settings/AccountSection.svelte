@@ -78,7 +78,9 @@
 
   // ---------- the password and email dialogs ----------
 
-  let dialog = $state<'password' | 'email' | null>(null);
+  let dialog = $state<'password' | 'email' | 'username' | null>(null);
+  let newName = $state('');
+  const self = $derived(session.store.self);
   let current = $state('');
   let next = $state('');
   let repeat = $state('');
@@ -86,8 +88,9 @@
   let busy = $state(false);
   let error = $state<string | undefined>();
 
-  function open(which: 'password' | 'email') {
+  function open(which: 'password' | 'email' | 'username') {
     current = next = repeat = newEmail = '';
+    newName = self?.username ?? '';
     error = undefined;
     dialog = which;
   }
@@ -106,6 +109,12 @@
     busy = true;
     try {
       const which = dialog;
+      if (which === 'username') {
+        session.store.upsertUsers([await backend.changeUsername(newName.trim(), current)]);
+        toasts.show(t.usernameDialog.done, 'info');
+        dialog = null;
+        return;
+      }
       // With TOTP on, Stoat wants a ticket made from a code as well as the current password.
       const ticket = await identity.ticketIfTotp(backend, which === 'password' ? t.confirm.actions.password : t.confirm.actions.email);
       if (ticket === null) return;
@@ -126,6 +135,13 @@
 </script>
 
 <section aria-labelledby="account-email">
+  <div class="row">
+    <div class="text">
+      <h2 class="label">{t.username}</h2>
+      <span class="value">{self ? `${self.username}#${self.discriminator}` : ''}</span>
+    </div>
+    <Button variant="secondary" size="sm" onclick={() => open('username')}>{t.changeUsername}</Button>
+  </div>
   <div class="row">
     <div class="text">
       <h2 class="label" id="account-email">{t.email}</h2>
@@ -180,9 +196,13 @@
   {/if}
 </section>
 
-<Dialog open={dialog !== null} title={dialog === 'email' ? t.emailDialog.title : t.passwordDialog.title} onclose={close}>
+<Dialog open={dialog !== null} title={dialog === 'email' ? t.emailDialog.title : dialog === 'username' ? t.usernameDialog.title : t.passwordDialog.title} onclose={close}>
   <form id="account-change" onsubmit={submit}>
-    {#if dialog === 'email'}
+    {#if dialog === 'username'}
+      <p>{t.usernameDialog.help}</p>
+      <TextField label={t.usernameDialog.next} autocomplete="off" minlength={2} maxlength={32} required bind:value={newName} disabled={busy} />
+      <TextField label={t.emailDialog.current} type="password" autocomplete="current-password" required bind:value={current} disabled={busy} />
+    {:else if dialog === 'email'}
       <p>{t.emailDialog.help}</p>
       <TextField label={t.emailDialog.next} type="email" autocomplete="email" required bind:value={newEmail} disabled={busy} />
       <TextField label={t.emailDialog.current} type="password" autocomplete="current-password" required bind:value={current} disabled={busy} />
@@ -195,7 +215,7 @@
   </form>
   {#snippet actions()}
     <Button variant="ghost" onclick={close} disabled={busy}>{t.cancel}</Button>
-    <Button type="submit" form="account-change" {busy}>{dialog === 'email' ? t.emailDialog.submit : t.passwordDialog.submit}</Button>
+    <Button type="submit" form="account-change" {busy}>{dialog === 'email' ? t.emailDialog.submit : dialog === 'username' ? t.usernameDialog.submit : t.passwordDialog.submit}</Button>
   {/snippet}
 </Dialog>
 

@@ -132,21 +132,26 @@ export class StoatGateway implements Gateway {
     }
   }
 
+  /** Bumped by every connect attempt: an older attempt that finishes late is dropped, so there is one socket at most. */
+  private opening = 0;
+
   private async open(): Promise<void> {
+    const attempt = ++this.opening;
     this.handlers.onState(this.attempt === 0 ? 'connecting' : 'reconnecting');
     let socket: Socket;
     try {
       socket = await this.transport.connect(readyQuery());
     } catch {
-      this.scheduleReconnect();
+      // A newer attempt is on its way or connected: this one's failure says nothing.
+      if (attempt === this.opening) this.scheduleReconnect();
       return;
     }
-    if (this.closed) {
+    if (this.closed || attempt !== this.opening) {
       socket.close();
       return;
     }
     this.socket = socket;
-    socket.onFrame((frame) => this.onFrame(frame));
+    socket.onFrame((frame) => { if (this.socket === socket) this.onFrame(frame); });
     socket.onClose(() => {
       if (this.socket !== socket) return;
       this.socket = null;
@@ -205,7 +210,7 @@ export class StoatGateway implements Gateway {
   }
 
   private scheduleReconnect(): void {
-    if (this.retry || this.closed) return;
+    if (this.retry || this.closed || this.socket) return;
     this.handlers.onState('reconnecting');
     const base = Math.min(MAX_BACKOFF_MS, 1000 * 2 ** this.attempt);
     const delay = base / 2 + Math.random() * (base / 2);

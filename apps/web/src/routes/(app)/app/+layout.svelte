@@ -52,9 +52,9 @@
 {#if onLogin || onInvite || onWelcome || onBeta || app.status === 'signed-in'}
   {@render children()}
 {:else}
-  <div class="splash"><Spinner label={m.app.loading} /></div>
+  <div class="splash"><Spinner label={m.app.loading} />{#if app.unreachable}<p>{m.app.cantReach}</p>{/if}</div>
 {/if}
 
 <style>
-  .splash { display: grid; place-items: center; height: 100dvh; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
+  .splash { display: grid; place-content: center; justify-items: center; gap: var(--space-4); height: 100dvh; color: var(--text-secondary); font: var(--text-sm) var(--font-sans); }
 </style>

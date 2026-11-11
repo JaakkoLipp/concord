@@ -38,6 +38,25 @@ export interface User {
   bot?: { owner: Id };
 }
 
+/**
+ * A bot as its owner manages it. Its user, with the name and avatar, is in the store like any user. No token here:
+ * a token is a credential, and only `Backend.botToken` and `resetBotToken` return one, to whoever asked.
+ */
+export interface Bot {
+  id: Id;
+  owner: Id;
+  /** Whether anyone may add it to a server they manage. New bots are private. */
+  public: boolean;
+}
+
+/** What anyone may see of a public bot, or its owner of a private one, before adding it somewhere. */
+export interface PublicBot {
+  id: Id;
+  username: string;
+  avatar?: string;
+  description?: string;
+}
+
 export interface Profile {
   content?: string;
   background?: FileRef;

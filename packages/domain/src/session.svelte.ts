@@ -213,6 +213,8 @@ export class Session {
     for (const a of this.acks.values()) clearTimeout(a.timer);
     if (this.emojiSave) clearTimeout(this.emojiSave);
     this.emojiSave = null;
+    if (this.gifsSave) clearTimeout(this.gifsSave);
+    this.gifsSave = null;
     for (const t of this.typingState.values()) if (t.stop) clearTimeout(t.stop);
     this.typingState.clear();
     for (const t of this.profileRefetch.values()) clearTimeout(t);
@@ -1151,6 +1153,16 @@ export class Session {
       const map = scope === 'server' ? n.serverMutes : n.channelMutes;
       if (minutes === false) delete map[id];
       else map[id] = minutes === null ? {} : { until: Date.now() + minutes * 60_000 };
+    });
+  }
+
+  /** Mute or unmute several channels in one write, as muting a category does: each channel in it, as it is now. */
+  setMutes(channels: Id[], minutes: number | null | false): Promise<void> {
+    return this.changeNotifications((n) => {
+      for (const id of channels) {
+        if (minutes === false) delete n.channelMutes[id];
+        else n.channelMutes[id] = minutes === null ? {} : { until: Date.now() + minutes * 60_000 };
+      }
     });
   }
 

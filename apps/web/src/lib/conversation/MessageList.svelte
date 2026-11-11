@@ -18,6 +18,7 @@
   import { compose } from '$lib/view/compose.svelte.ts';
   import { toasts } from '$lib/view/toast.svelte.ts';
   import type { MessageActions } from './actions.ts';
+  import { reactionsView } from '$lib/view/reactions.svelte.ts';
   import DeleteDialog from './DeleteDialog.svelte';
   import { reactionKey } from '$lib/emoji/data.ts';
   import { picker } from '$lib/emoji/picker.svelte.ts';
@@ -181,6 +182,7 @@
       unreadFrom = before ?? '0';
     },
     copyText: (msg) => void copy(msg.content ?? ''),
+    showReactions: (msg, emoji) => reactionsView.open(msg.id, emoji),
     openUrl: (url, text) => void visit(url, text),
     copyUrl: (url) => void copy(url),
     isFavouriteGif: (url) => store.favouriteGifs.some((g) => g.url === url),

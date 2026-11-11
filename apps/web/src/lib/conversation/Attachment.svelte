@@ -8,16 +8,26 @@
   import { m } from '$lib/i18n/index.ts';
   import { fileSize, fit, placeholder } from '$lib/view/media.ts';
   import { viewer } from '$lib/view/viewer.svelte.ts';
+  import { isSpoiler } from './spoiler.ts';
 
   let { file }: { file: FileRef } = $props();
   const url = $derived(fileUrl(file));
   const size = $derived(fit(file.width ?? 0, file.height ?? 0, 400, 300));
   const thumb = $derived(placeholder(file.thumbhash));
   // Recognised by name, since Autumn classes Chromium's WebM recordings as plain files (M4.8 task 14c).
+  // A spoiler loads nothing until it is uncovered: no image, video, sound or name (m4.3-plan.md decision 6).
+  let revealed = $state(false);
+  const covered = $derived(isSpoiler(file.filename) && !revealed);
   const voice = $derived(file.kind !== 'image' && file.kind !== 'text' && isVoiceMessage(file.filename));
 </script>
 
-{#if voice}
+{#if covered}
+  <button class="cover" class:flat={file.kind !== 'image'} style:width={file.kind === 'image' || file.kind === 'video' ? `${size.width}px` : undefined}
+    style:aspect-ratio={file.kind === 'image' || file.kind === 'video' ? `${size.width} / ${size.height}` : undefined}
+    style:background-image={thumb ? `url(${thumb})` : undefined} aria-label={m.files.spoilerReveal} onclick={() => (revealed = true)}>
+    <span>{m.files.spoilerCover}</span>
+  </button>
+{:else if voice}
   <div class="voice">
     <span class="mic" aria-hidden="true"><Mic size={20} /></span>
     <div class="voice-body">
@@ -50,6 +60,14 @@
     display: block; max-width: 100%; height: auto; padding: 0; margin: var(--space-2) 0 0;
     border: 0; border-radius: var(--radius-md); overflow: hidden; background: var(--surface-2) center / cover no-repeat;
     cursor: zoom-in;
+  }
+  .cover {
+    display: grid; place-items: center; max-width: 100%; min-height: 4rem; min-width: 10rem; margin: var(--space-2) 0 0; padding: 0; border: 0;
+    border-radius: var(--radius-md); overflow: hidden; background: var(--surface-4) center / cover no-repeat; cursor: pointer;
+  }
+  .cover span {
+    padding: var(--space-2) var(--space-4); border-radius: var(--radius-full); background: var(--scrim); color: var(--text-strong);
+    font: 700 var(--text-xs) var(--font-sans); letter-spacing: 0.06em; text-transform: uppercase;
   }
   video.media { cursor: auto; background: var(--video-backdrop); }
   .media img { width: 100%; height: 100%; object-fit: cover; }

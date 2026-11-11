@@ -33,6 +33,7 @@
   import ModerationPanel from '$lib/admin/ModerationPanel.svelte';
   import NotifySettingsDialog from '$lib/notify/NotifySettingsDialog.svelte';
   import ServerProfileDialog from '$lib/admin/ServerProfileDialog.svelte';
+  import ReactionsDialog from '$lib/conversation/ReactionsDialog.svelte';
   import NotifyBar from '$lib/notify/NotifyBar.svelte';
   import { app } from '$lib/session/app.svelte.ts';
   import { moderationView } from '$lib/admin/moderation.svelte.ts';
@@ -87,7 +88,7 @@
 <QuickSwitcher />
 {#if app.session}<MentionsPanel session={app.session} />{/if}
 <ContextMenuHost />
-{#if app.session}<AdminDialogs session={app.session} /><MemberRolesDialog session={app.session} /><ModerationDialogs session={app.session} /><MemberNicknameDialog session={app.session} /><NotifySettingsDialog session={app.session} /><ServerProfileDialog session={app.session} />{/if}
+{#if app.session}<AdminDialogs session={app.session} /><MemberRolesDialog session={app.session} /><ModerationDialogs session={app.session} /><MemberNicknameDialog session={app.session} /><NotifySettingsDialog session={app.session} /><ReactionsDialog session={app.session} /><ServerProfileDialog session={app.session} />{/if}
 <NotifyBar />
 {#if app.rings}<IncomingCalls {store} rings={app.rings} />{/if}
 
